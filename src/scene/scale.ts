@@ -31,7 +31,8 @@ export function surveyToPage(easting: number, northing: number): [number, number
 
 /**
  * 8F 尺寸线。南墙 51.90 m：Y=86370.182→86422.082，X=75926.890。
- * 东墙 97.40 m：X=75926.890→76024.290，Y=86422.082。外皮是这一条直墙。
+ * 东墙 97.40 m：X=75926.890→76024.290，Y=86422.082。
+ * 外墙细线在这条尺寸线以东，并在中部向东错出约 2.79 m。
  */
 const EAST_SW_PAGE = surveyToPage(86370.182, 75926.89)
 const EAST_NE_PAGE = surveyToPage(86422.082, 76024.29)
