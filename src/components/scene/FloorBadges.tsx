@@ -1,4 +1,4 @@
-import { useFrame, useLoader } from '@react-three/fiber'
+import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   Color,
@@ -10,6 +10,7 @@ import {
   Quaternion,
   SRGBColorSpace,
   TextureLoader,
+  Vector2,
   Vector3,
 } from 'three'
 import atlasUrl from '../../assets/badges/badge-digits.png'
@@ -22,7 +23,7 @@ import {
   BADGE_WIDTH,
   badgeAnchor,
 } from '../../scene/badges'
-import { buildBadgeDigitGeometry, writeBadgeDigitPositions } from '../../scene/badgeDigits'
+import { buildBadgeDigitGeometry, patchBadgeDigitVertexShader, writeBadgeDigitPositions } from '../../scene/badgeDigits'
 import { useTwinStore } from '../../store/store'
 
 const PLATE = new Color('#172433')
@@ -49,27 +50,39 @@ export function FloorBadges() {
   const emitFloorFly = useTwinStore((state) => state.emitFloorFly)
   const enterFloor = useTwinStore((state) => state.enterFloor)
   const texture = useLoader(TextureLoader, atlasUrl)
+  const gl = useThree((state) => state.gl)
   const meshRef = useRef<InstancedMesh>(null)
   const digitRef = useRef<Mesh>(null)
+  const viewportHeight = useRef(1)
+  const drawingBuffer = useMemo(() => new Vector2(), [])
   const anchors = useMemo(() => floors.map((floor) => badgeAnchor(floor)), [floors])
   const plateGeometry = useMemo(() => new PlaneGeometry(1, 1), [])
   const plateMaterial = useMemo(() => new MeshBasicMaterial({ toneMapped: false }), [])
   const digits = useMemo(() => (floors.length === 0 ? null : buildBadgeDigitGeometry(floors)), [floors])
-  const digitMaterial = useMemo(
-    () =>
-      new MeshBasicMaterial({
-        color: '#ffffff',
-        map: texture,
-        // Far mip levels average edge alpha. 0.2 lets those texels reach
-        // alpha-to-coverage so the stroke stays. transparent stays off.
-        alphaTest: 0.2,
-        alphaToCoverage: true,
-        transparent: false,
-        toneMapped: false,
-      }),
-    [texture],
-  )
+  const digitMaterial = useMemo(() => {
+    const material = new MeshBasicMaterial({
+      color: '#ffffff',
+      map: texture,
+      // Far mip levels average edge alpha. 0.2 lets those texels reach
+      // alpha-to-coverage so the stroke stays. transparent stays off.
+      alphaTest: 0.2,
+      alphaToCoverage: true,
+      transparent: false,
+      toneMapped: false,
+    })
+    material.customProgramCacheKey = () => 'badge-digit-screen-floor'
+    material.onBeforeCompile = (shader) => {
+      patchBadgeDigitVertexShader(shader, viewportHeight.current)
+      material.userData.shader = shader
+    }
+    return material
+  }, [texture])
   const capacity = Math.max(anchors.length, 1) * 3
+
+  useLayoutEffect(() => {
+    gl.getDrawingBufferSize(drawingBuffer)
+    viewportHeight.current = drawingBuffer.y
+  }, [drawingBuffer, gl])
 
   useLayoutEffect(() => {
     texture.colorSpace = SRGBColorSpace
@@ -105,6 +118,10 @@ export function FloorBadges() {
   }, [digitMaterial, digits])
 
   useFrame(({ camera }) => {
+    gl.getDrawingBufferSize(drawingBuffer)
+    viewportHeight.current = drawingBuffer.y
+    const shader = digitMaterial.userData.shader as { uniforms?: { badgeViewportHeight?: { value: number } } } | undefined
+    if (shader?.uniforms?.badgeViewportHeight) shader.uniforms.badgeViewportHeight.value = drawingBuffer.y
     if (hidden || anchors.length === 0) return
     right.set(1, 0, 0).applyQuaternion(camera.quaternion)
     up.set(0, 1, 0).applyQuaternion(camera.quaternion)
@@ -144,6 +161,8 @@ export function FloorBadges() {
         ref={meshRef}
         args={[plateGeometry, plateMaterial, capacity]}
         frustumCulled={false}
+        castShadow={false}
+        receiveShadow={false}
         renderOrder={2}
         onClick={(event) => {
           if (!show || event.delta > 2 || event.instanceId == null) return
@@ -166,7 +185,11 @@ export function FloorBadges() {
           geometry={digits.geometry}
           material={digitMaterial}
           frustumCulled={false}
+          castShadow={false}
+          receiveShadow={false}
           renderOrder={3}
+          // 放大只发生在颜色通道。不投影，避免深度材质仍用未放大的顶点。
+          // 射线打在未放大的底板上；数字网格不参与拾取。
           raycast={() => null}
         />
       )}

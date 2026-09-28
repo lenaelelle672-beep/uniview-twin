@@ -1,7 +1,7 @@
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { BufferGeometry, PlaneGeometry, Vector3 } from 'three'
+import { BufferAttribute, BufferGeometry, PlaneGeometry, Vector3 } from 'three'
 import atlas from '../assets/badges/badge-digits.json'
-import { BADGE_ALARM_X, BADGE_ID_X, BADGE_OFFLINE_X } from './badges'
+import { BADGE_ALARM_X, BADGE_HEIGHT, BADGE_ID_X, BADGE_MIN_SCREEN_PX, BADGE_OFFLINE_X, badgeAnchor } from './badges'
 
 /** 四边形高度对应图集格子去掉内边后的 56 px。两位数字要落进色块里。 */
 export const BADGE_GLYPH_HEIGHT = 1.16
@@ -87,12 +87,55 @@ export function buildBadgeDigitGeometry(floors: BadgeDigitSource[]): BadgeDigitL
   parts.forEach((part) => part.dispose())
   if (!geometry) throw new Error('徽标数字网格合并失败')
   const position = geometry.attributes.position.array as Float32Array
+  const centers = new Float32Array(anchorIds.length * 3)
+  for (let index = 0; index < anchorIds.length; index += 1) {
+    const anchor = badgeAnchor(floors[anchorIds[index]])
+    centers[index * 3] = anchor.x
+    centers[index * 3 + 1] = anchor.y
+    centers[index * 3 + 2] = anchor.z
+  }
+  geometry.setAttribute('badgeCenter', new BufferAttribute(centers, 3))
   geometry.computeBoundingSphere()
   return {
     geometry,
     local: position.slice(),
     anchorIndex: Uint16Array.from(anchorIds),
   }
+}
+
+/** 低于最小屏幕高度时放大，已超过时保持 1。 */
+export function badgeScreenScale(pixelHeight: number, minimum = BADGE_MIN_SCREEN_PX): number {
+  return Math.max(minimum / Math.max(pixelHeight, 0.0001), 1)
+}
+
+export function patchBadgeDigitVertexShader(
+  shader: { vertexShader: string; uniforms: Record<string, { value: unknown }> },
+  viewportHeight: number,
+) {
+  shader.uniforms.badgeViewportHeight = { value: viewportHeight }
+  shader.uniforms.badgeWorldHeight = { value: BADGE_HEIGHT }
+  shader.uniforms.badgeMinPixelHeight = { value: BADGE_MIN_SCREEN_PX }
+  const vertex = shader.vertexShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+attribute vec3 badgeCenter;
+uniform float badgeViewportHeight;
+uniform float badgeWorldHeight;
+uniform float badgeMinPixelHeight;
+`,
+    )
+    .replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+vec4 badgeView = modelViewMatrix * vec4(badgeCenter, 1.0);
+float badgePixels = badgeWorldHeight * projectionMatrix[1][1] * badgeViewportHeight / (2.0 * max(abs(badgeView.z), 0.0001));
+float badgeScale = max(badgeMinPixelHeight / max(badgePixels, 0.0001), 1.0);
+transformed = badgeCenter + (transformed - badgeCenter) * badgeScale;
+`,
+    )
+  if (!vertex.includes('float badgeScale')) throw new Error('徽标数字顶点着色器没有接上屏幕尺寸')
+  shader.vertexShader = vertex
 }
 
 const scratch = new Vector3()

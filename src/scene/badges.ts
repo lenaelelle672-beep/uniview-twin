@@ -3,6 +3,11 @@ import { TOWER } from './siteGeometry'
 /** 徽标世界尺寸。层间距 4.2 m，高度必须小于间距，否则俯视时会叠在一起。 */
 export const BADGE_WIDTH = 9
 export const BADGE_HEIGHT = 2.5
+/**
+ * 远景把整块徽标的屏幕高度抬到这个像素数，只放大不缩小。
+ * 图集墨迹约占底板高度的 0.40，28px 时墨迹约 11px。
+ */
+export const BADGE_MIN_SCREEN_PX = 28
 /** 楼层号、告警数、离线数在底板上的横向中心。 */
 export const BADGE_ID_X = -2.85
 export const BADGE_ALARM_X = 0.25
