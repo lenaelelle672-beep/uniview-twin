@@ -3,6 +3,12 @@ import { TOWER } from './siteGeometry'
 /** 徽标世界尺寸。层间距 4.2 m，高度必须小于间距，否则俯视时会叠在一起。 */
 export const BADGE_WIDTH = 9
 export const BADGE_HEIGHT = 2.5
+/** 楼层号、告警数、离线数在底板上的横向中心。 */
+export const BADGE_ID_X = -2.85
+export const BADGE_ALARM_X = 0.25
+export const BADGE_OFFLINE_X = 2.6
+export const BADGE_CHIP_W = 2.15
+export const BADGE_CHIP_H = 1.85
 
 /** 塔楼西侧偏南，总览东南机位能看到，又不挡南立面。 */
 export const BADGE_COLUMN_X = TOWER.minX - 16

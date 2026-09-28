@@ -1,32 +1,36 @@
-import { useFrame } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useFrame, useLoader } from '@react-three/fiber'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   Color,
   InstancedMesh,
+  Mesh,
   MeshBasicMaterial,
   Object3D,
   PlaneGeometry,
   Quaternion,
+  SRGBColorSpace,
+  TextureLoader,
   Vector3,
 } from 'three'
-import { BatchedText, Text, preloadFont } from 'troika-three-text'
-import badgeFont from '../../assets/fonts/DejaVuSans-Bold.ttf'
-import { BADGE_HEIGHT, BADGE_WIDTH, badgeAnchor } from '../../scene/badges'
+import atlasUrl from '../../assets/badges/badge-digits.png'
+import {
+  BADGE_ALARM_X,
+  BADGE_CHIP_H,
+  BADGE_CHIP_W,
+  BADGE_HEIGHT,
+  BADGE_OFFLINE_X,
+  BADGE_WIDTH,
+  badgeAnchor,
+} from '../../scene/badges'
+import { buildBadgeDigitGeometry, writeBadgeDigitPositions } from '../../scene/badgeDigits'
 import { useTwinStore } from '../../store/store'
 
-const GLYPHS = 'BF0123456789'
 const PLATE = new Color('#172433')
 const ALARM = new Color('#b42318')
 const OFFLINE = new Color('#5d6775')
-const ID_X = -2.85
-const ALARM_X = 0.25
-const OFFLINE_X = 2.6
-const CHIP_W = 2.15
-const CHIP_H = 1.85
-
-preloadFont({ font: badgeFont, characters: GLYPHS }, () => {})
 
 const right = new Vector3()
+const up = new Vector3()
 const forward = new Vector3()
 const anchorScratch = new Vector3()
 const placed = new Vector3()
@@ -44,100 +48,89 @@ export function FloorBadges() {
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const emitFloorFly = useTwinStore((state) => state.emitFloorFly)
   const enterFloor = useTwinStore((state) => state.enterFloor)
+  const texture = useLoader(TextureLoader, atlasUrl)
   const meshRef = useRef<InstancedMesh>(null)
-  const textsRef = useRef<Text[]>([])
+  const digitRef = useRef<Mesh>(null)
   const anchors = useMemo(() => floors.map((floor) => badgeAnchor(floor)), [floors])
-  const batch = useMemo(() => {
-    const text = new BatchedText()
-    text.font = badgeFont
-    text.renderOrder = 3
-    return text
-  }, [])
-  const geometry = useMemo(() => new PlaneGeometry(1, 1), [])
-  const material = useMemo(() => new MeshBasicMaterial({ toneMapped: false }), [])
+  const plateGeometry = useMemo(() => new PlaneGeometry(1, 1), [])
+  const plateMaterial = useMemo(() => new MeshBasicMaterial({ toneMapped: false }), [])
+  const digits = useMemo(() => (floors.length === 0 ? null : buildBadgeDigitGeometry(floors)), [floors])
+  const digitMaterial = useMemo(
+    () =>
+      new MeshBasicMaterial({
+        color: '#ffffff',
+        map: texture,
+        alphaTest: 0.5,
+        transparent: false,
+        toneMapped: false,
+      }),
+    [texture],
+  )
   const capacity = Math.max(anchors.length, 1) * 3
 
   useLayoutEffect(() => {
-    let cancelled = false
-    window.__twinBadges = 0
-    if (hidden || anchors.length === 0) return
+    texture.colorSpace = SRGBColorSpace
+    texture.flipY = true
+    texture.generateMipmaps = true
+    texture.needsUpdate = true
+  }, [texture])
 
-    const created: Text[] = []
-    const addLabel = (value: string, x: number, y: number, z: number, color: number) => {
-      const text = new Text()
-      text.font = badgeFont
-      text.text = value
-      text.fontSize = 1.15
-      text.color = color
-      text.anchorX = 'center'
-      text.anchorY = 'middle'
-      text.position.set(x, y, z)
-      text.raycast = () => {}
-      batch.add(text)
-      created.push(text)
-    }
-
-    anchors.forEach((anchor, index) => {
-      const floor = floors[index]
-      addLabel(floor.id, anchor.x, anchor.y, anchor.z, 0xf7fafc)
-      addLabel(String(floor.alarmCount), anchor.x, anchor.y, anchor.z, 0xffffff)
-      addLabel(String(floor.offlineCount), anchor.x, anchor.y, anchor.z, 0xffffff)
-    })
-    textsRef.current = created
-    batch.sync(() => {
-      if (cancelled) return
-      const mat = batch.material
-      if (mat && !Array.isArray(mat)) mat.toneMapped = false
-      window.__twinBadges = anchors.length
-    })
-
+  useLayoutEffect(() => {
+    window.__twinBadges = hidden || anchors.length === 0 ? 0 : anchors.length
     const mesh = meshRef.current
-    if (mesh) {
-      anchors.forEach((_, index) => {
-        mesh.setColorAt(index, PLATE)
-        mesh.setColorAt(anchors.length + index, ALARM)
-        mesh.setColorAt(anchors.length * 2 + index, OFFLINE)
-      })
-      if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
-    }
+    if (!mesh || hidden || anchors.length === 0) return
+    anchors.forEach((_, index) => {
+      mesh.setColorAt(index, PLATE)
+      mesh.setColorAt(anchors.length + index, ALARM)
+      mesh.setColorAt(anchors.length * 2 + index, OFFLINE)
+    })
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+  }, [anchors, hidden])
 
+  useEffect(() => {
     return () => {
-      cancelled = true
-      created.forEach((text) => {
-        batch.remove(text)
-        text.dispose()
-      })
-      if (textsRef.current === created) textsRef.current = []
-      window.__twinBadges = 0
+      plateGeometry.dispose()
+      plateMaterial.dispose()
     }
-  }, [anchors, batch, floors, hidden])
+  }, [plateGeometry, plateMaterial])
+
+  useEffect(() => {
+    return () => {
+      digits?.geometry.dispose()
+      digitMaterial.dispose()
+    }
+  }, [digitMaterial, digits])
 
   useFrame(({ camera }) => {
     if (hidden || anchors.length === 0) return
     right.set(1, 0, 0).applyQuaternion(camera.quaternion)
+    up.set(0, 1, 0).applyQuaternion(camera.quaternion)
     forward.set(0, 0, 1).applyQuaternion(camera.quaternion)
-    const quaternion = camera.quaternion
     const mesh = meshRef.current
     if (mesh) {
       anchors.forEach((anchor, index) => {
         anchorScratch.set(anchor.x, anchor.y, anchor.z)
-        writeInstance(mesh, index, anchorScratch, 0, 0.02, BADGE_WIDTH, BADGE_HEIGHT, quaternion)
-        writeInstance(mesh, anchors.length + index, anchorScratch, ALARM_X, 0.04, CHIP_W, CHIP_H, quaternion)
-        writeInstance(mesh, anchors.length * 2 + index, anchorScratch, OFFLINE_X, 0.04, CHIP_W, CHIP_H, quaternion)
+        writeInstance(mesh, index, anchorScratch, 0, 0.02, BADGE_WIDTH, BADGE_HEIGHT, camera.quaternion)
+        writeInstance(mesh, anchors.length + index, anchorScratch, BADGE_ALARM_X, 0.04, BADGE_CHIP_W, BADGE_CHIP_H, camera.quaternion)
+        writeInstance(
+          mesh,
+          anchors.length * 2 + index,
+          anchorScratch,
+          BADGE_OFFLINE_X,
+          0.04,
+          BADGE_CHIP_W,
+          BADGE_CHIP_H,
+          camera.quaternion,
+        )
       })
       mesh.count = anchors.length * 3
       mesh.instanceMatrix.needsUpdate = true
     }
-
-    textsRef.current.forEach((text, index) => {
-      const anchor = anchors[Math.floor(index / 3)]
-      if (!anchor) return
-      const column = index % 3
-      const localX = column === 0 ? ID_X : column === 1 ? ALARM_X : OFFLINE_X
-      anchorScratch.set(anchor.x, anchor.y, anchor.z)
-      offset(anchorScratch, localX, 0.08, text.position)
-      text.quaternion.copy(quaternion)
-    })
+    const digit = digitRef.current
+    if (!digit || !digits) return
+    const positions = digit.geometry.attributes.position.array as Float32Array
+    writeBadgeDigitPositions(positions, digits.local, digits.anchorIndex, anchors, right, up, forward)
+    digit.geometry.attributes.position.needsUpdate = true
   })
 
   const show = !hidden && anchors.length > 0
@@ -146,7 +139,7 @@ export function FloorBadges() {
       <instancedMesh
         key={capacity}
         ref={meshRef}
-        args={[geometry, material, capacity]}
+        args={[plateGeometry, plateMaterial, capacity]}
         frustumCulled={false}
         renderOrder={2}
         onClick={(event) => {
@@ -164,7 +157,16 @@ export function FloorBadges() {
           enterFloor(floor.id)
         }}
       />
-      <primitive object={batch} />
+      {digits && (
+        <mesh
+          ref={digitRef}
+          geometry={digits.geometry}
+          material={digitMaterial}
+          frustumCulled={false}
+          renderOrder={3}
+          raycast={() => null}
+        />
+      )}
     </group>
   )
 }

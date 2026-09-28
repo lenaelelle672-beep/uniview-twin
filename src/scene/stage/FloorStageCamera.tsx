@@ -1,4 +1,4 @@
-import { type CameraControls as CameraControlsImpl } from '@react-three/drei'
+import { type CameraControls as CameraControlsImpl } from '@react-three/drei/core/CameraControls'
 import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef } from 'react'
 import { PerspectiveCamera } from 'three'

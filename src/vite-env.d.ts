@@ -1,31 +1,5 @@
 /// <reference types="vite/client" />
 
-declare module 'troika-three-text' {
-  import type { ColorRepresentation, Material, Mesh, Object3D } from 'three'
-
-  export class Text extends Mesh {
-    text: string
-    font: string | null
-    fontSize: number
-    color: ColorRepresentation | null
-    anchorX: string | number
-    anchorY: string | number
-    sync: (callback?: () => void) => void
-    dispose: () => void
-  }
-
-  export class BatchedText extends Text {
-    add: (...objects: Object3D[]) => this
-    remove: (...objects: Object3D[]) => this
-    material: Material | Material[]
-  }
-
-  export function preloadFont(
-    options: { font: string; characters?: string | string[]; sdfGlyphSize?: number },
-    callback?: () => void,
-  ): void
-}
-
 interface TwinRenderStats {
   calls: number
   triangles: number

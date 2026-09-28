@@ -1,4 +1,4 @@
-import { CameraControls } from '@react-three/drei'
+import { CameraControls } from '@react-three/drei/core/CameraControls'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef, type RefObject } from 'react'
 import { Box3, Group, PerspectiveCamera, Vector3 } from 'three'
