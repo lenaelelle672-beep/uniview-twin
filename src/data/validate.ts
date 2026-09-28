@@ -91,6 +91,7 @@ export function validateTwinData(raw: unknown): TwinData {
       floorId,
       index: indexNo,
       zone: expectEnum(record.zone, ZONES, `${path}.zone`),
+      // D027：?data= 可以带坐标，但只作载荷保留。场景摆放不得使用 x/y/z。
       x: expectNumber(record, 'x', path),
       y: expectNumber(record, 'y', path),
       z: expectNumber(record, 'z', path),

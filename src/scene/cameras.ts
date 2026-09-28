@@ -7,17 +7,18 @@ export interface CameraPose {
 }
 
 /**
- * 固定机位。五个 `?cam=` 在 D025 体块（塔楼在西北角）上对照 docs/ref 校准。
- * 总览姿态只作为 fitToBox 的起始方向，最终取景由 CameraRig 框定。
+ * 固定机位。五个 `?cam=` 在 integration 合入后的体块上按 D028 重新校准：
+ * 塔楼在西北，弧形裙楼连向东南 8F，下沉广场在弧内。
+ * 总览姿态只作为 fitToBox 的起始方向，最终取景由 CameraRig 用 Buildings 组的 Box3 框定。
  * 竖向视场角。打开 `?cam=` 时直接落到该姿态，不播放飞行动画。
  */
 export const CAMERA_POSES: Record<CameraId | 'overview', CameraPose> = {
   overview: { position: [24, 70, 210], target: [0, 36, 48], fov: 33 },
-  photo1: { position: [-24, 1.6, 178], target: [36, 46, 16], fov: 50 },
-  p2f000: { position: [-190, 58, 210], target: [28, 48, 28], fov: 40 },
-  p2f001: { position: [270, 110, 150], target: [-40, 30, 28], fov: 38 },
-  p2f002: { position: [198, 72, 150], target: [-18, 42, 30], fov: 46 },
-  p2f003: { position: [-148, 52, 228], target: [36, 48, 40], fov: 44 },
+  photo1: { position: [20, 1.6, 210], target: [52, 34, 26], fov: 50 },
+  p2f000: { position: [8, 52, 248], target: [38, 54, 24], fov: 40 },
+  p2f001: { position: [260, 48, -120], target: [45, 42, 58], fov: 36 },
+  p2f002: { position: [190, 64, 145], target: [-18, 50, 2], fov: 42 },
+  p2f003: { position: [-140, 50, 206], target: [44, 56, 38], fov: 40 },
 }
 
 export const CAMERA_LIMITS = {

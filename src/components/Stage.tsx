@@ -1,10 +1,24 @@
+import { useEffect } from 'react'
 import { useTwinStore } from '../store/store'
 import { SceneCanvas } from './Scene'
 
 export function Stage() {
   const view = useTwinStore((state) => state.view)
+  const selectedFloor = useTwinStore((state) => state.selectedFloor)
   const status = useTwinStore((state) => state.status)
   const error = useTwinStore((state) => state.error)
+  const exitFloor = useTwinStore((state) => state.exitFloor)
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      if (useTwinStore.getState().view !== 'floor') return
+      event.preventDefault()
+      useTwinStore.getState().exitFloor()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <main className="stage" aria-label="场景">
@@ -25,8 +39,13 @@ export function Stage() {
       ) : (
         <SceneCanvas />
       )}
+      {view === 'floor' && (
+        <button type="button" className="back-button" title="Esc 返回总览" onClick={() => exitFloor()}>
+          返回总览
+        </button>
+      )}
       {view !== 'blueprint' && (
-        <p className="view-chip">{view === 'floor' ? '单层视图' : '总览视图'}</p>
+        <p className="view-chip">{view === 'floor' ? `单层视图${selectedFloor ? ` · ${selectedFloor}` : ''}` : '总览视图'}</p>
       )}
     </main>
   )

@@ -314,6 +314,19 @@ button {
   left: 12px;
 }
 
+.back-button {
+  position: absolute;
+  z-index: 3;
+  top: 12px;
+  left: 12px;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: #0c2340;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(16, 32, 51, 0.2);
+}
+
 .scene-caption {
   right: 12px;
 }

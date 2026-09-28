@@ -38,9 +38,12 @@ function offset(anchor: Vector3, localX: number, localZ: number, target: Vector3
 
 export function FloorBadges() {
   const floors = useTwinStore((state) => state.floors)
-  const hidden = useTwinStore((state) => state.presentation === 'model' || state.cam != null)
+  const hidden = useTwinStore(
+    (state) => state.view !== 'building' || state.presentation === 'model' || state.cam != null,
+  )
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const emitFloorFly = useTwinStore((state) => state.emitFloorFly)
+  const enterFloor = useTwinStore((state) => state.enterFloor)
   const meshRef = useRef<InstancedMesh>(null)
   const textsRef = useRef<Text[]>([])
   const anchors = useMemo(() => floors.map((floor) => badgeAnchor(floor)), [floors])
@@ -157,8 +160,8 @@ export function FloorBadges() {
           event.stopPropagation()
           const floor = floors[event.instanceId % floors.length]
           if (!floor) return
-          setSelectedFloor(floor.id)
           emitFloorFly(floor.id)
+          enterFloor(floor.id)
         }}
       />
       <primitive object={batch} />

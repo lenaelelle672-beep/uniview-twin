@@ -1,29 +1,18 @@
 import { CameraControls } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { Box3, PerspectiveCamera, Vector3 } from 'three'
-import { TOWER_ROOF_M } from '../../data/floors'
+import { useLayoutEffect, useRef, type RefObject } from 'react'
+import { Box3, Group, PerspectiveCamera, Vector3 } from 'three'
 import { CAMERA_LIMITS, CAMERA_POSES, maxPolarAngleAboveGround } from '../../scene/cameras'
-import { EAST_ROOF_M } from '../../scene/massing'
-import { COURTYARD, FOOTPRINT, PARCEL_WORLD, TOWER } from '../../scene/siteGeometry'
 import { useTwinStore } from '../../store/store'
 
 const targetScratch = new Vector3()
 const positionScratch = new Vector3()
 
-function buildingSiteBox(): Box3 {
-  const box = new Box3()
-  PARCEL_WORLD.forEach(([x, z]) => {
-    box.expandByPoint(new Vector3(x, -COURTYARD.depth, z))
-    box.expandByPoint(new Vector3(x, 0.4, z))
-  })
-  box.expandByPoint(new Vector3(TOWER.minX - 2, -COURTYARD.depth, TOWER.minZ - 2))
-  box.expandByPoint(new Vector3(TOWER.maxX + 2, TOWER_ROOF_M + 4.4, TOWER.maxZ + 2))
-  box.expandByPoint(new Vector3(FOOTPRINT.minX - 2, 0, FOOTPRINT.minZ - 2))
-  box.expandByPoint(new Vector3(FOOTPRINT.maxX + 2, EAST_ROOF_M, FOOTPRINT.maxZ + 8))
-  box.expandByPoint(new Vector3(COURTYARD.cx - COURTYARD.rx - 2, -COURTYARD.depth, COURTYARD.cz - COURTYARD.rz - 2))
-  box.expandByPoint(new Vector3(COURTYARD.cx + COURTYARD.rx + 2, 1, COURTYARD.cz + COURTYARD.rz + 2))
-  return box
+export function FitBump({ onReady }: { onReady: () => void }) {
+  useLayoutEffect(() => {
+    onReady()
+  }, [onReady])
+  return null
 }
 
 function applyCameraLimits(rig: CameraControls) {
@@ -49,22 +38,36 @@ function applyCameraLimits(rig: CameraControls) {
   }
 }
 
-export function CameraRig() {
+export function CameraRig({
+  fitRef,
+  fitGeneration,
+}: {
+  fitRef: RefObject<Group | null>
+  fitGeneration: number
+}) {
   const cam = useTwinStore((state) => state.cam)
+  const view = useTwinStore((state) => state.view)
   const controls = useRef<CameraControls>(null)
   const camera = useThree((state) => state.camera)
   const size = useThree((state) => state.size)
-  const bounds = useMemo(() => buildingSiteBox(), [])
 
   useLayoutEffect(() => {
     const perspective = camera as PerspectiveCamera
     const rig = controls.current
+    const group = fitRef.current
     if (!rig) return
+    window.__twinRig = rig as unknown as Window['__twinRig']
+    if (view === 'floor') {
+      rig.setBoundary(undefined)
+      return
+    }
     rig.smoothTime = 0
     rig.minDistance = CAMERA_LIMITS.minDistance
     rig.maxDistance = CAMERA_LIMITS.maxDistance
-    window.__twinRig = rig
     if (!cam) {
+      if (!group) return
+      const bounds = new Box3().setFromObject(group)
+      if (bounds.isEmpty()) return
       const fov = CAMERA_POSES.overview.fov
       if (perspective.isPerspectiveCamera && perspective.fov !== fov) {
         perspective.fov = fov
@@ -117,11 +120,11 @@ export function CameraRig() {
     )
     applyCameraLimits(rig)
     rig.update(0)
-  }, [bounds, cam, camera, size.height, size.width])
+  }, [cam, camera, fitGeneration, fitRef, size.height, size.width, view])
 
   useFrame(() => {
     const rig = controls.current
-    if (!rig) return
+    if (!rig || view === 'floor') return
     applyCameraLimits(rig)
   }, -2)
 

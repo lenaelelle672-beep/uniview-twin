@@ -91,6 +91,7 @@ export function applySearchToStore(search: string) {
   useTwinStore.setState({
     view: parsed.view ?? 'building',
     selectedFloor: parsed.floor ?? null,
+    // TODO(D027): ?pos= 目前只记下工位编号，还没有飞到工位。以后飞镜头和工位详情都要调用 workstationPosition(floorId, workstationId)，不要读取数据里的 x/y/z。
     focusedDeskId: parsed.pos ?? null,
     cam: parsed.cam ?? null,
     dataUrl,

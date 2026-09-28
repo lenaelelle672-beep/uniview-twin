@@ -1,24 +1,32 @@
 import { useMemo } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { FLOOR_HEIGHT_F1_M, FLOOR_HEIGHT_TYPICAL_M } from '../../data/floors'
 import { extrudeUp } from '../../scene/extrude'
 import { FOOTPRINT } from '../../scene/siteGeometry'
-import { eastLowerOutline, eastUpperOutline, EAST_ROOF_M, outset } from '../../scene/massing'
+import { eastGrilleMounts, eastLowerOutline, eastUpperOutline, EAST_LOWER_TOP_M, EAST_ROOF_M, outset } from '../../scene/massing'
 import { curtainMaterial, finMaterial, solidMaterial } from '../../scene/materials'
 import { FinRow } from './Fins'
 
-const LOWER_TOP = FLOOR_HEIGHT_F1_M + FLOOR_HEIGHT_TYPICAL_M
+const LOWER_TOP = EAST_LOWER_TOP_M
 
 export function EastBlock({ model }: { model: boolean }) {
   const upperOutline = useMemo(() => eastUpperOutline(), [])
   const lowerOutline = useMemo(() => eastLowerOutline(), [])
-  const upper = useMemo(() => extrudeUp(upperOutline, EAST_ROOF_M - LOWER_TOP), [upperOutline])
+  const upper = useMemo(() => {
+    const geometry = extrudeUp(upperOutline, EAST_ROOF_M - LOWER_TOP)
+    geometry.clearGroups()
+    return geometry
+  }, [upperOutline])
   const lower = useMemo(() => extrudeUp(lowerOutline, LOWER_TOP), [lowerOutline])
   const curve = useMemo(() => upperOutline.slice(1), [upperOutline])
+  const focus = useMemo<[number, number]>(
+    () => [(FOOTPRINT.minX + FOOTPRINT.maxX) / 2, (FOOTPRINT.minZ + FOOTPRINT.maxZ) / 2],
+    [],
+  )
   const seams = useMemo(() => {
-    const levels = [LOWER_TOP, LOWER_TOP + FLOOR_HEIGHT_TYPICAL_M, LOWER_TOP + FLOOR_HEIGHT_TYPICAL_M * 2]
+    const span = EAST_ROOF_M - LOWER_TOP
+    const levels = [0, 1, 2, 3, 4, 5].map((index) => LOWER_TOP + (span * index) / 6)
     const parts = levels.map((level) => {
-      const geometry = extrudeUp(outset(upperOutline, 0.12, [40, 12]), 0.2)
+      const geometry = extrudeUp(outset(upperOutline, 0.12, focus), 0.2)
       geometry.translate(0, level, 0)
       return geometry
     })
@@ -26,20 +34,24 @@ export function EastBlock({ model }: { model: boolean }) {
     parts.forEach((geometry) => geometry.dispose())
     if (!merged) throw new Error('东楼分层线为空')
     return merged
-  }, [upperOutline])
+  }, [focus, upperOutline])
   const glass = model ? solidMaterial : curtainMaterial
+  const mounts = eastGrilleMounts()
 
   return (
     <group name="EastBlock">
+      {mounts.map((mount) => (
+        <object3D key={mount.name} name={mount.name} position={mount.position} rotation={mount.rotation} />
+      ))}
       <mesh geometry={lower} material={[solidMaterial, glass]} castShadow receiveShadow />
       <mesh geometry={upper} material={solidMaterial} position={[0, LOWER_TOP, 0]} castShadow receiveShadow />
       <mesh geometry={seams} material={finMaterial} castShadow />
       <FinRow
         points={curve}
-        spacing={0.95}
+        spacing={1.6}
         y={LOWER_TOP + (EAST_ROOF_M - LOWER_TOP) / 2}
         height={EAST_ROOF_M - LOWER_TOP - 0.15}
-        outwardFrom={[(FOOTPRINT.minX + FOOTPRINT.maxX) / 2, (FOOTPRINT.minZ + FOOTPRINT.maxZ) / 2]}
+        outwardFrom={focus}
       />
     </group>
   )

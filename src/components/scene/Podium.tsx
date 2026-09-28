@@ -1,34 +1,45 @@
 import { useMemo } from 'react'
 import { BufferGeometry, Float32BufferAttribute } from 'three'
-import { COURTYARD } from '../../scene/siteGeometry'
+import { COURT_DEPTH_M, COURT_SLOPE_M } from '../../scene/siteGeometry'
 import { extrudeUp } from '../../scene/extrude'
-import { outset, podiumOuterArc, podiumOutline, PODIUM_HEIGHT_M } from '../../scene/massing'
+import { courtyardHole, outset, podiumFrontArc, podiumFocus, podiumOutline, PODIUM_HEIGHT_M } from '../../scene/massing'
 import { courtWallMaterial, curtainMaterial, solidMaterial } from '../../scene/materials'
 import { FinRow } from './Fins'
 
+function insetToward(points: Array<[number, number]>, amount: number): Array<[number, number]> {
+  const cx = points.reduce((sum, [x]) => sum + x, 0) / points.length
+  const cz = points.reduce((sum, [, z]) => sum + z, 0) / points.length
+  return points.map(([x, z]) => {
+    const dx = x - cx
+    const dz = z - cz
+    const len = Math.hypot(dx, dz) || 1
+    return [x - (dx / len) * amount, z - (dz / len) * amount]
+  })
+}
+
 function makeBasin() {
-  const { cx, cz, rx, rz, depth, slope } = COURTYARD
-  const segments = 48
+  const topRing = courtyardHole()
+  const bottomRing = insetToward(topRing, COURT_SLOPE_M)
   const positions: number[] = []
-  const pushRing = (radiusX: number, radiusZ: number, y: number) => {
+  const push = (points: Array<[number, number]>, y: number) => {
     const start = positions.length / 3
-    for (let i = 0; i < segments; i += 1) {
-      const t = (i / segments) * Math.PI * 2
-      positions.push(cx + Math.cos(t) * radiusX, y, cz + Math.sin(t) * radiusZ)
-    }
+    points.forEach(([x, z]) => positions.push(x, y, z))
     return start
   }
-  const top = pushRing(rx, rz, 0.25)
-  const bottom = pushRing(Math.max(rx - slope, 4), Math.max(rz - slope * 0.7, 3), -depth)
+  const top = push(topRing, 0.25)
+  const bottom = push(bottomRing, -COURT_DEPTH_M)
+  const count = topRing.length
   const indices: number[] = []
-  for (let i = 0; i < segments; i += 1) {
-    const next = (i + 1) % segments
+  for (let i = 0; i < count; i += 1) {
+    const next = (i + 1) % count
     indices.push(top + i, bottom + i, top + next, bottom + i, bottom + next, top + next)
   }
+  const cx = bottomRing.reduce((sum, [x]) => sum + x, 0) / count
+  const cz = bottomRing.reduce((sum, [, z]) => sum + z, 0) / count
   const center = positions.length / 3
-  positions.push(cx, -depth, cz)
-  for (let i = 0; i < segments; i += 1) {
-    indices.push(center, bottom + ((i + 1) % segments), bottom + i)
+  positions.push(cx, -COURT_DEPTH_M, cz)
+  for (let i = 0; i < count; i += 1) {
+    indices.push(center, bottom + ((i + 1) % count), bottom + i)
   }
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
@@ -39,10 +50,11 @@ function makeBasin() {
 
 export function Podium({ model }: { model: boolean }) {
   const outline = useMemo(() => podiumOutline(), [])
+  const focus = useMemo(() => podiumFocus(), [])
   const shell = useMemo(() => extrudeUp(outline, PODIUM_HEIGHT_M), [outline])
-  const band = useMemo(() => extrudeUp(outset(outline, 0.16, [-36, 22]), 0.42), [outline])
+  const band = useMemo(() => extrudeUp(outset(outline, 0.16, focus), 0.42), [focus, outline])
   const basin = useMemo(() => makeBasin(), [])
-  const arc = useMemo(() => podiumOuterArc(), [])
+  const arc = useMemo(() => podiumFrontArc(), [])
   const materials = model ? [solidMaterial, solidMaterial] : [solidMaterial, curtainMaterial]
 
   return (
@@ -50,7 +62,7 @@ export function Podium({ model }: { model: boolean }) {
       <mesh geometry={shell} material={materials} castShadow receiveShadow />
       <mesh geometry={band} material={solidMaterial} position={[0, 5.75, 0]} castShadow receiveShadow />
       <mesh name="CourtyardWall" geometry={basin} material={courtWallMaterial} receiveShadow />
-      <FinRow points={arc} spacing={1.55} y={PODIUM_HEIGHT_M / 2} height={PODIUM_HEIGHT_M * 0.92} outwardFrom={[-36, 8]} />
+      <FinRow points={arc} spacing={2.2} y={PODIUM_HEIGHT_M / 2} height={PODIUM_HEIGHT_M * 0.92} outwardFrom={focus} />
     </group>
   )
 }

@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { BoxGeometry, PlaneGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { InstancedProp, PROP_URL } from './InstancedProp'
+import type { QualityTier } from '../../types'
+import { selectTreeModels } from '../../scene/quality'
+import { FoliageShadow, InstancedProp, PROP_URL } from './InstancedProp'
 import { extrudeUp } from '../../scene/extrude'
 import { courtyardHole } from '../../scene/massing'
 import {
@@ -22,6 +24,26 @@ import {
   zebraStripes,
   type Ribbon,
 } from '../../scene/siteGeometry'
+
+export function ParcelMesh() {
+  const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
+  const court = useMemo(() => courtyardHole(), [])
+  const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court]), [court])
+  return (
+    <mesh
+      name="Parcel"
+      geometry={parcel}
+      material={pavingMaterial}
+      position={[0, 0.04, 0]}
+      receiveShadow
+      onClick={(event) => {
+        if (event.delta > 2) return
+        event.stopPropagation()
+        setSelectedFloor(null)
+      }}
+    />
+  )
+}
 
 const PARK: Array<[number, number]> = [
   [-240, -90],
@@ -47,26 +69,11 @@ function ribbonGeometry(ribbons: Ribbon[], y: number) {
   return merged
 }
 
-export function Site({ model, night, perf }: { model: boolean; night: boolean; perf: boolean }) {
+export function Site({ model, night, quality }: { model: boolean; night: boolean; quality: QualityTier }) {
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const furniture = useMemo(() => placeStreetFurniture(), [])
-  const horizon = useMemo(() => {
-    const ground = extrudeUp(
-      [
-        [-1800, -1800],
-        [1800, -1800],
-        [1800, 1800],
-        [-1800, 1800],
-      ],
-      0.04,
-      [PARK],
-    )
-    ground.translate(0, -0.08, 0)
-    return ground
-  }, [])
   const court = useMemo(() => courtyardHole(), [])
   const park = useMemo(() => extrudeUp(PARK, 0.04, [court]), [court])
-  const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court]), [court])
   const plinth = useMemo(() => extrudeUp(footprintOutline(), 0.2), [])
   const sidewalk = useMemo(() => ribbonGeometry(sidewalkRibbons(), 0.08), [])
   const roads = useMemo(() => ribbonGeometry(roadRibbons(), 0.12), [])
@@ -81,6 +88,7 @@ export function Site({ model, night, perf }: { model: boolean; night: boolean; p
     if (!merged) throw new Error('斑马线几何为空')
     return merged
   }, [])
+  const trees = selectTreeModels(quality)
 
   const clearSelection = (event: { delta: number; stopPropagation: () => void }) => {
     if (event.delta > 2) return
@@ -96,18 +104,18 @@ export function Site({ model, night, perf }: { model: boolean; night: boolean; p
 
   return (
     <group onClick={clearSelection}>
-      <mesh geometry={horizon} material={grassMaterial} receiveShadow />
-      <mesh geometry={park} material={grassMaterial} receiveShadow />
-      <mesh geometry={parcel} material={pavingMaterial} position={[0, 0.04, 0]} receiveShadow />
+      <mesh name="Park" geometry={park} material={grassMaterial} receiveShadow />
       <mesh geometry={sidewalk} material={sidewalkMaterial} receiveShadow />
       <mesh geometry={roads} material={roadMaterial} receiveShadow />
       <mesh geometry={zebras} material={zebraMaterial} receiveShadow />
       <InstancedProp
-        url={perf ? PROP_URL.TREE_LO : PROP_URL.TREE_HI}
+        url={trees.visual === 'lo' ? PROP_URL.TREE_LO : PROP_URL.TREE_HI}
         placements={furniture.trees}
         night={night}
         y={0.12}
+        leafCastShadow={trees.shadow == null}
       />
+      {trees.shadow && <FoliageShadow url={PROP_URL.TREE_LO} placements={furniture.trees} y={0.12} />}
       <InstancedProp url={PROP_URL.LAMP} placements={furniture.lamps} night={night} y={0.12} />
     </group>
   )

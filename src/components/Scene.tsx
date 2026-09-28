@@ -1,16 +1,19 @@
 import { Canvas } from '@react-three/fiber'
-import { Suspense, useLayoutEffect } from 'react'
+import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { Group } from 'three'
+import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
-import { CameraRig } from './scene/CameraRig'
+import { CameraRig, FitBump } from './scene/CameraRig'
 import { EastBlock } from './scene/EastBlock'
 import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
 import { RenderProbe } from './scene/RenderProbe'
-import { Site } from './scene/Site'
+import { ParcelMesh, Site } from './scene/Site'
 import { Tower } from './scene/Tower'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
+import { qualityDprRange } from '../scene/quality'
 import { useTwinStore } from '../store/store'
 
 function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'balanced' | 'high' }) {
@@ -18,6 +21,10 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const night = mode === 'night'
   const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
+  const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
+  const fitRef = useRef<Group>(null)
+  const [fitGeneration, setFitGeneration] = useState(0)
+  const bumpFit = useCallback(() => setFitGeneration((value) => value + 1), [])
 
   return (
     <>
@@ -46,14 +53,23 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         shadow-camera-top={220}
         shadow-camera-bottom={-220}
       />
-      <CameraRig />
+      <CameraRig fitRef={fitRef} fitGeneration={fitGeneration} />
       <Suspense fallback={null}>
-        <Site model={model} night={night} perf={quality === 'perf'} />
-        <Tower night={night} />
-        <Podium model={model} />
-        <EastBlock model={model} />
-        <B1 model={model} />
+        <group ref={fitRef} name="Buildings">
+          <Tower night={night} />
+          <group name="AboveGradeContext" visible={!openBasement}>
+            {!model && <ParcelMesh />}
+            <Podium model={model} />
+            <EastBlock model={model} />
+            <B1 model={model} />
+          </group>
+          <FitBump onReady={bumpFit} />
+        </group>
+        <group visible={!openBasement}>
+          <Site model={model} night={night} quality={quality} />
+        </group>
         <FloorBadges />
+        <FloorStage />
         <RenderProbe />
       </Suspense>
     </>
@@ -68,7 +84,6 @@ export function SceneCanvas() {
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
   const pose = cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview
-  const dpr = quality === 'high' ? 1.5 : quality === 'perf' ? 1 : 1.25
   applySurfaceMode(mode)
 
   useLayoutEffect(() => {
@@ -76,10 +91,10 @@ export function SceneCanvas() {
   }, [mode])
 
   return (
-    <div className="scene-root" data-day-night={dayNight} data-presentation={presentation}>
+    <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={quality}>
       <Canvas
         key={quality}
-        dpr={dpr}
+        dpr={qualityDprRange(quality)}
         shadows={quality === 'perf' ? false : 'percentage'}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
         gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
