@@ -169,12 +169,14 @@ export function meetingChairBoxes(): BoxSpec[] {
 
 export function kitchenBoxes(): BoxSpec[] {
   const center = aabbCenter(KITCHEN)
+  const width = KITCHEN.x1 - KITCHEN.x0
+  const depth = KITCHEN.z1 - KITCHEN.z0
   return [
     roomFloor(KITCHEN, 0.02),
-    box(center.x, 0.48, KITCHEN.z0 + 1.15, KITCHEN.x1 - KITCHEN.x0 - 1.2, 0.92, 0.8),
-    box(center.x, 0.48, -6.4, 8.5, 0.9, 1.5),
-    box(center.x - 5.2, 1.15, -8.6, 2.2, 2.2, 0.8),
-    box(-16.2, 1.35, -9.4, 1.6, 1.1, 1.4),
+    box(center.x, 0.48, KITCHEN.z0 + 1.15, width - 1.4, 0.92, 0.8),
+    box(center.x, 0.48, center.z, width - 2.6, 0.9, depth * 0.32),
+    box(KITCHEN.x0 + 1.5, 1.15, KITCHEN.z0 + 1.5, 2.0, 2.2, 0.8),
+    box(KITCHEN.x1 - 1.5, 1.35, KITCHEN.z1 - 1.4, 1.6, 1.1, 1.4),
   ]
 }
 
@@ -296,7 +298,11 @@ export const kitchenGeometry = mergeBoxes(kitchenBoxes())
 export const privateGlassGeometry = mergeBoxes(privateRooms.glass)
 export const privateWoodGeometry = mergeBoxes(privateRooms.wood)
 export const privateChairGeometry = mergeBoxes(privateRooms.chairs)
-export const stageGeometry = mergeBoxes([
-  box(FAN.apexX, 0.2, FAN.apexZ + 0.55, 7.4, 0.32, 3.2),
-  box(FAN.apexX, 1.45, FAN.apexZ - 1.25, 6.2, 2.4, 0.12),
-])
+export function stageBoxes(): BoxSpec[] {
+  return [
+    box(FAN.apexX, 0.2, FAN.apexZ + 0.55, 7.4, 0.32, 3.2),
+    box(FAN.apexX, 1.45, FAN.apexZ - 1.25, 6.2, 2.4, 0.12),
+  ]
+}
+
+export const stageGeometry = mergeBoxes(stageBoxes())
