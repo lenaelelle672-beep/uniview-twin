@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { MockAdapter } from './adapters'
 import { floorIdList, TOWER_ROOF_M } from './floors'
-import { createMockData, DESKS_PER_FLOOR } from './mockData'
+import { ALARM_HEAVY_FLOORS, createMockData, DESKS_PER_FLOOR } from './mockData'
 import type { DeviceStatus } from '../types'
 
 const ALL_STATUSES = new Set<DeviceStatus>(['online', 'idle', 'alarm', 'offline'])
@@ -38,8 +38,26 @@ describe('MockAdapter', () => {
       expect(new Set(devices.map((device) => device.status))).toEqual(ALL_STATUSES)
       expect(floor.alarmCount).toBe(devices.filter((device) => device.status === 'alarm').length)
       expect(floor.offlineCount).toBe(devices.filter((device) => device.status === 'offline').length)
-      expect(floor.alarmCount).toBeGreaterThan(0)
-      expect(floor.offlineCount).toBeGreaterThan(0)
+
+      const heavy = (ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id)
+      const idle = devices.filter((device) => device.status === 'idle').length / devices.length
+      expect(idle).toBeGreaterThan(0.12)
+      expect(idle).toBeLessThan(0.18)
+      if (!heavy) {
+        expect(floor.alarmCount).toBeGreaterThanOrEqual(5)
+        expect(floor.alarmCount).toBeLessThanOrEqual(11)
+        expect(floor.offlineCount).toBeGreaterThanOrEqual(7)
+        expect(floor.offlineCount).toBeLessThanOrEqual(17)
+      }
+    }
+
+    const normal = data.floors.filter((floor) => !(ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id))
+    const heavy = data.floors.filter((floor) => (ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id))
+    const maxNormalAlarm = Math.max(...normal.map((floor) => floor.alarmCount))
+    expect(new Set(normal.map((floor) => floor.alarmCount)).size).toBeGreaterThan(1)
+    expect(new Set(normal.map((floor) => floor.offlineCount)).size).toBeGreaterThan(1)
+    for (const floor of heavy) {
+      expect(floor.alarmCount).toBeGreaterThanOrEqual(maxNormalAlarm + 4)
     }
   })
 
@@ -62,7 +80,5 @@ describe('MockAdapter', () => {
     expect(zones('F12')).toEqual(new Set(['tower']))
     expect(zones('B1')).toEqual(new Set(['podium']))
 
-    const firstDevices = data.devices.filter((device) => device.floorId === 'F1').slice(0, 4)
-    expect(firstDevices.map((device) => device.status)).toEqual(['online', 'idle', 'alarm', 'offline'])
   })
 })

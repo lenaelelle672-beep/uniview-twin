@@ -8,8 +8,7 @@ export function useUrlSync() {
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
   const cam = useTwinStore((state) => state.cam)
   const dataUrl = useTwinStore((state) => state.dataUrl)
-  const quality = useTwinStore((state) => state.quality)
-  const qualityPinned = useTwinStore((state) => state.qualityPinned)
+  const urlQuality = useTwinStore((state) => state.urlQuality)
   const presentation = useTwinStore((state) => state.presentation)
 
   useEffect(() => {
@@ -17,7 +16,7 @@ export function useUrlSync() {
     if (next === window.location.search) return
     const url = `${window.location.pathname}${next}${window.location.hash}`
     window.history.replaceState(null, '', url)
-  }, [view, selectedFloor, focusedDeskId, cam, dataUrl, quality, qualityPinned, presentation])
+  }, [view, selectedFloor, focusedDeskId, cam, dataUrl, urlQuality, presentation])
 
   useEffect(() => {
     const onPopState = () => applySearchToStore(window.location.search)

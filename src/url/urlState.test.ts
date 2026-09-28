@@ -45,10 +45,17 @@ describe('URL 解析与回写', () => {
     state.declineQuality()
     expect(useTwinStore.getState().quality).toBe('high')
     expect(storeToSearch()).toBe('?floor=F8&q=high')
+
+    useTwinStore.getState().setQuality('perf')
+    expect(useTwinStore.getState().quality).toBe('perf')
+    expect(useTwinStore.getState().urlQuality).toBe('high')
+    expect(storeToSearch()).toBe('?floor=F8&q=high')
+    useTwinStore.getState().declineQuality()
+    expect(useTwinStore.getState().quality).toBe('perf')
   })
 
-  it('未固定画质时可以降档，手动选择后写入 q 并固定', () => {
-    useTwinStore.setState({ quality: 'high', qualityPinned: false })
+  it('未固定画质时可以降档；手动选择后本次会话不再降档，且不写 q', () => {
+    useTwinStore.setState({ quality: 'high', qualityPinned: false, downgradeSuppressed: false, urlQuality: null })
     useTwinStore.getState().declineQuality()
     expect(useTwinStore.getState().quality).toBe('balanced')
     expect(useTwinStore.getState().qualityPinned).toBe(false)
@@ -58,10 +65,12 @@ describe('URL 解析与回写', () => {
     expect(useTwinStore.getState().quality).toBe('perf')
 
     useTwinStore.getState().setQuality('balanced')
-    expect(useTwinStore.getState().qualityPinned).toBe(true)
+    expect(useTwinStore.getState().qualityPinned).toBe(false)
+    expect(useTwinStore.getState().downgradeSuppressed).toBe(true)
+    expect(useTwinStore.getState().urlQuality).toBeNull()
     useTwinStore.getState().declineQuality()
     expect(useTwinStore.getState().quality).toBe('balanced')
-    expect(storeToSearch()).toBe('?q=balanced')
+    expect(storeToSearch()).toBe('')
   })
 
   it('回写 view、floor、pos、cam、data', () => {

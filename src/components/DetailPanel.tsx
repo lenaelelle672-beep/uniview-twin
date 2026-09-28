@@ -15,7 +15,7 @@ export function DetailPanel() {
 
   return (
     <aside className="detail-panel" aria-label="详情">
-      <div className="panel-title">详情</div>
+      <div className="panel-title">{floor ? `${floor.id} · ${floor.name}` : '详情'}</div>
       <div className="detail-body">
         {status === 'error' && <p className="panel-hint">数据未能加载，无法显示详情。</p>}
         {status !== 'error' && !selectedFloor && <p className="panel-hint">请在左侧选择楼层。</p>}
