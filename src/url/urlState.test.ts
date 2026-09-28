@@ -1,0 +1,80 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+import { resetTwinStore, useTwinStore } from '../store/store'
+import { applySearchToStore, parseSearch, serializeUrl, storeToSearch } from './urlState'
+
+describe('URL 解析与回写', () => {
+  beforeEach(() => {
+    resetTwinStore()
+  })
+
+  it('解析 view、floor、pos、cam、data、q', () => {
+    expect(parseSearch('?view=floor&floor=F12&pos=F12-66&cam=p2f000&data=/sample.json&q=perf')).toEqual({
+      view: 'floor',
+      floor: 'F12',
+      pos: 'F12-66',
+      cam: 'p2f000',
+      data: '/sample.json',
+      q: 'perf',
+    })
+    expect(parseSearch('?pos=B1-8&cam=photo1&view=blueprint&q=high')).toEqual({
+      pos: 'B1-8',
+      cam: 'photo1',
+      view: 'blueprint',
+      q: 'high',
+    })
+  })
+
+  it('忽略非法取值', () => {
+    expect(parseSearch('?view=orbit&floor=F23&floor=F0&pos=desk&cam=side&q=ultra')).toEqual({})
+    expect(parseSearch('')).toEqual({})
+  })
+
+  it('序列化时保留站内路径的斜杠，并省略默认总览', () => {
+    expect(serializeUrl({ view: 'building', q: 'balanced' })).toBe('?q=balanced')
+    expect(serializeUrl({})).toBe('')
+    const raw = '?view=floor&floor=B1&pos=B1-3&cam=p2f003&data=/sample.json&q=balanced'
+    expect(serializeUrl(parseSearch(raw))).toBe(raw)
+  })
+
+  it('?q= 固定画质档后不自动降档', () => {
+    applySearchToStore('?q=high&floor=F8')
+    const state = useTwinStore.getState()
+    expect(state.quality).toBe('high')
+    expect(state.qualityPinned).toBe(true)
+    expect(state.selectedFloor).toBe('F8')
+    state.declineQuality()
+    expect(useTwinStore.getState().quality).toBe('high')
+    expect(storeToSearch()).toBe('?floor=F8&q=high')
+  })
+
+  it('未固定画质时可以降档，手动选择后写入 q 并固定', () => {
+    useTwinStore.setState({ quality: 'high', qualityPinned: false })
+    useTwinStore.getState().declineQuality()
+    expect(useTwinStore.getState().quality).toBe('balanced')
+    expect(useTwinStore.getState().qualityPinned).toBe(false)
+    useTwinStore.getState().declineQuality()
+    expect(useTwinStore.getState().quality).toBe('perf')
+    useTwinStore.getState().declineQuality()
+    expect(useTwinStore.getState().quality).toBe('perf')
+
+    useTwinStore.getState().setQuality('balanced')
+    expect(useTwinStore.getState().qualityPinned).toBe(true)
+    useTwinStore.getState().declineQuality()
+    expect(useTwinStore.getState().quality).toBe('balanced')
+    expect(storeToSearch()).toBe('?q=balanced')
+  })
+
+  it('回写 view、floor、pos、cam、data', () => {
+    applySearchToStore('?data=/sample.json&cam=p2f001&pos=F2-6')
+    useTwinStore.getState().setView('blueprint')
+    useTwinStore.getState().setSelectedFloor('F2')
+    expect(storeToSearch()).toBe('?view=blueprint&floor=F2&pos=F2-6&cam=p2f001&data=/sample.json')
+    expect(parseSearch(storeToSearch()).data).toBe('/sample.json')
+  })
+
+  it('外站 data 地址不作为可加载路径，但仍保留在地址栏', () => {
+    applySearchToStore('?data=https://example.com/a.json')
+    expect(useTwinStore.getState().error).toContain('站内路径')
+    expect(parseSearch(storeToSearch()).data).toBe('https://example.com/a.json')
+  })
+})
