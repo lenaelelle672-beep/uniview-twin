@@ -1,4 +1,4 @@
-import { Color, DoubleSide, MeshPhysicalMaterial, MeshStandardMaterial, type Material } from 'three'
+import { Color, DoubleSide, FrontSide, MeshPhysicalMaterial, MeshStandardMaterial, type Material } from 'three'
 
 export type SurfaceMode = 'day' | 'night' | 'model'
 
@@ -40,6 +40,7 @@ export function createCurtainMaterial(): MeshPhysicalMaterial {
     metalness: 0.72,
     roughness: 0.07,
     envMapIntensity: 1.15,
+    side: FrontSide,
   })
   material.userData.grid = grid
   material.userData.strength = strength

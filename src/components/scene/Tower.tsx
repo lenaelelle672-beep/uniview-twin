@@ -1,38 +1,21 @@
 import { useMemo } from 'react'
-import { BoxGeometry, PlaneGeometry } from 'three'
+import { BoxGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { listFloorSpecs, TOWER_ROOF_M } from '../../data/floors'
 import { curtainMaterial, grilleMaterial, jointMaterial, solidMaterial } from '../../scene/materials'
 import { TOWER } from '../../scene/siteGeometry'
+import { createTowerGlass } from '../../scene/towerGlass'
 import { RoofSign } from './InstancedProp'
 
 const BAND = 0.78
 const WIDTH = TOWER.maxX - TOWER.minX
 const DEPTH = TOWER.maxZ - TOWER.minZ
 
-function mergeParts(parts: BoxGeometry[] | PlaneGeometry[]) {
+function mergeParts(parts: BoxGeometry[]) {
   const merged = mergeGeometries(parts)
   parts.forEach((geometry) => geometry.dispose())
   if (!merged) throw new Error('楼层几何为空')
   return merged
-}
-
-function makeGlass(elevation: number, height: number) {
-  const glassHeight = height - BAND
-  const y = elevation + BAND + glassHeight / 2
-  const inset = 0.06
-  const south = new PlaneGeometry(WIDTH, glassHeight)
-  south.translate(0, y, TOWER.maxZ - inset)
-  const north = new PlaneGeometry(WIDTH, glassHeight)
-  north.rotateY(Math.PI)
-  north.translate(0, y, TOWER.minZ + inset)
-  const east = new PlaneGeometry(DEPTH, glassHeight)
-  east.rotateY(Math.PI / 2)
-  east.translate(TOWER.maxX - inset, y, 0)
-  const west = new PlaneGeometry(DEPTH, glassHeight)
-  west.rotateY(-Math.PI / 2)
-  west.translate(TOWER.minX + inset, y, 0)
-  return mergeParts([south, north, east, west])
 }
 
 function makeBand(elevation: number) {
@@ -50,7 +33,7 @@ function makeBand(elevation: number) {
 }
 
 function FloorShell({ id, elevation, height }: { id: string; elevation: number; height: number }) {
-  const glass = useMemo(() => makeGlass(elevation, height), [elevation, height])
+  const glass = useMemo(() => createTowerGlass(elevation, height), [elevation, height])
   const band = useMemo(() => makeBand(elevation), [elevation])
   return (
     <group name={`FloorShell-${id}`}>
