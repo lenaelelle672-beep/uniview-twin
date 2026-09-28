@@ -1,0 +1,39 @@
+.focus-card {
+  margin: 0 0 12px;
+  padding: 8px 10px;
+  border: 1px solid #f0c2ba;
+  border-radius: 8px;
+  background: #fff8f6;
+}
+
+.focus-card h3 {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.focus-card h3:first-child {
+  margin-top: 0;
+}
+
+.focus-card .detail-list {
+  margin-bottom: 0;
+}
+
+.focus-card .detail-list div {
+  align-items: flex-start;
+}
+
+.focus-card .detail-list dd {
+  min-width: 0;
+  flex: 1;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.focus-card .cell-alarm {
+  color: #b42318;
+}
+
+.focus-card .cell-offline {
+  color: #667085;
+}

@@ -74,7 +74,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
 
   function pick(row: AlarmListRow) {
     setActiveId(row.deviceId)
-    focusDevice({ floor: row.floorId, deskId: row.deskId })
+    focusDevice({ floor: row.floorId, deskId: row.deskId, deviceId: row.deviceId })
     setFocusNote(
       row.deskId ? `已选择工位 ${row.deskId}，楼层 ${row.floorId}` : `已选择楼层 ${row.floorId}，该设备没有工位`,
     )
