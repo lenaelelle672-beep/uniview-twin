@@ -59,4 +59,6 @@ npm test
 
 ## 运行时不访问外网
 
-字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自 three 自带的 `RoomEnvironment`（本地生成），没有使用 drei 的 Environment 预设。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。
+字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自 three 自带的 `RoomEnvironment`（本地生成），没有使用 drei 的 Environment 预设。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。楼顶标识是 v2（蓝色 UNV，材质槽 `sign_face` / `sign_face_cn` / `sign_body`）。
+
+单层视图的房间标签使用本地字体 `public/fonts/NotoSansSC-Regular-subset.otf`（Noto Sans CJK SC Regular 子集：GB2312 汉字、ASCII 和常用标点，OFL）。许可全文在 `public/fonts/NotoSansCJK-copyright.txt`。走廊人物在 `public/models/people/`，只在均衡档和高画质的单层视图里加载，性能档不请求这些 GLB。模型是 Poly Pizza 上的 CC0（Quaternius）：[Man in Suit](https://poly.pizza/m/mQnGoME1ez)、[Woman Casual](https://poly.pizza/m/jpKRgGDxhk)、[Animated Human](https://poly.pizza/m/c3Ibh9I3udk)。仓库私有，这些 GLB 不单独对外分发。

@@ -79,6 +79,7 @@ export function Tower({ night }: { night: boolean }) {
     geometry.translate(0, TOWER_ROOF_M - 0.175, 0)
     return geometry
   }, [])
+  // v2 宽 15 m、高 3 m，局部底边 y=0、字面朝 +Z。贴南侧女儿墙外皮靠西端，底边与屋面齐平。
   const signZ = TOWER.maxZ + 0.1 + 0.36 + 0.03
   const signX = TOWER.minX + 7.5 + 1.4
 

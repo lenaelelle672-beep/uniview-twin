@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { Color } from 'three'
 import type { FloorSpec } from '../../data/floors'
+import type { Device } from '../../types'
 import { TOWER } from '../siteGeometry'
 import { SLAB_M } from './cut'
 import { Ceiling } from './Ceiling'
@@ -28,6 +30,10 @@ import {
   slabMaterial,
   woodMaterial,
 } from './materials'
+import { CorridorPeople } from './CorridorPeople'
+import { DeviceBadges } from './DeviceBadges'
+import { RoomLabels } from './RoomLabels'
+import { towerRoomLabels } from './roomLabels'
 import { InstancedSlots, Workstations } from './Workstations'
 
 const columns = towerColumns().map((column) => ({ ...column, rot: 0 }))
@@ -36,10 +42,14 @@ export function TowerInterior({
   spec,
   slots,
   colors,
+  devices,
+  showPeople,
 }: {
   spec: FloorSpec
   slots: Slot[]
   colors: Color[]
+  devices: Device[]
+  showPeople: boolean
 }) {
   const width = TOWER.maxX - TOWER.minX - 0.7
   const depth = TOWER.maxZ - TOWER.minZ - 0.7
@@ -66,6 +76,11 @@ export function TowerInterior({
       <mesh geometry={meetingGlassGeometry} material={meetingGlassMaterial} />
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
+      <DeviceBadges floorId={spec.id} devices={devices} />
+      <Suspense fallback={null}>
+        <RoomLabels labels={towerRoomLabels()} />
+        <CorridorPeople enabled={showPeople} />
+      </Suspense>
       <Ceiling width={width} depth={depth} y={spec.height - SLAB_M - 0.06} />
     </group>
   )

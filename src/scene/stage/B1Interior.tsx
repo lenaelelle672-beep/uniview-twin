@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react'
+import { Suspense, useEffect, useMemo } from 'react'
 import { Color } from 'three'
+import type { Device } from '../../types'
 import { ellipsePoints } from '../massing'
 import { FOOTPRINT, footprintOutline } from '../siteGeometry'
 import { extrudeUp } from '../extrude'
@@ -47,6 +48,9 @@ import {
   stageMaterial,
   woodMaterial,
 } from './materials'
+import { DeviceBadges } from './DeviceBadges'
+import { RoomLabels } from './RoomLabels'
+import { basementRoomLabels } from './roomLabels'
 import { InstancedSlots, Workstations } from './Workstations'
 
 const tables = canteenTables().map((table) => ({ ...table, rot: 0 }))
@@ -54,7 +58,7 @@ const diningChairs = canteenChairs(canteenTables())
 const fanSeats = fanSeatSlots()
 const columns = b1Columns().map((column) => ({ ...column, rot: 0 }))
 
-export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }) {
+export function B1Interior({ slots, colors, devices }: { slots: Slot[]; colors: Color[]; devices: Device[] }) {
   const slab = useMemo(() => {
     const geometry = extrudeUp(footprintOutline(), SLAB_M)
     geometry.translate(0, -SLAB_M, 0)
@@ -106,6 +110,10 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
       </group>
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
+      <DeviceBadges floorId="B1" devices={devices} />
+      <Suspense fallback={null}>
+        <RoomLabels labels={basementRoomLabels()} />
+      </Suspense>
       <Ceiling
         width={FOOTPRINT.maxX - FOOTPRINT.minX}
         depth={FOOTPRINT.maxZ - FOOTPRINT.minZ}
