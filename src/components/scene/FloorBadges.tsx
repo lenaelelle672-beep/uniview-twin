@@ -60,7 +60,10 @@ export function FloorBadges() {
       new MeshBasicMaterial({
         color: '#ffffff',
         map: texture,
-        alphaTest: 0.5,
+        // Far mip levels average edge alpha. 0.2 lets those texels reach
+        // alpha-to-coverage so the stroke stays. transparent stays off.
+        alphaTest: 0.2,
+        alphaToCoverage: true,
         transparent: false,
         toneMapped: false,
       }),
