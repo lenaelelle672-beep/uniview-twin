@@ -22,6 +22,12 @@ import {
   type Ribbon,
 } from '../../scene/siteGeometry'
 
+export function ParcelMesh() {
+  const court = useMemo(() => courtyardHole(), [])
+  const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court]), [court])
+  return <mesh name="Parcel" geometry={parcel} material={pavingMaterial} position={[0, 0.04, 0]} receiveShadow />
+}
+
 const PARK: Array<[number, number]> = [
   [-240, -90],
   [160, -90],
@@ -50,7 +56,6 @@ export function Site({ model, night, perf }: { model: boolean; night: boolean; p
   const furniture = useMemo(() => placeStreetFurniture(), [])
   const court = useMemo(() => courtyardHole(), [])
   const park = useMemo(() => extrudeUp(PARK, 0.04, [court]), [court])
-  const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court]), [court])
   const plinth = useMemo(() => extrudeUp(footprintOutline(), 0.2), [])
   const sidewalk = useMemo(() => ribbonGeometry(sidewalkRibbons(), 0.08), [])
   const roads = useMemo(() => ribbonGeometry(roadRibbons(), 0.12), [])
@@ -72,8 +77,7 @@ export function Site({ model, night, perf }: { model: boolean; night: boolean; p
 
   return (
     <group>
-      <mesh geometry={park} material={grassMaterial} receiveShadow />
-      <mesh geometry={parcel} material={pavingMaterial} position={[0, 0.04, 0]} receiveShadow />
+      <mesh name="Park" geometry={park} material={grassMaterial} receiveShadow />
       <mesh geometry={sidewalk} material={sidewalkMaterial} receiveShadow />
       <mesh geometry={roads} material={roadMaterial} receiveShadow />
       <mesh geometry={zebras} material={zebraMaterial} receiveShadow />

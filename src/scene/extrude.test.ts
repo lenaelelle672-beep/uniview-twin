@@ -27,10 +27,11 @@ describe('轮廓挤出', () => {
   })
 
   it('裙房、下沉庭院和东楼轮廓可以挤出', () => {
-    const podium = extrudeUp(podiumOutline(), 10.2, [courtyardHole()])
+    const podium = extrudeUp(podiumOutline(), 10.2)
+    const court = extrudeUp(courtyardHole(), 5.5)
     const upper = extrudeUp(eastUpperOutline(), 12.6)
     const lower = extrudeUp(eastLowerOutline(), 10.2)
-    for (const geometry of [podium, upper, lower]) {
+    for (const geometry of [podium, court, upper, lower]) {
       geometry.computeBoundingBox()
       expect(geometry.boundingBox?.max.y).toBeGreaterThan(1)
       expect(Number.isFinite(geometry.boundingBox?.min.x)).toBe(true)

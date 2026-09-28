@@ -1,41 +1,39 @@
 import { CameraControls } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useRef } from 'react'
-import { Box3, PerspectiveCamera, Vector3 } from 'three'
+import { useLayoutEffect, useRef, type RefObject } from 'react'
+import { Box3, Group, PerspectiveCamera } from 'three'
 import { CAMERA_POSES } from '../../scene/cameras'
-import { EAST_ROOF_M } from '../../scene/massing'
-import { COURTYARD, FOOTPRINT, PARCEL_WORLD, TOWER } from '../../scene/siteGeometry'
-import { TOWER_ROOF_M } from '../../data/floors'
 import { useTwinStore } from '../../store/store'
 
-function buildingSiteBox(): Box3 {
-  const box = new Box3()
-  PARCEL_WORLD.forEach(([x, z]) => {
-    box.expandByPoint(new Vector3(x, -COURTYARD.depth, z))
-    box.expandByPoint(new Vector3(x, 0.4, z))
-  })
-  box.expandByPoint(new Vector3(TOWER.minX - 2, -COURTYARD.depth, TOWER.minZ - 2))
-  box.expandByPoint(new Vector3(TOWER.maxX + 2, TOWER_ROOF_M + 4.4, TOWER.maxZ + 2))
-  box.expandByPoint(new Vector3(FOOTPRINT.minX - 2, 0, FOOTPRINT.minZ - 2))
-  box.expandByPoint(new Vector3(FOOTPRINT.maxX + 2, EAST_ROOF_M, FOOTPRINT.maxZ + 8))
-  box.expandByPoint(new Vector3(COURTYARD.cx - COURTYARD.rx - 2, -COURTYARD.depth, COURTYARD.cz - COURTYARD.rz - 2))
-  box.expandByPoint(new Vector3(COURTYARD.cx + COURTYARD.rx + 2, 1, COURTYARD.cz + COURTYARD.rz + 2))
-  return box
+export function FitBump({ onReady }: { onReady: () => void }) {
+  useLayoutEffect(() => {
+    onReady()
+  }, [onReady])
+  return null
 }
 
-export function CameraRig() {
+export function CameraRig({
+  fitRef,
+  fitGeneration,
+}: {
+  fitRef: RefObject<Group | null>
+  fitGeneration: number
+}) {
   const cam = useTwinStore((state) => state.cam)
   const controls = useRef<CameraControls>(null)
   const camera = useThree((state) => state.camera)
   const size = useThree((state) => state.size)
-  const bounds = useMemo(() => buildingSiteBox(), [])
 
   useLayoutEffect(() => {
     const perspective = camera as PerspectiveCamera
     const rig = controls.current
+    const group = fitRef.current
     if (!rig) return
     rig.smoothTime = 0
     if (!cam) {
+      if (!group) return
+      const bounds = new Box3().setFromObject(group)
+      if (bounds.isEmpty()) return
       const fov = CAMERA_POSES.overview.fov
       if (perspective.isPerspectiveCamera && perspective.fov !== fov) {
         perspective.fov = fov
@@ -78,7 +76,7 @@ export function CameraRig() {
       pose.target[2],
       false,
     )
-  }, [bounds, cam, camera, size.height, size.width])
+  }, [cam, camera, fitGeneration, fitRef, size.height, size.width])
 
   return <CameraControls ref={controls} makeDefault smoothTime={0} />
 }

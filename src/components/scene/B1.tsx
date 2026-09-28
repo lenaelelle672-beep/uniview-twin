@@ -1,9 +1,9 @@
 import { useMemo } from 'react'
 import { BoxGeometry } from 'three'
 import { extrudeUp } from '../../scene/extrude'
-import { ellipsePoints } from '../../scene/massing'
+import { courtyardHole } from '../../scene/massing'
 import { solidMaterial, stoneMaterial, zoneMaterials } from '../../scene/materials'
-import { COURTYARD, FOOTPRINT, footprintOutline, TOWER } from '../../scene/siteGeometry'
+import { FOOTPRINT, footprintOutline, TOWER } from '../../scene/siteGeometry'
 
 export function B1({ model }: { model: boolean }) {
   const slab = useMemo(() => extrudeUp(footprintOutline(), 0.28), [])
@@ -21,19 +21,18 @@ export function B1({ model }: { model: boolean }) {
     [],
   )
   const eastCenter: [number, number] = [(FOOTPRINT.minX + FOOTPRINT.maxX) / 2, (FOOTPRINT.minZ + FOOTPRINT.maxZ) / 2]
-  const atrium = useMemo(
-    () => extrudeUp(ellipsePoints(COURTYARD.cx, COURTYARD.cz, COURTYARD.rx - 0.4, COURTYARD.rz - 0.35, 28), 0.12),
-    [],
-  )
+  const atrium = useMemo(() => extrudeUp(courtyardHole(), 0.12), [])
   const rooms = useMemo(() => {
     const geometry = new BoxGeometry(4.2, 0.16, 5.2)
     return geometry
   }, [])
   const fan = useMemo(() => {
-    const points: Array<[number, number]> = [[28, 18]]
+    const cx = (FOOTPRINT.minX + FOOTPRINT.maxX) / 2
+    const cz = (FOOTPRINT.minZ + FOOTPRINT.maxZ) / 2
+    const points: Array<[number, number]> = [[cx, cz]]
     for (let i = 0; i <= 14; i += 1) {
       const t = -0.4 + (2.2 * i) / 14
-      points.push([28 + Math.cos(t) * 16, 18 + Math.sin(t) * 14])
+      points.push([cx + Math.cos(t) * 12, cz + Math.sin(t) * 10])
     }
     return extrudeUp(points, 0.12)
   }, [])

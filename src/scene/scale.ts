@@ -13,23 +13,19 @@ export function pointsToMeters(points: number): number {
 }
 
 /**
- * 东南 8F 体块的外墙（site.pdf 粗线）。塔楼不在这块上。
- * 东西 98.5 m，南北 51.0 m。
+ * 东南 8F 外墙细线（不是 stroke-width 6 的地下室外轮廓）。
+ * 西 1961.88 / 东 2451.1 / 北 1354.16 / 南 1701.8，约 58.9 m × 41.9 m。
  */
 export const FOOTPRINT_PAGE = {
-  west: 1801.56,
-  east: 2619.72,
-  north: 1385.72,
-  south: 1809.32,
+  west: 1961.88,
+  east: 2451.1,
+  north: 1354.16,
+  south: 1701.8,
 } as const
 
-export const TOWER_WIDTH_M = 67
-export const TOWER_DEPTH_M = 27
-
 /**
- * 22F 塔楼平面中心。测量坐标北墙 X=76048.690，东西角 Y=86355.182 / 86422.082
- * （66.90 m），西墙进深 27.4 m。矩形按 67×27 m 贴住北墙和东西角。
- * 页面位置由用地西北角 (1099.1, 455.1) = (Y=86262.511, X=76072.020) 和比例条 8.306 pt/m 换算。
+ * 用地西北角 (1099.1, 455.1) = (Y=86262.511, X=76072.020)。
+ * 北红线长 1708.7 pt，对应东距 86262.511→86468.220。
  */
 const SURVEY_PT_PER_M = 1708.7 / (86468.22 - 86262.511)
 const SURVEY_NW_PAGE_X = 1099.1
@@ -44,15 +40,25 @@ export function surveyToPage(easting: number, northing: number): [number, number
   ]
 }
 
-const TOWER_NORTH_Y = surveyToPage(86355.182, 76048.69)[1]
-const TOWER_WEST_X = surveyToPage(86355.182, 76048.69)[0]
-const TOWER_EAST_X = surveyToPage(86422.082, 76048.69)[0]
+/**
+ * 22F 塔楼。东墙是 Y=86355.182（不是西墙）；西墙是 Y=86295.28。
+ * 北墙 X=76048.690，南墙 X=76021.290。图上 59.90 m × 27.40 m。
+ * 世界原点是这块矩形的平面中心。
+ */
+const TOWER_NW = surveyToPage(86295.28, 76048.69)
+const TOWER_SE = surveyToPage(86355.182, 76021.29)
 
-export const ORIGIN_PAGE_X = (TOWER_WEST_X + TOWER_EAST_X) / 2
-export const ORIGIN_PAGE_Y = TOWER_NORTH_Y + (TOWER_DEPTH_M * PT_PER_M) / 2
+export const TOWER_WIDTH_M = (TOWER_SE[0] - TOWER_NW[0]) / PT_PER_M
+export const TOWER_DEPTH_M = (TOWER_SE[1] - TOWER_NW[1]) / PT_PER_M
+export const ORIGIN_PAGE_X = (TOWER_NW[0] + TOWER_SE[0]) / 2
+export const ORIGIN_PAGE_Y = (TOWER_NW[1] + TOWER_SE[1]) / 2
 
 export function pageToWorld(pageX: number, pageY: number): [number, number] {
   return [(pageX - ORIGIN_PAGE_X) / PT_PER_M, (pageY - ORIGIN_PAGE_Y) / PT_PER_M]
+}
+
+export function worldToPage(x: number, z: number): [number, number] {
+  return [ORIGIN_PAGE_X + x * PT_PER_M, ORIGIN_PAGE_Y + z * PT_PER_M]
 }
 
 export function polygonArea(points: Array<[number, number]>): number {

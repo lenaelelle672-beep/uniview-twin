@@ -1,50 +1,26 @@
-import { COURTYARD, EAST_CANTILEVER_M, EAST_ROOF_M, FOOTPRINT, PODIUM_HEIGHT_M } from './siteGeometry'
+import { pageRingToWorld, plazaPage, podiumFrontPage, podiumPage } from './plan'
+import { EAST_CANTILEVER_M, EAST_ROOF_M, FOOTPRINT, PODIUM_HEIGHT_M } from './siteGeometry'
 
 export { EAST_CANTILEVER_M, EAST_ROOF_M, PODIUM_HEIGHT_M }
 
-export function ellipsePoints(
-  cx: number,
-  cz: number,
-  rx: number,
-  rz: number,
-  segments = 36,
-): Array<[number, number]> {
-  const points: Array<[number, number]> = []
-  for (let i = 0; i < segments; i += 1) {
-    const t = (i / segments) * Math.PI * 2
-    points.push([cx + Math.cos(t) * rx, cz + Math.sin(t) * rz])
-  }
-  return points
-}
-
 export function courtyardHole(): Array<[number, number]> {
-  return ellipsePoints(COURTYARD.cx, COURTYARD.cz, COURTYARD.rx, COURTYARD.rz, 40)
+  return pageRingToWorld(plazaPage())
 }
 
-/** 裙房外弧：西南广场上的两层玻璃廊，庭院在弧的南侧，不把庭院包进屋面。 */
-export function podiumOuterArc(): Array<[number, number]> {
-  const points: Array<[number, number]> = []
-  const steps = 28
-  const a0 = Math.PI * 0.18
-  const a1 = Math.PI * 0.82
-  for (let i = 0; i <= steps; i += 1) {
-    const t = a0 + ((a1 - a0) * i) / steps
-    points.push([-38 + Math.cos(t) * 30, 24 + Math.sin(t) * 16])
-  }
-  return points
+/** 裙楼朝向广场的凹弧，fins 沿这条外墙。 */
+export function podiumFrontArc(): Array<[number, number]> {
+  return pageRingToWorld(podiumFrontPage())
 }
 
 export function podiumOutline(): Array<[number, number]> {
-  const arc = podiumOuterArc()
-  const inner = arc
-    .map(([x, z]) => {
-      const dx = -28 - x
-      const dz = 8 - z
-      const len = Math.hypot(dx, dz) || 1
-      return [x + (dx / len) * 12, z + (dz / len) * 12] as [number, number]
-    })
-    .reverse()
-  return [...arc, ...inner]
+  return pageRingToWorld(podiumPage())
+}
+
+export function podiumFocus(): [number, number] {
+  const points = podiumOutline()
+  const sx = points.reduce((sum, [x]) => sum + x, 0)
+  const sz = points.reduce((sum, [, z]) => sum + z, 0)
+  return [sx / points.length, sz / points.length]
 }
 
 function eastBody(x0: number, x1: number, zNorth: number, zSouth: number, bulge: number): Array<[number, number]> {
@@ -61,17 +37,19 @@ function eastBody(x0: number, x1: number, zNorth: number, zSouth: number, bulge:
   return points
 }
 
+/** 上部南侧弧面向外悬挑；两端仍落在外墙角上。 */
 export function eastUpperOutline(): Array<[number, number]> {
-  return eastBody(FOOTPRINT.minX, FOOTPRINT.maxX, FOOTPRINT.minZ, FOOTPRINT.maxZ, 6)
+  return eastBody(FOOTPRINT.minX, FOOTPRINT.maxX, FOOTPRINT.minZ, FOOTPRINT.maxZ, EAST_CANTILEVER_M)
 }
 
+/** 下部平面内退，南侧收进，让出上部悬挑。 */
 export function eastLowerOutline(): Array<[number, number]> {
   return eastBody(
     FOOTPRINT.minX + 1.4,
     FOOTPRINT.maxX - 1.2,
     FOOTPRINT.minZ + 1.6,
-    FOOTPRINT.maxZ - EAST_CANTILEVER_M,
-    5,
+    FOOTPRINT.maxZ - 1.5,
+    1.2,
   )
 }
 

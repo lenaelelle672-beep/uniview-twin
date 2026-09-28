@@ -17,6 +17,10 @@ import {
 export const PARCEL_PAGE: Array<[number, number]> = [
   [1099.1, 455.1],
   [2807.8, 453.8],
+  // 东侧 P3：边界在 y≈850 向西折进约 1.96 m（十字缺口端点 2787.84, 849.92）
+  [2804.14, 846.5],
+  [2787.84, 849.92],
+  [2804.07, 853.4],
   [2803.1, 957.4],
   [2755.1, 1205.0],
   [2749.8, 1786.4],
@@ -71,19 +75,9 @@ export const TOWER = {
   maxZ: TOWER_DEPTH_M / 2,
 }
 
-/**
- * 椭圆下沉庭院在裙楼南侧地面上（西南广场，8F 西侧），长轴约 32 m。
- * 不在裙楼屋面中间，也不压到南侧道路。深 5.5 m 接 B1。
- * 整圈开口在红线内，南侧总览能看到下沉内壁。
- */
-export const COURTYARD = {
-  cx: -60,
-  cz: 74,
-  rx: 16,
-  rz: 12,
-  depth: 5.5,
-  slope: 4.5,
-}
+/** 下沉广场深 5.5 m 接 B1。侧壁内收，总览能看到内壁。 */
+export const COURT_DEPTH_M = 5.5
+export const COURT_SLOPE_M = 4.5
 
 export const PODIUM_HEIGHT_M = 6 + 4.2
 export const EAST_ROOF_M = 6 + 4 * 4.2
