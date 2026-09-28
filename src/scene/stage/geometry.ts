@@ -176,6 +176,7 @@ export function kitchenBoxes(): BoxSpec[] {
     box(center.x, 0.48, KITCHEN.z0 + 1.15, width - 1.4, 0.92, 0.8),
     box(center.x, 0.48, center.z, width - 2.6, 0.9, depth * 0.32),
     box(KITCHEN.x0 + 1.5, 1.15, KITCHEN.z0 + 1.5, 2.0, 2.2, 0.8),
+    // 底面离地 0.80 m，按吊柜保留。
     box(KITCHEN.x1 - 1.5, 1.35, KITCHEN.z1 - 1.4, 1.6, 1.1, 1.4),
   ]
 }

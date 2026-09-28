@@ -46,6 +46,11 @@ export function isBasementSlabHidden(view: ViewMode, selectedFloor: string | nul
   return floorSpec(active).level > 0
 }
 
+/** 地上单层同时隐藏 B1 色块。条件与楼板相同。 */
+export function isBasementZonesHidden(view: ViewMode, selectedFloor: string | null): boolean {
+  return isBasementSlabHidden(view, selectedFloor)
+}
+
 /** 世界坐标切面高度：选中层楼板顶面。高于此的外壳被裁掉。 */
 export function cutElevation(view: ViewMode, selectedFloor: string | null): number | null {
   const active = activeFloorId(view, selectedFloor)

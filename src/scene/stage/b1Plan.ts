@@ -3,24 +3,88 @@ import { pageToWorld, PT_PER_M } from '../scale'
 import type { Aabb, Point } from './layout'
 
 /**
- * B1.pdf → site.pdf 的唯一配准（D050）。
- * 旋转 0°。两边都用图纸比例，不再另拟合缩放。
- * 126.8 m 轴网边：B1 页 (508, 366.9) 对场地页 (1371.2, 648.9)，另一端残差约 0.012 m。
- * 地上的下沉广场不参与这套配准。
+ * B1.pdf → site.pdf 的唯一配准（D057）。
+ * 旋转 0°。比例只用 B1.pdf 的 126.8 m 尺寸线（页 508→2319.7，366.9）。
+ * 整体平移取外墙外角对 site.pdf A-WALL 地下室外墙外角的最小二乘。
+ * 西北、东北能对上。西南、东南对不上，不进这组解，原因见 B1_UNPAIRED_CORNERS。
+ * 地上的下沉广场和 B1Pick 不参与，也不跟着平移。
  */
 export const B1_PT_PER_M = 1811.7 / 126.8
 const SITE_PER_B1 = PT_PER_M / B1_PT_PER_M
 
 export const B1_ANCHOR_PAGE = { x: 508, y: 366.9 }
 export const B1_ANCHOR_SITE = { x: 1371.2, y: 648.9 }
-/** 场地轴网东端，用来核对东端残差。 */
+/** 126.8 m 尺寸线东端，只用来锁比例，不是外墙角。 */
 export const B1_EAST_PAGE = { x: 2319.7, y: 366.9 }
 export const B1_EAST_SITE = { x: 2424.5, y: 648.9 }
 
-export function b1PageToWorld(pageX: number, pageY: number): [number, number] {
+/**
+ * 外墙外角。B1 取北墙外皮 y=397 与角柱外皮的交点（西北 x=515.16，东北 x=2327.52）。
+ * 这两点间距 126.846 m。site 取 A-WALL 外皮交点：西 x=1368.48 ∩ 北 y=637.76，
+ * 东 x=2437.3198 ∩ 北 y=642.6801。东墙中段凸出不在这里。
+ */
+export const B1_OUTER_CORNERS = [
+  { id: 'NW' as const, b1: { x: 515.16, y: 397 }, site: { x: 1368.48, y: 637.76 } },
+  { id: 'NE' as const, b1: { x: 2327.52, y: 397 }, site: { x: 2437.3198, y: 642.6801 } },
+]
+
+/** 对不上的外角，不进最小二乘。 */
+export const B1_UNPAIRED_CORNERS = [
+  {
+    id: 'SW' as const,
+    reason:
+      'B1 西南外角是斜墙端点 (495.60, 1152.64)。site A-WALL 西墙外皮在 (1358.76, 888.56) 向东折进，没有再向南收到同一个外角。',
+  },
+  {
+    id: 'SE' as const,
+    reason:
+      'B1 东墙是直线，南端约在页坐标 y=938 折向西南。site 东墙在东北角以下约 8 m 向东凸到 x=2475.60，南墙外角在 (2420.88, 1671.56)，比 B1 东南角偏南约 60 m。',
+  },
+]
+
+function b1PageToWorldUnshifted(pageX: number, pageY: number): [number, number] {
   const siteX = B1_ANCHOR_SITE.x + (pageX - B1_ANCHOR_PAGE.x) * SITE_PER_B1
   const siteY = B1_ANCHOR_SITE.y + (pageY - B1_ANCHOR_PAGE.y) * SITE_PER_B1
   return pageToWorld(siteX, siteY)
+}
+
+function leastSquaresShift(): { x: number; z: number } {
+  let dx = 0
+  let dz = 0
+  for (const corner of B1_OUTER_CORNERS) {
+    const b1 = b1PageToWorldUnshifted(corner.b1.x, corner.b1.y)
+    const site = pageToWorld(corner.site.x, corner.site.y)
+    dx += b1[0] - site[0]
+    dz += b1[1] - site[1]
+  }
+  const count = B1_OUTER_CORNERS.length
+  return { x: -dx / count, z: -dz / count }
+}
+
+/** 加到 B1 世界上的平移（米）。x 向东，z 向南。 */
+export const B1_WALL_SHIFT = leastSquaresShift()
+
+export function b1PageToWorld(pageX: number, pageY: number): [number, number] {
+  const [x, z] = b1PageToWorldUnshifted(pageX, pageY)
+  return [x + B1_WALL_SHIFT.x, z + B1_WALL_SHIFT.z]
+}
+
+export type WallCornerResidual = {
+  id: 'NW' | 'NE'
+  dx: number
+  dz: number
+  meters: number
+}
+
+/** dx、dz = 平移后的 B1 世界 − site 世界。 */
+export function b1WallCornerResiduals(): WallCornerResidual[] {
+  return B1_OUTER_CORNERS.map((corner) => {
+    const b1 = b1PageToWorld(corner.b1.x, corner.b1.y)
+    const site = pageToWorld(corner.site.x, corner.site.y)
+    const dx = b1[0] - site[0]
+    const dz = b1[1] - site[1]
+    return { id: corner.id, dx, dz, meters: Math.hypot(dx, dz) }
+  })
 }
 
 export function b1PageToPoint(pageX: number, pageY: number): Point {

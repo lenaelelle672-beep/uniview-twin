@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest'
 import { B1_COLOR_BLOCK_COUNT, b1ZoneRings } from '../b1Zones'
 import { courtyardHole } from '../massing'
-import { pageToWorld } from '../scale'
 import {
   B1_ANCHOR_PAGE,
-  B1_ANCHOR_SITE,
   B1_ATRIUM,
   B1_CANTEEN,
   B1_CEILING,
   B1_CORE,
   B1_EAST_PAGE,
-  B1_EAST_SITE,
   B1_KITCHEN,
   B1_LOBBY,
+  B1_OUTER_CORNERS,
   B1_PLAZA,
   B1_PLAZA_LABEL_PAGE,
+  B1_PT_PER_M,
   B1_ROOMS,
+  B1_UNPAIRED_CORNERS,
+  B1_WALL_SHIFT,
   b1PageToWorld,
   b1SlabOutline,
+  b1WallCornerResiduals,
   basementPickOutline,
   pointInB1Slab,
   pointInRing,
@@ -41,6 +43,7 @@ import {
   canteenChairs,
   canteenTables,
   columnEdgeDistance,
+  deskColumnGap,
   deskHitsColumn,
   fanOutline,
   fanSeatSlots,
@@ -68,13 +71,22 @@ function boxCorners(spec: BoxSpec, offsetX = 0, offsetZ = 0): Array<[number, num
 }
 
 describe('B1 配准与楼板', () => {
-  it('126.8 m 边两端残差是 0 和 0.012 m', () => {
+  it('比例仍是 126.8 m 尺寸线，不旋转，外墙角残差不超过 1.2 m', () => {
     const west = b1PageToWorld(B1_ANCHOR_PAGE.x, B1_ANCHOR_PAGE.y)
-    const westSite = pageToWorld(B1_ANCHOR_SITE.x, B1_ANCHOR_SITE.y)
-    expect(Math.hypot(west[0] - westSite[0], west[1] - westSite[1])).toBeCloseTo(0, 6)
     const east = b1PageToWorld(B1_EAST_PAGE.x, B1_EAST_PAGE.y)
-    const eastSite = pageToWorld(B1_EAST_SITE.x, B1_EAST_SITE.y)
-    expect(Math.hypot(east[0] - eastSite[0], east[1] - eastSite[1])).toBeCloseTo(0.012, 3)
+    expect(Math.hypot(east[0] - west[0], east[1] - west[1])).toBeCloseTo(126.8, 3)
+    expect(east[1]).toBeCloseTo(west[1], 6)
+    const span = (B1_OUTER_CORNERS[1].b1.x - B1_OUTER_CORNERS[0].b1.x) / B1_PT_PER_M
+    expect(span).toBeCloseTo(126.846, 3)
+    expect(B1_UNPAIRED_CORNERS.map((corner) => corner.id)).toEqual(['SW', 'SE'])
+    const residuals = b1WallCornerResiduals()
+    expect(residuals.map((corner) => corner.id)).toEqual(['NW', 'NE'])
+    for (const corner of residuals) {
+      expect(corner.meters).toBeLessThanOrEqual(1.2)
+    }
+    const mean = residuals.reduce((sum, corner) => sum + corner.meters, 0) / residuals.length
+    expect(mean).toBeCloseTo(0.965, 2)
+    expect(B1_WALL_SHIFT.z).toBeLessThan(0)
   })
 
   it('楼板是一条外墙围合，室内物体的平面包围盒都在里面', () => {
@@ -125,6 +137,7 @@ describe('B1 工位与色块', () => {
     const columns = b1Columns()
     expect(columns.length).toBeGreaterThan(8)
     let nearestEdge = Infinity
+    let nearestGap = Infinity
     for (const slot of slots) {
       expect(pointInRing(slot.x, slot.z, ringFromAabb(B1_KITCHEN))).toBe(false)
       expect(pointInRing(slot.x, slot.z, ringFromAabb(B1_CANTEEN))).toBe(false)
@@ -132,11 +145,15 @@ describe('B1 工位与色块', () => {
       expect(inFan(slot.x, slot.z, 0.3)).toBe(false)
       for (const column of columns) {
         nearestEdge = Math.min(nearestEdge, columnEdgeDistance(slot.x, slot.z, column))
+        nearestGap = Math.min(nearestGap, deskColumnGap(slot, column))
         expect(columnEdgeDistance(slot.x, slot.z, column)).toBeGreaterThanOrEqual(COLUMN_EDGE_CLEAR_M - 1e-6)
         expect(deskHitsColumn(slot, column)).toBe(false)
+        expect(deskColumnGap(slot, column)).toBeGreaterThan(0)
       }
     }
     expect(nearestEdge).toBeGreaterThanOrEqual(COLUMN_EDGE_CLEAR_M - 1e-6)
+    expect(nearestEdge).toBeCloseTo(1.107, 2)
+    expect(nearestGap).toBeCloseTo(0.45, 2)
     expect(FAN.radius).toBeGreaterThan(10)
   })
 
@@ -151,10 +168,15 @@ describe('B1 工位与色块', () => {
     expect(plazaFromLayout).toBe(B1_PLAZA)
     expect(basementPickOutline()).toEqual(courtyardHole())
     const label = b1PageToWorld(B1_PLAZA_LABEL_PAGE.x, B1_PLAZA_LABEL_PAGE.y)
+    const block = ringCentroid(ringFromAabb(B1_PLAZA))
     const site = ringCentroid(courtyardHole())
-    const deviation = Math.hypot(label[0] - site.x, label[1] - site.z)
-    expect(deviation).toBeGreaterThan(11)
-    expect(deviation).toBeLessThan(13)
+    const dx = block.x - site.x
+    const dz = block.z - site.z
+    const deviation = Math.hypot(dx, dz)
+    expect(dx).toBeCloseTo(11.642, 2)
+    expect(dz).toBeCloseTo(-7.557, 2)
+    expect(deviation).toBeCloseTo(13.88, 2)
     expect(pointInB1Slab(label[0], label[1])).toBe(true)
+    expect(pointInB1Slab(block.x, block.z)).toBe(true)
   })
 })

@@ -149,6 +149,16 @@ export function deskHitsColumn(slot: Slot, column: Point): boolean {
   )
 }
 
+/** 桌包围盒到柱包围盒的间隙（米）。分开为正，相碰为负。 */
+export function deskColumnGap(slot: Slot, column: Point): number {
+  const dx = Math.abs(slot.x - column.x) - DESK_HALF_X_M - COLUMN_HALF_M
+  const dz = Math.abs(slot.z - column.z) - DESK_HALF_Z_M - COLUMN_HALF_M
+  if (dx >= 0 && dz >= 0) return Math.hypot(dx, dz)
+  if (dx >= 0) return dx
+  if (dz >= 0) return dz
+  return Math.max(dx, dz)
+}
+
 export function b1Columns(): Point[] {
   const columns: Point[] = []
   for (const column of b1ColumnPoints()) {
