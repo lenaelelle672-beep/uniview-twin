@@ -103,9 +103,19 @@ export function buildBadgeDigitGeometry(floors: BadgeDigitSource[]): BadgeDigitL
   }
 }
 
+/** 世界高度在视图深度处的 CSS 像素高。viewportHeight 不乘 devicePixelRatio。 */
+export function badgeProjectedPixels(
+  worldHeight: number,
+  viewDepth: number,
+  viewportHeight: number,
+  projection11: number,
+): number {
+  return (worldHeight * projection11 * 0.5 * viewportHeight) / Math.max(viewDepth, 1e-3)
+}
+
 /** 低于最小屏幕高度时放大，已超过时保持 1。 */
 export function badgeScreenScale(pixelHeight: number, minimum = BADGE_MIN_SCREEN_PX): number {
-  return Math.max(minimum / Math.max(pixelHeight, 0.0001), 1)
+  return Math.max(minimum / Math.max(pixelHeight, 1e-3), 1)
 }
 
 export function patchBadgeDigitVertexShader(
@@ -128,13 +138,13 @@ uniform float badgeMinPixelHeight;
     .replace(
       '#include <begin_vertex>',
       `#include <begin_vertex>
-vec4 badgeView = modelViewMatrix * vec4(badgeCenter, 1.0);
-float badgePixels = badgeWorldHeight * projectionMatrix[1][1] * badgeViewportHeight / (2.0 * max(abs(badgeView.z), 0.0001));
-float badgeScale = max(badgeMinPixelHeight / max(badgePixels, 0.0001), 1.0);
-transformed = badgeCenter + (transformed - badgeCenter) * badgeScale;
+vec4 mvC = modelViewMatrix * vec4(badgeCenter, 1.0);
+float px = badgeWorldHeight * projectionMatrix[1][1] * 0.5 * badgeViewportHeight / max(-mvC.z, 1e-3);
+float k = max(1.0, badgeMinPixelHeight / max(px, 1e-3));
+transformed = badgeCenter + (transformed - badgeCenter) * k;
 `,
     )
-  if (!vertex.includes('float badgeScale')) throw new Error('徽标数字顶点着色器没有接上屏幕尺寸')
+  if (!vertex.includes('float k =')) throw new Error('徽标数字顶点着色器没有接上屏幕尺寸')
   shader.vertexShader = vertex
 }
 

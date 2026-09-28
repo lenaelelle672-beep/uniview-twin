@@ -77,7 +77,7 @@ describe('徽标数字图集', () => {
     }
     patchBadgeDigitVertexShader(shader, 768)
     expect(shader.vertexShader).toContain('attribute vec3 badgeCenter;')
-    expect(shader.vertexShader).toContain('float badgeScale = max(badgeMinPixelHeight / max(badgePixels, 0.0001), 1.0);')
+    expect(shader.vertexShader).toContain('float k = max(1.0, badgeMinPixelHeight / max(px, 1e-3));')
     expect(shader.uniforms.badgeViewportHeight.value).toBe(768)
     expect(shader.uniforms.badgeWorldHeight.value).toBe(BADGE_HEIGHT)
     expect(shader.uniforms.badgeMinPixelHeight.value).toBe(BADGE_MIN_SCREEN_PX)
