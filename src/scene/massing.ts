@@ -1,7 +1,7 @@
 import { pageRingToWorld, plazaPage, podiumFrontPage, podiumPage } from './plan'
-import { EAST_ROOF_M, FOOTPRINT, PODIUM_HEIGHT_M } from './siteGeometry'
+import { EAST_CANTILEVER_M, EAST_ROOF_M, FOOTPRINT, PODIUM_HEIGHT_M } from './siteGeometry'
 
-export { EAST_ROOF_M, PODIUM_HEIGHT_M }
+export { EAST_CANTILEVER_M, EAST_ROOF_M, PODIUM_HEIGHT_M }
 
 export function courtyardHole(): Array<[number, number]> {
   return pageRingToWorld(plazaPage())
@@ -23,19 +23,45 @@ export function podiumFocus(): [number, number] {
   return [sx / points.length, sz / points.length]
 }
 
-/** 8F 平面：尺寸线矩形。东墙外皮是直墙，不按楼层拆。 */
-export function eastUpperOutline(): Array<[number, number]> {
-  return [
-    [FOOTPRINT.minX, FOOTPRINT.minZ],
-    [FOOTPRINT.maxX, FOOTPRINT.minZ],
-    [FOOTPRINT.maxX, FOOTPRINT.maxZ],
-    [FOOTPRINT.minX, FOOTPRINT.maxZ],
+function eastBody(x0: number, x1: number, zNorth: number, zSouth: number, bulge: number): Array<[number, number]> {
+  const steps = 20
+  const points: Array<[number, number]> = [
+    [x0, zNorth],
+    [x1, zNorth],
   ]
+  for (let i = 0; i <= steps; i += 1) {
+    const u = i / steps
+    const x = x1 + (x0 - x1) * u
+    points.push([x, zSouth + Math.sin(Math.PI * u) * bulge])
+  }
+  return points
+}
+
+/** 下部玻璃层顶。底层内退，上部从这里开始悬挑。 */
+export const EAST_LOWER_TOP_M = 6 + 4.2
+
+/**
+ * 东墙是尺寸线上的直边（南北向）。南墙是朝前的弧面，上部向外悬挑。
+ * 东墙不在中部错台。
+ */
+export function eastUpperOutline(): Array<[number, number]> {
+  return eastBody(FOOTPRINT.minX, FOOTPRINT.maxX, FOOTPRINT.minZ, FOOTPRINT.maxZ, EAST_CANTILEVER_M)
+}
+
+/** 底层平面内退，南侧再收进，让出上部悬挑和弧面。 */
+export function eastLowerOutline(): Array<[number, number]> {
+  return eastBody(
+    FOOTPRINT.minX + 1.4,
+    FOOTPRINT.maxX - 1.2,
+    FOOTPRINT.minZ + 1.6,
+    FOOTPRINT.maxZ - 1.5,
+    1.2,
+  )
 }
 
 /**
- * 8F 东墙外侧挂载点。东墙是一条直墙，所以只有这一个点。
- * 原点在外皮南端、标高 ±0.00；局部 +X 沿墙向北，+Z 朝东，+Y 向上。
+ * 东墙外侧挂载点。外皮是上部直墙所在的平面（底层向内退 1.2 m）。
+ * 原点在该外皮南端、标高 ±0.00；局部 +X 沿墙向北，+Z 朝东，+Y 向上。
  */
 export function eastGrilleMount(): {
   length: number

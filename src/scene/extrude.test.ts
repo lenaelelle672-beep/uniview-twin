@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Object3D, Vector3 } from 'three'
 import { extrudeUp } from './extrude'
-import { courtyardHole, eastGrilleMount, eastUpperOutline, podiumOutline } from './massing'
+import { courtyardHole, eastGrilleMount, eastLowerOutline, eastUpperOutline, podiumOutline } from './massing'
 import { EAST_ROOF_M, FOOTPRINT } from './siteGeometry'
 
 describe('轮廓挤出', () => {
@@ -31,14 +31,17 @@ describe('轮廓挤出', () => {
   it('裙房、下沉庭院和东楼轮廓可以挤出', () => {
     const podium = extrudeUp(podiumOutline(), 10.2)
     const court = extrudeUp(courtyardHole(), 5.5)
-    const east = extrudeUp(eastUpperOutline(), EAST_ROOF_M)
-    for (const geometry of [podium, court, east]) {
+    const upper = extrudeUp(eastUpperOutline(), EAST_ROOF_M)
+    const lower = extrudeUp(eastLowerOutline(), 10.2)
+    for (const geometry of [podium, court, upper, lower]) {
       geometry.computeBoundingBox()
       expect(geometry.boundingBox?.max.y).toBeGreaterThan(1)
       expect(Number.isFinite(geometry.boundingBox?.min.x)).toBe(true)
-      geometry.dispose()
     }
-    expect(east.boundingBox?.max.y).toBeCloseTo(EAST_ROOF_M, 4)
+    expect(upper.boundingBox?.max.y).toBeCloseTo(EAST_ROOF_M, 4)
+    expect((upper.boundingBox?.max.z ?? 0) - (lower.boundingBox?.max.z ?? 0)).toBeGreaterThan(3)
+    expect((upper.boundingBox?.max.x ?? 0) - (lower.boundingBox?.max.x ?? 0)).toBeGreaterThan(1)
+    for (const geometry of [podium, court, upper, lower]) geometry.dispose()
   })
 
   it('东墙是直墙，挂载点在外皮南端标高 0，+X 向北、+Z 朝东', () => {
@@ -55,8 +58,10 @@ describe('轮廓挤出', () => {
     expect(origin.y).toBeCloseTo(0, 6)
     expect(origin.z).toBeCloseTo(FOOTPRINT.maxZ, 6)
     expect(mount.length).toBeCloseTo(97.4, 1)
+    expect(Math.abs(mount.length - 97.4)).toBeLessThanOrEqual(3)
     expect(mount.height).toBeCloseTo(45.5, 4)
     expect(FOOTPRINT.maxX - FOOTPRINT.minX).toBeCloseTo(51.9, 1)
+    expect(FOOTPRINT.maxZ - FOOTPRINT.minZ).toBeGreaterThan(FOOTPRINT.maxX - FOOTPRINT.minX)
     expect(along.toArray()).toEqual([expect.closeTo(0, 5), expect.closeTo(0, 5), expect.closeTo(-1, 5)])
     expect(up.toArray()).toEqual([expect.closeTo(0, 5), expect.closeTo(1, 5), expect.closeTo(0, 5)])
     expect(outward.toArray()).toEqual([expect.closeTo(1, 5), expect.closeTo(0, 5), expect.closeTo(0, 5)])

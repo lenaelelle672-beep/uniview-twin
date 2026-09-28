@@ -82,6 +82,8 @@ export const COURT_SLOPE_M = 4.5
 export const PODIUM_HEIGHT_M = 6 + 4.2
 /** 图注「8F/2D H=45.50m」。 */
 export const EAST_ROOF_M = 45.5
+/** 上部南侧弧面相对下层向外悬挑。 */
+export const EAST_CANTILEVER_M = 4
 
 export interface Placement {
   x: number
