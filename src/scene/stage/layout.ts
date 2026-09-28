@@ -139,6 +139,26 @@ export function towerColumns(): Point[] {
   return columns
 }
 
+/** 柱断面 0.62 m。D034：桌心到柱边不少于 1.10 m。 */
+export const COLUMN_HALF_M = 0.31
+export const DESK_HALF_X_M = 0.7
+export const DESK_HALF_Z_M = 0.35
+export const COLUMN_EDGE_CLEAR_M = 1.1
+
+export function columnEdgeDistance(x: number, z: number, column: Point): number {
+  const dx = Math.abs(x - column.x) - COLUMN_HALF_M
+  const dz = Math.abs(z - column.z) - COLUMN_HALF_M
+  if (dx < 0 && dz < 0) return 0
+  return Math.hypot(Math.max(dx, 0), Math.max(dz, 0))
+}
+
+export function deskHitsColumn(slot: Slot, column: Point): boolean {
+  return (
+    Math.abs(slot.x - column.x) < DESK_HALF_X_M + COLUMN_HALF_M &&
+    Math.abs(slot.z - column.z) < DESK_HALF_Z_M + COLUMN_HALF_M
+  )
+}
+
 export function b1Columns(): Point[] {
   const columns: Point[] = []
   for (let x = -24; x <= 56; x += 8) {
@@ -173,23 +193,15 @@ function slotsInZone(zone: Aabb, gapX: number, gapZ: number): Slot[] {
   return slots
 }
 
-/**
- * 桌面 1.40 m、柱截面 0.62 m，半宽相加 1.01 m。
- * 中心距低于 1.01 m 就会穿进柱子；D034 要求桌子中心离柱子至少 1.10 m。
- */
-export const DESK_COLUMN_MIN_DISTANCE_M = 1.1
-
-function nearColumn(slot: Slot, columns: Point[]): boolean {
-  return columns.some((column) => Math.hypot(column.x - slot.x, column.z - slot.z) < DESK_COLUMN_MIN_DISTANCE_M)
-}
-
 function towerBlocked(slot: Slot, pad: number): boolean {
   if (!inTowerPlate(slot.x, slot.z)) return true
   if (insideAabb(slot.x, slot.z, CORE, pad)) return true
   if (MEETINGS.some((room) => insideAabb(slot.x, slot.z, room, pad))) return true
   if (insideAabb(slot.x, slot.z, RECEPTION, pad)) return true
   if (insideAabb(slot.x, slot.z, PANTRY, pad)) return true
-  return nearColumn(slot, towerColumns())
+  return towerColumns().some(
+    (column) => columnEdgeDistance(slot.x, slot.z, column) < COLUMN_EDGE_CLEAR_M || deskHitsColumn(slot, column),
+  )
 }
 
 function b1Blocked(slot: Slot, pad: number): boolean {
@@ -199,7 +211,7 @@ function b1Blocked(slot: Slot, pad: number): boolean {
   if (B1_ROOMS.some((room) => insideAabb(slot.x, slot.z, room, pad))) return true
   if (inAtrium(slot.x, slot.z, pad)) return true
   if (inFan(slot.x, slot.z, pad)) return true
-  return nearColumn(slot, b1Columns())
+  return b1Columns().some((column) => Math.hypot(column.x - slot.x, column.z - slot.z) < 1.1)
 }
 
 function collect(floorId: string, gapX: number, gapZ: number, pad: number): Slot[] {

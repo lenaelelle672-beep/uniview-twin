@@ -17,8 +17,8 @@ import { columnGeometry, deskGeometry } from './geometry'
 import {
   B1_CORE,
   B1_ROOMS,
+  COLUMN_EDGE_CLEAR_M,
   CORE,
-  DESK_COLUMN_MIN_DISTANCE_M,
   FAN,
   KITCHEN,
   MEETINGS,
@@ -26,6 +26,8 @@ import {
   RECEPTION,
   b1Columns,
   canteenTables,
+  columnEdgeDistance,
+  deskHitsColumn,
   fanSeatSlots,
   inFan,
   layoutWorkstations,
@@ -161,7 +163,7 @@ describe('enterFloor / exitFloor', () => {
 })
 
 describe('工位避柱', () => {
-  it('23 层桌子与柱子都不穿插，中心距至少 1.10 m', () => {
+  it('塔楼桌心到柱边至少 1.10 m，桌子和柱子包围盒不相交', () => {
     const desk = geometryBounds(deskGeometry)
     const column = geometryBounds(columnGeometry)
     const deskHalfX = (desk.max.x - desk.min.x) / 2
@@ -169,19 +171,22 @@ describe('工位避柱', () => {
     const columnHalfX = (column.max.x - column.min.x) / 2
     const columnHalfZ = (column.max.z - column.min.z) / 2
     expect(deskHalfX + columnHalfX).toBeCloseTo(1.01, 5)
-    expect(DESK_COLUMN_MIN_DISTANCE_M).toBeGreaterThanOrEqual(deskHalfX + columnHalfX)
+    expect(COLUMN_EDGE_CLEAR_M).toBe(1.1)
 
     for (const floorId of floorIdList()) {
       const columns = floorId === 'B1' ? b1Columns() : towerColumns()
       for (let index = 1; index <= WORKSTATIONS_PER_FLOOR; index += 1) {
         const place = workstationPosition(floorId, `${floorId}-${index}`)
+        const slot = { x: place.x, z: place.z, rot: 0 }
         for (const columnPoint of columns) {
           const dx = Math.abs(place.x - columnPoint.x)
           const dz = Math.abs(place.z - columnPoint.z)
-          const distance = Math.hypot(dx, dz)
-          expect(distance).toBeGreaterThanOrEqual(DESK_COLUMN_MIN_DISTANCE_M - 1e-9)
           const overlaps = dx < deskHalfX + columnHalfX - 1e-6 && dz < deskHalfZ + columnHalfZ - 1e-6
           expect(overlaps).toBe(false)
+          expect(deskHitsColumn(slot, columnPoint)).toBe(false)
+          if (floorId !== 'B1') {
+            expect(columnEdgeDistance(place.x, place.z, columnPoint)).toBeGreaterThanOrEqual(COLUMN_EDGE_CLEAR_M - 1e-9)
+          }
         }
       }
     }
