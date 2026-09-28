@@ -16,6 +16,7 @@ export class MockAdapter implements TwinDataAdapter {
   }
 }
 
+/** ?data= 的站内 JSON。坐标字段会被保留，但不得当作工位落点（D027）。 */
 export class JsonAdapter implements TwinDataAdapter {
   constructor(private readonly url: string) {}
 

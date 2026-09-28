@@ -22,6 +22,10 @@ function zoneFor(floorId: string, index: number): Zone {
   return 'tower'
 }
 
+/**
+ * 只为填上数据模式里的 x/z。D027：这不是工位落点。
+ * 摆放、?pos= 定位和飞到工位都必须调用 workstationPosition，禁止读取这里的结果。
+ */
 function deskPosition(index: number): { x: number; z: number } {
   const col = (index - 1) % 10
   const row = Math.floor((index - 1) / 10)

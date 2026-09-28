@@ -48,6 +48,7 @@ export function DetailPanel() {
             </div>
           </dl>
         )}
+        {/* TODO(D027): 工位详情里的位置要调用 workstationPosition，不要读 desk.x/y/z。 */}
         {focusedDeskId && <p className="panel-hint">定位工位 {focusedDeskId}</p>}
         {cam && <p className="panel-hint">固定机位 {cam}</p>}
         <p className="panel-note">设备与人员详情将在后续任务中展示。</p>

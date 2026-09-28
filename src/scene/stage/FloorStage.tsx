@@ -9,8 +9,8 @@ import { B1Interior } from './B1Interior'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
-import { layoutWorkstations } from './layout'
 import { STATUS_COLOR } from './status'
+import { workstationPosition } from './workstationPosition'
 import { TowerInterior } from './TowerInterior'
 
 function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDesks: number }) {
@@ -75,7 +75,14 @@ export function FloorStage() {
     if (!active) return []
     return desks.filter((desk) => desk.floorId === active).sort((desk, other) => desk.index - other.index)
   }, [active, desks])
-  const slots = useMemo(() => (active ? layoutWorkstations(active, floorDesks.length) : []), [active, floorDesks.length])
+  const slots = useMemo(() => {
+    if (!active) return []
+    // D027：不读 desk.x/y/z。落点只来自 workstationPosition。
+    return floorDesks.map((desk) => {
+      const position = workstationPosition(desk.floorId, desk.id)
+      return { x: position.x, z: position.z, rot: 0 }
+    })
+  }, [active, floorDesks])
   const colors = useMemo(() => {
     const byDesk = new Map<string, DeviceStatus>()
     for (const device of devices) {

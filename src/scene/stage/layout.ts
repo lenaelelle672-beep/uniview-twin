@@ -170,7 +170,11 @@ function collect(floorId: string, gapX: number, gapZ: number, pad: number): Slot
   return slots
 }
 
-/** 按数据条数生成工位落点。序号与该层工位 index 升序一一对应。 */
+/**
+ * 内部排布，按当前楼板轮廓把序号铺进可放置区域。
+ * 对外落点只通过 workstationPosition 读取；不要在别处再算一套坐标。
+ * 轮廓来自 siteGeometry。轮廓变了以后要仍能在新楼板内排满每层 100 个。
+ */
 export function layoutWorkstations(floorId: string, count: number): Slot[] {
   if (count <= 0) return []
   const gapX0 = floorId === 'B1' ? 2.15 : 2.02

@@ -34,6 +34,10 @@ export interface Desk {
   floorId: string
   index: number
   zone: Zone
+  /**
+   * 数据载荷里的坐标。D027：模拟数据和 ?data= 只提供楼层、编号和状态；
+   * 这些坐标即使存在，也不得用于摆放。落点只来自 workstationPosition。
+   */
   x: number
   y: number
   z: number
