@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { B1_COLOR_BLOCK_COUNT, b1ZoneRings } from '../b1Zones'
 import { courtyardHole } from '../massing'
+import { pageToWorld } from '../scale'
 import {
   B1_ANCHOR_PAGE,
   B1_ATRIUM,
@@ -16,7 +17,11 @@ import {
   B1_PT_PER_M,
   B1_ROOMS,
   B1_UNPAIRED_CORNERS,
+  B1_WALL_CORNER_PAGES,
   B1_WALL_SHIFT,
+  SITE_EAST_NORTH_OUTER_X,
+  SITE_SOUTH_OUTER_Y,
+  SITE_WALL_CORNERS,
   b1PageToWorld,
   b1SlabOutline,
   b1WallCornerResiduals,
@@ -87,6 +92,18 @@ describe('B1 配准与楼板', () => {
     const mean = residuals.reduce((sum, corner) => sum + corner.meters, 0) / residuals.length
     expect(mean).toBeCloseTo(0.965, 2)
     expect(B1_WALL_SHIFT.z).toBeLessThan(0)
+  })
+
+  it('site 东南角是东墙北段外皮延长后与南墙外皮的交点', () => {
+    const southeast = SITE_WALL_CORNERS.find((corner) => corner.id === 'SE')
+    expect(southeast?.page).toEqual({ x: SITE_EAST_NORTH_OUTER_X, y: SITE_SOUTH_OUTER_Y })
+    expect(SITE_EAST_NORTH_OUTER_X).toBeLessThan(2470)
+    const [x, z] = pageToWorld(SITE_EAST_NORTH_OUTER_X, SITE_SOUTH_OUTER_Y)
+    expect(x).toBeCloseTo(98.392, 3)
+    expect(z).toBeCloseTo(109.424, 3)
+    expect(B1_OUTER_CORNERS.map((corner) => corner.id)).not.toContain('SE')
+    expect(B1_WALL_CORNER_PAGES.map((corner) => corner.id)).toEqual(['NW', 'NE', 'SW', 'SE'])
+    expect(SITE_WALL_CORNERS.map((corner) => corner.id)).toEqual(['NW', 'NE', 'SW', 'SE'])
   })
 
   it('楼板是一条外墙围合，室内物体的平面包围盒都在里面', () => {

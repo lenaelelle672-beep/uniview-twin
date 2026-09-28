@@ -19,13 +19,36 @@ export const B1_EAST_PAGE = { x: 2319.7, y: 366.9 }
 export const B1_EAST_SITE = { x: 2424.5, y: 648.9 }
 
 /**
- * 外墙外角。B1 取北墙外皮 y=397 与角柱外皮的交点（西北 x=515.16，东北 x=2327.52）。
- * 这两点间距 126.846 m。site 取 A-WALL 外皮交点：西 x=1368.48 ∩ 北 y=637.76，
- * 东 x=2437.3198 ∩ 北 y=642.6801。东墙中段凸出不在这里。
+ * site.pdf A-WALL 地下室外墙外角（页坐标，pt）。
+ * 东南角是东墙北段外皮 x=2437.319824 延长后，与南墙外皮 y=1671.560059 的交点。
+ * 东墙中段向东凸到 x=2475.60 的那段不参与这个交点。
+ * 西南是西墙外皮向西错出后的南端转角，不是延长到南墙。
+ */
+export const SITE_EAST_NORTH_OUTER_X = 2437.319824
+export const SITE_SOUTH_OUTER_Y = 1671.560059
+export const SITE_WALL_CORNERS = [
+  { id: 'NW' as const, page: { x: 1368.47998, y: 637.76001 } },
+  { id: 'NE' as const, page: { x: SITE_EAST_NORTH_OUTER_X, y: 642.680054 } },
+  { id: 'SW' as const, page: { x: 1358.76001, y: 888.560059 } },
+  { id: 'SE' as const, page: { x: SITE_EAST_NORTH_OUTER_X, y: SITE_SOUTH_OUTER_Y } },
+] as const
+
+/** B1.pdf 外墙外角（页坐标，pt）。西北、东北是北墙外皮与角柱外皮的交点。 */
+export const B1_WALL_CORNER_PAGES = [
+  { id: 'NW' as const, page: { x: 515.16, y: 397 } },
+  { id: 'NE' as const, page: { x: 2327.52, y: 397 } },
+  { id: 'SW' as const, page: { x: 495.6, y: 1152.64 } },
+  { id: 'SE' as const, page: { x: 2182.5601, y: 1266.64 } },
+] as const
+
+/**
+ * 参与最小二乘的外墙外角。只有西北、东北。
+ * B1 这两点取北墙外皮 y=397 与角柱外皮，间距 126.846 m。
+ * 东南用上面的延长交点，但不进这组解：B1 东南外角对过去差约 60 m。
  */
 export const B1_OUTER_CORNERS = [
-  { id: 'NW' as const, b1: { x: 515.16, y: 397 }, site: { x: 1368.48, y: 637.76 } },
-  { id: 'NE' as const, b1: { x: 2327.52, y: 397 }, site: { x: 2437.3198, y: 642.6801 } },
+  { id: 'NW' as const, b1: B1_WALL_CORNER_PAGES[0].page, site: SITE_WALL_CORNERS[0].page },
+  { id: 'NE' as const, b1: B1_WALL_CORNER_PAGES[1].page, site: SITE_WALL_CORNERS[1].page },
 ]
 
 /** 对不上的外角，不进最小二乘。 */
@@ -38,7 +61,7 @@ export const B1_UNPAIRED_CORNERS = [
   {
     id: 'SE' as const,
     reason:
-      'B1 东墙是直线，南端约在页坐标 y=938 折向西南。site 东墙在东北角以下约 8 m 向东凸到 x=2475.60，南墙外角在 (2420.88, 1671.56)，比 B1 东南角偏南约 60 m。',
+      'site 东南角是东墙北段外皮延长后与南墙外皮的交点，凸出段不参与。B1 东南外角对过去仍差约 60 m，所以不进最小二乘。',
   },
 ]
 
