@@ -102,12 +102,6 @@ export const sidewalkMaterial = new MeshStandardMaterial({ color: '#c9c3b8', rou
 export const zebraMaterial = new MeshStandardMaterial({ color: '#f2f2f0', roughness: 0.7, metalness: 0 })
 export const plinthMaterial = new MeshStandardMaterial({ color: '#8d8d8d', roughness: 0.8, metalness: 0 })
 
-const ZONE_COLORS = ['#c5ccd4', '#d9e2ea', '#d7c4b0', '#e4d3bf', '#cfc8be', '#d4cfc6']
-
-export const zoneMaterials = ZONE_COLORS.map(
-  (color) => new MeshStandardMaterial({ color, roughness: 0.9, metalness: 0 }),
-)
-
 export function applySurfaceMode(mode: SurfaceMode) {
   const grid = curtainMaterial.userData.grid as Color
   const strength = curtainMaterial.userData.strength as { value: number }
