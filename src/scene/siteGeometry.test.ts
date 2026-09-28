@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { ORIGIN_PAGE_X, ORIGIN_PAGE_Y, pageToWorld, pointsToMeters, PT_PER_M } from './scale'
+import { ORIGIN_PAGE_X, ORIGIN_PAGE_Y, pageToWorld, pointsToMeters, PT_PER_M, surveyToPage } from './scale'
 import {
   FOOTPRINT,
+  PARCEL_PAGE,
   parcelAreaM2,
   placeStreetFurniture,
   roadRibbons,
@@ -38,9 +39,9 @@ describe('总平面图轮廓换算', () => {
 
   it('行道树间距约 8 m，路灯间距约 30 m 且两侧交错', () => {
     const { trees, lamps } = placeStreetFurniture()
-    const northTrees = trees.filter((item) => item.z < -120 && item.z > -132)
-    const northLamps = lamps.filter((item) => item.z < -120 && item.z > -132)
-    const farLamps = lamps.filter((item) => item.z < -132)
+    const northTrees = trees.filter((item) => item.z < -32 && item.z > -40)
+    const northLamps = lamps.filter((item) => item.z < -32 && item.z > -40)
+    const farLamps = lamps.filter((item) => item.z < -44)
     expect(northTrees.length).toBeGreaterThan(10)
     expect(northLamps.length).toBeGreaterThan(3)
     const treeGap = gaps(northTrees.map((item) => item.x))
@@ -55,6 +56,28 @@ describe('总平面图轮廓换算', () => {
     })
     expect(Math.min(...stagger)).toBeGreaterThan(10)
     expect(Math.abs(northLamps[0].rotY - Math.PI / 2)).toBeLessThan(0.25)
+  })
+
+  it('红线四个角贴住测量点或折点，偏差不超过 3 m', () => {
+    const targets: Array<[number, number]> = [
+      surveyToPage(86262.511, 76072.02),
+      surveyToPage(86468.22, 76072.174),
+      surveyToPage(86355.251, 75893.89),
+      [2625.2, 1909.8],
+    ]
+    targets.forEach(([x, y]) => {
+      let best = Infinity
+      for (let i = 0; i < PARCEL_PAGE.length; i += 1) {
+        const [ax, ay] = PARCEL_PAGE[i]
+        const [bx, by] = PARCEL_PAGE[(i + 1) % PARCEL_PAGE.length]
+        const vx = bx - ax
+        const vy = by - ay
+        const len2 = vx * vx + vy * vy || 1
+        const t = Math.max(0, Math.min(1, ((x - ax) * vx + (y - ay) * vy) / len2))
+        best = Math.min(best, Math.hypot(x - ax - vx * t, y - ay - vy * t))
+      }
+      expect(best / PT_PER_M).toBeLessThan(3)
+    })
   })
 
   it('规划路、月明路和东侧路都有路面，斑马线成组', () => {

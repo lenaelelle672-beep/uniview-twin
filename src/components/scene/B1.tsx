@@ -3,10 +3,24 @@ import { BoxGeometry } from 'three'
 import { extrudeUp } from '../../scene/extrude'
 import { ellipsePoints } from '../../scene/massing'
 import { solidMaterial, stoneMaterial, zoneMaterials } from '../../scene/materials'
-import { COURTYARD, footprintOutline, TOWER } from '../../scene/siteGeometry'
+import { COURTYARD, FOOTPRINT, footprintOutline, TOWER } from '../../scene/siteGeometry'
 
 export function B1({ model }: { model: boolean }) {
   const slab = useMemo(() => extrudeUp(footprintOutline(), 0.28), [])
+  const towerSlab = useMemo(
+    () =>
+      extrudeUp(
+        [
+          [TOWER.minX, TOWER.minZ],
+          [TOWER.maxX, TOWER.minZ],
+          [TOWER.maxX, TOWER.maxZ],
+          [TOWER.minX, TOWER.maxZ],
+        ],
+        0.28,
+      ),
+    [],
+  )
+  const eastCenter: [number, number] = [(FOOTPRINT.minX + FOOTPRINT.maxX) / 2, (FOOTPRINT.minZ + FOOTPRINT.maxZ) / 2]
   const atrium = useMemo(
     () => extrudeUp(ellipsePoints(COURTYARD.cx, COURTYARD.cz, COURTYARD.rx - 0.4, COURTYARD.rz - 0.35, 28), 0.12),
     [],
@@ -27,6 +41,7 @@ export function B1({ model }: { model: boolean }) {
   return (
     <group name="B1" position={[0, -5.5, 0]}>
       <mesh geometry={slab} material={model ? solidMaterial : stoneMaterial} receiveShadow />
+      <mesh geometry={towerSlab} material={model ? solidMaterial : stoneMaterial} receiveShadow />
       {!model && (
         <>
           <mesh geometry={atrium} material={zoneMaterials[1]} position={[0, 0.28, 0]} />
@@ -34,10 +49,10 @@ export function B1({ model }: { model: boolean }) {
             <boxGeometry args={[18, 0.16, 14]} />
           </mesh>
           <mesh geometry={fan} material={zoneMaterials[2]} position={[0, 0.28, 0]} />
-          <mesh position={[48, 0.36, 2]} material={zoneMaterials[3]}>
+          <mesh position={[eastCenter[0], 0.36, eastCenter[1] - 6]} material={zoneMaterials[3]}>
             <boxGeometry args={[28, 0.16, 16]} />
           </mesh>
-          <mesh position={[42, 0.36, 22]} material={zoneMaterials[4]}>
+          <mesh position={[eastCenter[0] + 8, 0.36, eastCenter[1] + 10]} material={zoneMaterials[4]}>
             <boxGeometry args={[16, 0.16, 12]} />
           </mesh>
           {Array.from({ length: 5 }, (_, index) => (

@@ -39,11 +39,11 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         shadow-bias={-0.0004}
         shadow-normalBias={0.035}
         shadow-camera-near={10}
-        shadow-camera-far={360}
-        shadow-camera-left={-160}
-        shadow-camera-right={160}
-        shadow-camera-top={160}
-        shadow-camera-bottom={-160}
+        shadow-camera-far={720}
+        shadow-camera-left={-220}
+        shadow-camera-right={220}
+        shadow-camera-top={220}
+        shadow-camera-bottom={-220}
       />
       <CameraRig />
       <Suspense fallback={null}>

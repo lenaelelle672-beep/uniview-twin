@@ -27,10 +27,10 @@ function makeGlass(elevation: number, height: number) {
   north.rotateY(Math.PI)
   north.translate(0, y, TOWER.minZ + inset)
   const east = new PlaneGeometry(DEPTH, glassHeight)
-  east.rotateY(-Math.PI / 2)
+  east.rotateY(Math.PI / 2)
   east.translate(TOWER.maxX - inset, y, 0)
   const west = new PlaneGeometry(DEPTH, glassHeight)
-  west.rotateY(Math.PI / 2)
+  west.rotateY(-Math.PI / 2)
   west.translate(TOWER.minX + inset, y, 0)
   return mergeParts([south, north, east, west])
 }

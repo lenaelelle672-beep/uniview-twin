@@ -30,6 +30,7 @@ export function TopBar({ floorListOpen, onToggleFloorList }: TopBarProps) {
 
   return (
     <header className="topbar">
+      <h1 className="visually-hidden">宇视总部大楼数字孪生</h1>
       <div className="brand">
         <span className="brand-mark" aria-hidden="true">
           宇

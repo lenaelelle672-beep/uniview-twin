@@ -10,39 +10,36 @@ import {
 } from './scale'
 
 /**
- * 用地红线，页面坐标（pt）。顶点取自 site.pdf 粗线（stroke-width 6）。
- * 北界 y≈493 横跨机动车出入口的缺口在同一直线上补齐。
- * 面积约 29465 ㎡，图纸“建设用地面积”为 29991 ㎡。
+ * 用地范围线，页面坐标（pt）。顶点是 site.pdf 上 stroke-width 2 的红线端点，
+ * 不是内侧停车带（y≈493）。北段 (1099.1,455.1)–(2807.8,453.8) 与测量角点重合，
+ * 南折点 (1869.4,1934.7) 与 X=75893.890 / Y=86355.251 重合。面积约 29980 ㎡。
  */
 export const PARCEL_PAGE: Array<[number, number]> = [
-  [1070.2, 613.4],
-  [1113.5, 611.1],
-  [1149.5, 514.9],
-  [1252.6, 485.6],
-  [1264.2, 487.9],
-  [1276.0, 489.8],
-  [1287.7, 491.2],
-  [1299.6, 492.3],
-  [1311.5, 492.9],
-  [1323.4, 493.2],
-  [2661.2, 493.2],
-  [2734.7, 523.5],
-  [2764.3, 596.9],
-  [2836.0, 550.4],
-  [2834.0, 809.0],
-  [2792.0, 849.9],
-  [2822.1, 990.7],
-  [2780.0, 1207.4],
-  [2774.7, 1786.6],
-  [2625.3, 1934.7],
-  [2045.9, 1934.7],
-  [1871.2, 1959.7],
-  [1736.5, 1959.6],
-  [1639.7, 1883.7],
-  [1562.1, 1567.1],
-  [1513.0, 1367.2],
-  [1402.6, 1187.7],
-  [1246.2, 1053.9],
+  [1099.1, 455.1],
+  [2807.8, 453.8],
+  [2803.1, 957.4],
+  [2755.1, 1205.0],
+  [2749.8, 1786.4],
+  [2739.8, 1834.4],
+  [2713.0, 1873.7],
+  [2673.5, 1900.1],
+  [2625.2, 1909.8],
+  [2044.2, 1909.8],
+  [1869.4, 1934.7],
+  [1723.7, 1934.7],
+  [1699.0, 1930.4],
+  [1677.6, 1918.7],
+  [1661.1, 1900.7],
+  [1651.1, 1877.8],
+  [1575.64, 1570.14],
+  [1527.31, 1420.85],
+  [1456.64, 1281.81],
+  [1365.13, 1155.5],
+  [1254.39, 1044.5],
+  [1172.72, 955.33],
+  [1115.57, 850.7],
+  [1084.9, 735.5],
+  [1082.5, 614.6],
 ]
 
 export const PARCEL_WORLD: Array<[number, number]> = PARCEL_PAGE.map(([x, y]) => pageToWorld(x, y))
@@ -74,13 +71,18 @@ export const TOWER = {
   maxZ: TOWER_DEPTH_M / 2,
 }
 
-/** 椭圆下沉庭院，长轴东西向约 30 m，深 5.5 m 接 B1。 */
+/**
+ * 椭圆下沉庭院在裙楼南侧地面上（西南广场，8F 西侧），长轴约 32 m。
+ * 不在裙楼屋面中间，也不压到南侧道路。深 5.5 m 接 B1。
+ * 整圈开口在红线内，南侧总览能看到下沉内壁。
+ */
 export const COURTYARD = {
-  cx: 0,
-  cz: 24,
-  rx: 15,
-  rz: 8.2,
+  cx: -60,
+  cz: 74,
+  rx: 16,
+  rz: 12,
   depth: 5.5,
+  slope: 4.5,
 }
 
 export const PODIUM_HEIGHT_M = 6 + 4.2
@@ -116,6 +118,18 @@ export function armRotation(east: number, south: number): number {
  * 沿页面线段布点。offsetM 沿远离塔楼的方向为正。
  * armOutward 为 true 时挑臂朝外，false 时朝内；省略则不旋转（行道树）。
  */
+function segmentOutward(a: [number, number], b: [number, number]): [number, number] {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1
+  let nx = -(b[1] - a[1]) / len
+  let ny = (b[0] - a[0]) / len
+  const [ox, oy] = outwardPage((a[0] + b[0]) / 2, (a[1] + b[1]) / 2)
+  if (nx * ox + ny * oy < 0) {
+    nx = -nx
+    ny = -ny
+  }
+  return [nx, ny]
+}
+
 function sampleSegment(
   a: [number, number],
   b: [number, number],
@@ -128,18 +142,16 @@ function sampleSegment(
   if (len < 1) return []
   const dx = (b[0] - a[0]) / len
   const dy = (b[1] - a[1]) / len
-  const midX = (a[0] + b[0]) / 2
-  const midY = (a[1] + b[1]) / 2
-  const [ox, oy] = outwardPage(midX, midY)
+  const [nx, ny] = segmentOutward(a, b)
   const rotY =
-    armOutward === undefined ? 0 : armRotation(armOutward ? ox : -ox, armOutward ? oy : -oy)
+    armOutward === undefined ? 0 : armRotation(armOutward ? nx : -nx, armOutward ? ny : -ny)
   const out: Placement[] = []
   const count = Math.floor((len / PT_PER_M - phase) / spacing)
   for (let i = 0; i <= count; i += 1) {
     const distM = phase + i * spacing
     if (distM < 0 || distM * PT_PER_M > len - 1) continue
-    const px = a[0] + dx * distM * PT_PER_M + ox * offsetM * PT_PER_M
-    const py = a[1] + dy * distM * PT_PER_M + oy * offsetM * PT_PER_M
+    const px = a[0] + dx * distM * PT_PER_M + nx * offsetM * PT_PER_M
+    const py = a[1] + dy * distM * PT_PER_M + ny * offsetM * PT_PER_M
     const [x, z] = pageToWorld(px, py)
     out.push({ x, z, rotY })
   }
@@ -162,20 +174,20 @@ export function placeStreetFurniture(): { trees: Placement[]; lamps: Placement[]
 
   const southEdges: Array<[[number, number], [number, number]]> = [
     [
-      [2045.9, 1934.7],
-      [2625.3, 1934.7],
+      [2044.2, 1909.8],
+      [2625.2, 1909.8],
     ],
     [
-      [1871.2, 1959.7],
-      [2045.9, 1934.7],
+      [1869.4, 1934.7],
+      [2044.2, 1909.8],
     ],
     [
-      [1736.5, 1959.6],
-      [1871.2, 1959.7],
+      [1723.7, 1934.7],
+      [1869.4, 1934.7],
     ],
     [
-      [1639.7, 1883.7],
-      [1736.5, 1959.6],
+      [1651.1, 1877.8],
+      [1723.7, 1934.7],
     ],
   ]
   southEdges.forEach(([a, b], index) => {
@@ -185,15 +197,15 @@ export function placeStreetFurniture(): { trees: Placement[]; lamps: Placement[]
     lamps.push(...sampleSegment(a, b, 30, 10.6, 23, false))
   })
 
-  const eastA: [number, number] = [2774.7, 1786.6]
-  const eastB: [number, number] = [2780.0, 1207.4]
+  const eastA: [number, number] = [2749.8, 1786.4]
+  const eastB: [number, number] = [2803.1, 957.4]
   trees.push(...sampleSegment(eastA, eastB, 8, 3.2, 2))
   trees.push(...sampleSegment(eastA, eastB, 8, 11.5, 6))
   lamps.push(...sampleSegment(eastA, eastB, 30, 2.2, 5, true))
   lamps.push(...sampleSegment(eastA, eastB, 30, 10.4, 20, false))
 
-  const westA: [number, number] = [1246.2, 1053.9]
-  const westB: [number, number] = [1562.1, 1567.1]
+  const westA: [number, number] = [1254.39, 1044.5]
+  const westB: [number, number] = [1575.64, 1570.14]
   trees.push(...sampleSegment(westA, westB, 8, 4.5, 2))
 
   return { trees, lamps }
@@ -211,9 +223,7 @@ function offsetRibbon(
   outwardM: number,
   halfWidth: number,
 ): Ribbon {
-  const midX = (a[0] + b[0]) / 2
-  const midY = (a[1] + b[1]) / 2
-  const [ox, oy] = outwardPage(midX, midY)
+  const [ox, oy] = segmentOutward(a, b)
   const shift = outwardM * PT_PER_M
   return {
     a: pageToWorld(a[0] + ox * shift, a[1] + oy * shift),
@@ -232,9 +242,9 @@ export function roadRibbons(): Ribbon[] {
       b: pageToWorld(NORTH_ROAD.x1, northCenterY),
       halfWidth: northHalf,
     },
-    offsetRibbon([1736.5, 1959.6], [2045.9, 1934.7], 9, 6),
-    offsetRibbon([2045.9, 1934.7], [2625.3, 1934.7], 9, 6),
-    offsetRibbon([2774.7, 1786.6], [2780.0, 1207.4], 9, 5.5),
+    offsetRibbon([1723.7, 1934.7], [2044.2, 1909.8], 9, 6),
+    offsetRibbon([2044.2, 1909.8], [2625.2, 1909.8], 9, 6),
+    offsetRibbon([2749.8, 1786.4], [2803.1, 957.4], 9, 5.5),
   ]
 }
 
@@ -264,7 +274,7 @@ export function zebraStripes(): Stripe[] {
   const roadW = (NORTH_ROAD.yCurbSouth - NORTH_ROAD.yCurbNorth) / PT_PER_M
   addCrossing(1616, midY, roadW)
   addCrossing(2279, midY, roadW)
-  addCrossing(2210, 1995, 12)
+  addCrossing(2300, 1984, 12)
   return stripes
 }
 

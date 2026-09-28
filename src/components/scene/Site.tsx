@@ -23,10 +23,10 @@ import {
 } from '../../scene/siteGeometry'
 
 const PARK: Array<[number, number]> = [
-  [-240, -200],
-  [260, -200],
-  [260, 160],
-  [-240, 160],
+  [-240, -90],
+  [160, -90],
+  [160, 210],
+  [-240, 210],
 ]
 
 function ribbonGeometry(ribbons: Ribbon[], y: number) {

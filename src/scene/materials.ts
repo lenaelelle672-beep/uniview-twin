@@ -1,4 +1,4 @@
-import { Color, MeshPhysicalMaterial, MeshStandardMaterial, type Material } from 'three'
+import { Color, DoubleSide, MeshPhysicalMaterial, MeshStandardMaterial, type Material } from 'three'
 
 export type SurfaceMode = 'day' | 'night' | 'model'
 
@@ -87,6 +87,12 @@ export const solidMaterial = new MeshStandardMaterial({ color: '#f4f5f7', roughn
 export const jointMaterial = new MeshStandardMaterial({ color: '#fbfcfd', roughness: 0.5, metalness: 0.04 })
 export const finMaterial = new MeshStandardMaterial({ color: '#e4e7eb', roughness: 0.5, metalness: 0.08 })
 export const stoneMaterial = new MeshStandardMaterial({ color: '#d7d2c8', roughness: 0.86, metalness: 0 })
+export const courtWallMaterial = new MeshStandardMaterial({
+  color: '#c4bfb4',
+  roughness: 0.9,
+  metalness: 0,
+  side: DoubleSide,
+})
 export const grassMaterial = new MeshStandardMaterial({ color: '#b7c3ad', roughness: 0.95, metalness: 0 })
 export const pavingMaterial = new MeshStandardMaterial({ color: '#e3e0d8', roughness: 0.9, metalness: 0 })
 export const deckMaterial = new MeshStandardMaterial({ color: '#d9d5cc', roughness: 0.88, metalness: 0 })
@@ -118,6 +124,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     jointMaterial.color.set('#5e666e')
     finMaterial.color.set('#d5d8dc')
     stoneMaterial.color.set('#e6e6e6')
+    courtWallMaterial.color.set('#e6e6e6')
     deckMaterial.color.set('#dedede')
   } else if (mode === 'night') {
     curtainMaterial.color.set('#173a64')
@@ -133,6 +140,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     jointMaterial.color.set('#e7edf3')
     finMaterial.color.set('#b7bec6')
     stoneMaterial.color.set('#8a867e')
+    courtWallMaterial.color.set('#8a867e')
     deckMaterial.color.set('#6e6a64')
     grassMaterial.color.set('#1d2a22')
     pavingMaterial.color.set('#2a2e32')
@@ -153,6 +161,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     jointMaterial.color.set('#fbfcfd')
     finMaterial.color.set('#e4e7eb')
     stoneMaterial.color.set('#d7d2c8')
+    courtWallMaterial.color.set('#c4bfb4')
     deckMaterial.color.set('#d9d5cc')
     grassMaterial.color.set('#b7c3ad')
     pavingMaterial.color.set('#e3e0d8')
@@ -167,6 +176,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     jointMaterial,
     finMaterial,
     stoneMaterial,
+    courtWallMaterial,
     grassMaterial,
     pavingMaterial,
     deckMaterial,

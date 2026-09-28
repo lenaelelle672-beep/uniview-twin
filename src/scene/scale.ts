@@ -12,7 +12,10 @@ export function pointsToMeters(points: number): number {
   return points / PT_PER_M
 }
 
-/** 塔楼平面中心在图面上的位置。塔楼贴在地上建筑轮廓的西北角，宽 67 m、深 27 m。 */
+/**
+ * 东南 8F 体块的外墙（site.pdf 粗线）。塔楼不在这块上。
+ * 东西 98.5 m，南北 51.0 m。
+ */
 export const FOOTPRINT_PAGE = {
   west: 1801.56,
   east: 2619.72,
@@ -23,8 +26,30 @@ export const FOOTPRINT_PAGE = {
 export const TOWER_WIDTH_M = 67
 export const TOWER_DEPTH_M = 27
 
-export const ORIGIN_PAGE_X = FOOTPRINT_PAGE.west + (TOWER_WIDTH_M * PT_PER_M) / 2
-export const ORIGIN_PAGE_Y = FOOTPRINT_PAGE.north + (TOWER_DEPTH_M * PT_PER_M) / 2
+/**
+ * 22F 塔楼平面中心。测量坐标北墙 X=76048.690，东西角 Y=86355.182 / 86422.082
+ * （66.90 m），西墙进深 27.4 m。矩形按 67×27 m 贴住北墙和东西角。
+ * 页面位置由用地西北角 (1099.1, 455.1) = (Y=86262.511, X=76072.020) 和比例条 8.306 pt/m 换算。
+ */
+const SURVEY_PT_PER_M = 1708.7 / (86468.22 - 86262.511)
+const SURVEY_NW_PAGE_X = 1099.1
+const SURVEY_NW_PAGE_Y = 455.1
+const SURVEY_NW_EASTING = 86262.511
+const SURVEY_NW_NORTHING = 76072.02
+
+export function surveyToPage(easting: number, northing: number): [number, number] {
+  return [
+    SURVEY_NW_PAGE_X + (easting - SURVEY_NW_EASTING) * SURVEY_PT_PER_M,
+    SURVEY_NW_PAGE_Y - (northing - SURVEY_NW_NORTHING) * SURVEY_PT_PER_M,
+  ]
+}
+
+const TOWER_NORTH_Y = surveyToPage(86355.182, 76048.69)[1]
+const TOWER_WEST_X = surveyToPage(86355.182, 76048.69)[0]
+const TOWER_EAST_X = surveyToPage(86422.082, 76048.69)[0]
+
+export const ORIGIN_PAGE_X = (TOWER_WEST_X + TOWER_EAST_X) / 2
+export const ORIGIN_PAGE_Y = TOWER_NORTH_Y + (TOWER_DEPTH_M * PT_PER_M) / 2
 
 export function pageToWorld(pageX: number, pageY: number): [number, number] {
   return [(pageX - ORIGIN_PAGE_X) / PT_PER_M, (pageY - ORIGIN_PAGE_Y) / PT_PER_M]

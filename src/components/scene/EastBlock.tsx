@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { FLOOR_HEIGHT_F1_M, FLOOR_HEIGHT_TYPICAL_M } from '../../data/floors'
 import { extrudeUp } from '../../scene/extrude'
+import { FOOTPRINT } from '../../scene/siteGeometry'
 import { eastLowerOutline, eastUpperOutline, EAST_ROOF_M, outset } from '../../scene/massing'
 import { curtainMaterial, finMaterial, solidMaterial } from '../../scene/materials'
 import { FinRow } from './Fins'
@@ -38,7 +39,7 @@ export function EastBlock({ model }: { model: boolean }) {
         spacing={0.95}
         y={LOWER_TOP + (EAST_ROOF_M - LOWER_TOP) / 2}
         height={EAST_ROOF_M - LOWER_TOP - 0.15}
-        outwardFrom={[40, 8]}
+        outwardFrom={[(FOOTPRINT.minX + FOOTPRINT.maxX) / 2, (FOOTPRINT.minZ + FOOTPRINT.maxZ) / 2]}
       />
     </group>
   )
