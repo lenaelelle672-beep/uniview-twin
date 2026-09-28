@@ -3,10 +3,10 @@ import { pageToWorld, PT_PER_M } from '../scale'
 import type { Aabb, Point } from './layout'
 
 /**
- * B1.pdf → site.pdf 的唯一配准（D057）。
+ * B1.pdf → site.pdf 的唯一配准（D057 / D061）。
  * 旋转 0°。比例只用 B1.pdf 的 126.8 m 尺寸线（页 508→2319.7，366.9）。
- * 整体平移取外墙外角对 site.pdf A-WALL 地下室外墙外角的最小二乘。
- * 西北、东北能对上。西南、东南对不上，不进这组解，原因见 B1_UNPAIRED_CORNERS。
+ * 平移只用北侧西北、东北两个外墙角的最小二乘，与 9abcb9c 相同。
+ * 南侧两个角不参与：两张图南侧标的不是同一处墙角。
  * 地上的下沉广场和 B1Pick 不参与，也不跟着平移。
  */
 export const B1_PT_PER_M = 1811.7 / 126.8
@@ -19,51 +19,49 @@ export const B1_EAST_PAGE = { x: 2319.7, y: 366.9 }
 export const B1_EAST_SITE = { x: 2424.5, y: 648.9 }
 
 /**
- * site.pdf A-WALL 地下室外墙外角（页坐标，pt）。
- * 东南角是东墙北段外皮 x=2437.319824 延长后，与南墙外皮 y=1671.560059 的交点。
- * 东墙中段向东凸到 x=2475.60 的那段不参与这个交点。
- * 西南是西墙外皮向西错出后的南端转角，不是延长到南墙。
- */
-export const SITE_EAST_NORTH_OUTER_X = 2437.319824
-export const SITE_SOUTH_OUTER_Y = 1671.560059
-export const SITE_WALL_CORNERS = [
-  { id: 'NW' as const, page: { x: 1368.47998, y: 637.76001 } },
-  { id: 'NE' as const, page: { x: SITE_EAST_NORTH_OUTER_X, y: 642.680054 } },
-  { id: 'SW' as const, page: { x: 1358.76001, y: 888.560059 } },
-  { id: 'SE' as const, page: { x: SITE_EAST_NORTH_OUTER_X, y: SITE_SOUTH_OUTER_Y } },
-] as const
-
-/** B1.pdf 外墙外角（页坐标，pt）。西北、东北是北墙外皮与角柱外皮的交点。 */
-export const B1_WALL_CORNER_PAGES = [
-  { id: 'NW' as const, page: { x: 515.16, y: 397 } },
-  { id: 'NE' as const, page: { x: 2327.52, y: 397 } },
-  { id: 'SW' as const, page: { x: 495.6, y: 1152.64 } },
-  { id: 'SE' as const, page: { x: 2182.5601, y: 1266.64 } },
-] as const
-
-/**
- * 参与最小二乘的外墙外角。只有西北、东北。
- * B1 这两点取北墙外皮 y=397 与角柱外皮，间距 126.846 m。
- * 东南用上面的延长交点，但不进这组解：B1 东南外角对过去差约 60 m。
+ * 参与平移的外墙外角，只有北侧两个。
+ * B1 取北墙外皮 y=397 与角柱外皮（西北 x=515.16，东北 x=2327.52），间距 126.846 m。
+ * site 取 A-WALL 外皮交点：西 x=1368.48 ∩ 北 y=637.76，东 x=2437.3198 ∩ 北 y=642.6801。
  */
 export const B1_OUTER_CORNERS = [
-  { id: 'NW' as const, b1: B1_WALL_CORNER_PAGES[0].page, site: SITE_WALL_CORNERS[0].page },
-  { id: 'NE' as const, b1: B1_WALL_CORNER_PAGES[1].page, site: SITE_WALL_CORNERS[1].page },
+  { id: 'NW' as const, b1: { x: 515.16, y: 397 }, site: { x: 1368.48, y: 637.76 } },
+  { id: 'NE' as const, b1: { x: 2327.52, y: 397 }, site: { x: 2437.3198, y: 642.6801 } },
 ]
 
-/** 对不上的外角，不进最小二乘。 */
+/** 南侧两个角不参与平移。 */
+export const SOUTH_CORNER_REASON = '两张图南侧标的不是同一处墙角。'
 export const B1_UNPAIRED_CORNERS = [
-  {
-    id: 'SW' as const,
-    reason:
-      'B1 西南外角是斜墙端点 (495.60, 1152.64)。site A-WALL 西墙外皮在 (1358.76, 888.56) 向东折进，没有再向南收到同一个外角。',
-  },
-  {
-    id: 'SE' as const,
-    reason:
-      'site 东南角是东墙北段外皮延长后与南墙外皮的交点，凸出段不参与。B1 东南外角对过去仍差约 60 m，所以不进最小二乘。',
-  },
+  { id: 'SW' as const, reason: SOUTH_CORNER_REASON },
+  { id: 'SE' as const, reason: SOUTH_CORNER_REASON },
 ]
+
+/** 北墙外皮：B1 的 y=397，site 西段 y=637.76。两端 y 相同，方向都是东西向。 */
+const B1_NORTH_OUTER_FACE = { x0: 515.16, y0: 397, x1: 2327.52, y1: 397 }
+const SITE_NORTH_OUTER_FACE = { x0: 1371.839966, y0: 637.76001, x1: 1707.23999, y1: 637.76001 }
+
+function lineBearingDeg(x0: number, y0: number, x1: number, y1: number): number {
+  let degrees = (Math.atan2(y1 - y0, x1 - x0) * 180) / Math.PI
+  while (degrees > 90) degrees -= 180
+  while (degrees < -90) degrees += 180
+  return degrees
+}
+
+/** 两张图北墙外皮线的方向夹角（度）。只记录，不作为通过条件。 */
+export function northWallAngleDeg(): number {
+  const b1 = lineBearingDeg(
+    B1_NORTH_OUTER_FACE.x0,
+    B1_NORTH_OUTER_FACE.y0,
+    B1_NORTH_OUTER_FACE.x1,
+    B1_NORTH_OUTER_FACE.y1,
+  )
+  const site = lineBearingDeg(
+    SITE_NORTH_OUTER_FACE.x0,
+    SITE_NORTH_OUTER_FACE.y0,
+    SITE_NORTH_OUTER_FACE.x1,
+    SITE_NORTH_OUTER_FACE.y1,
+  )
+  return Math.abs(b1 - site)
+}
 
 function b1PageToWorldUnshifted(pageX: number, pageY: number): [number, number] {
   const siteX = B1_ANCHOR_SITE.x + (pageX - B1_ANCHOR_PAGE.x) * SITE_PER_B1
