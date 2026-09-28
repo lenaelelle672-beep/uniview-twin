@@ -1,7 +1,7 @@
-import { useFrame, useLoader } from '@react-three/fiber'
+import { useLoader, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { InstancedMesh, Mesh, MeshStandardMaterial, Object3D, Quaternion, Vector3 } from 'three'
+import { InstancedMesh, Mesh, MeshStandardMaterial, Object3D, Quaternion, Scene, Vector3, type Camera, type Light, type WebGLShadowMap } from 'three'
 import type { Placement } from '../../scene/siteGeometry'
 import { installMeshopt } from '../../scene/meshopt'
 
@@ -114,9 +114,27 @@ export function InstancedProp({
 }
 
 /**
- * 远景树叶只负责投影。阴影 pass 在主 pass 之前，投影后立刻隐藏，
- * 避免低模树叶进入主 pass（three 的阴影层测试用的是主相机，不能靠 layers 藏起来）。
+ * 主相机的投影列表在阴影 pass 之前就建好了，事后隐藏来不及。
+ * 远景树叶平时不可见，只在 shadowMap.render 里短暂打开。
  */
+function bindShadowOnly(mesh: InstancedMesh, shadowMap: WebGLShadowMap) {
+  const map = shadowMap as WebGLShadowMap & { __foliage?: Set<InstancedMesh> }
+  if (!map.__foliage) {
+    map.__foliage = new Set()
+    const render = map.render.bind(map)
+    map.render = (lights: Light[], scene: Scene, camera: Camera) => {
+      for (const item of map.__foliage!) item.visible = true
+      render(lights, scene, camera)
+      for (const item of map.__foliage!) item.visible = false
+    }
+  }
+  mesh.visible = false
+  map.__foliage.add(mesh)
+  return () => {
+    map.__foliage?.delete(mesh)
+  }
+}
+
 export function FoliageShadow({
   url,
   placements,
@@ -126,6 +144,7 @@ export function FoliageShadow({
   placements: Placement[]
   y?: number
 }) {
+  const gl = useThree((state) => state.gl)
   const gltf = useLoader(GLTFLoader, url, installMeshopt)
   const leaf = useMemo(
     () => collectMeshes(gltf.scene).find((mesh) => materialName(mesh) === LEAF_MATERIAL) ?? null,
@@ -137,18 +156,8 @@ export function FoliageShadow({
     const mesh = ref.current
     if (!mesh) return
     applyPlacements(mesh, placements, y)
-    mesh.onAfterShadow = () => {
-      mesh.visible = false
-    }
-    return () => {
-      mesh.onAfterShadow = () => {}
-    }
-  }, [leaf, placements, y])
-
-  useFrame(() => {
-    const mesh = ref.current
-    if (mesh) mesh.visible = true
-  })
+    return bindShadowOnly(mesh, gl.shadowMap)
+  }, [gl, leaf, placements, y])
 
   if (!leaf || placements.length === 0) return null
   return (
@@ -159,6 +168,7 @@ export function FoliageShadow({
       castShadow
       receiveShadow={false}
       frustumCulled={false}
+      visible={false}
     />
   )
 }
