@@ -1,13 +1,13 @@
 import { useMemo } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { FLOOR_HEIGHT_F1_M, FLOOR_HEIGHT_TYPICAL_M } from '../../data/floors'
+import { FLOOR_HEIGHT_TYPICAL_M } from '../../data/floors'
 import { extrudeUp } from '../../scene/extrude'
 import { FOOTPRINT } from '../../scene/siteGeometry'
-import { eastLowerOutline, eastUpperOutline, EAST_ROOF_M, outset } from '../../scene/massing'
+import { eastGrilleMount, eastLowerOutline, eastUpperOutline, EAST_LOWER_TOP_M, EAST_ROOF_M, outset } from '../../scene/massing'
 import { curtainMaterial, finMaterial, solidMaterial } from '../../scene/materials'
 import { FinRow } from './Fins'
 
-const LOWER_TOP = FLOOR_HEIGHT_F1_M + FLOOR_HEIGHT_TYPICAL_M
+const LOWER_TOP = EAST_LOWER_TOP_M
 
 export function EastBlock({ model }: { model: boolean }) {
   const upperOutline = useMemo(() => eastUpperOutline(), [])
@@ -29,8 +29,11 @@ export function EastBlock({ model }: { model: boolean }) {
   }, [upperOutline])
   const glass = model ? solidMaterial : curtainMaterial
 
+  const grille = eastGrilleMount()
+
   return (
     <group name="EastBlock">
+      <object3D name="eastGrilleMount" position={grille.position} rotation={grille.rotation} />
       <mesh geometry={lower} material={[solidMaterial, glass]} castShadow receiveShadow />
       <mesh geometry={upper} material={solidMaterial} position={[0, LOWER_TOP, 0]} castShadow receiveShadow />
       <mesh geometry={seams} material={finMaterial} castShadow />

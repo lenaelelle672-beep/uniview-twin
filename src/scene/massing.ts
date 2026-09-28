@@ -37,9 +37,30 @@ function eastBody(x0: number, x1: number, zNorth: number, zSouth: number, bulge:
   return points
 }
 
+/** 下部玻璃层顶，也是外挑实墙的底。 */
+export const EAST_LOWER_TOP_M = 6 + 4.2
+
 /** 上部南侧弧面向外悬挑；两端仍落在外墙角上。 */
 export function eastUpperOutline(): Array<[number, number]> {
   return eastBody(FOOTPRINT.minX, FOOTPRINT.maxX, FOOTPRINT.minZ, FOOTPRINT.maxZ, EAST_CANTILEVER_M)
+}
+
+/**
+ * 8F 东墙外侧挂载点。外表面是上部实墙（下层内退 1.2 m，不在这个平面上）。
+ * 从东侧朝墙看，原点在左下角；局部 +Y 向上，+Z 朝东（墙外），+X 沿墙朝北。
+ */
+export function eastGrilleMount(): {
+  length: number
+  height: number
+  position: [number, number, number]
+  rotation: [number, number, number]
+} {
+  return {
+    length: FOOTPRINT.maxZ - FOOTPRINT.minZ,
+    height: EAST_ROOF_M - EAST_LOWER_TOP_M,
+    position: [FOOTPRINT.maxX, EAST_LOWER_TOP_M, FOOTPRINT.maxZ],
+    rotation: [0, Math.PI / 2, 0],
+  }
 }
 
 /** 下部平面内退，南侧收进，让出上部悬挑。 */
