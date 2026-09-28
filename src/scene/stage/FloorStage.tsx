@@ -60,7 +60,8 @@ function BasementPick() {
       }}
     >
       <circleGeometry args={[COURTYARD.rx * 0.78, 28]} />
-      <meshBasicMaterial transparent opacity={0} depthWrite={false} colorWrite={false} />
+      {/* 网格保持可见以便射线拾取。材质不参与渲染，渲染器会跳过，不产生绘制调用。 */}
+      <meshBasicMaterial visible={false} />
     </mesh>
   )
 }
