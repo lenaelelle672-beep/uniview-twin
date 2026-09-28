@@ -40,27 +40,24 @@ describe('MockAdapter', () => {
       expect(floor.offlineCount).toBe(devices.filter((device) => device.status === 'offline').length)
 
       const heavy = (ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id)
-      const online = devices.filter((device) => device.status === 'online').length / devices.length
       const idle = devices.filter((device) => device.status === 'idle').length / devices.length
-      const alarm = floor.alarmCount / devices.length
-      const offline = floor.offlineCount / devices.length
-      expect(online).toBeGreaterThan(0.68)
-      expect(online).toBeLessThan(0.8)
       expect(idle).toBeGreaterThan(0.12)
       expect(idle).toBeLessThan(0.18)
-      expect(offline).toBeGreaterThan(0.04)
-      expect(offline).toBeLessThan(0.08)
-      if (heavy) {
-        expect(floor.alarmCount).toBeGreaterThanOrEqual(12)
-        expect(floor.alarmCount).toBeLessThanOrEqual(20)
-        expect(alarm).toBeGreaterThan(0.06)
-        expect(alarm).toBeLessThan(0.1)
-      } else {
+      if (!heavy) {
         expect(floor.alarmCount).toBeGreaterThanOrEqual(5)
-        expect(floor.alarmCount).toBeLessThanOrEqual(10)
-        expect(alarm).toBeGreaterThan(0.03)
-        expect(alarm).toBeLessThan(0.05)
+        expect(floor.alarmCount).toBeLessThanOrEqual(11)
+        expect(floor.offlineCount).toBeGreaterThanOrEqual(7)
+        expect(floor.offlineCount).toBeLessThanOrEqual(17)
       }
+    }
+
+    const normal = data.floors.filter((floor) => !(ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id))
+    const heavy = data.floors.filter((floor) => (ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id))
+    const maxNormalAlarm = Math.max(...normal.map((floor) => floor.alarmCount))
+    expect(new Set(normal.map((floor) => floor.alarmCount)).size).toBeGreaterThan(1)
+    expect(new Set(normal.map((floor) => floor.offlineCount)).size).toBeGreaterThan(1)
+    for (const floor of heavy) {
+      expect(floor.alarmCount).toBeGreaterThanOrEqual(maxNormalAlarm + 4)
     }
   })
 
@@ -83,14 +80,5 @@ describe('MockAdapter', () => {
     expect(zones('F12')).toEqual(new Set(['tower']))
     expect(zones('B1')).toEqual(new Set(['podium']))
 
-    const ratio = (floorId: string) => {
-      const floor = byId[floorId]
-      const count = data.devices.filter((device) => device.floorId === floorId).length
-      return floor.alarmCount / count
-    }
-    for (const floorId of ALARM_HEAVY_FLOORS) {
-      expect(ratio(floorId)).toBeGreaterThan(ratio('F1') * 1.8)
-      expect(ratio(floorId)).toBeLessThan(ratio('F1') * 2.2)
-    }
   })
 })

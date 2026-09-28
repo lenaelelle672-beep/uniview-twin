@@ -7,7 +7,6 @@ export const MOCK_SEED = 20260928
 export const DESKS_PER_FLOOR = 100
 export const ALARM_HEAVY_FLOORS = ['F3', 'F12', 'F18'] as const
 
-const ONLINE_RATIO = 0.75
 const IDLE_RATIO = 0.15
 const ALARM_RATIO = 0.04
 const OFFLINE_RATIO = 0.06
@@ -32,14 +31,24 @@ function deskPosition(index: number): { x: number; z: number } {
   }
 }
 
-function statusQuota(count: number, alarmHeavy: boolean): DeviceStatus[] {
-  const alarm = Math.round(count * (alarmHeavy ? ALARM_RATIO * 2 : ALARM_RATIO))
+function jitterAround(base: number, rng: () => number): number {
+  const factor = 1 + (rng() * 2 - 1) * 0.4
+  return Math.max(1, Math.round(base * factor))
+}
+
+function statusQuota(count: number, alarmHeavy: boolean, rng: () => number): DeviceStatus[] {
+  const nominalAlarm = Math.round(count * ALARM_RATIO)
+  const alarmBase = alarmHeavy ? nominalAlarm * 2 : nominalAlarm
+  let alarm = jitterAround(alarmBase, rng)
+  if (alarmHeavy) {
+    const normalCeiling = Math.round(nominalAlarm * 1.4)
+    alarm = Math.max(alarm, normalCeiling + 4)
+  }
+  const offline = jitterAround(Math.round(count * OFFLINE_RATIO), rng)
   const idle = Math.round(count * IDLE_RATIO)
-  const offline = Math.round(count * OFFLINE_RATIO)
   const online = count - alarm - idle - offline
-  const onlineTarget = alarmHeavy ? ONLINE_RATIO - ALARM_RATIO : ONLINE_RATIO
-  if (online < 1 || Math.abs(online / count - onlineTarget) > 0.03) {
-    throw new Error(`在线比例偏离目标：${online}/${count}`)
+  if (online < 1) {
+    throw new Error(`在线设备不足：${online}/${count}`)
   }
   return [
     ...Array.from({ length: online }, () => 'online' as const),
@@ -115,7 +124,7 @@ export function createMockData(seed = MOCK_SEED): TwinData {
       })
     }
 
-    const statuses = statusQuota(pending.length, alarmHeavy)
+    const statuses = statusQuota(pending.length, alarmHeavy, statusRng)
     shuffleInPlace(statuses, statusRng)
     pending.forEach((device, index) => {
       const status = statuses[index]

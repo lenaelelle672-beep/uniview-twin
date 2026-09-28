@@ -75,7 +75,7 @@ export function storeToSearch(): string {
     pos: state.focusedDeskId ?? undefined,
     cam: state.cam ?? undefined,
     data: state.dataUrl ?? undefined,
-    q: state.qualityPinned ? state.quality : undefined,
+    q: state.urlQuality ?? undefined,
   })
 }
 
@@ -90,6 +90,8 @@ export function applySearchToStore(search: string) {
     dataUrl,
     quality: parsed.q ?? 'balanced',
     qualityPinned: parsed.q != null,
+    urlQuality: parsed.q ?? null,
+    downgradeSuppressed: false,
     error: dataUrl && !isLocalDataPath(dataUrl) ? '数据地址必须是以 / 开头的站内路径' : null,
     status: dataUrl && !isLocalDataPath(dataUrl) ? 'error' : useTwinStore.getState().status,
   })

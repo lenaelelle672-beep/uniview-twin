@@ -10,6 +10,8 @@ export interface ViewSlice {
   dayNight: DayNight
   quality: QualityTier
   qualityPinned: boolean
+  urlQuality: QualityTier | null
+  downgradeSuppressed: boolean
   selectedFloor: string | null
   hoveredFloor: string | null
   focusedDeskId: string | null
@@ -31,6 +33,8 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   dayNight: 'day',
   quality: 'balanced',
   qualityPinned: false,
+  urlQuality: null,
+  downgradeSuppressed: false,
   selectedFloor: null,
   hoveredFloor: null,
   focusedDeskId: null,
@@ -38,10 +42,10 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   setView: (view) => set({ view }),
   setExploded: (exploded) => set({ exploded }),
   setDayNight: (dayNight) => set({ dayNight }),
-  setQuality: (quality) => set({ quality, qualityPinned: true }),
+  setQuality: (quality) => set({ quality, downgradeSuppressed: true }),
   declineQuality: () => {
-    const { qualityPinned, quality } = get()
-    if (qualityPinned) return
+    const { qualityPinned, downgradeSuppressed, quality } = get()
+    if (qualityPinned || downgradeSuppressed) return
     const index = QUALITY_ORDER.indexOf(quality)
     const next = QUALITY_ORDER[Math.min(index + 1, QUALITY_ORDER.length - 1)]
     if (next !== quality) set({ quality: next })
