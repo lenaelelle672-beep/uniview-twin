@@ -120,11 +120,16 @@ button {
   border-color: rgba(255, 255, 255, 0.28);
 }
 
-.search {
+.search-wrap {
+  position: relative;
   margin-left: auto;
-  flex: 1 1 140px;
-  min-width: 120px;
-  max-width: 280px;
+  flex: 1 1 180px;
+  min-width: 148px;
+  max-width: 320px;
+}
+
+.search {
+  width: 100%;
   height: 32px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -135,6 +140,57 @@ button {
 
 .search::placeholder {
   color: rgba(255, 255, 255, 0.72);
+}
+
+.search-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  right: 0;
+  width: max(100%, 260px);
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: #fff;
+  color: #122033;
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(12, 24, 40, 0.28);
+}
+
+.search-option,
+.search-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 6px;
+}
+
+.search-option.is-active {
+  background: #e7f1fb;
+}
+
+.search-title {
+  font-weight: 700;
+}
+
+.search-subtitle,
+.search-empty {
+  color: #526070;
+  font-size: 12px;
+}
+
+.desk-devices {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.desk-devices li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid #e6edf5;
 }
 
 .workspace {
@@ -298,6 +354,10 @@ button {
   background: #fff4f2;
   color: #7a1f16;
   border: 1px solid #f0c2ba;
+}
+
+.banner-error.is-second {
+  top: 64px;
 }
 
 .view-chip,

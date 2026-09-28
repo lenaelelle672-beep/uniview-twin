@@ -1,58 +1,189 @@
 import { type CameraControls as CameraControlsImpl } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
-import { useLayoutEffect, useRef } from 'react'
-import { PerspectiveCamera } from 'three'
-import { type CameraPose } from '../cameras'
+import { useFrame, useThree } from '@react-three/fiber'
+import { useLayoutEffect } from 'react'
+import { Box3, Object3D, PerspectiveCamera, Vector3 } from 'three'
+import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
 import { activeFloorId } from './cut'
-import { floorCameraPose } from './poses'
+import { obliqueOverviewSeed } from './poses'
+import { workstationPosition } from './workstationPosition'
 
-const FLY_SECONDS = 1.5
+const FLOOR_FOV = 48
+const DESK_FOV = 42
+const FLY_SECONDS = 0.42
+const POLAR_DIP = 1.05
 
-function fly(controls: CameraControlsImpl, camera: PerspectiveCamera, pose: CameraPose, transition: boolean) {
-  if (camera.isPerspectiveCamera && Math.abs(camera.fov - pose.fov) > 0.05) {
-    camera.fov = pose.fov
-    camera.updateProjectionMatrix()
+const corner = new Vector3()
+
+function setFov(camera: PerspectiveCamera, fov: number) {
+  if (!camera.isPerspectiveCamera || Math.abs(camera.fov - fov) <= 0.05) return
+  camera.fov = fov
+  camera.updateProjectionMatrix()
+}
+
+function projectBox(camera: PerspectiveCamera, box: Box3) {
+  const xs = [box.min.x, box.max.x]
+  const ys = [box.min.y, box.max.y]
+  const zs = [box.min.z, box.max.z]
+  camera.updateMatrixWorld()
+  let minX = Infinity
+  let maxX = -Infinity
+  let minY = Infinity
+  let maxY = -Infinity
+  for (const x of xs) {
+    for (const y of ys) {
+      for (const z of zs) {
+        corner.set(x, y, z).project(camera)
+        minX = Math.min(minX, corner.x)
+        maxX = Math.max(maxX, corner.x)
+        minY = Math.min(minY, corner.y)
+        maxY = Math.max(maxY, corner.y)
+      }
+    }
   }
-  controls.smoothTime = transition ? FLY_SECONDS : 0
-  void controls.setLookAt(
-    pose.position[0],
-    pose.position[1],
-    pose.position[2],
-    pose.target[0],
-    pose.target[1],
-    pose.target[2],
-    transition,
+  return {
+    widthRatio: (maxX - minX) / 2,
+    heightRatio: (maxY - minY) / 2,
+    centerX: (minX + maxX) / 2,
+    centerY: (minY + maxY) / 2,
+    minY,
+    maxY,
+  }
+}
+
+function frameSlab(rig: CameraControlsImpl, camera: PerspectiveCamera, plate: Object3D, floorId: string) {
+  plate.updateWorldMatrix(true, true)
+  const box = new Box3().setFromObject(plate)
+  if (box.isEmpty()) return false
+  const center = box.getCenter(new Vector3())
+  const size = box.getSize(new Vector3())
+  const seed = obliqueOverviewSeed(center, { x: size.x, z: size.z })
+  rig.smoothTime = 0
+  rig.maxPolarAngle = Math.PI / 2 - POLAR_DIP
+  setFov(camera, FLOOR_FOV)
+  void rig.setLookAt(
+    seed.position[0],
+    seed.position[1],
+    seed.position[2],
+    seed.target[0],
+    seed.target[1],
+    seed.target[2],
+    false,
   )
+  void rig.fitToBox(box, false)
+  rig.update(0)
+  const fitted = projectBox(camera, box)
+  if (fitted.widthRatio > 0.05 && fitted.widthRatio < 0.7) {
+    rig.dollyTo(rig.distance * (fitted.widthRatio / 0.78), false)
+    rig.update(0)
+  }
+  rig.maxPolarAngle = Math.PI
+  const settled = projectBox(camera, box)
+  window.__twinSlab = { floorId, ...settled }
+  return true
+}
+
+function flyToDesk(
+  rig: CameraControlsImpl,
+  camera: PerspectiveCamera,
+  interior: Object3D,
+  floorId: string,
+  deskId: string,
+  transition: boolean,
+) {
+  interior.updateWorldMatrix(true, false)
+  const local = workstationPosition(floorId, deskId)
+  const target = new Vector3(local.x, 0.55, local.z)
+  interior.localToWorld(target)
+  const eye = target.clone().add(new Vector3(2.6, 5.4, 6.8))
+  rig.smoothTime = transition ? FLY_SECONDS : 0
+  rig.maxPolarAngle = Math.PI
+  setFov(camera, DESK_FOV)
+  const started = performance.now()
+  delete window.__twinLocate
+  window.__twinFlyEnd = { deskId, x: eye.x, y: eye.y, z: eye.z, started }
+  void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, transition).then(() => {
+    markLocated(deskId, started)
+  })
+  return true
+}
+
+function markLocated(deskId: string, started: number) {
+  if (window.__twinLocate?.deskId === deskId) return
+  window.__twinLocate = {
+    ms: Math.round(performance.now()),
+    flyMs: Math.round(performance.now() - started),
+    deskId,
+  }
+  window.dispatchEvent(new CustomEvent('twin-locate-rest'))
 }
 
 export function FloorStageCamera() {
   const active = useTwinStore((state) => activeFloorId(state.view, state.selectedFloor))
+  const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
+  const focusSeq = useTwinStore((state) => state.focusSeq)
   const controls = useThree((state) => state.controls)
   const camera = useThree((state) => state.camera)
-  const armed = useRef(false)
+  const scene = useThree((state) => state.scene)
+  const size = useThree((state) => state.size)
+
+  useFrame(() => {
+    const end = window.__twinFlyEnd
+    if (!end || window.__twinLocate?.deskId === end.deskId) return
+    const perspective = camera as PerspectiveCamera
+    const dx = perspective.position.x - end.x
+    const dy = perspective.position.y - end.y
+    const dz = perspective.position.z - end.z
+    if (dx * dx + dy * dy + dz * dz < 1.2 * 1.2) markLocated(end.deskId, end.started)
+  })
 
   useLayoutEffect(() => {
     const rig = controls as CameraControlsImpl | null
-    if (!rig || typeof rig.setLookAt !== 'function') return
-    const perspective = camera as PerspectiveCamera
-    let timer = 0
-    const settle = () => {
-      timer = window.setTimeout(() => {
-        if (rig.smoothTime === FLY_SECONDS) rig.smoothTime = 0
-      }, 1800)
+    let cancelled = false
+    let attempts = 0
+    const tick = () => {
+      if (cancelled) return
+      const ready = rig && typeof rig.setLookAt === 'function' && typeof rig.fitToBox === 'function'
+      if (!ready || !rig) {
+        if (attempts < 40) {
+          attempts += 1
+          requestAnimationFrame(tick)
+        }
+        return
+      }
+      if (!active) {
+        rig.smoothTime = 0
+        return
+      }
+      const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
+      const deskId = focused && focused.floorId === active ? focused.deskId : null
+      if (deskId) {
+        const interior = scene.getObjectByName('FloorInterior')
+        if (!interior) {
+          if (attempts < 90) {
+            attempts += 1
+            requestAnimationFrame(tick)
+          }
+          return
+        }
+        flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, focusSeq > 0)
+        return
+      }
+      const plate = scene.getObjectByName('FloorPlate')
+      if (!plate) {
+        if (attempts < 90) {
+          attempts += 1
+          requestAnimationFrame(tick)
+        }
+        return
+      }
+      frameSlab(rig, camera as PerspectiveCamera, plate, active)
     }
-    if (active) {
-      armed.current = true
-      fly(rig, perspective, floorCameraPose(active), true)
-      settle()
-    } else if (armed.current) {
-      // 总览取景由 CameraRig 的 fitToBox 负责，这里不再写回旧机位。
-      armed.current = false
-      rig.smoothTime = 0
+    tick()
+    return () => {
+      cancelled = true
     }
-    return () => window.clearTimeout(timer)
-  }, [active, camera, controls])
+  }, [active, camera, controls, focusSeq, focusedDeskId, scene, size.height, size.width])
 
   return null
 }

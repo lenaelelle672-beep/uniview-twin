@@ -47,6 +47,7 @@ import {
   stageMaterial,
   woodMaterial,
 } from './materials'
+import { DeskFlash } from './DeskFlash'
 import { InstancedSlots, Workstations } from './Workstations'
 
 const tables = canteenTables().map((table) => ({ ...table, rot: 0 }))
@@ -84,7 +85,9 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
 
   return (
     <group name="FloorInterior" position={[0, -5.5 + SLAB_M, 0]} onDoubleClick={(event) => event.stopPropagation()}>
-      <mesh name="FloorSlab" geometry={slab} material={slabMaterial} receiveShadow />
+      <group name="FloorPlate">
+        <mesh name="FloorSlab" geometry={slab} material={slabMaterial} receiveShadow />
+      </group>
       <mesh geometry={court} material={atriumMaterial} receiveShadow />
       <mesh geometry={courtInner} material={atriumInnerMaterial} position={[0, 0.02, 0]} />
       <mesh geometry={fan} material={fanFloorMaterial} receiveShadow />
@@ -106,6 +109,7 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
       </group>
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
+      <DeskFlash floorId="B1" />
       <Ceiling
         width={FOOTPRINT.maxX - FOOTPRINT.minX}
         depth={FOOTPRINT.maxZ - FOOTPRINT.minZ}

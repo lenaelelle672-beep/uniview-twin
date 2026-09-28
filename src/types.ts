@@ -35,12 +35,12 @@ export interface Desk {
   index: number
   zone: Zone
   /**
-   * 数据载荷里的坐标。D027：模拟数据和 ?data= 只提供楼层、编号和状态；
-   * 这些坐标即使存在，也不得用于摆放。落点只来自 workstationPosition。
+   * 历史载荷。D027 / D034：坐标可选，带了也必须忽略。
+   * 摆放、定位和详情只调用 workstationPosition。
    */
-  x: number
-  y: number
-  z: number
+  x?: number
+  y?: number
+  z?: number
 }
 
 export interface Device {

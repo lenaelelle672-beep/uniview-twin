@@ -2,9 +2,8 @@ import type { Presentation } from '../store/viewSlice'
 import { CAMERA_IDS, QUALITY_TIERS, VIEW_MODES, type CameraId, type QualityTier, type ViewMode } from '../types'
 import { isFloorId } from '../data/floors'
 import { isLocalDataPath } from '../data/adapters'
+import { invalidPosMessage, resolveWorkstationRef } from '../locate/ref'
 import { useTwinStore } from '../store/store'
-
-const POS_RE = /^(?:B1|F(?:[1-9]|1\d|2[0-2]))-\d{1,4}$/
 
 export interface UrlState {
   view?: ViewMode
@@ -39,7 +38,8 @@ export function parseSearch(search: string): UrlState {
   if (floor && isFloorId(floor)) result.floor = floor
 
   const pos = params.get('pos')
-  if (pos && POS_RE.test(pos)) result.pos = pos
+  const resolvedPos = pos ? resolveWorkstationRef(pos) : null
+  if (resolvedPos) result.pos = resolvedPos.deskId
 
   const cam = params.get('cam')
   if (cam && isCameraId(cam)) result.cam = cam
@@ -85,14 +85,24 @@ export function storeToSearch(): string {
   })
 }
 
+function rawParam(search: string, key: string): string | null {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+  const value = params.get(key)
+  if (!value || !value.trim()) return null
+  return value.trim()
+}
+
 export function applySearchToStore(search: string) {
   const parsed = parseSearch(search)
   const dataUrl = parsed.data ?? null
+  const rawPos = rawParam(search, 'pos')
+  const located = rawPos ? resolveWorkstationRef(rawPos) : null
   useTwinStore.setState({
     view: parsed.view ?? 'building',
     selectedFloor: parsed.floor ?? null,
-    // TODO(D027): ?pos= 目前只记下工位编号，还没有飞到工位。以后飞镜头和工位详情都要调用 workstationPosition(floorId, workstationId)，不要读取数据里的 x/y/z。
-    focusedDeskId: parsed.pos ?? null,
+    focusedDeskId: null,
+    focusedDeviceId: null,
+    posNotice: rawPos && !located ? invalidPosMessage(rawPos) : null,
     cam: parsed.cam ?? null,
     dataUrl,
     quality: parsed.q ?? 'balanced',
@@ -103,4 +113,7 @@ export function applySearchToStore(search: string) {
     error: dataUrl && !isLocalDataPath(dataUrl) ? '数据地址必须是以 / 开头的站内路径' : null,
     status: dataUrl && !isLocalDataPath(dataUrl) ? 'error' : useTwinStore.getState().status,
   })
+  if (located) {
+    useTwinStore.getState().focusDevice({ floor: located.floorId, deskId: located.deskId })
+  }
 }

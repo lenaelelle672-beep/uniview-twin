@@ -22,6 +22,8 @@ export interface ViewSlice {
   /** 告警抽屉点中的设备。T005 飞镜头仍只看 floor / deskId / focusSeq。 */
   focusedDeviceId: string | null
   cam: CameraId | null
+  /** 无效的 ?pos=。中文提示，不抛错、不白屏。 */
+  posNotice: string | null
   setView: (view: ViewMode) => void
   setExploded: (exploded: boolean) => void
   setDayNight: (dayNight: DayNight) => void
@@ -52,6 +54,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   focusedDeskId: null,
   focusedDeviceId: null,
   cam: null,
+  posNotice: null,
   focusSeq: 0,
   setView: (view) => set({ view }),
   setExploded: (exploded) => set({ exploded }),
@@ -84,6 +87,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
       focusedDeskId: deskId,
       focusedDeviceId: deviceId,
       view: 'floor',
+      posNotice: null,
       focusSeq: state.focusSeq + 1,
     })),
 })

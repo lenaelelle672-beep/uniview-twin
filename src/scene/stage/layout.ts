@@ -173,13 +173,23 @@ function slotsInZone(zone: Aabb, gapX: number, gapZ: number): Slot[] {
   return slots
 }
 
+/**
+ * 桌面 1.40 m、柱截面 0.62 m，半宽相加 1.01 m。
+ * 中心距低于 1.01 m 就会穿进柱子；D034 要求桌子中心离柱子至少 1.10 m。
+ */
+export const DESK_COLUMN_MIN_DISTANCE_M = 1.1
+
+function nearColumn(slot: Slot, columns: Point[]): boolean {
+  return columns.some((column) => Math.hypot(column.x - slot.x, column.z - slot.z) < DESK_COLUMN_MIN_DISTANCE_M)
+}
+
 function towerBlocked(slot: Slot, pad: number): boolean {
   if (!inTowerPlate(slot.x, slot.z)) return true
   if (insideAabb(slot.x, slot.z, CORE, pad)) return true
   if (MEETINGS.some((room) => insideAabb(slot.x, slot.z, room, pad))) return true
   if (insideAabb(slot.x, slot.z, RECEPTION, pad)) return true
   if (insideAabb(slot.x, slot.z, PANTRY, pad)) return true
-  return towerColumns().some((column) => Math.hypot(column.x - slot.x, column.z - slot.z) < 0.95)
+  return nearColumn(slot, towerColumns())
 }
 
 function b1Blocked(slot: Slot, pad: number): boolean {
@@ -189,7 +199,7 @@ function b1Blocked(slot: Slot, pad: number): boolean {
   if (B1_ROOMS.some((room) => insideAabb(slot.x, slot.z, room, pad))) return true
   if (inAtrium(slot.x, slot.z, pad)) return true
   if (inFan(slot.x, slot.z, pad)) return true
-  return b1Columns().some((column) => Math.hypot(column.x - slot.x, column.z - slot.z) < 0.9)
+  return nearColumn(slot, b1Columns())
 }
 
 function collect(floorId: string, gapX: number, gapZ: number, pad: number): Slot[] {
