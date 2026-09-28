@@ -33,7 +33,7 @@ npm test
 | `view` | `building` 总览、`floor` 单层、`blueprint` 蓝图。默认总览，不写进地址栏 | `?view=floor` |
 | `floor` | `B1` 或 `F1`～`F22` | `?floor=F12` |
 | `pos` | 工位号，如 `F12-66`、`B1-8` | `?pos=F12-66` |
-| `cam` | 固定机位：`photo1`、`p2f000`、`p2f001`、`p2f002`、`p2f003`。打开后直接落到姿态，不飞。数值是方案初值，尚未对照照片 | `?cam=p2f000` |
+| `cam` | 固定机位：`photo1`、`p2f000`、`p2f001`、`p2f002`、`p2f003`。打开后直接落到姿态，不飞。数值已按 `docs/ref` 对照当前体块校准 | `?cam=p2f000` |
 | `data` | 站内 JSON，必须以 `/` 开头 | `?data=/sample.json` |
 | `q` | 画质档 `perf`、`balanced`、`high`。只有打开页面时地址栏里已有 `q` 才锁定该档并关闭自动降档。界面里改画质只在本次会话生效 | `?q=perf` |
 | `style` | `model` 时用白模（黑底、灰线分格），便于和体块模型对照。缺省为白天或夜间的玻璃幕墙 | `?style=model` |

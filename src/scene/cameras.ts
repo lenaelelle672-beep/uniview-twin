@@ -7,17 +7,17 @@ export interface CameraPose {
 }
 
 /**
- * 固定机位。五个 `?cam=` 先用方案第 7 节的初值，对照照片的校准在体块落地后进行。
+ * 固定机位。五个 `?cam=` 在 D025 体块（塔楼在西北角）上对照 docs/ref 校准。
  * 总览姿态只作为 fitToBox 的起始方向，最终取景由 CameraRig 框定。
  * 竖向视场角。打开 `?cam=` 时直接落到该姿态，不播放飞行动画。
  */
 export const CAMERA_POSES: Record<CameraId | 'overview', CameraPose> = {
   overview: { position: [24, 70, 210], target: [0, 36, 48], fov: 33 },
-  photo1: { position: [-40, 1.6, 170], target: [20, 40, 0], fov: 50 },
-  p2f000: { position: [10, 90, 260], target: [10, 35, 0], fov: 30 },
-  p2f001: { position: [220, 110, 180], target: [15, 30, 0], fov: 30 },
-  p2f002: { position: [260, 90, -20], target: [15, 30, 0], fov: 30 },
-  p2f003: { position: [-200, 90, 190], target: [10, 30, 0], fov: 30 },
+  photo1: { position: [-24, 1.6, 178], target: [36, 46, 16], fov: 50 },
+  p2f000: { position: [-190, 58, 210], target: [28, 48, 28], fov: 40 },
+  p2f001: { position: [270, 110, 150], target: [-40, 30, 28], fov: 38 },
+  p2f002: { position: [198, 72, 150], target: [-18, 42, 30], fov: 46 },
+  p2f003: { position: [-148, 52, 228], target: [36, 48, 40], fov: 44 },
 }
 
 export const CAMERA_LIMITS = {
