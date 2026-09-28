@@ -2,7 +2,8 @@ import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useMemo } from 'react'
 import { InstancedMesh } from 'three'
 import { floorSpec } from '../../data/floors'
-import { COURTYARD } from '../siteGeometry'
+import { extrudeUp } from '../extrude'
+import { courtyardHole } from '../massing'
 import { useTwinStore } from '../../store/store'
 import type { DeviceStatus } from '../../types'
 import { B1Interior } from './B1Interior'
@@ -48,18 +49,21 @@ function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDes
 function BasementPick() {
   const enterFloor = useTwinStore((state) => state.enterFloor)
   const inside = useTwinStore((state) => state.view === 'floor')
+  const geometry = useMemo(() => {
+    const pick = extrudeUp(courtyardHole(), 0.08)
+    pick.translate(0, 0.42, 0)
+    return pick
+  }, [])
   if (inside) return null
   return (
     <mesh
       name="B1Pick"
-      rotation={[-Math.PI / 2, 0, 0]}
-      position={[COURTYARD.cx, 0.42, COURTYARD.cz]}
+      geometry={geometry}
       onDoubleClick={(event) => {
         event.stopPropagation()
         enterFloor('B1')
       }}
     >
-      <circleGeometry args={[COURTYARD.rx * 0.78, 28]} />
       {/* 网格保持可见以便射线拾取。材质不参与渲染，渲染器会跳过，不产生绘制调用。 */}
       <meshBasicMaterial visible={false} />
     </mesh>

@@ -1,8 +1,8 @@
 import { BoxGeometry, BufferAttribute, BufferGeometry, Color, MeshStandardMaterial } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { extrudeUp } from './extrude'
-import { ellipsePoints } from './massing'
-import { COURTYARD, FOOTPRINT, TOWER } from './siteGeometry'
+import { courtyardHole } from './massing'
+import { FOOTPRINT, TOWER } from './siteGeometry'
 
 /** 与原先 6 个 zoneMaterials 相同的色值。 */
 export const B1_ZONE_COLORS = ['#c5ccd4', '#d9e2ea', '#d7c4b0', '#e4d3bf', '#cfc8be', '#d4cfc6'] as const
@@ -37,11 +37,13 @@ function place(geometry: BufferGeometry, x: number, y: number, z: number, hex: s
 
 /** 把 B1 色块收成一个带顶点色的网格，主 pass 从 10 次降到 1 次。 */
 export function buildB1ZoneGeometry(): BufferGeometry {
-  const atrium = extrudeUp(ellipsePoints(COURTYARD.cx, COURTYARD.cz, COURTYARD.rx - 0.4, COURTYARD.rz - 0.35, 28), 0.12)
-  const fanPoints: Array<[number, number]> = [[28, 18]]
+  const atrium = extrudeUp(courtyardHole(), 0.12)
+  const fanX = (FOOTPRINT.minX + FOOTPRINT.maxX) / 2
+  const fanZ = (FOOTPRINT.minZ + FOOTPRINT.maxZ) / 2
+  const fanPoints: Array<[number, number]> = [[fanX, fanZ]]
   for (let i = 0; i <= 14; i += 1) {
     const t = -0.4 + (2.2 * i) / 14
-    fanPoints.push([28 + Math.cos(t) * 16, 18 + Math.sin(t) * 14])
+    fanPoints.push([fanX + Math.cos(t) * 12, fanZ + Math.sin(t) * 10])
   }
   const fan = extrudeUp(fanPoints, 0.12)
   const rooms = new BoxGeometry(4.2, 0.16, 5.2)

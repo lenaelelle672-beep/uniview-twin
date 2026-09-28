@@ -89,11 +89,15 @@ const TOWER_DESK_ZONES: Aabb[] = [
   { x0: 12.2, x1: 31.5, z0: -12.15, z1: -7.45 },
 ]
 
+/** 8F 楼板改成南北向长条后，工位从这块楼板里重排，仍只经 workstationPosition 读取。 */
 const B1_DESK_ZONES: Aabb[] = [
-  { x0: 47.5, x1: 62.2, z0: 1.5, z1: 31.5 },
-  { x0: 18.5, x1: 45.5, z0: -11.2, z1: 6.2 },
-  { x0: 46.8, x1: 62.2, z0: -11.2, z1: 0.6 },
-].map(onBasementBox)
+  {
+    x0: FOOTPRINT.minX + 1.8,
+    x1: FOOTPRINT.maxX - 1.8,
+    z0: FOOTPRINT.minZ + 1.8,
+    z1: FOOTPRINT.maxZ - 1.8,
+  },
+]
 
 function insideAabb(x: number, z: number, box: Aabb, pad = 0): boolean {
   return x >= box.x0 - pad && x <= box.x1 + pad && z >= box.z0 - pad && z <= box.z1 + pad

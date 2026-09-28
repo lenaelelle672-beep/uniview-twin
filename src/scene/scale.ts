@@ -13,23 +13,8 @@ export function pointsToMeters(points: number): number {
 }
 
 /**
- * 东南 8F 体块的外墙（site.pdf 粗线）。塔楼不在这块上。
- * 东西 98.5 m，南北 51.0 m。
- */
-export const FOOTPRINT_PAGE = {
-  west: 1801.56,
-  east: 2619.72,
-  north: 1385.72,
-  south: 1809.32,
-} as const
-
-export const TOWER_WIDTH_M = 67
-export const TOWER_DEPTH_M = 27
-
-/**
- * 22F 塔楼平面中心。测量坐标北墙 X=76048.690，东西角 Y=86355.182 / 86422.082
- * （66.90 m），西墙进深 27.4 m。矩形按 67×27 m 贴住北墙和东西角。
- * 页面位置由用地西北角 (1099.1, 455.1) = (Y=86262.511, X=76072.020) 和比例条 8.306 pt/m 换算。
+ * 用地西北角 (1099.1, 455.1) = (Y=86262.511, X=76072.020)。
+ * 北红线长 1708.7 pt，对应东距 86262.511→86468.220。
  */
 const SURVEY_PT_PER_M = 1708.7 / (86468.22 - 86262.511)
 const SURVEY_NW_PAGE_X = 1099.1
@@ -44,15 +29,39 @@ export function surveyToPage(easting: number, northing: number): [number, number
   ]
 }
 
-const TOWER_NORTH_Y = surveyToPage(86355.182, 76048.69)[1]
-const TOWER_WEST_X = surveyToPage(86355.182, 76048.69)[0]
-const TOWER_EAST_X = surveyToPage(86422.082, 76048.69)[0]
+/**
+ * 8F 尺寸线。南墙 51.90 m：Y=86370.182→86422.082，X=75926.890。
+ * 东墙 97.40 m：X=75926.890→76024.290，Y=86422.082。
+ * 外墙细线在这条尺寸线以东，并在中部向东错出约 2.79 m。
+ */
+const EAST_SW_PAGE = surveyToPage(86370.182, 75926.89)
+const EAST_NE_PAGE = surveyToPage(86422.082, 76024.29)
+export const FOOTPRINT_PAGE = {
+  west: EAST_SW_PAGE[0],
+  east: EAST_NE_PAGE[0],
+  north: EAST_NE_PAGE[1],
+  south: EAST_SW_PAGE[1],
+} as const
 
-export const ORIGIN_PAGE_X = (TOWER_WEST_X + TOWER_EAST_X) / 2
-export const ORIGIN_PAGE_Y = TOWER_NORTH_Y + (TOWER_DEPTH_M * PT_PER_M) / 2
+/**
+ * 22F 塔楼。东墙是 Y=86355.182（不是西墙）；西墙是 Y=86295.28。
+ * 北墙 X=76048.690，南墙 X=76021.290。图上 59.90 m × 27.40 m。
+ * 世界原点是这块矩形的平面中心。
+ */
+const TOWER_NW = surveyToPage(86295.28, 76048.69)
+const TOWER_SE = surveyToPage(86355.182, 76021.29)
+
+export const TOWER_WIDTH_M = (TOWER_SE[0] - TOWER_NW[0]) / PT_PER_M
+export const TOWER_DEPTH_M = (TOWER_SE[1] - TOWER_NW[1]) / PT_PER_M
+export const ORIGIN_PAGE_X = (TOWER_NW[0] + TOWER_SE[0]) / 2
+export const ORIGIN_PAGE_Y = (TOWER_NW[1] + TOWER_SE[1]) / 2
 
 export function pageToWorld(pageX: number, pageY: number): [number, number] {
   return [(pageX - ORIGIN_PAGE_X) / PT_PER_M, (pageY - ORIGIN_PAGE_Y) / PT_PER_M]
+}
+
+export function worldToPage(x: number, z: number): [number, number] {
+  return [ORIGIN_PAGE_X + x * PT_PER_M, ORIGIN_PAGE_Y + z * PT_PER_M]
 }
 
 export function polygonArea(points: Array<[number, number]>): number {

@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react'
 import { Color } from 'three'
-import { ellipsePoints } from '../massing'
 import { FOOTPRINT, footprintOutline } from '../siteGeometry'
 import { extrudeUp } from '../extrude'
 import { SLAB_M } from './cut'
@@ -53,6 +52,15 @@ const tables = canteenTables().map((table) => ({ ...table, rot: 0 }))
 const diningChairs = canteenChairs(canteenTables())
 const fanSeats = fanSeatSlots()
 const columns = b1Columns().map((column) => ({ ...column, rot: 0 }))
+
+function ellipsePoints(cx: number, cz: number, rx: number, rz: number, segments: number): Array<[number, number]> {
+  const points: Array<[number, number]> = []
+  for (let i = 0; i < segments; i += 1) {
+    const t = (i / segments) * Math.PI * 2
+    points.push([cx + Math.cos(t) * rx, cz + Math.sin(t) * rz])
+  }
+  return points
+}
 
 export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }) {
   const slab = useMemo(() => {

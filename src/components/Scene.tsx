@@ -1,13 +1,14 @@
 import { Canvas } from '@react-three/fiber'
-import { Suspense, useLayoutEffect } from 'react'
+import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { Group } from 'three'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
-import { CameraRig } from './scene/CameraRig'
+import { CameraRig, FitBump } from './scene/CameraRig'
 import { EastBlock } from './scene/EastBlock'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
 import { RenderProbe } from './scene/RenderProbe'
-import { Site } from './scene/Site'
+import { ParcelMesh, Site } from './scene/Site'
 import { Tower } from './scene/Tower'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
@@ -20,6 +21,9 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const background = model ? '#050505' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
+  const fitRef = useRef<Group>(null)
+  const [fitGeneration, setFitGeneration] = useState(0)
+  const bumpFit = useCallback(() => setFitGeneration((value) => value + 1), [])
 
   return (
     <>
@@ -48,15 +52,21 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         shadow-camera-top={220}
         shadow-camera-bottom={-220}
       />
-      <CameraRig />
+      <CameraRig fitRef={fitRef} fitGeneration={fitGeneration} />
       <Suspense fallback={null}>
-        <group name="AboveGradeContext" visible={!openBasement}>
-          <Site model={model} night={night} quality={quality} />
-          <Podium model={model} />
-          <EastBlock model={model} />
-          <B1 model={model} />
+        <group ref={fitRef} name="Buildings">
+          <Tower night={night} />
+          <group name="AboveGradeContext" visible={!openBasement}>
+            {!model && <ParcelMesh />}
+            <Podium model={model} />
+            <EastBlock model={model} />
+            <B1 model={model} />
+          </group>
+          <FitBump onReady={bumpFit} />
         </group>
-        <Tower night={night} />
+        <group visible={!openBasement}>
+          <Site model={model} night={night} quality={quality} />
+        </group>
         <FloorStage />
         <RenderProbe />
       </Suspense>

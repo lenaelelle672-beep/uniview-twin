@@ -23,15 +23,15 @@ describe('总平面图轮廓换算', () => {
     expect(PT_PER_M).toBeCloseTo(8.306, 5)
   })
 
-  it('塔楼中心落到世界原点，平面为东西 67 m、南北 27 m', () => {
+  it('塔楼中心落到世界原点，平面为东西 59.90 m、南北 27.40 m', () => {
     expect(pageToWorld(ORIGIN_PAGE_X, ORIGIN_PAGE_Y)).toEqual([0, 0])
-    expect(TOWER.maxX - TOWER.minX).toBe(67)
-    expect(TOWER.maxZ - TOWER.minZ).toBe(27)
+    expect(TOWER.maxX - TOWER.minX).toBeCloseTo(59.9, 1)
+    expect(TOWER.maxZ - TOWER.minZ).toBeCloseTo(27.4, 1)
   })
 
-  it('地上轮廓约 98.5 m × 51 m，红线面积接近图纸 29991 ㎡', () => {
-    expect(FOOTPRINT.maxX - FOOTPRINT.minX).toBeCloseTo(98.5, 1)
-    expect(FOOTPRINT.maxZ - FOOTPRINT.minZ).toBeCloseTo(51, 1)
+  it('8F 南墙 51.90 m、东墙 97.40 m，红线面积接近图纸 29991 ㎡', () => {
+    expect(FOOTPRINT.maxX - FOOTPRINT.minX).toBeCloseTo(51.9, 1)
+    expect(FOOTPRINT.maxZ - FOOTPRINT.minZ).toBeCloseTo(97.4, 1)
     const area = parcelAreaM2()
     expect(area).toBeGreaterThan(28000)
     expect(area).toBeLessThan(31000)
@@ -64,6 +64,7 @@ describe('总平面图轮廓换算', () => {
       surveyToPage(86468.22, 76072.174),
       surveyToPage(86355.251, 75893.89),
       [2625.2, 1909.8],
+      surveyToPage(86466.527, 76024.49),
     ]
     targets.forEach(([x, y]) => {
       let best = Infinity
