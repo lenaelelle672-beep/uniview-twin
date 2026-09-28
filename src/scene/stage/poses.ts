@@ -22,9 +22,10 @@ function towerPose(spec: FloorSpec): CameraPose {
 }
 
 function basementPose(): CameraPose {
+  // 与裙楼楼板一起南移，仍从南侧俯看食堂和扇形报告厅。
   return {
-    position: [4, 56, 78],
-    target: [6, -5.25, 10],
+    position: [-4.05, 56, 166.7],
+    target: [-2.05, -5.25, 98.7],
     fov: 52,
   }
 }

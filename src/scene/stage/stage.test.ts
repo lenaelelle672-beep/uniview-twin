@@ -13,6 +13,7 @@ import {
   SLAB_M,
 } from './cut'
 import {
+  B1_CORE,
   B1_ROOMS,
   CORE,
   FAN,
@@ -64,7 +65,7 @@ describe('工位布置', () => {
       expect(nearest).toBeGreaterThan(1.45)
       for (const slot of slots) {
         if (floorId === 'B1') {
-          expect(inside(slot.x, slot.z, CORE, 0.4)).toBe(false)
+          expect(inside(slot.x, slot.z, B1_CORE, 0.4)).toBe(false)
           expect(inside(slot.x, slot.z, KITCHEN, 0.3)).toBe(false)
           expect(inFan(slot.x, slot.z, 0.3)).toBe(false)
         } else {

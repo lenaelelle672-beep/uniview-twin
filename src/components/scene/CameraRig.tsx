@@ -25,6 +25,7 @@ function buildingSiteBox(): Box3 {
 
 export function CameraRig() {
   const cam = useTwinStore((state) => state.cam)
+  const view = useTwinStore((state) => state.view)
   const controls = useRef<CameraControls>(null)
   const camera = useThree((state) => state.camera)
   const size = useThree((state) => state.size)
@@ -34,6 +35,7 @@ export function CameraRig() {
     const perspective = camera as PerspectiveCamera
     const rig = controls.current
     if (!rig) return
+    if (view === 'floor') return
     rig.smoothTime = 0
     if (!cam) {
       const fov = CAMERA_POSES.overview.fov
@@ -78,7 +80,7 @@ export function CameraRig() {
       pose.target[2],
       false,
     )
-  }, [bounds, cam, camera, size.height, size.width])
+  }, [bounds, cam, camera, size.height, size.width, view])
 
   return <CameraControls ref={controls} makeDefault smoothTime={0} />
 }

@@ -1,4 +1,4 @@
-import { COURTYARD, FOOTPRINT, TOWER } from '../siteGeometry'
+import { FOOTPRINT, TOWER } from '../siteGeometry'
 
 export interface Aabb {
   x0: number
@@ -32,20 +32,53 @@ export const RECEPTION: Aabb = { x0: -7.6, x1: 3.2, z0: 7.7, z1: 12.15 }
 
 export const PANTRY: Aabb = { x0: 8.1, x1: 15.8, z0: 1.15, z1: 7.55 }
 
+/**
+ * D025 之前裙楼西北角贴着塔楼西北角（-33.5, -13.5）。
+ * 原点改到测量坐标后，裙楼楼板南移。负一层室内按当前 FOOTPRINT 平移，相对关系不变。
+ */
+const BASEMENT_ANCHOR = { x: -33.5, z: -13.5 }
+
+export const B1_SHIFT = {
+  x: FOOTPRINT.minX - BASEMENT_ANCHOR.x,
+  z: FOOTPRINT.minZ - BASEMENT_ANCHOR.z,
+}
+
+function onBasementSlab(x: number, z: number): Point {
+  return { x: x + B1_SHIFT.x, z: z + B1_SHIFT.z }
+}
+
+function onBasementBox(box: Aabb): Aabb {
+  const min = onBasementSlab(box.x0, box.z0)
+  const max = onBasementSlab(box.x1, box.z1)
+  return { x0: min.x, x1: max.x, z0: min.z, z1: max.z }
+}
+
+const fanAnchor = onBasementSlab(33, 15.2)
+
 export const FAN = {
-  apexX: 33,
-  apexZ: 15.2,
+  apexX: fanAnchor.x,
+  apexZ: fanAnchor.z,
   a0: Math.PI * 0.08,
   a1: Math.PI * 0.92,
   radius: 12.4,
 }
 
-export const KITCHEN: Aabb = { x0: -30.4, x1: -14.2, z0: -12.2, z1: -2.1 }
+export const KITCHEN: Aabb = onBasementBox({ x0: -30.4, x1: -14.2, z0: -12.2, z1: -2.1 })
+
+export const B1_CORE: Aabb = onBasementBox(CORE)
 
 export const B1_ROOMS: Aabb[] = [0, 1, 2, 3, 4].map((index) => {
   const z0 = 2.4 + index * 5.45
-  return { x0: -32.5, x1: -27.7, z0, z1: z0 + 4.15 }
+  return onBasementBox({ x0: -32.5, x1: -27.7, z0, z1: z0 + 4.15 })
 })
+
+/** 图纸中庭，铺在裙楼楼板上。场地里的下沉庭院已挪到西南广场，不在这块楼板上。 */
+const atriumAnchor = onBasementSlab(0, 24)
+export const B1_ATRIUM = { cx: atriumAnchor.x, cz: atriumAnchor.z, rx: 15, rz: 8.2 }
+
+export function canteenPadCenter(): Point {
+  return onBasementSlab(-21, 13)
+}
 
 const TOWER_DESK_ZONES: Aabb[] = [
   { x0: -31.4, x1: -7.5, z0: -6.15, z1: 6.7 },
@@ -60,7 +93,7 @@ const B1_DESK_ZONES: Aabb[] = [
   { x0: 47.5, x1: 62.2, z0: 1.5, z1: 31.5 },
   { x0: 18.5, x1: 45.5, z0: -11.2, z1: 6.2 },
   { x0: 46.8, x1: 62.2, z0: -11.2, z1: 0.6 },
-]
+].map(onBasementBox)
 
 function insideAabb(x: number, z: number, box: Aabb, pad = 0): boolean {
   return x >= box.x0 - pad && x <= box.x1 + pad && z >= box.z0 - pad && z <= box.z1 + pad
@@ -75,8 +108,8 @@ function inFootprint(x: number, z: number): boolean {
 }
 
 function inAtrium(x: number, z: number, pad = 0.4): boolean {
-  const dx = (x - COURTYARD.cx) / (COURTYARD.rx + pad)
-  const dz = (z - COURTYARD.cz) / (COURTYARD.rz + pad)
+  const dx = (x - B1_ATRIUM.cx) / (B1_ATRIUM.rx + pad)
+  const dz = (z - B1_ATRIUM.cz) / (B1_ATRIUM.rz + pad)
   return dx * dx + dz * dz <= 1
 }
 
@@ -110,13 +143,14 @@ export function b1Columns(): Point[] {
   const columns: Point[] = []
   for (let x = -24; x <= 56; x += 8) {
     for (let z = -8; z <= 28; z += 8) {
-      if (!inFootprint(x, z)) continue
-      if (insideAabb(x, z, CORE, 0.5)) continue
-      if (insideAabb(x, z, KITCHEN, 0.4)) continue
-      if (B1_ROOMS.some((room) => insideAabb(x, z, room, 0.4))) continue
-      if (inAtrium(x, z, 0.8)) continue
-      if (inFan(x, z, 1)) continue
-      columns.push({ x, z })
+      const column = onBasementSlab(x, z)
+      if (!inFootprint(column.x, column.z)) continue
+      if (insideAabb(column.x, column.z, B1_CORE, 0.5)) continue
+      if (insideAabb(column.x, column.z, KITCHEN, 0.4)) continue
+      if (B1_ROOMS.some((room) => insideAabb(column.x, column.z, room, 0.4))) continue
+      if (inAtrium(column.x, column.z, 0.8)) continue
+      if (inFan(column.x, column.z, 1)) continue
+      columns.push(column)
     }
   }
   return columns
@@ -150,7 +184,7 @@ function towerBlocked(slot: Slot, pad: number): boolean {
 
 function b1Blocked(slot: Slot, pad: number): boolean {
   if (!inFootprint(slot.x, slot.z)) return true
-  if (insideAabb(slot.x, slot.z, CORE, pad)) return true
+  if (insideAabb(slot.x, slot.z, B1_CORE, pad)) return true
   if (insideAabb(slot.x, slot.z, KITCHEN, pad)) return true
   if (B1_ROOMS.some((room) => insideAabb(slot.x, slot.z, room, pad))) return true
   if (inAtrium(slot.x, slot.z, pad)) return true
@@ -195,7 +229,7 @@ export function canteenTables(): Point[] {
   const tables: Point[] = []
   for (let row = 0; row < 4; row += 1) {
     for (let col = 0; col < 4; col += 1) {
-      tables.push({ x: -25.6 + col * 3.15, z: 6.8 + row * 4.15 })
+      tables.push(onBasementSlab(-25.6 + col * 3.15, 6.8 + row * 4.15))
     }
   }
   return tables

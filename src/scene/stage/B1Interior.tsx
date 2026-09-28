@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { Color } from 'three'
 import { ellipsePoints } from '../massing'
-import { COURTYARD, FOOTPRINT, footprintOutline } from '../siteGeometry'
+import { FOOTPRINT, footprintOutline } from '../siteGeometry'
 import { extrudeUp } from '../extrude'
 import { SLAB_M } from './cut'
 import { Ceiling } from './Ceiling'
@@ -20,8 +20,11 @@ import {
   towerCoreGeometry,
 } from './geometry'
 import {
+  B1_ATRIUM,
+  B1_SHIFT,
   b1Columns,
   canteenChairs,
+  canteenPadCenter,
   canteenTables,
   fanOutline,
   fanSeatSlots,
@@ -58,11 +61,15 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
     return geometry
   }, [])
   const fan = useMemo(() => extrudeUp(fanOutline(), 0.08), [])
-  const court = useMemo(() => extrudeUp(ellipsePoints(COURTYARD.cx, COURTYARD.cz, COURTYARD.rx, COURTYARD.rz, 36), 0.05), [])
-  const courtInner = useMemo(
-    () => extrudeUp(ellipsePoints(COURTYARD.cx, COURTYARD.cz, COURTYARD.rx - 3.2, COURTYARD.rz - 1.8, 28), 0.08),
+  const court = useMemo(
+    () => extrudeUp(ellipsePoints(B1_ATRIUM.cx, B1_ATRIUM.cz, B1_ATRIUM.rx, B1_ATRIUM.rz, 36), 0.05),
     [],
   )
+  const courtInner = useMemo(
+    () => extrudeUp(ellipsePoints(B1_ATRIUM.cx, B1_ATRIUM.cz, B1_ATRIUM.rx - 3.2, B1_ATRIUM.rz - 1.8, 28), 0.08),
+    [],
+  )
+  const canteen = canteenPadCenter()
   useEffect(() => {
     return () => {
       slab.dispose()
@@ -83,7 +90,7 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
       <mesh geometry={fan} material={fanFloorMaterial} receiveShadow />
       <mesh geometry={stageGeometry} material={stageMaterial} castShadow receiveShadow />
       <InstancedSlots name="FanSeats" geometry={seatGeometry} material={seatMaterial} slots={fanSeats} />
-      <mesh position={[-21, 0.02, 13]} material={canteenMaterial} receiveShadow>
+      <mesh position={[canteen.x, 0.02, canteen.z]} material={canteenMaterial} receiveShadow>
         <boxGeometry args={[11.2, 0.04, 15.6]} />
       </mesh>
       <InstancedSlots name="CanteenTables" geometry={roundTableGeometry} material={woodMaterial} slots={tables} />
@@ -92,9 +99,11 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
       <mesh geometry={privateWoodGeometry} material={woodMaterial} castShadow receiveShadow />
       <mesh geometry={privateChairGeometry} material={chairMaterial} />
       <mesh geometry={privateGlassGeometry} material={meetingGlassMaterial} />
-      <mesh geometry={coreFloorGeometry} material={coreMaterial} receiveShadow />
-      <mesh geometry={towerCoreGeometry} material={coreWallMaterial} castShadow receiveShadow />
-      <mesh geometry={elevatorGeometry} material={darkMaterial} />
+      <group position={[B1_SHIFT.x, 0, B1_SHIFT.z]}>
+        <mesh geometry={coreFloorGeometry} material={coreMaterial} receiveShadow />
+        <mesh geometry={towerCoreGeometry} material={coreWallMaterial} castShadow receiveShadow />
+        <mesh geometry={elevatorGeometry} material={darkMaterial} />
+      </group>
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
       <Ceiling

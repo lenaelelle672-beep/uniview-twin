@@ -2,7 +2,7 @@ import { type CameraControls as CameraControlsImpl } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef } from 'react'
 import { PerspectiveCamera } from 'three'
-import { CAMERA_POSES, type CameraPose } from '../cameras'
+import { type CameraPose } from '../cameras'
 import { useTwinStore } from '../../store/store'
 import { activeFloorId } from './cut'
 import { floorCameraPose } from './poses'
@@ -47,10 +47,9 @@ export function FloorStageCamera() {
       fly(rig, perspective, floorCameraPose(active), true)
       settle()
     } else if (armed.current) {
+      // 总览取景由 CameraRig 的 fitToBox 负责，这里不再写回旧机位。
       armed.current = false
-      const cam = useTwinStore.getState().cam
-      fly(rig, perspective, cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview, true)
-      settle()
+      rig.smoothTime = 0
     }
     return () => window.clearTimeout(timer)
   }, [active, camera, controls])

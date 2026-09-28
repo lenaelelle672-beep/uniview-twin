@@ -43,8 +43,8 @@ function slotIndex(floorId: string, workstationId: string): number {
  * 模拟数据和 `?data=` 只提供楼层、编号和状态。数据里即使带了 x/y/z，也不得用来摆放。
  * 编号形如 `F12-66`、`B1-8`，末段是 1～100 的序号，对应本层固定的 100 个落点。
  *
- * 平面来自当前塔楼 / 地下室楼板轮廓。T002 返工如果改了轮廓，要按新轮廓重排，
- * 每层仍然是 100 个，并且都落在楼板以内。
+ * 平面来自当前塔楼 / 地下室楼板轮廓。塔楼板仍是 67×27 m。
+ * D025 把裙楼楼板南移后，B1 的 100 个落点跟着 FOOTPRINT 走，并且都在楼板以内。
  */
 export function workstationPosition(floorId: string, workstationId: string): WorkstationPosition {
   const slot = canonicalSlots(floorId)[slotIndex(floorId, workstationId)]
