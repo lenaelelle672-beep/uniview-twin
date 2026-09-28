@@ -48,6 +48,7 @@ export function DeskFlash({ floorId }: { floorId: string }) {
       }, FLASH_MS)
     }
     window.addEventListener('twin-locate-rest', onRest)
+    if (window.__twinLocate?.deskId === deskId) onRest()
     return () => {
       window.removeEventListener('twin-locate-rest', onRest)
       window.clearTimeout(timer)

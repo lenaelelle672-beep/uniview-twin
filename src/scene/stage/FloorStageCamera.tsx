@@ -1,6 +1,6 @@
 import { type CameraControls as CameraControlsImpl } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { Box3, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
@@ -96,13 +96,22 @@ function flyToDesk(
   const target = new Vector3(local.x, 0.55, local.z)
   interior.localToWorld(target)
   const eye = target.clone().add(new Vector3(2.6, 5.4, 6.8))
-  rig.smoothTime = transition ? FLY_SECONDS : 0
   rig.maxPolarAngle = Math.PI
   setFov(camera, DESK_FOV)
   const started = performance.now()
   delete window.__twinLocate
   window.__twinFlyEnd = { deskId, x: eye.x, y: eye.y, z: eye.z, started }
-  void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, transition).then(() => {
+  // 首帧画出来之前做阻尼，SwiftShader 上要等很久才进入 1.2 m。
+  // 直达链接在第一帧提交时直接落到工位；已经在看画面时再平滑飞入。
+  if (!transition) {
+    rig.smoothTime = 0
+    void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, false)
+    rig.update(0)
+    markLocated(deskId, started)
+    return true
+  }
+  rig.smoothTime = FLY_SECONDS
+  void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, true).then(() => {
     markLocated(deskId, started)
   })
   return true
@@ -126,14 +135,17 @@ export function FloorStageCamera() {
   const camera = useThree((state) => state.camera)
   const scene = useThree((state) => state.scene)
   const size = useThree((state) => state.size)
+  const presented = useRef(false)
 
   useFrame(() => {
+    presented.current = true
     const end = window.__twinFlyEnd
-    if (!end || window.__twinLocate?.deskId === end.deskId) return
+    if (!end) return
     const perspective = camera as PerspectiveCamera
     const dx = perspective.position.x - end.x
     const dy = perspective.position.y - end.y
     const dz = perspective.position.z - end.z
+    if (window.__twinLocate?.deskId === end.deskId) return
     if (dx * dx + dy * dy + dz * dz < 1.2 * 1.2) markLocated(end.deskId, end.started)
   })
 
@@ -141,6 +153,9 @@ export function FloorStageCamera() {
     const rig = controls as CameraControlsImpl | null
     let cancelled = false
     let attempts = 0
+    // 以本次提交时是否已经出过帧为准。直达链接的楼板可能要等几帧才挂上，
+    // 若等到那时再阻尼，首屏会被 SwiftShader 的长帧拖过 5 秒。
+    const glide = focusSeq > 0 && presented.current
     const tick = () => {
       if (cancelled) return
       const ready = rig && typeof rig.setLookAt === 'function' && typeof rig.fitToBox === 'function'
@@ -166,7 +181,7 @@ export function FloorStageCamera() {
           }
           return
         }
-        flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, focusSeq > 0)
+        flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide)
         return
       }
       const plate = scene.getObjectByName('FloorPlate')
