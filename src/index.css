@@ -262,16 +262,156 @@ button {
 }
 
 .scene-root,
-.blueprint-placeholder {
+.blueprint {
   position: absolute;
   inset: 0;
 }
 
-.blueprint-placeholder {
-  display: grid;
-  place-items: center;
-  background: #f4f7fb;
-  color: #243246;
+.blueprint {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: #e7eef6;
+  color: #122033;
+}
+
+.blueprint-empty {
+  margin: auto;
+  color: #526070;
+}
+
+.blueprint-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 12px;
+  background: #fff;
+  border-bottom: 1px solid #d5deea;
+}
+
+.blueprint-toolbar p {
+  margin: 0;
+  min-width: 0;
+  font-weight: 700;
+}
+
+.blueprint-count {
+  margin-left: 8px;
+  font-weight: 650;
+  color: #526070;
+}
+
+.blueprint-zoom {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.blueprint-zoom button {
+  border: 1px solid #c5d0de;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+
+.blueprint-zoom button:disabled {
+  color: #98a2b3;
+  cursor: default;
+}
+
+.blueprint-scroll {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: #d7e3ef;
+}
+
+.blueprint-scroll svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #d7e3ef;
+}
+
+.blueprint-scroll.is-zoomed svg {
+  width: calc(var(--zoom) * 100%);
+  height: calc(var(--zoom) * 100%);
+  min-width: calc(var(--zoom) * 100%);
+  min-height: calc(var(--zoom) * 100%);
+}
+
+.plan-plate {
+  fill: #f6f4ef;
+  stroke: #2c3b4d;
+  stroke-width: 0.42;
+}
+
+.plan-room {
+  fill: #d7e4f4;
+  stroke: #8aa0b8;
+  stroke-width: 0.08;
+}
+
+.plan-label {
+  fill: #243246;
+  text-anchor: middle;
+  dominant-baseline: middle;
+  pointer-events: none;
+}
+
+.plan-wall {
+  fill: #3d4c5c;
+  pointer-events: none;
+}
+
+.plan-column {
+  fill: #8b95a1;
+  pointer-events: none;
+}
+
+.plan-atrium {
+  fill: #d5e6ea;
+  stroke: #6f8f99;
+  stroke-width: 0.12;
+}
+
+.plan-fan {
+  fill: #efe4d4;
+  stroke: #b08968;
+  stroke-width: 0.12;
+}
+
+.plan-desk {
+  cursor: pointer;
+}
+
+.plan-hit {
+  fill: transparent;
+}
+
+.blueprint-legend {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 8px 12px;
+  list-style: none;
+  background: #fff;
+  border-top: 1px solid #d5deea;
+  max-width: 100%;
+}
+
+.blueprint-legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .scene-caption,
@@ -314,17 +454,29 @@ button {
   left: 12px;
 }
 
-.back-button {
+.back-button,
+.explode-button {
   position: absolute;
   z-index: 3;
   top: 12px;
-  left: 12px;
   border: 0;
   border-radius: 8px;
   padding: 8px 14px;
   background: #0c2340;
   color: #fff;
   box-shadow: 0 6px 18px rgba(16, 32, 51, 0.2);
+}
+
+.back-button {
+  left: 12px;
+}
+
+.explode-button {
+  right: 12px;
+}
+
+.explode-button.is-active {
+  background: #9a3412;
 }
 
 .scene-caption {

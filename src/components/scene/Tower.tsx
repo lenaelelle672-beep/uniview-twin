@@ -40,10 +40,15 @@ function FloorShell({ id, elevation, height }: { id: string; elevation: number; 
   const hidden = useTwinStore((state) => isFloorShellHidden(state.view, state.selectedFloor, elevation))
   const opened = useTwinStore((state) => isFloorCurtainOpen(state.view, state.selectedFloor, id))
   const enterFloor = useTwinStore((state) => state.enterFloor)
+  const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   return (
     <group
       name={`FloorShell-${id}`}
       visible={!hidden}
+      onClick={(event) => {
+        event.stopPropagation()
+        setSelectedFloor(id)
+      }}
       onDoubleClick={(event) => {
         event.stopPropagation()
         enterFloor(id)

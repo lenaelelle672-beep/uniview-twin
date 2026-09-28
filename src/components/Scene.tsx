@@ -8,6 +8,7 @@ import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
 import { RenderProbe } from './scene/RenderProbe'
 import { Site } from './scene/Site'
+import { ExplodedLayout } from './scene/ExplodedLayout'
 import { Tower } from './scene/Tower'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
@@ -57,6 +58,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
           <B1 model={model} />
         </group>
         <Tower night={night} />
+        <ExplodedLayout />
         <FloorStage />
         <RenderProbe />
       </Suspense>

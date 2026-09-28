@@ -7,6 +7,7 @@ import { useTwinStore } from '../../store/store'
 
 export function B1({ model }: { model: boolean }) {
   const enterFloor = useTwinStore((state) => state.enterFloor)
+  const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const slab = useMemo(() => extrudeUp(footprintOutline(), 0.28), [])
   const towerSlab = useMemo(
     () =>
@@ -27,6 +28,10 @@ export function B1({ model }: { model: boolean }) {
     <group
       name="B1"
       position={[0, -5.5, 0]}
+      onClick={(event) => {
+        event.stopPropagation()
+        setSelectedFloor('B1')
+      }}
       onDoubleClick={(event) => {
         event.stopPropagation()
         enterFloor('B1')

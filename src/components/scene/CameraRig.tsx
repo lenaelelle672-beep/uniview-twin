@@ -6,16 +6,18 @@ import { CAMERA_POSES } from '../../scene/cameras'
 import { EAST_ROOF_M } from '../../scene/massing'
 import { COURTYARD, FOOTPRINT, PARCEL_WORLD, TOWER } from '../../scene/siteGeometry'
 import { TOWER_ROOF_M } from '../../data/floors'
+import { explodeOffset, FLOOR_COUNT } from '../../scene/explode'
 import { useTwinStore } from '../../store/store'
 
-function buildingSiteBox(): Box3 {
+function buildingSiteBox(exploded: boolean): Box3 {
   const box = new Box3()
   PARCEL_WORLD.forEach(([x, z]) => {
     box.expandByPoint(new Vector3(x, -COURTYARD.depth, z))
     box.expandByPoint(new Vector3(x, 0.4, z))
   })
+  const extraTop = exploded ? explodeOffset(FLOOR_COUNT - 1, 1) : 0
   box.expandByPoint(new Vector3(TOWER.minX - 2, -COURTYARD.depth, TOWER.minZ - 2))
-  box.expandByPoint(new Vector3(TOWER.maxX + 2, TOWER_ROOF_M + 4.4, TOWER.maxZ + 2))
+  box.expandByPoint(new Vector3(TOWER.maxX + 2, TOWER_ROOF_M + 4.4 + extraTop, TOWER.maxZ + 2))
   box.expandByPoint(new Vector3(FOOTPRINT.minX - 2, 0, FOOTPRINT.minZ - 2))
   box.expandByPoint(new Vector3(FOOTPRINT.maxX + 2, EAST_ROOF_M, FOOTPRINT.maxZ + 8))
   box.expandByPoint(new Vector3(COURTYARD.cx - COURTYARD.rx - 2, -COURTYARD.depth, COURTYARD.cz - COURTYARD.rz - 2))
@@ -26,10 +28,12 @@ function buildingSiteBox(): Box3 {
 export function CameraRig() {
   const cam = useTwinStore((state) => state.cam)
   const view = useTwinStore((state) => state.view)
+  const exploded = useTwinStore((state) => state.exploded)
   const controls = useRef<CameraControls>(null)
   const camera = useThree((state) => state.camera)
   const size = useThree((state) => state.size)
-  const bounds = useMemo(() => buildingSiteBox(), [])
+  const spread = view === 'building' && exploded
+  const bounds = useMemo(() => buildingSiteBox(spread), [spread])
 
   useLayoutEffect(() => {
     const perspective = camera as PerspectiveCamera
