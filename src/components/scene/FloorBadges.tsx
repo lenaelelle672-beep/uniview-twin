@@ -13,7 +13,7 @@ import {
   Vector2,
   Vector3,
 } from 'three'
-import atlasUrl from '../../assets/badges/badge-digits.png'
+import atlasUrl from '../../../assets/ready/textures/badge-digits-bold.png'
 import {
   BADGE_ALARM_X,
   BADGE_CHIP_H,

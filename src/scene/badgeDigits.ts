@@ -1,6 +1,6 @@
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
 import { BufferAttribute, BufferGeometry, PlaneGeometry, Vector3 } from 'three'
-import atlas from '../assets/badges/badge-digits.json'
+import atlas from '../../assets/ready/textures/badge-digits-bold.json'
 import { BADGE_ALARM_X, BADGE_HEIGHT, BADGE_ID_X, BADGE_MIN_SCREEN_PX, BADGE_OFFLINE_X, badgeAnchor } from './badges'
 
 /** 四边形高度对应图集格子去掉内边后的 56 px。两位数字要落进色块里。 */
