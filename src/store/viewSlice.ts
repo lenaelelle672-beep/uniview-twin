@@ -4,10 +4,13 @@ import type { TwinStore } from './types'
 
 const QUALITY_ORDER: QualityTier[] = ['high', 'balanced', 'perf']
 
+export type Presentation = 'lit' | 'model'
+
 export interface ViewSlice {
   view: ViewMode
   exploded: boolean
   dayNight: DayNight
+  presentation: Presentation
   quality: QualityTier
   qualityPinned: boolean
   selectedFloor: string | null
@@ -29,6 +32,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   view: 'building',
   exploded: false,
   dayNight: 'day',
+  presentation: 'lit',
   quality: 'balanced',
   qualityPinned: false,
   selectedFloor: null,

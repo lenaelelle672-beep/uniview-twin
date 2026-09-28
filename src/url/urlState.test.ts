@@ -72,6 +72,17 @@ describe('URL 解析与回写', () => {
     expect(parseSearch(storeToSearch()).data).toBe('/sample.json')
   })
 
+  it('style=model 往返，缺省和其他取值不写入', () => {
+    expect(parseSearch('?style=model&q=balanced')).toEqual({ style: 'model', q: 'balanced' })
+    expect(parseSearch('?style=night')).toEqual({})
+    applySearchToStore('?style=model')
+    expect(useTwinStore.getState().presentation).toBe('model')
+    expect(storeToSearch()).toBe('?style=model')
+    applySearchToStore('')
+    expect(useTwinStore.getState().presentation).toBe('lit')
+    expect(storeToSearch()).toBe('')
+  })
+
   it('外站 data 地址不作为可加载路径，但仍保留在地址栏', () => {
     applySearchToStore('?data=https://example.com/a.json')
     expect(useTwinStore.getState().error).toContain('站内路径')

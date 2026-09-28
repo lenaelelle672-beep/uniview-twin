@@ -1,3 +1,4 @@
+import type { Presentation } from '../store/viewSlice'
 import { CAMERA_IDS, QUALITY_TIERS, VIEW_MODES, type CameraId, type QualityTier, type ViewMode } from '../types'
 import { isFloorId } from '../data/floors'
 import { isLocalDataPath } from '../data/adapters'
@@ -12,6 +13,7 @@ export interface UrlState {
   cam?: CameraId
   data?: string
   q?: QualityTier
+  style?: Presentation
 }
 
 function isViewMode(value: string): value is ViewMode {
@@ -48,6 +50,8 @@ export function parseSearch(search: string): UrlState {
   const quality = params.get('q')
   if (quality && isQuality(quality)) result.q = quality
 
+  if (params.get('style') === 'model') result.style = 'model'
+
   return result
 }
 
@@ -59,6 +63,7 @@ export function serializeUrl(state: UrlState): string {
     ['cam', state.cam],
     ['data', state.data],
     ['q', state.q],
+    ['style', state.style === 'model' ? 'model' : undefined],
   ]
   const query = parts
     .filter((entry): entry is [string, string] => Boolean(entry[1]))
@@ -76,6 +81,7 @@ export function storeToSearch(): string {
     cam: state.cam ?? undefined,
     data: state.dataUrl ?? undefined,
     q: state.qualityPinned ? state.quality : undefined,
+    style: state.presentation === 'model' ? 'model' : undefined,
   })
 }
 
@@ -90,6 +96,7 @@ export function applySearchToStore(search: string) {
     dataUrl,
     quality: parsed.q ?? 'balanced',
     qualityPinned: parsed.q != null,
+    presentation: parsed.style ?? 'lit',
     error: dataUrl && !isLocalDataPath(dataUrl) ? '数据地址必须是以 / 开头的站内路径' : null,
     status: dataUrl && !isLocalDataPath(dataUrl) ? 'error' : useTwinStore.getState().status,
   })

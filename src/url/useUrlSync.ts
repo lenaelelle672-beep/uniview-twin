@@ -10,13 +10,14 @@ export function useUrlSync() {
   const dataUrl = useTwinStore((state) => state.dataUrl)
   const quality = useTwinStore((state) => state.quality)
   const qualityPinned = useTwinStore((state) => state.qualityPinned)
+  const presentation = useTwinStore((state) => state.presentation)
 
   useEffect(() => {
     const next = storeToSearch()
     if (next === window.location.search) return
     const url = `${window.location.pathname}${next}${window.location.hash}`
     window.history.replaceState(null, '', url)
-  }, [view, selectedFloor, focusedDeskId, cam, dataUrl, quality, qualityPinned])
+  }, [view, selectedFloor, focusedDeskId, cam, dataUrl, quality, qualityPinned, presentation])
 
   useEffect(() => {
     const onPopState = () => applySearchToStore(window.location.search)
