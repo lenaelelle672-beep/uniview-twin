@@ -13,17 +13,6 @@ export function pointsToMeters(points: number): number {
 }
 
 /**
- * 东南 8F 外墙细线（不是 stroke-width 6 的地下室外轮廓）。
- * 西 1961.88 / 东 2451.1 / 北 1354.16 / 南 1701.8，约 58.9 m × 41.9 m。
- */
-export const FOOTPRINT_PAGE = {
-  west: 1961.88,
-  east: 2451.1,
-  north: 1354.16,
-  south: 1701.8,
-} as const
-
-/**
  * 用地西北角 (1099.1, 455.1) = (Y=86262.511, X=76072.020)。
  * 北红线长 1708.7 pt，对应东距 86262.511→86468.220。
  */
@@ -39,6 +28,19 @@ export function surveyToPage(easting: number, northing: number): [number, number
     SURVEY_NW_PAGE_Y - (northing - SURVEY_NW_NORTHING) * SURVEY_PT_PER_M,
   ]
 }
+
+/**
+ * 8F 尺寸线。南墙 51.90 m：Y=86370.182→86422.082，X=75926.890。
+ * 东墙 97.40 m：X=75926.890→76024.290，Y=86422.082。外皮是这一条直墙。
+ */
+const EAST_SW_PAGE = surveyToPage(86370.182, 75926.89)
+const EAST_NE_PAGE = surveyToPage(86422.082, 76024.29)
+export const FOOTPRINT_PAGE = {
+  west: EAST_SW_PAGE[0],
+  east: EAST_NE_PAGE[0],
+  north: EAST_NE_PAGE[1],
+  south: EAST_SW_PAGE[1],
+} as const
 
 /**
  * 22F 塔楼。东墙是 Y=86355.182（不是西墙）；西墙是 Y=86295.28。

@@ -29,9 +29,9 @@ describe('总平面图轮廓换算', () => {
     expect(TOWER.maxZ - TOWER.minZ).toBeCloseTo(27.4, 1)
   })
 
-  it('8F 外墙约 58.9 m × 41.9 m，红线面积接近图纸 29991 ㎡', () => {
-    expect(FOOTPRINT.maxX - FOOTPRINT.minX).toBeCloseTo(58.9, 1)
-    expect(FOOTPRINT.maxZ - FOOTPRINT.minZ).toBeCloseTo(41.85, 1)
+  it('8F 南墙 51.90 m、东墙 97.40 m，红线面积接近图纸 29991 ㎡', () => {
+    expect(FOOTPRINT.maxX - FOOTPRINT.minX).toBeCloseTo(51.9, 1)
+    expect(FOOTPRINT.maxZ - FOOTPRINT.minZ).toBeCloseTo(97.4, 1)
     const area = parcelAreaM2()
     expect(area).toBeGreaterThan(28000)
     expect(area).toBeLessThan(31000)
