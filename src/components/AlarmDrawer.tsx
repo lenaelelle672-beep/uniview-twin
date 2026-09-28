@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   alarmBadgeSum,
   buildExceptionRows,
@@ -38,6 +38,29 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
   const [draftEnd, setDraftEnd] = useState(() => range?.end ?? '')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [focusNote, setFocusNote] = useState('')
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+    if (!open) {
+      if (!dialog.open) return
+      dialog.close()
+      document.getElementById('alarm-toggle')?.focus()
+      return
+    }
+    if (!dialog.open) dialog.show()
+    dialog.focus()
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      onCloseRef.current()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [open])
 
   const floorOptions = useMemo(
     () => [...floors].sort((left, right) => floorLevel(left.id) - floorLevel(right.id)),
@@ -96,15 +119,17 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
   }
 
   return (
-    <aside
+    <dialog
+      ref={dialogRef}
       id="alarm-drawer"
       className={floorListOpen ? 'alarm-drawer' : 'alarm-drawer is-floor-collapsed'}
       aria-label="告警抽屉"
-      hidden={!open}
+      aria-modal="false"
+      tabIndex={-1}
     >
       <div className="alarm-head">
         <h2>告警</h2>
-        <button type="button" className="alarm-close" onClick={onClose}>
+        <button type="button" className="alarm-close" aria-label="关闭告警抽屉" onClick={onClose}>
           关闭
         </button>
       </div>
@@ -151,7 +176,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
               ))}
             </select>
           </label>
-          <button type="button" className="text-button" onClick={() => commitRange('', '')}>
+          <button type="button" className="text-button" aria-label="清除楼层范围" onClick={() => commitRange('', '')}>
             清除范围
           </button>
         </div>
@@ -161,6 +186,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
           <button
             type="button"
             className={statuses.includes('alarm') ? 'chip is-on' : 'chip'}
+            aria-label="状态：告警"
             aria-pressed={statuses.includes('alarm')}
             onClick={() => toggleStatus('alarm')}
           >
@@ -169,6 +195,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
           <button
             type="button"
             className={statuses.includes('offline') ? 'chip chip-offline is-on' : 'chip'}
+            aria-label="状态：离线"
             aria-pressed={statuses.includes('offline')}
             onClick={() => toggleStatus('offline')}
           >
@@ -176,10 +203,10 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
           </button>
         </div>
         <div className="alarm-actions">
-          <button type="button" onClick={exportCsv} disabled={!ready}>
+          <button type="button" aria-label="导出 CSV" onClick={exportCsv} disabled={!ready}>
             导出 CSV
           </button>
-          <button type="button" className="secondary" onClick={openReport} disabled={!ready}>
+          <button type="button" className="secondary" aria-label="生成告警报告" onClick={openReport} disabled={!ready}>
             生成报告
           </button>
         </div>
@@ -215,6 +242,6 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
             </button>
           ))}
       </div>
-    </aside>
+    </dialog>
   )
 }

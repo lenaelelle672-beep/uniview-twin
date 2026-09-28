@@ -102,6 +102,7 @@ export function TopBar({ floorListOpen, onToggleFloorList, alarmOpen, onToggleAl
 
       <button
         type="button"
+        id="alarm-toggle"
         className={alarmOpen ? 'text-button alarm-toggle is-active' : 'text-button alarm-toggle'}
         aria-label={alarmOpen ? '关闭告警抽屉' : '打开告警抽屉'}
         aria-pressed={alarmOpen}

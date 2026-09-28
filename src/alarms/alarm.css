@@ -7,9 +7,18 @@
   position: fixed;
   z-index: 6;
   top: 56px;
+  right: auto;
   bottom: 0;
   left: 232px;
+  inset-inline: auto;
+  inset-inline-start: 232px;
   width: min(560px, calc(100vw - 232px - 248px - 12px));
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
   display: flex;
   flex-direction: column;
   background: #fff;
@@ -18,12 +27,13 @@
   box-shadow: 8px 0 24px rgba(16, 32, 51, 0.12);
 }
 
-.alarm-drawer[hidden] {
+.alarm-drawer:not([open]) {
   display: none;
 }
 
 .alarm-drawer.is-floor-collapsed {
   left: 0;
+  inset-inline-start: 0;
   width: min(560px, calc(100vw - 248px - 12px));
 }
 
@@ -220,11 +230,13 @@
 @media (max-width: 1280px) {
   .alarm-drawer {
     left: 208px;
+    inset-inline-start: 208px;
     width: min(520px, calc(100vw - 208px - 220px - 12px));
   }
 
   .alarm-drawer.is-floor-collapsed {
     left: 0;
+    inset-inline-start: 0;
     width: min(520px, calc(100vw - 220px - 12px));
   }
 }
