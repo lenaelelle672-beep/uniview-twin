@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { extrudeUp } from '../../scene/extrude'
 import { FOOTPRINT } from '../../scene/siteGeometry'
-import { eastGrilleMounts, eastLowerOutline, eastUpperOutline, EAST_LOWER_TOP_M, EAST_ROOF_M, outset } from '../../scene/massing'
+import { eastGrilleMount, eastLowerOutline, eastUpperOutline, EAST_LOWER_TOP_M, EAST_ROOF_M, outset } from '../../scene/massing'
 import { curtainMaterial, finMaterial, solidMaterial } from '../../scene/materials'
 import { FinRow } from './Fins'
 
@@ -36,13 +36,11 @@ export function EastBlock({ model }: { model: boolean }) {
     return merged
   }, [focus, upperOutline])
   const glass = model ? solidMaterial : curtainMaterial
-  const mounts = eastGrilleMounts()
+  const grille = eastGrilleMount()
 
   return (
     <group name="EastBlock">
-      {mounts.map((mount) => (
-        <object3D key={mount.name} name={mount.name} position={mount.position} rotation={mount.rotation} />
-      ))}
+      <object3D name="eastGrilleMount" position={grille.position} rotation={grille.rotation} />
       <mesh geometry={lower} material={[solidMaterial, glass]} castShadow receiveShadow />
       <mesh geometry={upper} material={solidMaterial} position={[0, LOWER_TOP, 0]} castShadow receiveShadow />
       <mesh geometry={seams} material={finMaterial} castShadow />

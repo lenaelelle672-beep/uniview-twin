@@ -25,50 +25,42 @@ export function podiumFocus(): [number, number] {
 }
 
 /**
- * 东墙外轮廓细线，取自 site.svg 那条连续折线（stroke 经过页面变换后）。
- * 南段 x=2451.121，北段 x=2474.281，错台 y=1445.121。
- * 间距 23.160 pt / 8.306 pt/m = 2.788 m。内部那对 4.90 m 的线不在这条外墙上。
+ * 8F 闭合外轮廓的东墙外皮细线（site.svg 页面 x）。
+ * 一条直墙，从北端 y=839.000 贯通到南端 y=1693.160。
+ * 再往东 2.788 m、并一直伸到 8F 以北的是地下室粗墙，不用。
  */
-const EAST_SKIN_PAGE = {
-  southX: 2451.1210938,
-  northX: 2474.28125004,
-  jogY: 1445.1210938,
-} as const
+const EAST_SKIN_PAGE_X = 2451.1210938
 
-/** 消防车道靠近楼的那条细线。对侧细线在 y=1784.719，中心距 7.01 m。 */
+/** 消防车道靠近楼的那条细线。对侧细线在 y=1784.719，宽度 7.01 m。 */
 const FIRE_LANE_NORTH_PAGE_Y = 1726.519531
 
-export interface EastSkin {
-  southFaceX: number
-  northFaceX: number
-  jogZ: number
-  /** 北段相对南段向东错出的距离。 */
-  offset: number
-  /** 南墙（测量点 X=75926.890）到错台的距离。 */
+/** 弧面和首层离车道北缘至少留这么多。 */
+const LANE_CLEARANCE_M = 4
+
+export interface EastWall {
+  /** 外皮细线的世界 x。 */
+  faceX: number
+  /** 南北向墙长。 */
+  length: number
+  /** 南墙角点到角点，西测量点到外皮细线。 */
   southLength: number
-  northLength: number
-  /** 车道北缘。世界 +Z 向南，小于这个值就是在车道以北。 */
+  /** 车道北缘。世界 +Z 向南。 */
   laneNorthZ: number
 }
 
-export function eastSkin(): EastSkin {
-  const southFaceX = pageToWorld(EAST_SKIN_PAGE.southX, EAST_SKIN_PAGE.jogY)[0]
-  const northFaceX = pageToWorld(EAST_SKIN_PAGE.northX, EAST_SKIN_PAGE.jogY)[0]
-  const jogZ = pageToWorld(EAST_SKIN_PAGE.southX, EAST_SKIN_PAGE.jogY)[1]
+export function eastWall(): EastWall {
+  const faceX = pageToWorld(EAST_SKIN_PAGE_X, FIRE_LANE_NORTH_PAGE_Y)[0]
   return {
-    southFaceX,
-    northFaceX,
-    jogZ,
-    offset: northFaceX - southFaceX,
-    southLength: FOOTPRINT.maxZ - jogZ,
-    northLength: jogZ - FOOTPRINT.minZ,
-    laneNorthZ: pageToWorld(EAST_SKIN_PAGE.southX, FIRE_LANE_NORTH_PAGE_Y)[1],
+    faceX,
+    length: FOOTPRINT.maxZ - FOOTPRINT.minZ,
+    southLength: faceX - FOOTPRINT.minX,
+    laneNorthZ: pageToWorld(EAST_SKIN_PAGE_X, FIRE_LANE_NORTH_PAGE_Y)[1],
   }
 }
 
-/** 弧面、首层停在车道北缘以北，留 0.4 m。 */
-function bulgeNorthOfLane(zWall: number, requested: number, laneNorthZ: number): number {
-  const room = laneNorthZ - zWall - 0.4
+/** 弧面停在车道北缘以北至少 4 m。 */
+function bulgeClearOfLane(zWall: number, requested: number, laneNorthZ: number): number {
+  const room = laneNorthZ - zWall - LANE_CLEARANCE_M
   return Math.min(requested, Math.max(0, room))
 }
 
@@ -93,37 +85,33 @@ function withSouthCurve(
 export const EAST_LOWER_TOP_M = 6 + 4.2
 
 /**
- * 南墙在测量点 X=75926.890。东墙外皮是细线上的两段：
- * 南段在尺寸线以东，北段再向东错出约 2.79 m。南侧弧面朝前，停在消防车道以北。
+ * 南墙在测量点 X=75926.890。东墙是外皮细线上的一条直墙。
+ * 南侧弧面朝前，最南点离消防车道北缘至少 4 m。
  */
 export function eastUpperOutline(): Array<[number, number]> {
-  const skin = eastSkin()
-  const bulge = bulgeNorthOfLane(FOOTPRINT.maxZ, EAST_CANTILEVER_M, skin.laneNorthZ)
+  const wall = eastWall()
+  const bulge = bulgeClearOfLane(FOOTPRINT.maxZ, EAST_CANTILEVER_M, wall.laneNorthZ)
   return withSouthCurve(
     [
       [FOOTPRINT.minX, FOOTPRINT.minZ],
-      [skin.northFaceX, FOOTPRINT.minZ],
-      [skin.northFaceX, skin.jogZ],
-      [skin.southFaceX, skin.jogZ],
-      [skin.southFaceX, FOOTPRINT.maxZ],
+      [wall.faceX, FOOTPRINT.minZ],
+      [wall.faceX, FOOTPRINT.maxZ],
     ],
     FOOTPRINT.maxZ,
     bulge,
   )
 }
 
-/** 底层平面内退，南侧再收进，让出上部悬挑和弧面。东墙错台保留。 */
+/** 底层平面内退，南侧再收进，让出上部悬挑和弧面。东墙仍是一条直墙。 */
 export function eastLowerOutline(): Array<[number, number]> {
-  const skin = eastSkin()
+  const wall = eastWall()
   const zSouth = FOOTPRINT.maxZ - 1.5
-  const bulge = bulgeNorthOfLane(zSouth, 1.2, skin.laneNorthZ)
+  const bulge = bulgeClearOfLane(zSouth, 1.2, wall.laneNorthZ)
   return withSouthCurve(
     [
       [FOOTPRINT.minX + 1.4, FOOTPRINT.minZ + 1.6],
-      [skin.northFaceX - 1.2, FOOTPRINT.minZ + 1.6],
-      [skin.northFaceX - 1.2, skin.jogZ],
-      [skin.southFaceX - 1.2, skin.jogZ],
-      [skin.southFaceX - 1.2, zSouth],
+      [wall.faceX - 1.2, FOOTPRINT.minZ + 1.6],
+      [wall.faceX - 1.2, zSouth],
     ],
     zSouth,
     bulge,
@@ -131,7 +119,6 @@ export function eastLowerOutline(): Array<[number, number]> {
 }
 
 export interface EastGrilleMount {
-  name: 'eastGrilleMountS' | 'eastGrilleMountN'
   length: number
   height: number
   position: [number, number, number]
@@ -139,28 +126,17 @@ export interface EastGrilleMount {
 }
 
 /**
- * 东墙两段各一个挂载点。原点在该段外皮南端、标高 ±0.00。
+ * 东墙外皮挂载点。原点在外皮南端、标高 ±0.00。
  * 局部 +X 沿墙向北，+Z 朝东，+Y 向上。不挂格栅。
  */
-export function eastGrilleMounts(): EastGrilleMount[] {
-  const skin = eastSkin()
-  const rotation: [number, number, number] = [0, Math.PI / 2, 0]
-  return [
-    {
-      name: 'eastGrilleMountS',
-      length: skin.southLength,
-      height: EAST_ROOF_M,
-      position: [skin.southFaceX, 0, FOOTPRINT.maxZ],
-      rotation,
-    },
-    {
-      name: 'eastGrilleMountN',
-      length: skin.northLength,
-      height: EAST_ROOF_M,
-      position: [skin.northFaceX, 0, skin.jogZ],
-      rotation,
-    },
-  ]
+export function eastGrilleMount(): EastGrilleMount {
+  const wall = eastWall()
+  return {
+    length: wall.length,
+    height: EAST_ROOF_M,
+    position: [wall.faceX, 0, FOOTPRINT.maxZ],
+    rotation: [0, Math.PI / 2, 0],
+  }
 }
 
 export interface FinPoint {
