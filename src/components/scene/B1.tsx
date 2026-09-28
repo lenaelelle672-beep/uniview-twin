@@ -2,11 +2,13 @@ import { useMemo } from 'react'
 import { buildB1ZoneGeometry, zoneBlockMaterial } from '../../scene/b1Zones'
 import { extrudeUp } from '../../scene/extrude'
 import { solidMaterial, stoneMaterial } from '../../scene/materials'
+import { isBasementSlabHidden } from '../../scene/stage/cut'
 import { footprintOutline, TOWER } from '../../scene/siteGeometry'
 import { useTwinStore } from '../../store/store'
 
 export function B1({ model }: { model: boolean }) {
   const enterFloor = useTwinStore((state) => state.enterFloor)
+  const hideSlab = useTwinStore((state) => isBasementSlabHidden(state.view, state.selectedFloor))
   const slab = useMemo(() => extrudeUp(footprintOutline(), 0.28), [])
   const towerSlab = useMemo(
     () =>
@@ -32,8 +34,14 @@ export function B1({ model }: { model: boolean }) {
         enterFloor('B1')
       }}
     >
-      <mesh geometry={slab} material={model ? solidMaterial : stoneMaterial} receiveShadow />
-      <mesh geometry={towerSlab} material={model ? solidMaterial : stoneMaterial} receiveShadow />
+      <mesh name="B1Slab" geometry={slab} material={model ? solidMaterial : stoneMaterial} receiveShadow visible={!hideSlab} />
+      <mesh
+        name="B1TowerSlab"
+        geometry={towerSlab}
+        material={model ? solidMaterial : stoneMaterial}
+        receiveShadow
+        visible={!hideSlab}
+      />
       {!model && <mesh name="B1Zones" geometry={zones} material={zoneBlockMaterial} />}
     </group>
   )

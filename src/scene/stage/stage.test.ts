@@ -7,6 +7,7 @@ import {
   activeFloorId,
   cutElevation,
   hiddenFloorIds,
+  isBasementSlabHidden,
   isFloorCurtainOpen,
   isFloorShellHidden,
   isRoofHidden,
@@ -53,6 +54,17 @@ describe('单层剖切', () => {
     expect(isFloorCurtainOpen('floor', 'F12', 'F11')).toBe(false)
     expect(isRoofHidden('floor', 'F3')).toBe(true)
     expect(isRoofHidden('building', 'F3')).toBe(false)
+  })
+
+  it('地上单层隐藏 B1 楼板，总览和 B1 不隐藏', () => {
+    expect(isBasementSlabHidden('building', null)).toBe(false)
+    expect(isBasementSlabHidden('building', 'F12')).toBe(false)
+    expect(isBasementSlabHidden('blueprint', 'F12')).toBe(false)
+    expect(isBasementSlabHidden('floor', 'B1')).toBe(false)
+    expect(isBasementSlabHidden('floor', null)).toBe(false)
+    for (let level = 1; level <= 22; level += 1) {
+      expect(isBasementSlabHidden('floor', `F${level}`)).toBe(true)
+    }
   })
 })
 
