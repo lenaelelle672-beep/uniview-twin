@@ -11,6 +11,7 @@ import { Site } from './scene/Site'
 import { Tower } from './scene/Tower'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
+import { qualityDprRange } from '../scene/quality'
 import { useTwinStore } from '../store/store'
 
 function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'balanced' | 'high' }) {
@@ -50,7 +51,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
       <CameraRig />
       <Suspense fallback={null}>
         <group name="AboveGradeContext" visible={!openBasement}>
-          <Site model={model} night={night} perf={quality === 'perf'} />
+          <Site model={model} night={night} quality={quality} />
           <Podium model={model} />
           <EastBlock model={model} />
           <B1 model={model} />
@@ -69,7 +70,6 @@ export function SceneCanvas() {
   const presentation = useTwinStore((state) => state.presentation)
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
   const pose = CAMERA_POSES.overview
-  const dpr = quality === 'high' ? 1.5 : quality === 'perf' ? 1 : 1.25
   applySurfaceMode(mode)
 
   useLayoutEffect(() => {
@@ -77,10 +77,10 @@ export function SceneCanvas() {
   }, [mode])
 
   return (
-    <div className="scene-root" data-day-night={dayNight} data-presentation={presentation}>
+    <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={quality}>
       <Canvas
         key={quality}
-        dpr={dpr}
+        dpr={qualityDprRange(quality)}
         shadows={quality === 'perf' ? false : 'percentage'}
         camera={{ position: pose.position, fov: pose.fov, near: 0.45, far: 900 }}
         gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}

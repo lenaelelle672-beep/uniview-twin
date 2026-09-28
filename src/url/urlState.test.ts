@@ -36,6 +36,14 @@ describe('URL 解析与回写', () => {
     expect(serializeUrl(parseSearch(raw))).toBe(raw)
   })
 
+  it('不带 q 时默认均衡档，且不锁定', () => {
+    applySearchToStore('')
+    expect(useTwinStore.getState().quality).toBe('balanced')
+    expect(useTwinStore.getState().qualityPinned).toBe(false)
+    expect(useTwinStore.getState().urlQuality).toBeNull()
+    expect(storeToSearch()).toBe('')
+  })
+
   it('?q= 固定画质档后不自动降档', () => {
     applySearchToStore('?q=high&floor=F8')
     const state = useTwinStore.getState()

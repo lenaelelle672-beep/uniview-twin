@@ -1,7 +1,9 @@
 import { useMemo } from 'react'
 import { BoxGeometry, PlaneGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { InstancedProp, PROP_URL } from './InstancedProp'
+import type { QualityTier } from '../../types'
+import { selectTreeModels } from '../../scene/quality'
+import { FoliageShadow, InstancedProp, PROP_URL } from './InstancedProp'
 import { extrudeUp } from '../../scene/extrude'
 import { courtyardHole } from '../../scene/massing'
 import {
@@ -46,7 +48,7 @@ function ribbonGeometry(ribbons: Ribbon[], y: number) {
   return merged
 }
 
-export function Site({ model, night, perf }: { model: boolean; night: boolean; perf: boolean }) {
+export function Site({ model, night, quality }: { model: boolean; night: boolean; quality: QualityTier }) {
   const furniture = useMemo(() => placeStreetFurniture(), [])
   const court = useMemo(() => courtyardHole(), [])
   const park = useMemo(() => extrudeUp(PARK, 0.04, [court]), [court])
@@ -66,6 +68,8 @@ export function Site({ model, night, perf }: { model: boolean; night: boolean; p
     return merged
   }, [])
 
+  const trees = selectTreeModels(quality)
+
   if (model) {
     return <mesh geometry={plinth} material={plinthMaterial} receiveShadow position={[0, -0.2, 0]} />
   }
@@ -78,11 +82,13 @@ export function Site({ model, night, perf }: { model: boolean; night: boolean; p
       <mesh geometry={roads} material={roadMaterial} receiveShadow />
       <mesh geometry={zebras} material={zebraMaterial} receiveShadow />
       <InstancedProp
-        url={perf ? PROP_URL.TREE_LO : PROP_URL.TREE_HI}
+        url={trees.visual === 'lo' ? PROP_URL.TREE_LO : PROP_URL.TREE_HI}
         placements={furniture.trees}
         night={night}
         y={0.12}
+        leafCastShadow={trees.shadow == null}
       />
+      {trees.shadow && <FoliageShadow url={PROP_URL.TREE_LO} placements={furniture.trees} y={0.12} />}
       <InstancedProp url={PROP_URL.LAMP} placements={furniture.lamps} night={night} y={0.12} />
     </group>
   )
