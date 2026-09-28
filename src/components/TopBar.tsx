@@ -4,6 +4,8 @@ import type { QualityTier, ViewMode } from '../types'
 interface TopBarProps {
   floorListOpen: boolean
   onToggleFloorList: () => void
+  alarmOpen: boolean
+  onToggleAlarm: () => void
 }
 
 const VIEWS: Array<{ id: ViewMode; label: string }> = [
@@ -18,7 +20,7 @@ const QUALITIES: Array<{ id: QualityTier; label: string }> = [
   { id: 'high', label: '高画质' },
 ]
 
-export function TopBar({ floorListOpen, onToggleFloorList }: TopBarProps) {
+export function TopBar({ floorListOpen, onToggleFloorList, alarmOpen, onToggleAlarm }: TopBarProps) {
   const view = useTwinStore((state) => state.view)
   const dayNight = useTwinStore((state) => state.dayNight)
   const quality = useTwinStore((state) => state.quality)
@@ -96,6 +98,17 @@ export function TopBar({ floorListOpen, onToggleFloorList }: TopBarProps) {
         onClick={onToggleFloorList}
       >
         {floorListOpen ? '收起楼层' : '展开楼层'}
+      </button>
+
+      <button
+        type="button"
+        className={alarmOpen ? 'text-button alarm-toggle is-active' : 'text-button alarm-toggle'}
+        aria-label={alarmOpen ? '关闭告警抽屉' : '打开告警抽屉'}
+        aria-pressed={alarmOpen}
+        aria-controls="alarm-drawer"
+        onClick={onToggleAlarm}
+      >
+        告警
       </button>
 
       <input

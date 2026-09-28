@@ -25,6 +25,9 @@ export interface ViewSlice {
   setHoveredFloor: (floorId: string | null) => void
   setFocusedDeskId: (deskId: string | null) => void
   setCam: (cam: CameraId | null) => void
+  /** 每次 focusDevice 加一。T005 订阅该序号后再做镜头飞行；本任务只改选中楼层和工位。 */
+  focusSeq: number
+  focusDevice: (target: { floor: string; deskId: string | null }) => void
 }
 
 export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set, get) => ({
@@ -39,6 +42,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   hoveredFloor: null,
   focusedDeskId: null,
   cam: null,
+  focusSeq: 0,
   setView: (view) => set({ view }),
   setExploded: (exploded) => set({ exploded }),
   setDayNight: (dayNight) => set({ dayNight }),
@@ -54,4 +58,11 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   setHoveredFloor: (hoveredFloor) => set({ hoveredFloor }),
   setFocusedDeskId: (focusedDeskId) => set({ focusedDeskId }),
   setCam: (cam) => set({ cam }),
+  focusDevice: ({ floor, deskId }) =>
+    set((state) => ({
+      selectedFloor: floor,
+      focusedDeskId: deskId,
+      view: 'floor',
+      focusSeq: state.focusSeq + 1,
+    })),
 })
