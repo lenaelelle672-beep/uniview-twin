@@ -3,8 +3,10 @@ import { BoxGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { listFloorSpecs, TOWER_ROOF_M } from '../../data/floors'
 import { curtainMaterial, grilleMaterial, jointMaterial, solidMaterial } from '../../scene/materials'
+import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
 import { TOWER } from '../../scene/siteGeometry'
 import { createTowerGlass } from '../../scene/towerGlass'
+import { useTwinStore } from '../../store/store'
 import { RoofSign } from './InstancedProp'
 
 const BAND = 0.78
@@ -35,9 +37,19 @@ function makeBand(elevation: number) {
 function FloorShell({ id, elevation, height }: { id: string; elevation: number; height: number }) {
   const glass = useMemo(() => createTowerGlass(elevation, height), [elevation, height])
   const band = useMemo(() => makeBand(elevation), [elevation])
+  const hidden = useTwinStore((state) => isFloorShellHidden(state.view, state.selectedFloor, elevation))
+  const opened = useTwinStore((state) => isFloorCurtainOpen(state.view, state.selectedFloor, id))
+  const enterFloor = useTwinStore((state) => state.enterFloor)
   return (
-    <group name={`FloorShell-${id}`}>
-      <mesh geometry={glass} material={curtainMaterial} />
+    <group
+      name={`FloorShell-${id}`}
+      visible={!hidden}
+      onDoubleClick={(event) => {
+        event.stopPropagation()
+        enterFloor(id)
+      }}
+    >
+      <mesh name={`FloorCurtain-${id}`} geometry={glass} material={curtainMaterial} visible={!opened} />
       <mesh geometry={band} material={jointMaterial} castShadow receiveShadow />
     </group>
   )
@@ -60,6 +72,7 @@ function makeParapet() {
 
 export function Tower({ night }: { night: boolean }) {
   const floors = useMemo(() => listFloorSpecs().filter((floor) => floor.level >= 1), [])
+  const roofHidden = useTwinStore((state) => isRoofHidden(state.view, state.selectedFloor))
   const parapet = useMemo(() => makeParapet(), [])
   const roof = useMemo(() => {
     const geometry = new BoxGeometry(WIDTH - 0.6, 0.35, DEPTH - 0.6)
@@ -74,9 +87,11 @@ export function Tower({ night }: { night: boolean }) {
       {floors.map((floor) => (
         <FloorShell key={floor.id} id={floor.id} elevation={floor.elevation} height={floor.height} />
       ))}
-      <mesh geometry={roof} material={solidMaterial} castShadow receiveShadow />
-      <mesh name="RoofParapet" geometry={parapet} material={grilleMaterial} castShadow receiveShadow />
-      <RoofSign night={night} position={[signX, TOWER_ROOF_M, signZ]} />
+      <group name="RoofAssembly" visible={!roofHidden}>
+        <mesh geometry={roof} material={solidMaterial} castShadow receiveShadow />
+        <mesh name="RoofParapet" geometry={parapet} material={grilleMaterial} castShadow receiveShadow />
+        <RoofSign night={night} position={[signX, TOWER_ROOF_M, signZ]} />
+      </group>
     </group>
   )
 }

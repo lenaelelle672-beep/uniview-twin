@@ -1,4 +1,5 @@
 import type { StateCreator } from 'zustand'
+import { isFloorId } from '../data/floors'
 import type { CameraId, DayNight, QualityTier, ViewMode } from '../types'
 import type { TwinStore } from './types'
 
@@ -28,6 +29,8 @@ export interface ViewSlice {
   setHoveredFloor: (floorId: string | null) => void
   setFocusedDeskId: (deskId: string | null) => void
   setCam: (cam: CameraId | null) => void
+  enterFloor: (floorId: string) => void
+  exitFloor: () => void
 }
 
 export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set, get) => ({
@@ -58,4 +61,14 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   setHoveredFloor: (hoveredFloor) => set({ hoveredFloor }),
   setFocusedDeskId: (focusedDeskId) => set({ focusedDeskId }),
   setCam: (cam) => set({ cam }),
+  enterFloor: (floorId) => {
+    if (!isFloorId(floorId)) return
+    const { view, selectedFloor } = get()
+    if (view === 'floor' && selectedFloor === floorId) return
+    set({ view: 'floor', selectedFloor: floorId })
+  },
+  exitFloor: () => {
+    if (get().view !== 'floor') return
+    set({ view: 'building' })
+  },
 })

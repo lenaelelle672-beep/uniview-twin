@@ -4,8 +4,10 @@ import { extrudeUp } from '../../scene/extrude'
 import { ellipsePoints } from '../../scene/massing'
 import { solidMaterial, stoneMaterial, zoneMaterials } from '../../scene/materials'
 import { COURTYARD, FOOTPRINT, footprintOutline, TOWER } from '../../scene/siteGeometry'
+import { useTwinStore } from '../../store/store'
 
 export function B1({ model }: { model: boolean }) {
+  const enterFloor = useTwinStore((state) => state.enterFloor)
   const slab = useMemo(() => extrudeUp(footprintOutline(), 0.28), [])
   const towerSlab = useMemo(
     () =>
@@ -39,7 +41,14 @@ export function B1({ model }: { model: boolean }) {
   }, [])
 
   return (
-    <group name="B1" position={[0, -5.5, 0]}>
+    <group
+      name="B1"
+      position={[0, -5.5, 0]}
+      onDoubleClick={(event) => {
+        event.stopPropagation()
+        enterFloor('B1')
+      }}
+    >
       <mesh geometry={slab} material={model ? solidMaterial : stoneMaterial} receiveShadow />
       <mesh geometry={towerSlab} material={model ? solidMaterial : stoneMaterial} receiveShadow />
       {!model && (

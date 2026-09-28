@@ -1,5 +1,6 @@
 import { Canvas } from '@react-three/fiber'
 import { Suspense, useLayoutEffect } from 'react'
+import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig } from './scene/CameraRig'
 import { EastBlock } from './scene/EastBlock'
@@ -17,6 +18,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const night = mode === 'night'
   const background = model ? '#050505' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
+  const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
 
   return (
     <>
@@ -47,11 +49,14 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
       />
       <CameraRig />
       <Suspense fallback={null}>
-        <Site model={model} night={night} perf={quality === 'perf'} />
+        <group name="AboveGradeContext" visible={!openBasement}>
+          <Site model={model} night={night} perf={quality === 'perf'} />
+          <Podium model={model} />
+          <EastBlock model={model} />
+          <B1 model={model} />
+        </group>
         <Tower night={night} />
-        <Podium model={model} />
-        <EastBlock model={model} />
-        <B1 model={model} />
+        <FloorStage />
         <RenderProbe />
       </Suspense>
     </>
