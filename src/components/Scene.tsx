@@ -3,6 +3,7 @@ import { Suspense, useLayoutEffect } from 'react'
 import { B1 } from './scene/B1'
 import { CameraRig } from './scene/CameraRig'
 import { EastBlock } from './scene/EastBlock'
+import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
 import { RenderProbe } from './scene/RenderProbe'
@@ -15,7 +16,7 @@ import { useTwinStore } from '../store/store'
 function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'balanced' | 'high' }) {
   const model = mode === 'model'
   const night = mode === 'night'
-  const background = model ? '#050505' : night ? '#07111c' : '#c5d7ea'
+  const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
 
   return (
@@ -52,6 +53,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <Podium model={model} />
         <EastBlock model={model} />
         <B1 model={model} />
+        <FloorBadges />
         <RenderProbe />
       </Suspense>
     </>
@@ -62,8 +64,10 @@ export function SceneCanvas() {
   const dayNight = useTwinStore((state) => state.dayNight)
   const quality = useTwinStore((state) => state.quality)
   const presentation = useTwinStore((state) => state.presentation)
+  const cam = useTwinStore((state) => state.cam)
+  const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
-  const pose = CAMERA_POSES.overview
+  const pose = cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview
   const dpr = quality === 'high' ? 1.5 : quality === 'perf' ? 1 : 1.25
   applySurfaceMode(mode)
 
@@ -77,8 +81,11 @@ export function SceneCanvas() {
         key={quality}
         dpr={dpr}
         shadows={quality === 'perf' ? false : 'percentage'}
-        camera={{ position: pose.position, fov: pose.fov, near: 0.45, far: 900 }}
+        camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
         gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+        onPointerMissed={() => {
+          setSelectedFloor(null)
+        }}
       >
         <SceneBody mode={mode} quality={quality} />
       </Canvas>

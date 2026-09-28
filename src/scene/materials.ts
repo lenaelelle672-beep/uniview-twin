@@ -2,7 +2,7 @@ import { Color, DoubleSide, FrontSide, MeshPhysicalMaterial, MeshStandardMateria
 
 export type SurfaceMode = 'day' | 'night' | 'model'
 
-const GRID_KEY = 'twin-curtain-v1'
+const GRID_KEY = 'twin-curtain-v2'
 const GRILLE_KEY = 'twin-grille-v1'
 
 function injectPositionVarying(shader: { vertexShader: string; fragmentShader: string }, fragmentHeader = '') {
@@ -53,8 +53,11 @@ export function createCurtainMaterial(): MeshPhysicalMaterial {
       `#include <opaque_fragment>
        ${facadeUv()}
        vec2 fr = fract(guv / 1.55);
-       float edge = min(min(fr.x, 1.0 - fr.x), min(fr.y, 1.0 - fr.y));
-       float line = 1.0 - smoothstep(0.03, 0.072, edge);
+       float vEdge = min(fr.x, 1.0 - fr.x);
+       float hEdge = min(fr.y, 1.0 - fr.y);
+       float vLine = 1.0 - smoothstep(0.028, 0.07, vEdge);
+       float hLine = 1.0 - smoothstep(0.045, 0.1, hEdge);
+       float line = max(vLine, hLine * 0.42);
        gl_FragColor.rgb = mix(gl_FragColor.rgb, uGrid, line * uLine);`,
     )
   }
@@ -86,6 +89,21 @@ export const curtainMaterial = createCurtainMaterial()
 export const grilleMaterial = createGrilleMaterial()
 export const solidMaterial = new MeshStandardMaterial({ color: '#f4f5f7', roughness: 0.62, metalness: 0.05 })
 export const jointMaterial = new MeshStandardMaterial({ color: '#fbfcfd', roughness: 0.5, metalness: 0.04 })
+export const revealMaterial = new MeshStandardMaterial({ color: '#5c6772', roughness: 0.72, metalness: 0.08 })
+export const highlightCurtainMaterial = new MeshStandardMaterial({
+  color: '#ffd7a1',
+  emissive: '#e8890c',
+  emissiveIntensity: 0.72,
+  roughness: 0.42,
+  metalness: 0.08,
+})
+export const highlightJointMaterial = new MeshStandardMaterial({
+  color: '#ffe3a8',
+  emissive: '#ff9d1f',
+  emissiveIntensity: 1.05,
+  roughness: 0.38,
+  metalness: 0.06,
+})
 export const finMaterial = new MeshStandardMaterial({ color: '#e4e7eb', roughness: 0.5, metalness: 0.08 })
 export const stoneMaterial = new MeshStandardMaterial({ color: '#d7d2c8', roughness: 0.86, metalness: 0 })
 export const courtWallMaterial = new MeshStandardMaterial({
@@ -118,11 +136,12 @@ export function applySurfaceMode(mode: SurfaceMode) {
     curtainMaterial.envMapIntensity = 0.04
     curtainMaterial.emissive.set('#000000')
     curtainMaterial.emissiveIntensity = 0
-    grid.set('#5e656c')
-    strength.value = 0.92
+    grid.set('#3c444c')
+    strength.value = 0.96
     grilleMaterial.color.set('#f5f5f5')
     solidMaterial.color.set('#f3f3f3')
-    jointMaterial.color.set('#5e666e')
+    jointMaterial.color.set('#f7f7f7')
+    revealMaterial.color.set('#2a3138')
     finMaterial.color.set('#d5d8dc')
     stoneMaterial.color.set('#e6e6e6')
     courtWallMaterial.color.set('#e6e6e6')
@@ -138,7 +157,8 @@ export function applySurfaceMode(mode: SurfaceMode) {
     strength.value = 0.5
     grilleMaterial.color.set('#d5dae0')
     solidMaterial.color.set('#c8ced6')
-    jointMaterial.color.set('#e7edf3')
+    jointMaterial.color.set('#f3f6fa')
+    revealMaterial.color.set('#1c2430')
     finMaterial.color.set('#b7bec6')
     stoneMaterial.color.set('#8a867e')
     courtWallMaterial.color.set('#8a867e')
@@ -159,7 +179,8 @@ export function applySurfaceMode(mode: SurfaceMode) {
     strength.value = 0.8
     grilleMaterial.color.set('#f7f8fa')
     solidMaterial.color.set('#f4f5f7')
-    jointMaterial.color.set('#fbfcfd')
+    jointMaterial.color.set('#e7eef5')
+    revealMaterial.color.set('#5d6874')
     finMaterial.color.set('#e4e7eb')
     stoneMaterial.color.set('#d7d2c8')
     courtWallMaterial.color.set('#c4bfb4')
@@ -175,6 +196,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     grilleMaterial,
     solidMaterial,
     jointMaterial,
+    revealMaterial,
     finMaterial,
     stoneMaterial,
     courtWallMaterial,

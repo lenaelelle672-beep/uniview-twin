@@ -1,12 +1,15 @@
 import { CameraControls } from '@react-three/drei'
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Box3, PerspectiveCamera, Vector3 } from 'three'
-import { CAMERA_POSES } from '../../scene/cameras'
+import { TOWER_ROOF_M } from '../../data/floors'
+import { CAMERA_LIMITS, CAMERA_POSES, maxPolarAngleAboveGround } from '../../scene/cameras'
 import { EAST_ROOF_M } from '../../scene/massing'
 import { COURTYARD, FOOTPRINT, PARCEL_WORLD, TOWER } from '../../scene/siteGeometry'
-import { TOWER_ROOF_M } from '../../data/floors'
 import { useTwinStore } from '../../store/store'
+
+const targetScratch = new Vector3()
+const positionScratch = new Vector3()
 
 function buildingSiteBox(): Box3 {
   const box = new Box3()
@@ -23,6 +26,29 @@ function buildingSiteBox(): Box3 {
   return box
 }
 
+function applyCameraLimits(rig: CameraControls) {
+  rig.minDistance = CAMERA_LIMITS.minDistance
+  rig.maxDistance = CAMERA_LIMITS.maxDistance
+  rig.minPolarAngle = CAMERA_LIMITS.minPolarAngle
+  rig.infinityDolly = false
+
+  rig.getTarget(targetScratch, true)
+  if (targetScratch.y < CAMERA_LIMITS.minTargetY) {
+    rig.setTarget(targetScratch.x, CAMERA_LIMITS.minTargetY, targetScratch.z, false)
+    targetScratch.y = CAMERA_LIMITS.minTargetY
+  }
+
+  const distance = Math.max(rig.distance, CAMERA_LIMITS.minDistance)
+  const maxPhi = maxPolarAngleAboveGround(targetScratch.y, distance)
+  rig.maxPolarAngle = Math.max(maxPhi, CAMERA_LIMITS.minPolarAngle + 0.01)
+  if (rig.polarAngle > rig.maxPolarAngle) rig.polarAngle = rig.maxPolarAngle
+
+  rig.getPosition(positionScratch, true)
+  if (positionScratch.y < CAMERA_LIMITS.minCameraY) {
+    rig.setPosition(positionScratch.x, CAMERA_LIMITS.minCameraY, positionScratch.z, false)
+  }
+}
+
 export function CameraRig() {
   const cam = useTwinStore((state) => state.cam)
   const controls = useRef<CameraControls>(null)
@@ -35,6 +61,9 @@ export function CameraRig() {
     const rig = controls.current
     if (!rig) return
     rig.smoothTime = 0
+    rig.minDistance = CAMERA_LIMITS.minDistance
+    rig.maxDistance = CAMERA_LIMITS.maxDistance
+    window.__twinRig = rig
     if (!cam) {
       const fov = CAMERA_POSES.overview.fov
       if (perspective.isPerspectiveCamera && perspective.fov !== fov) {
@@ -62,6 +91,9 @@ export function CameraRig() {
         paddingBottom: 6,
       })
       rig.maxPolarAngle = Math.PI
+      rig.setBoundary(
+        new Box3(new Vector3(-500, CAMERA_LIMITS.minTargetY, -500), new Vector3(500, 240, 500)),
+      )
       return
     }
     const pose = CAMERA_POSES[cam]
@@ -69,6 +101,7 @@ export function CameraRig() {
       perspective.fov = pose.fov
       perspective.updateProjectionMatrix()
     }
+    rig.maxPolarAngle = Math.PI
     void rig.setLookAt(
       pose.position[0],
       pose.position[1],
@@ -78,7 +111,19 @@ export function CameraRig() {
       pose.target[2],
       false,
     )
+    rig.update(0)
+    rig.setBoundary(
+      new Box3(new Vector3(-500, CAMERA_LIMITS.minTargetY, -500), new Vector3(500, 240, 500)),
+    )
+    applyCameraLimits(rig)
+    rig.update(0)
   }, [bounds, cam, camera, size.height, size.width])
+
+  useFrame(() => {
+    const rig = controls.current
+    if (!rig) return
+    applyCameraLimits(rig)
+  }, -2)
 
   return <CameraControls ref={controls} makeDefault smoothTime={0} />
 }

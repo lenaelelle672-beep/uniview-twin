@@ -19,6 +19,8 @@ export interface ViewSlice {
   hoveredFloor: string | null
   focusedDeskId: string | null
   cam: CameraId | null
+  /** 双击楼层时递增。T004 用它触发飞入；本任务不改视图。 */
+  floorFlyRequest: { floorId: string; nonce: number } | null
   setView: (view: ViewMode) => void
   setExploded: (exploded: boolean) => void
   setDayNight: (dayNight: DayNight) => void
@@ -28,6 +30,7 @@ export interface ViewSlice {
   setHoveredFloor: (floorId: string | null) => void
   setFocusedDeskId: (deskId: string | null) => void
   setCam: (cam: CameraId | null) => void
+  emitFloorFly: (floorId: string) => void
 }
 
 export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set, get) => ({
@@ -43,6 +46,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   hoveredFloor: null,
   focusedDeskId: null,
   cam: null,
+  floorFlyRequest: null,
   setView: (view) => set({ view }),
   setExploded: (exploded) => set({ exploded }),
   setDayNight: (dayNight) => set({ dayNight }),
@@ -58,4 +62,11 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   setHoveredFloor: (hoveredFloor) => set({ hoveredFloor }),
   setFocusedDeskId: (focusedDeskId) => set({ focusedDeskId }),
   setCam: (cam) => set({ cam }),
+  emitFloorFly: (floorId) =>
+    set({
+      floorFlyRequest: {
+        floorId,
+        nonce: (get().floorFlyRequest?.nonce ?? 0) + 1,
+      },
+    }),
 })

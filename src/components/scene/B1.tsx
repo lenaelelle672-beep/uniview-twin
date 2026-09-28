@@ -2,10 +2,14 @@ import { useMemo } from 'react'
 import { BoxGeometry } from 'three'
 import { extrudeUp } from '../../scene/extrude'
 import { ellipsePoints } from '../../scene/massing'
-import { solidMaterial, stoneMaterial, zoneMaterials } from '../../scene/materials'
+import { highlightJointMaterial, solidMaterial, stoneMaterial, zoneMaterials } from '../../scene/materials'
 import { COURTYARD, FOOTPRINT, footprintOutline, TOWER } from '../../scene/siteGeometry'
+import { useTwinStore } from '../../store/store'
+import { useFloorActions } from './floorPick'
 
 export function B1({ model }: { model: boolean }) {
+  const selected = useTwinStore((state) => state.selectedFloor === 'B1')
+  const actions = useFloorActions('B1')
   const slab = useMemo(() => extrudeUp(footprintOutline(), 0.28), [])
   const towerSlab = useMemo(
     () =>
@@ -38,10 +42,12 @@ export function B1({ model }: { model: boolean }) {
     return extrudeUp(points, 0.12)
   }, [])
 
+  const slabMaterial = selected ? highlightJointMaterial : model ? solidMaterial : stoneMaterial
+
   return (
-    <group name="B1" position={[0, -5.5, 0]}>
-      <mesh geometry={slab} material={model ? solidMaterial : stoneMaterial} receiveShadow />
-      <mesh geometry={towerSlab} material={model ? solidMaterial : stoneMaterial} receiveShadow />
+    <group name="B1" position={[0, -5.5, 0]} {...actions}>
+      <mesh geometry={slab} material={slabMaterial} receiveShadow />
+      <mesh geometry={towerSlab} material={slabMaterial} receiveShadow />
       {!model && (
         <>
           <mesh geometry={atrium} material={zoneMaterials[1]} position={[0, 0.28, 0]} />

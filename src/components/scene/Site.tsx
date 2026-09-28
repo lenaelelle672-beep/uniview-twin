@@ -12,6 +12,7 @@ import {
   sidewalkMaterial,
   zebraMaterial,
 } from '../../scene/materials'
+import { useTwinStore } from '../../store/store'
 import {
   footprintOutline,
   PARCEL_WORLD,
@@ -47,7 +48,22 @@ function ribbonGeometry(ribbons: Ribbon[], y: number) {
 }
 
 export function Site({ model, night, perf }: { model: boolean; night: boolean; perf: boolean }) {
+  const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const furniture = useMemo(() => placeStreetFurniture(), [])
+  const horizon = useMemo(() => {
+    const ground = extrudeUp(
+      [
+        [-1800, -1800],
+        [1800, -1800],
+        [1800, 1800],
+        [-1800, 1800],
+      ],
+      0.04,
+      [PARK],
+    )
+    ground.translate(0, -0.08, 0)
+    return ground
+  }, [])
   const court = useMemo(() => courtyardHole(), [])
   const park = useMemo(() => extrudeUp(PARK, 0.04, [court]), [court])
   const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court]), [court])
@@ -66,12 +82,21 @@ export function Site({ model, night, perf }: { model: boolean; night: boolean; p
     return merged
   }, [])
 
+  const clearSelection = (event: { delta: number; stopPropagation: () => void }) => {
+    if (event.delta > 2) return
+    event.stopPropagation()
+    setSelectedFloor(null)
+  }
+
   if (model) {
-    return <mesh geometry={plinth} material={plinthMaterial} receiveShadow position={[0, -0.2, 0]} />
+    return (
+      <mesh geometry={plinth} material={plinthMaterial} receiveShadow position={[0, -0.2, 0]} onClick={clearSelection} />
+    )
   }
 
   return (
-    <group>
+    <group onClick={clearSelection}>
+      <mesh geometry={horizon} material={grassMaterial} receiveShadow />
       <mesh geometry={park} material={grassMaterial} receiveShadow />
       <mesh geometry={parcel} material={pavingMaterial} position={[0, 0.04, 0]} receiveShadow />
       <mesh geometry={sidewalk} material={sidewalkMaterial} receiveShadow />
