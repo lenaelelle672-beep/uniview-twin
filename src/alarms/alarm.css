@@ -1,0 +1,242 @@
+.topbar .alarm-toggle.is-active {
+  background: #f4f8fc;
+  color: #0c2340;
+}
+
+.alarm-drawer {
+  position: fixed;
+  z-index: 6;
+  top: 56px;
+  right: auto;
+  bottom: 0;
+  left: 232px;
+  inset-inline: auto;
+  inset-inline-start: 232px;
+  width: min(560px, calc(100vw - 232px - 248px - 12px));
+  height: auto;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: none;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  color: #122033;
+  border-right: 1px solid #d5deea;
+  box-shadow: 8px 0 24px rgba(16, 32, 51, 0.12);
+}
+
+.alarm-drawer:not([open]) {
+  display: none;
+}
+
+.alarm-drawer.is-floor-collapsed {
+  left: 0;
+  inset-inline-start: 0;
+  width: min(560px, calc(100vw - 248px - 12px));
+}
+
+.alarm-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px 8px;
+}
+
+.alarm-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.alarm-close {
+  margin-left: auto;
+  border: 1px solid #d5deea;
+  background: #fff;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.alarm-count {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 0 14px 10px;
+  flex-wrap: wrap;
+}
+
+.alarm-count strong {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.alarm-count span {
+  color: #526070;
+  margin-right: 8px;
+}
+
+.alarm-filters {
+  flex: none;
+  display: grid;
+  gap: 8px;
+  padding: 0 14px 10px;
+}
+
+.alarm-range,
+.alarm-status,
+.alarm-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.alarm-range label,
+.alarm-status span {
+  color: #526070;
+}
+
+.alarm-range select {
+  height: 32px;
+  border: 1px solid #d5deea;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 8px;
+  max-width: 150px;
+}
+
+.alarm-range .text-button,
+.alarm-actions button,
+.chip {
+  border-radius: 8px;
+  border: 1px solid #d5deea;
+  background: #fff;
+  padding: 4px 10px;
+}
+
+.alarm-range .text-button {
+  color: #122033;
+}
+
+.chip.is-on {
+  background: #fff1f0;
+  border-color: #b42318;
+  color: #b42318;
+}
+
+.chip.is-on.chip-offline {
+  background: #f2f4f7;
+  border-color: #667085;
+  color: #344054;
+}
+
+.alarm-hint {
+  margin: 0;
+  color: #526070;
+  font-size: 12px;
+}
+
+.alarm-actions button {
+  flex: 1;
+  height: 34px;
+  border-color: #0b6bcb;
+  background: #0b6bcb;
+  color: #fff;
+}
+
+.alarm-actions button.secondary {
+  background: #fff;
+  color: #0b6bcb;
+}
+
+.alarm-actions button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.alarm-focus {
+  flex: none;
+  min-height: 1.4em;
+  margin: 0;
+  padding: 0 14px 8px;
+  color: #0b3f86;
+}
+
+.alarm-table {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 10px 12px;
+}
+
+.alarm-cols,
+.alarm-row {
+  display: grid;
+  grid-template-columns: 52px 76px minmax(0, 1.4fr) 48px 118px;
+  gap: 6px;
+  align-items: center;
+}
+
+.alarm-cols {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 6px 8px;
+  background: #eef3f8;
+  color: #526070;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.alarm-row {
+  width: 100%;
+  text-align: left;
+  border: 1px solid transparent;
+  background: #f6f8fb;
+  border-radius: 8px;
+  padding: 8px;
+  margin-top: 6px;
+}
+
+.alarm-row.is-active {
+  background: #e7f1fb;
+  border-color: #0b6bcb;
+}
+
+.alarm-row .cell-device,
+.alarm-row .cell-time {
+  overflow-wrap: anywhere;
+}
+
+.cell-alarm {
+  color: #b42318;
+  font-weight: 700;
+}
+
+.cell-offline {
+  color: #667085;
+  font-weight: 700;
+}
+
+.alarm-empty {
+  margin: 12px 8px;
+  color: #526070;
+}
+
+@media (max-width: 1280px) {
+  .alarm-drawer {
+    left: 208px;
+    inset-inline-start: 208px;
+    width: min(520px, calc(100vw - 208px - 220px - 12px));
+  }
+
+  .alarm-drawer.is-floor-collapsed {
+    left: 0;
+    inset-inline-start: 0;
+    width: min(520px, calc(100vw - 220px - 12px));
+  }
+}

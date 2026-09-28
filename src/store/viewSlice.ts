@@ -19,6 +19,8 @@ export interface ViewSlice {
   selectedFloor: string | null
   hoveredFloor: string | null
   focusedDeskId: string | null
+  /** 告警抽屉点中的设备。T005 飞镜头仍只看 floor / deskId / focusSeq。 */
+  focusedDeviceId: string | null
   cam: CameraId | null
   setView: (view: ViewMode) => void
   setExploded: (exploded: boolean) => void
@@ -31,6 +33,9 @@ export interface ViewSlice {
   setCam: (cam: CameraId | null) => void
   enterFloor: (floorId: string) => void
   exitFloor: () => void
+  /** 每次 focusDevice 加一。T005 订阅该序号后再做镜头飞行。 */
+  focusSeq: number
+  focusDevice: (target: { floor: string; deskId: string | null; deviceId?: string | null }) => void
 }
 
 export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set, get) => ({
@@ -45,7 +50,9 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   selectedFloor: null,
   hoveredFloor: null,
   focusedDeskId: null,
+  focusedDeviceId: null,
   cam: null,
+  focusSeq: 0,
   setView: (view) => set({ view }),
   setExploded: (exploded) => set({ exploded }),
   setDayNight: (dayNight) => set({ dayNight }),
@@ -71,4 +78,12 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
     if (get().view !== 'floor') return
     set({ view: 'building' })
   },
+  focusDevice: ({ floor, deskId, deviceId = null }) =>
+    set((state) => ({
+      selectedFloor: floor,
+      focusedDeskId: deskId,
+      focusedDeviceId: deviceId,
+      view: 'floor',
+      focusSeq: state.focusSeq + 1,
+    })),
 })
