@@ -43,6 +43,9 @@ const ALARM = new Color('#b42318')
 const OFFLINE = new Color('#5d6775')
 const PLATE_Z = 0.02
 const CHIP_Z = 0.05
+/** 楼体和树用默认 0。底板是 N，数字是 N+1，数字画在底板上面。 */
+const BADGE_PLATE_ORDER = 10
+const BADGE_DIGIT_ORDER = BADGE_PLATE_ORDER + 1
 
 const right = new Vector3()
 const up = new Vector3()
@@ -170,6 +173,7 @@ export function FloorBadges() {
     syncViewport(digitMaterial, cssHeight)
     if (hidden || anchors.length === 0 || !(frameCamera instanceof PerspectiveCamera)) {
       window.__twinBadgeCenters = []
+      if (meshRef.current) meshRef.current.count = 0
       return
     }
     right.set(1, 0, 0).applyQuaternion(frameCamera.quaternion)
@@ -188,13 +192,18 @@ export function FloorBadges() {
     window.__twinBadgeCenters = centers
     const mesh = meshRef.current
     if (mesh) {
+      const floorCount = centers.length
+      // 同一次实例调用按序号画。depthTest 关闭后，后面的实例盖住前面的，所以色块必须排在全部底板之后。
       centers.forEach((center, index) => {
         centerScratch.set(center.x, center.y, center.z)
         writeInstance(mesh, index, centerScratch, BADGE_WIDTH, BADGE_HEIGHT, frameCamera.quaternion)
-        writeInstance(mesh, centers.length + index, centerScratch, BADGE_CHIP_W, BADGE_CHIP_H, frameCamera.quaternion)
-        writeInstance(mesh, centers.length * 2 + index, centerScratch, BADGE_CHIP_W, BADGE_CHIP_H, frameCamera.quaternion)
       })
-      mesh.count = centers.length * 3
+      centers.forEach((center, index) => {
+        centerScratch.set(center.x, center.y, center.z)
+        writeInstance(mesh, floorCount + index, centerScratch, BADGE_CHIP_W, BADGE_CHIP_H, frameCamera.quaternion)
+        writeInstance(mesh, floorCount * 2 + index, centerScratch, BADGE_CHIP_W, BADGE_CHIP_H, frameCamera.quaternion)
+      })
+      mesh.count = floorCount * 3
       mesh.instanceMatrix.needsUpdate = true
     }
     const digit = digitRef.current
@@ -221,8 +230,10 @@ export function FloorBadges() {
         frustumCulled={false}
         castShadow={false}
         receiveShadow={false}
-        renderOrder={10}
+        visible={show}
+        renderOrder={BADGE_PLATE_ORDER}
         raycast={(raycaster, intersects) => {
+          if (!show) return
           const mesh = meshRef.current
           const active = raycaster.camera
           if (!mesh || !(active instanceof PerspectiveCamera)) return
@@ -251,7 +262,8 @@ export function FloorBadges() {
           frustumCulled={false}
           castShadow={false}
           receiveShadow={false}
-          renderOrder={11}
+          visible={show}
+          renderOrder={BADGE_DIGIT_ORDER}
           raycast={() => null}
         />
       )}
