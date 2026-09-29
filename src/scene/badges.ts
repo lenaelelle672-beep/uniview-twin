@@ -18,6 +18,10 @@ export const BADGE_CHIP_H = 1.85
 /** 塔楼西侧偏南，总览东南机位能看到，又不挡南立面。 */
 export const BADGE_COLUMN_X = TOWER.minX - 16
 export const BADGE_COLUMN_Z = TOWER.maxZ + 4
+/**
+ * 左右两列之间留出的世界间隙（米），随放大倍数一起变，避免放大后的底板相切。
+ */
+export const BADGE_STAGGER_PAD = 0.8
 
 export interface BadgeAnchor {
   id: string

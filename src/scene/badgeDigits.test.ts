@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { PerspectiveCamera, Vector3 } from 'three'
 import { listFloorSpecs } from '../data/floors'
-import { BADGE_ALARM_X, BADGE_CHIP_W, BADGE_HEIGHT, BADGE_ID_X, BADGE_MIN_SCREEN_PX, badgeAnchor } from './badges'
+import { BADGE_ALARM_X, BADGE_CHIP_W, BADGE_HEIGHT, BADGE_ID_X, BADGE_MIN_SCREEN_PX, BADGE_WIDTH, badgeAnchor } from './badges'
 import {
   BADGE_GLYPH_HEIGHT,
+  badgeProjectedPixels,
   badgeScreenScale,
   buildBadgeDigitGeometry,
   glyphFrame,
+  layoutBadgeCenters,
   patchBadgeDigitVertexShader,
+  patchBadgePlateVertexShader,
   writeBadgeDigitPositions,
 } from './badgeDigits'
 
@@ -81,30 +84,107 @@ describe('徽标数字图集', () => {
     expect(shader.uniforms.badgeViewportHeight.value).toBe(768)
     expect(shader.uniforms.badgeWorldHeight.value).toBe(BADGE_HEIGHT)
     expect(shader.uniforms.badgeMinPixelHeight.value).toBe(BADGE_MIN_SCREEN_PX)
+
+    const plate = {
+      vertexShader: '#include <common>\nvoid main() {\n#include <begin_vertex>\n}\n',
+      uniforms: {} as Record<string, { value: unknown }>,
+    }
+    patchBadgePlateVertexShader(plate, 576)
+    expect(plate.vertexShader).toContain('attribute vec3 badgeShift;')
+    expect(plate.vertexShader).toContain('modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)')
+    expect(plate.vertexShader).toContain('transformed *= k;')
+    expect(plate.vertexShader).toContain('float k = max(1.0, badgeMinPixelHeight / max(px, 1e-3));')
+    expect(plate.uniforms.badgeWorldHeight.value).toBe(shader.uniforms.badgeWorldHeight.value)
+    expect(plate.uniforms.badgeViewportHeight.value).toBe(576)
   })
 
-  it('验收机位三种宽度下墨迹至少 10px，相邻层中心距大于墨迹', () => {
-    const inkWorld = BADGE_GLYPH_HEIGHT * (48 / 56)
-    const eye = new Vector3(-304, 71, 121)
-    const target = new Vector3(-46, 46, 18)
-    const forward = target.clone().sub(eye).normalize()
-    const camera = new PerspectiveCamera(36, 1, 0.35, 2400)
-    const anchors = listFloorSpecs().map((floor) => badgeAnchor(floor)).filter((anchor) => anchor.id !== 'B1')
-    for (const height of [1080, 768, 576]) {
-      camera.aspect = (height * 16) / 9 / height
-      camera.updateProjectionMatrix()
-      const proj11 = camera.projectionMatrix.elements[5]
-      const rows = anchors.map((anchor) => {
-        const viewZ = Math.abs(forward.dot(new Vector3(anchor.x, anchor.y, anchor.z).sub(eye)))
-        const plate = (BADGE_HEIGHT * proj11 * height) / (2 * viewZ)
-        const scale = badgeScreenScale(plate)
-        return { y: anchor.y, viewZ, ink: plate * scale * (inkWorld / BADGE_HEIGHT) }
-      })
-      expect(Math.min(...rows.map((row) => row.ink))).toBeGreaterThanOrEqual(10)
-      rows.sort((a, b) => a.y - b.y)
-      for (let index = 1; index < rows.length; index += 1) {
-        const spacing = ((rows[index].y - rows[index - 1].y) * proj11 * height) / (2 * ((rows[index].viewZ + rows[index - 1].viewZ) / 2))
-        expect(spacing).toBeGreaterThan((rows[index].ink + rows[index - 1].ink) / 2)
+  it('两个机位三种宽度下墨迹至少 10px，底板互不重叠，字心在板内', () => {
+    const inkRatio = (BADGE_GLYPH_HEIGHT * (46 / 56)) / BADGE_HEIGHT
+    const floors = listFloorSpecs()
+    const views = [
+      {
+        eye: new Vector3(39.13713073730469, 213.92249815309717, 424.7470959835453),
+        target: new Vector3(39.13713073730469, 47.26308741443341, 51.550373244450206),
+        fov: 33,
+      },
+      { eye: new Vector3(-304, 71, 121), target: new Vector3(-46, 46, 18), fov: 36 },
+    ]
+    const { geometry, local, anchorIndex } = buildBadgeDigitGeometry(
+      floors.map((floor) => ({ ...floor, alarmCount: 12, offlineCount: 8 })),
+    )
+    const glyphCenters: number[] = []
+    for (let index = 0; index < anchorIndex.length; index += 4) {
+      glyphCenters.push((local[index * 3] + local[(index + 3) * 3]) / 2)
+      expect(Math.abs((local[index * 3 + 1] + local[(index + 3) * 3 + 1]) / 2)).toBeLessThan(BADGE_HEIGHT / 2)
+    }
+    expect(Math.max(...glyphCenters.map((x) => Math.abs(x)))).toBeLessThan(BADGE_WIDTH / 2)
+    geometry.dispose()
+
+    for (const view of views) {
+      for (const size of [
+        { width: 1920, height: 1080 },
+        { width: 1366, height: 768 },
+        { width: 1024, height: 576 },
+      ]) {
+        const camera = new PerspectiveCamera(view.fov, size.width / size.height, 0.35, 2400)
+        camera.position.copy(view.eye)
+        camera.lookAt(view.target)
+        camera.updateMatrixWorld()
+        camera.updateProjectionMatrix()
+        const basisRight = new Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
+        const basisView = new Vector3(0, 0, -1).applyQuaternion(camera.quaternion)
+        const centers = layoutBadgeCenters(
+          floors,
+          basisRight,
+          basisView,
+          camera.position,
+          camera.projectionMatrix.elements[5],
+          size.height,
+        )
+        const f1 = centers.find((item) => item.id === 'F1')
+        const f2 = centers.find((item) => item.id === 'F2')
+        const b1 = centers.find((item) => item.id === 'B1')
+        expect(f1 && f2 && b1).toBeTruthy()
+        const f1Right = basisRight.dot(new Vector3(f1!.x, f1!.y, f1!.z))
+        const f2Right = basisRight.dot(new Vector3(f2!.x, f2!.y, f2!.z))
+        const b1Right = basisRight.dot(new Vector3(b1!.x, b1!.y, b1!.z))
+        expect(Math.abs(f1Right - f2Right)).toBeGreaterThan(BADGE_WIDTH * 0.5)
+        expect(b1Right).toBeLessThan(f1Right - BADGE_WIDTH * 0.5)
+        expect(b1!.y).toBeGreaterThan(0.7)
+
+        const rects = centers.map((center) => {
+          const point = new Vector3(center.x, center.y, center.z)
+          const depth = Math.max(point.clone().sub(camera.position).dot(basisView), 1e-3)
+          const plate = badgeProjectedPixels(BADGE_HEIGHT, depth, size.height, camera.projectionMatrix.elements[5])
+          const heightPx = Math.max(plate, BADGE_MIN_SCREEN_PX)
+          const ndc = point.project(camera)
+          return {
+            id: center.id,
+            sx: (ndc.x * 0.5 + 0.5) * size.width,
+            sy: (-ndc.y * 0.5 + 0.5) * size.height,
+            h: heightPx,
+            w: heightPx * (BADGE_WIDTH / BADGE_HEIGHT),
+            ink: heightPx * inkRatio,
+          }
+        })
+        expect(Math.min(...rects.map((rect) => rect.ink))).toBeGreaterThanOrEqual(10)
+        for (const rect of rects) {
+          expect(rect.sx - rect.w / 2).toBeGreaterThan(-1)
+          expect(rect.sx + rect.w / 2).toBeLessThan(size.width + 1)
+          expect(rect.sy - rect.h / 2).toBeGreaterThan(-1)
+          expect(rect.sy + rect.h / 2).toBeLessThan(size.height + 1)
+        }
+        for (let i = 0; i < rects.length; i += 1) {
+          for (let j = i + 1; j < rects.length; j += 1) {
+            const a = rects[i]
+            const b = rects[j]
+            const gap = Math.max(
+              Math.abs(a.sx - b.sx) - (a.w + b.w) / 2,
+              Math.abs(a.sy - b.sy) - (a.h + b.h) / 2,
+            )
+            expect(gap, `${a.id} 与 ${b.id} 在 ${size.width} 重叠`).toBeGreaterThan(1)
+          }
+        }
       }
     }
   })

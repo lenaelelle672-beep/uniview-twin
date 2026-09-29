@@ -22,6 +22,7 @@ interface Window {
   __twinReady?: boolean
   __twinStats?: TwinRenderStats
   __twinBadges?: number
+  __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>
   __twinFly?: { floorId: string; nonce: number } | null
   __twinProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }
   __twinInterior?: TwinInteriorStats
