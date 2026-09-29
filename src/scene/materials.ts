@@ -209,10 +209,10 @@ export function applySurfaceMode(mode: SurfaceMode) {
     sidewalkMaterial.color.set('#2c3034')
     zebraMaterial.color.set('#d8d8d4')
   } else {
-    curtainMaterial.color.set('#9aa0a6')
+    curtainMaterial.color.set('#7091c2')
     curtainMaterial.metalness = 0.98
     curtainMaterial.roughness = 0.03
-    curtainMaterial.envMapIntensity = 2.05
+    curtainMaterial.envMapIntensity = 1.85
     curtainMaterial.emissive.set('#000000')
     curtainMaterial.emissiveIntensity = 0
     grid.set('#142636')
