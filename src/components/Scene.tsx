@@ -1,6 +1,6 @@
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react'
-import { Group } from 'three'
+import { AgXToneMapping, Group } from 'three'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
@@ -16,6 +16,15 @@ import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { useTwinStore } from '../store/store'
 
+function DayExposure({ mode }: { mode: SurfaceMode }) {
+  const gl = useThree((state) => state.gl)
+  useLayoutEffect(() => {
+    // AgX 中灰比 ACES 更沉，白天抬曝光，单层和 B1 才不会整层变暗。夜间和白模保持 1。
+    gl.toneMappingExposure = mode === 'day' ? 2 : 1
+  }, [gl, mode])
+  return null
+}
+
 function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'balanced' | 'high' }) {
   const model = mode === 'model'
   const night = mode === 'night'
@@ -29,7 +38,8 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   return (
     <>
       <color attach="background" args={[background]} />
-      <LocalEnvironment enabled={!model} />
+      <DayExposure mode={mode} />
+      <LocalEnvironment enabled={!model} night={night} />
       <hemisphereLight
         args={[
           model ? '#ffffff' : night ? '#243e68' : '#e7f1ff',
@@ -97,7 +107,7 @@ export function SceneCanvas() {
         dpr={qualityDprRange(quality)}
         shadows={quality === 'perf' ? false : 'percentage'}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
-        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, toneMapping: AgXToneMapping }}
         onPointerMissed={() => {
           setSelectedFloor(null)
         }}

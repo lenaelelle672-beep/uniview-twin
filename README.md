@@ -59,4 +59,10 @@ npm test
 
 ## 运行时不访问外网
 
-字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自 three 自带的 `RoomEnvironment`（本地生成），没有使用 drei 的 Environment 预设。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。
+字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自仓库里的室外天空 HDR，不使用 drei 的 Environment 预设，也不把贴图设成背景。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。
+
+室外天空贴图：
+
+| 文件 | 来源 | 许可证 |
+| --- | --- | --- |
+| `public/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky)，Poly Haven 1k HDR。作者 Greg Zaal（原片）、Jarod Guest（天空编辑） | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |

@@ -1,32 +1,13 @@
-import { useThree } from '@react-three/fiber'
-import { useLayoutEffect } from 'react'
-import { PMREMGenerator } from 'three'
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { Environment } from '@react-three/drei/core/Environment'
 
-export function LocalEnvironment({ enabled }: { enabled: boolean }) {
-  const gl = useThree((state) => state.gl)
-  const scene = useThree((state) => state.scene)
+/**
+ * Poly Haven CC0，Kloofendal 48d Partly Cloudy (Pure Sky) 1k。
+ * 不传 background，避免天空再占一次绘制。
+ */
+export const OUTDOOR_HDR_URL = '/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr'
 
-  useLayoutEffect(() => {
-    if (!enabled) {
-      scene.environment = null
-      return
-    }
-    const pmrem = new PMREMGenerator(gl)
-    const room = new RoomEnvironment()
-    const target = pmrem.fromScene(room, 0.04)
-    scene.environment = target.texture
-    return () => {
-      if (scene.environment === target.texture) scene.environment = null
-      target.texture.dispose()
-      pmrem.dispose()
-      room.traverse((child) => {
-        const mesh = child as { geometry?: { dispose(): void }; material?: { dispose(): void } }
-        mesh.geometry?.dispose()
-        mesh.material?.dispose()
-      })
-    }
-  }, [enabled, gl, scene])
-
-  return null
+export function LocalEnvironment({ enabled, night }: { enabled: boolean; night: boolean }) {
+  if (!enabled) return null
+  // 晴天 HDR 的太阳很亮。压低场景环境强度，幕墙靠金属度和粗糙度映出天空，室内不会被照爆。
+  return <Environment files={OUTDOOR_HDR_URL} environmentIntensity={night ? 0.16 : 0.58} />
 }
