@@ -199,10 +199,11 @@ describe('徽标数字图集', () => {
     }
   })
 
-  it('告警标记叠在数字上面，选中高亮再叠在告警上面', () => {
-    expect(BADGE_DIGIT_ORDER).toBe(BADGE_PLATE_ORDER + 1)
-    expect(ALARM_MARKER_ORDER).toBeGreaterThan(BADGE_DIGIT_ORDER)
-    expect(BUILDING_HIGHLIGHT_ORDER).toBeGreaterThan(ALARM_MARKER_ORDER)
+  it('高亮在底板下面，数字在底板上面，告警在数字上面', () => {
+    expect(BUILDING_HIGHLIGHT_ORDER).toBe(9)
+    expect(BADGE_PLATE_ORDER).toBe(10)
+    expect(BADGE_DIGIT_ORDER).toBe(11)
+    expect(ALARM_MARKER_ORDER).toBe(12)
   })
 
   it('告警色块和告警数字绕同一中心，数字写在色块之后', () => {
