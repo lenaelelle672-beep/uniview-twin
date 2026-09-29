@@ -26,6 +26,7 @@ describe('URL 解析与回写', () => {
 
   it('忽略非法取值', () => {
     expect(parseSearch('?view=orbit&floor=F23&floor=F0&pos=desk&cam=side&q=ultra')).toEqual({})
+    expect(parseSearch('?cam=east')).toEqual({ cam: 'east' })
     expect(parseSearch('')).toEqual({})
   })
 

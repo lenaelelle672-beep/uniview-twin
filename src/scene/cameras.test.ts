@@ -16,7 +16,7 @@ describe('相机限制', () => {
     expect(0.35 + 18 * Math.cos(phi)).toBeCloseTo(0.85, 5)
   })
 
-  it('五个固定机位和总览都在缩放范围内，且相机在地面以上', () => {
+  it('固定机位和总览都在缩放范围内，且相机在地面以上', () => {
     const poses = [CAMERA_POSES.overview, ...CAMERA_IDS.map((id) => CAMERA_POSES[id])]
     for (const pose of poses) {
       expect(pose.position[1]).toBeGreaterThanOrEqual(CAMERA_LIMITS.minCameraY)

@@ -1,4 +1,4 @@
-import { Color, DoubleSide, FrontSide, MeshPhysicalMaterial, MeshStandardMaterial, type Material } from 'three'
+import { Color, DoubleSide, FrontSide, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial, type Material } from 'three'
 
 export type SurfaceMode = 'day' | 'night' | 'model'
 
@@ -91,20 +91,13 @@ export const grilleMaterial = createGrilleMaterial()
 export const solidMaterial = new MeshStandardMaterial({ color: '#f4f5f7', roughness: 0.62, metalness: 0.05 })
 export const jointMaterial = new MeshStandardMaterial({ color: '#fbfcfd', roughness: 0.5, metalness: 0.04 })
 export const revealMaterial = new MeshStandardMaterial({ color: '#5c6772', roughness: 0.72, metalness: 0.08 })
-export const highlightCurtainMaterial = new MeshStandardMaterial({
-  color: '#ffd7a1',
-  emissive: '#e8890c',
-  emissiveIntensity: 0.72,
-  roughness: 0.42,
-  metalness: 0.08,
+/** 选中层。728309f 在 ACES 下读数是 #f7eedd。不参与色调映射，AgX 不再改这个颜色。 */
+export const highlightCurtainMaterial = new MeshBasicMaterial({
+  color: '#f7eedd',
   toneMapped: false,
 })
-export const highlightJointMaterial = new MeshStandardMaterial({
-  color: '#ffe3a8',
-  emissive: '#ff9d1f',
-  emissiveIntensity: 1.05,
-  roughness: 0.38,
-  metalness: 0.06,
+export const highlightJointMaterial = new MeshBasicMaterial({
+  color: '#f7eedd',
   toneMapped: false,
 })
 export const finMaterial = new MeshStandardMaterial({

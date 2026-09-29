@@ -16,7 +16,7 @@ export type DeviceType = (typeof DEVICE_TYPES)[number]
 export const ZONES = ['tower', 'podium', 'east'] as const
 export type Zone = (typeof ZONES)[number]
 
-export const CAMERA_IDS = ['photo1', 'p2f000', 'p2f001', 'p2f002', 'p2f003'] as const
+export const CAMERA_IDS = ['photo1', 'p2f000', 'p2f001', 'p2f002', 'p2f003', 'east'] as const
 export type CameraId = (typeof CAMERA_IDS)[number]
 
 export interface Floor {

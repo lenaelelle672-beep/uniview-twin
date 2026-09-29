@@ -9,6 +9,7 @@ export interface CameraPose {
 /**
  * 固定机位。五个 `?cam=` 在 integration 合入后的体块上按 D028 重新校准：
  * 塔楼在西北，弧形裙楼连向东南 8F，下沉广场在弧内。
+ * `east` 只从地址栏 `?cam=east` 进入，东面朝西，用来对照实景。
  * 总览姿态只作为 fitToBox 的起始方向，最终取景由 CameraRig 用 Buildings 组的 Box3 框定。
  * 竖向视场角。打开 `?cam=` 时直接落到该姿态，不播放飞行动画。
  */
@@ -19,12 +20,14 @@ export const CAMERA_POSES: Record<CameraId | 'overview', CameraPose> = {
   p2f001: { position: [260, 48, -120], target: [45, 42, 58], fov: 36 },
   p2f002: { position: [190, 64, 145], target: [-18, 50, 2], fov: 42 },
   p2f003: { position: [-140, 50, 206], target: [44, 56, 38], fov: 40 },
+  // 从 [340, 35, 50] → [40, 40, 45] 沿东面朝西推近。左边是研发中心，塔楼在右后方。
+  east: { position: [250, 28, 70], target: [60, 24, 50], fov: 38 },
 }
 
 export const CAMERA_LIMITS = {
   /** 推近最近距离（米）。近到能数清楼层分缝，但进不了楼板里。 */
   minDistance: 18,
-  /** 拉远最远距离（米）。五个固定机位都在这个范围内。 */
+  /** 拉远最远距离（米）。固定机位都在这个范围内。 */
   maxDistance: 520,
   /** 相机高度下限。低于此值就会钻到地面以下。 */
   minCameraY: 0.85,
