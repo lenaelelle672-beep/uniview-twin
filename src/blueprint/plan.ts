@@ -3,17 +3,18 @@ import {
   B1_ATRIUM,
   B1_CORE,
   B1_ROOMS,
-  B1_SHIFT,
   CORE,
   KITCHEN,
   MEETINGS,
   PANTRY,
   RECEPTION,
   b1Columns,
+  b1CoreOffset,
   fanOutline,
   towerColumns,
   type Aabb,
 } from '../scene/stage/layout'
+import { b1SlabBounds, b1SlabOutline } from '../scene/stage/b1Plan'
 import {
   COLUMN_SIZE_M,
   kitchenBoxes,
@@ -23,7 +24,7 @@ import {
   type BoxSpec,
 } from '../scene/stage/geometry'
 import { pcStatusOf } from '../scene/stage/status'
-import { FOOTPRINT, TOWER } from '../scene/siteGeometry'
+import { TOWER } from '../scene/siteGeometry'
 import { workstationPosition } from '../scene/stage/workstationPosition'
 
 export interface PlanBounds {
@@ -57,6 +58,8 @@ export interface FloorPlanGeometry {
   floorId: string
   bounds: PlanBounds
   outline: { x0: number; x1: number; z0: number; z1: number }
+  /** 楼板折线。B1 与三维 B1Slab 同为 b1SlabOutline()；塔楼为 null，按 outline 画矩形。 */
+  slab: Array<[number, number]> | null
   rooms: PlanRoom[]
   walls: PlanRect[]
   columns: PlanPoint[]
@@ -104,14 +107,15 @@ function boundsOf(outline: FloorPlanGeometry['outline']): PlanBounds {
 /** 当前楼层的墙、房间和柱。坐标来自 T004 的 layout / geometry，不另写一套平面。 */
 export function floorPlanGeometry(floorId: string): FloorPlanGeometry {
   if (floorId === 'B1') {
-    const outline = { x0: FOOTPRINT.minX, x1: FOOTPRINT.maxX, z0: FOOTPRINT.minZ, z1: FOOTPRINT.maxZ }
+    const outline = b1SlabBounds()
+    const core = b1CoreOffset()
     const rooms = [
       room('核心筒', B1_CORE),
       room('厨房', KITCHEN),
       ...B1_ROOMS.map((box, index) => room(`包厢 ${index + 1}`, box)),
     ]
     const walls = wallRects([
-      ...shift(towerCoreBoxes(), B1_SHIFT.x, B1_SHIFT.z),
+      ...shift(towerCoreBoxes(), core.x, core.z),
       ...privateRoomBoxes(B1_ROOMS).glass,
       ...kitchenBoxes(),
     ])
@@ -119,6 +123,7 @@ export function floorPlanGeometry(floorId: string): FloorPlanGeometry {
       floorId,
       bounds: boundsOf(outline),
       outline,
+      slab: b1SlabOutline(),
       rooms,
       walls,
       columns: b1Columns(),
@@ -138,6 +143,7 @@ export function floorPlanGeometry(floorId: string): FloorPlanGeometry {
     floorId,
     bounds: boundsOf(outline),
     outline,
+    slab: null,
     rooms,
     walls: wallRects([...towerCoreBoxes(), ...meetingGlassBoxes()]),
     columns: towerColumns(),

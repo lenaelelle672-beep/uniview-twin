@@ -75,13 +75,20 @@ export function BlueprintView() {
           data-status-alarm={counts.alarm}
           data-status-offline={counts.offline}
         >
-          <rect
-            x={worldX(geometry.outline.x0, bounds)}
-            y={worldY(geometry.outline.z0, bounds)}
-            width={geometry.outline.x1 - geometry.outline.x0}
-            height={geometry.outline.z1 - geometry.outline.z0}
-            className="plan-plate"
-          />
+          {geometry.slab ? (
+            <polygon
+              points={geometry.slab.map(([x, z]) => `${worldX(x, bounds)},${worldY(z, bounds)}`).join(' ')}
+              className="plan-plate"
+            />
+          ) : (
+            <rect
+              x={worldX(geometry.outline.x0, bounds)}
+              y={worldY(geometry.outline.z0, bounds)}
+              width={geometry.outline.x1 - geometry.outline.x0}
+              height={geometry.outline.z1 - geometry.outline.z0}
+              className="plan-plate"
+            />
+          )}
           {geometry.atrium && (
             <ellipse
               cx={worldX(geometry.atrium.cx, bounds)}

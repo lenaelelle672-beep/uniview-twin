@@ -1,18 +1,40 @@
 import { CameraControls } from '@react-three/drei/core/CameraControls'
 import { useFrame, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef, type RefObject } from 'react'
-import { Box3, Group, PerspectiveCamera, Vector3 } from 'three'
+import { Box3, Group, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { CAMERA_LIMITS, CAMERA_POSES, maxPolarAngleAboveGround } from '../../scene/cameras'
+import { explodeOffset, FLOOR_COUNT } from '../../scene/explode'
 import { useTwinStore } from '../../store/store'
 
 const targetScratch = new Vector3()
 const positionScratch = new Vector3()
+const movedScratch: Array<[Object3D, number]> = []
 
 export function FitBump({ onReady }: { onReady: () => void }) {
   useLayoutEffect(() => {
     onReady()
   }, [onReady])
   return null
+}
+
+/**
+ * ExplodedLayout 只改各层 position.y，原值记在 userData.explodeRestY。
+ * 按收拢位置量框，爆炸动画走到哪一步、量几次都得到同一个框，展开时再单独抬高框顶。
+ */
+function collapsedBounds(group: Group): Box3 {
+  movedScratch.length = 0
+  group.traverse((object) => {
+    const rest = object.userData.explodeRestY
+    if (typeof rest === 'number' && object.position.y !== rest) {
+      movedScratch.push([object, object.position.y])
+      object.position.y = rest
+    }
+  })
+  const bounds = new Box3().setFromObject(group)
+  for (const [object, y] of movedScratch) object.position.y = y
+  if (movedScratch.length > 0) group.updateWorldMatrix(false, true)
+  movedScratch.length = 0
+  return bounds
 }
 
 function applyCameraLimits(rig: CameraControls) {
@@ -48,6 +70,7 @@ export function CameraRig({
   const cam = useTwinStore((state) => state.cam)
   const view = useTwinStore((state) => state.view)
   const exploded = useTwinStore((state) => state.exploded)
+  const spread = view === 'building' && exploded
   const controls = useRef<CameraControls>(null)
   const camera = useThree((state) => state.camera)
   const size = useThree((state) => state.size)
@@ -67,8 +90,10 @@ export function CameraRig({
     rig.maxDistance = CAMERA_LIMITS.maxDistance
     if (!cam) {
       if (!group) return
-      const bounds = new Box3().setFromObject(group)
+      const bounds = collapsedBounds(group)
       if (bounds.isEmpty()) return
+      // 展开后顶层和屋面抬高 explodeOffset(FLOOR_COUNT - 1, 1)，框顶跟着抬，散开的楼层都进画面。
+      if (spread) bounds.max.y += explodeOffset(FLOOR_COUNT - 1, 1)
       const fov = CAMERA_POSES.overview.fov
       if (perspective.isPerspectiveCamera && perspective.fov !== fov) {
         perspective.fov = fov
@@ -121,7 +146,7 @@ export function CameraRig({
     )
     applyCameraLimits(rig)
     rig.update(0)
-  }, [cam, camera, fitGeneration, fitRef, size.height, size.width, view])
+  }, [cam, camera, fitGeneration, fitRef, size.height, size.width, spread, view])
 
   useFrame(() => {
     const rig = controls.current

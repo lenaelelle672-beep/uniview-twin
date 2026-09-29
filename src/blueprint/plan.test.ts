@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { createMockData, DESKS_PER_FLOOR } from '../data/mockData'
+import { b1SlabBounds, b1SlabOutline } from '../scene/stage/b1Plan'
+import { B1_CORE } from '../scene/stage/layout'
 import { STATUS_COLOR, STATUS_HEX, STATUS_SHAPE } from '../scene/stage/status'
 import { workstationPosition } from '../scene/stage/workstationPosition'
 import { COLUMN_SIZE_M, floorPlanGeometry, planDesks } from './plan'
@@ -27,6 +29,24 @@ describe('蓝图平面', () => {
     expect(plan.atrium).not.toBeNull()
     expect(plan.walls.length).toBeGreaterThan(4)
     expect(COLUMN_SIZE_M).toBeGreaterThan(0.4)
+  })
+
+  it('B1 楼板、核心筒、柱和工位与三维 B1 同一套坐标', () => {
+    const data = createMockData()
+    const plan = floorPlanGeometry('B1')
+    expect(plan.slab).toEqual(b1SlabOutline())
+    expect(plan.outline).toEqual(b1SlabBounds())
+    expect(floorPlanGeometry('F12').slab).toBeNull()
+    const onSlab = (x: number, z: number) =>
+      x >= plan.outline.x0 && x <= plan.outline.x1 && z >= plan.outline.z0 && z <= plan.outline.z1
+    const desks = planDesks('B1', data.desks, data.devices)
+    expect(desks).toHaveLength(DESKS_PER_FLOOR)
+    expect(desks.every((desk) => onSlab(desk.x, desk.z))).toBe(true)
+    expect(plan.columns.every((column) => onSlab(column.x, column.z))).toBe(true)
+    const inCore = plan.walls.filter(
+      (wall) => wall.x >= B1_CORE.x0 && wall.x <= B1_CORE.x1 && wall.z >= B1_CORE.z0 && wall.z <= B1_CORE.z1,
+    )
+    expect(inCore.length).toBeGreaterThan(2)
   })
 
   it('四种状态的颜色和形状与三维共用一套常量', () => {
