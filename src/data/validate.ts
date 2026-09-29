@@ -86,15 +86,12 @@ export function validateTwinData(raw: unknown): TwinData {
     rememberId(deskIds, id, path)
     const indexNo = expectNumber(record, 'index', path)
     if (!Number.isInteger(indexNo) || indexNo < 1) fail(`${path}.index`, '必须是从 1 开始的整数')
+    // D034：工位坐标可选。带了 x/y/z 也不读取、不校验，摆放只走 workstationPosition。
     return {
       id,
       floorId,
       index: indexNo,
       zone: expectEnum(record.zone, ZONES, `${path}.zone`),
-      // D027：?data= 可以带坐标，但只作载荷保留。场景摆放不得使用 x/y/z。
-      x: expectNumber(record, 'x', path),
-      y: expectNumber(record, 'y', path),
-      z: expectNumber(record, 'z', path),
     }
   })
 

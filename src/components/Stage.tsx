@@ -7,6 +7,7 @@ export function Stage() {
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
   const status = useTwinStore((state) => state.status)
   const error = useTwinStore((state) => state.error)
+  const posNotice = useTwinStore((state) => state.posNotice)
   const exitFloor = useTwinStore((state) => state.exitFloor)
 
   useEffect(() => {
@@ -30,6 +31,11 @@ export function Stage() {
       {status === 'error' && error && (
         <p className="banner banner-error" role="alert">
           {error}
+        </p>
+      )}
+      {posNotice && (
+        <p className={status === 'error' && error ? 'banner banner-error is-second' : 'banner banner-error'} role="alert">
+          {posNotice}
         </p>
       )}
       {view === 'blueprint' ? (

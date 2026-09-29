@@ -18,6 +18,22 @@ interface TwinCutStats {
   aboveGradeVisible: boolean
 }
 
+interface TwinSlabMetrics {
+  floorId: string
+  widthRatio: number
+  heightRatio: number
+  centerX: number
+  centerY: number
+  minY: number
+  maxY: number
+}
+
+interface TwinLocateMetrics {
+  ms: number
+  flyMs: number
+  deskId: string
+}
+
 interface Window {
   __twinReady?: boolean
   __twinStats?: TwinRenderStats
@@ -53,4 +69,8 @@ interface Window {
     getTarget: (out: import('three').Vector3, receiveEndValue?: boolean) => import('three').Vector3
     update: (delta: number) => boolean
   }
+  __twinSlab?: TwinSlabMetrics
+  __twinLocate?: TwinLocateMetrics
+  __twinHighlight?: string
+  __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
 }

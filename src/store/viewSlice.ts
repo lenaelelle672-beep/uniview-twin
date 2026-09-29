@@ -24,6 +24,8 @@ export interface ViewSlice {
   cam: CameraId | null
   /** 双击楼层时递增。T004 用它触发飞入；本任务不改视图。 */
   floorFlyRequest: { floorId: string; nonce: number } | null
+  /** 无效的 ?pos=。中文提示，不抛错、不白屏。 */
+  posNotice: string | null
   setView: (view: ViewMode) => void
   setExploded: (exploded: boolean) => void
   setDayNight: (dayNight: DayNight) => void
@@ -57,6 +59,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   focusedDeviceId: null,
   cam: null,
   floorFlyRequest: null,
+  posNotice: null,
   focusSeq: 0,
   setView: (view) => set({ view }),
   setExploded: (exploded) => set({ exploded }),
@@ -96,6 +99,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
       focusedDeskId: deskId,
       focusedDeviceId: deviceId,
       view: 'floor',
+      posNotice: null,
       focusSeq: state.focusSeq + 1,
     })),
 })

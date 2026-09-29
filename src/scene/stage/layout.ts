@@ -205,7 +205,9 @@ function towerBlocked(slot: Slot, pad: number): boolean {
   if (MEETINGS.some((room) => insideAabb(slot.x, slot.z, room, pad))) return true
   if (insideAabb(slot.x, slot.z, RECEPTION, pad)) return true
   if (insideAabb(slot.x, slot.z, PANTRY, pad)) return true
-  return towerColumns().some((column) => Math.hypot(column.x - slot.x, column.z - slot.z) < 0.95)
+  return towerColumns().some(
+    (column) => columnEdgeDistance(slot.x, slot.z, column) < COLUMN_EDGE_CLEAR_M || deskHitsColumn(slot, column),
+  )
 }
 
 function b1Blocked(slot: Slot, pad: number): boolean {
