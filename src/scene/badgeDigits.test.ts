@@ -153,7 +153,6 @@ describe('徽标数字图集', () => {
         const b1Right = basisRight.dot(new Vector3(b1!.x, b1!.y, b1!.z))
         expect(Math.abs(f1Right - f2Right)).toBeGreaterThan(BADGE_WIDTH * 0.5)
         expect(b1Right).toBeLessThan(f1Right - BADGE_WIDTH * 0.5)
-        expect(b1!.y).toBeGreaterThan(0.7)
 
         const rects = centers.map((center) => {
           const point = new Vector3(center.x, center.y, center.z)
@@ -170,6 +169,11 @@ describe('徽标数字图集', () => {
             ink: heightPx * inkRatio,
           }
         })
+        const b1Rect = rects.find((rect) => rect.id === 'B1')
+        const f1Rect = rects.find((rect) => rect.id === 'F1')
+        expect(b1Rect && f1Rect).toBeTruthy()
+        expect(b1Rect!.sy - b1Rect!.h / 2).toBeGreaterThan(f1Rect!.sy + f1Rect!.h / 2)
+        expect(b1Rect!.sx).toBeLessThan(f1Rect!.sx)
         expect(Math.min(...rects.map((rect) => rect.ink))).toBeGreaterThanOrEqual(10)
         for (const rect of rects) {
           expect(rect.sx - rect.w / 2).toBeGreaterThan(-1)

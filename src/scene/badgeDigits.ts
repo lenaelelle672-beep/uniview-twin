@@ -193,8 +193,8 @@ function containBadgeRow(
 
 /**
  * 整块徽标的屏幕中心。奇数层在相机左侧，偶数层在右侧，两侧再各分一列，
- * 使同一列至少隔四层。列距不小于放大后的整块徽标宽。B1 在 F1 下方外侧。
- * 锚点高度保持在楼层上，避免把徽标推进地面。
+ * 使同一列至少隔四层。列距不小于放大后的整块徽标宽。
+ * B1 在 F1 的外侧，并且整块落在 F1 下方，不与 F1 并排。
  * 画布比窗口窄时，整列沿相机右方向平移，列距不变，底板留在画面内。
  */
 export function layoutBadgeCenters(
@@ -223,15 +223,14 @@ export function layoutBadgeCenters(
     positionOf.set(floor.id, base.addScaledVector(right, (column - 1.5) * slot(k)))
   }
   const basement = floors.find((floor) => floor.id === 'B1')
-  if (basement) {
-    const base = columnPoint(basement, new Vector3())
-    let k = scaleAt(base)
-    for (let step = 0; step < 2; step += 1) {
-      // 放大后的字形要留在地面以上，否则底板下半截会把字裁掉。
-      base.y = Math.max(1.5, 0.75 + k * BADGE_GLYPH_HEIGHT * 0.5)
-      k = scaleAt(base)
-    }
-    positionOf.set(basement.id, base.addScaledVector(right, (-1 - 1.5) * slot(k)))
+  const first = positionOf.get('F1')
+  if (basement && first) {
+    const k = scaleAt(first)
+    const screenUp = new Vector3().crossVectors(right, viewDir)
+    const pos = first.clone()
+    pos.addScaledVector(right, -slot(k))
+    pos.addScaledVector(screenUp, -k * (BADGE_HEIGHT + BADGE_STAGGER_PAD))
+    positionOf.set(basement.id, pos)
   }
   containBadgeRow(positionOf, right, viewDir, eye, proj11, viewportHeight, viewportWidth, scaleAt)
   return floors.map((floor) => {

@@ -23,7 +23,6 @@ import {
   BADGE_CHIP_H,
   BADGE_CHIP_W,
   BADGE_HEIGHT,
-  BADGE_MIN_SCREEN_PX,
   BADGE_OFFLINE_X,
   BADGE_WIDTH,
   badgeAnchor,
@@ -56,19 +55,6 @@ const pickPosition = new Vector3()
 const pickQuaternion = new Quaternion()
 const pickScale = new Vector3()
 const pickView = new Vector3()
-const ndcScratch = new Vector3()
-const gapPoint = new Vector3()
-const gapNdc = new Vector3()
-
-interface NdcRect {
-  cx: number
-  cy: number
-  hx: number
-  hy: number
-}
-
-const plateNdc: NdcRect[] = []
-
 type ScaleShader = { uniforms?: { badgeViewportHeight?: { value: number } } }
 
 function syncViewport(material: MeshBasicMaterial, cssHeight: number) {
@@ -87,10 +73,8 @@ export function FloorBadges() {
   const texture = useLoader(TextureLoader, atlasUrl)
   const cssWidth = useThree((state) => state.size.width)
   const cssHeight = useThree((state) => state.size.height)
-  const camera = useThree((state) => state.camera)
   const meshRef = useRef<InstancedMesh>(null)
   const digitRef = useRef<Mesh>(null)
-  const gapRef = useRef<Mesh>(null)
   const viewportHeight = useRef(cssHeight)
   const anchors = useMemo(() => floors.map((floor) => badgeAnchor(floor)), [floors])
   const plateGeometry = useMemo(() => {
@@ -107,7 +91,12 @@ export function FloorBadges() {
     return geometry
   }, [anchors.length])
   const plateMaterial = useMemo(() => {
-    const material = new MeshBasicMaterial({ color: '#ffffff', toneMapped: false })
+    const material = new MeshBasicMaterial({
+      color: '#ffffff',
+      toneMapped: false,
+      depthTest: false,
+      depthWrite: false,
+    })
     material.customProgramCacheKey = () => 'badge-plate-screen-floor'
     material.onBeforeCompile = (shader) => {
       patchBadgePlateVertexShader(shader, viewportHeight.current)
@@ -126,6 +115,8 @@ export function FloorBadges() {
       alphaToCoverage: true,
       transparent: false,
       toneMapped: false,
+      depthTest: false,
+      depthWrite: false,
     })
     material.customProgramCacheKey = () => 'badge-digit-screen-floor'
     material.onBeforeCompile = (shader) => {
@@ -179,7 +170,6 @@ export function FloorBadges() {
     syncViewport(digitMaterial, cssHeight)
     if (hidden || anchors.length === 0 || !(frameCamera instanceof PerspectiveCamera)) {
       window.__twinBadgeCenters = []
-      plateNdc.length = 0
       return
     }
     right.set(1, 0, 0).applyQuaternion(frameCamera.quaternion)
@@ -196,20 +186,6 @@ export function FloorBadges() {
       cssWidth,
     )
     window.__twinBadgeCenters = centers
-    plateNdc.length = 0
-    if (cssWidth > 0 && cssHeight > 0) {
-      for (const center of centers) {
-        const depth = Math.max(
-          centerScratch.set(center.x, center.y, center.z).sub(frameCamera.position).dot(viewDir),
-          1e-3,
-        )
-        const pixels = badgeProjectedPixels(BADGE_HEIGHT, depth, cssHeight, proj11)
-        const heightPx = Math.max(pixels, BADGE_MIN_SCREEN_PX)
-        const widthPx = heightPx * (BADGE_WIDTH / BADGE_HEIGHT)
-        ndcScratch.set(center.x, center.y, center.z).project(frameCamera)
-        plateNdc.push({ cx: ndcScratch.x, cy: ndcScratch.y, hx: widthPx / cssWidth, hy: heightPx / cssHeight })
-      }
-    }
     const mesh = meshRef.current
     if (mesh) {
       centers.forEach((center, index) => {
@@ -245,11 +221,12 @@ export function FloorBadges() {
         frustumCulled={false}
         castShadow={false}
         receiveShadow={false}
-        renderOrder={2}
+        renderOrder={10}
         raycast={(raycaster, intersects) => {
           const mesh = meshRef.current
-          if (!mesh || !(camera instanceof PerspectiveCamera)) return
-          raycastEnlargedPlates(mesh, camera, cssHeight, raycaster, intersects)
+          const active = raycaster.camera
+          if (!mesh || !(active instanceof PerspectiveCamera)) return
+          raycastEnlargedPlates(mesh, active, cssHeight, raycaster, intersects)
         }}
         onClick={(event) => {
           if (!show || event.delta > 2 || event.instanceId == null) return
@@ -274,53 +251,12 @@ export function FloorBadges() {
           frustumCulled={false}
           castShadow={false}
           receiveShadow={false}
-          renderOrder={3}
+          renderOrder={11}
           raycast={() => null}
         />
       )}
-      <mesh
-        ref={gapRef}
-        visible={false}
-        frustumCulled={false}
-        raycast={(raycaster, intersects) => raycastBadgeGap(gapRef.current, raycaster, intersects)}
-        onClick={swallow}
-        onDoubleClick={swallow}
-      >
-        <planeGeometry args={[1, 1]} />
-        <meshBasicMaterial />
-      </mesh>
     </group>
   )
-}
-
-function swallow(event: { stopPropagation: () => void }) {
-  event.stopPropagation()
-}
-
-function raycastBadgeGap(mesh: Mesh | null, raycaster: Raycaster, intersects: Intersection[]) {
-  if (!mesh || plateNdc.length === 0 || !raycaster.camera) return
-  gapNdc.copy(raycaster.ray.origin).addScaledVector(raycaster.ray.direction, 8)
-  gapNdc.project(raycaster.camera)
-  const x = gapNdc.x
-  const y = gapNdc.y
-  let minX = Infinity
-  let maxX = -Infinity
-  let minY = Infinity
-  let maxY = -Infinity
-  for (const rect of plateNdc) {
-    minX = Math.min(minX, rect.cx - rect.hx)
-    maxX = Math.max(maxX, rect.cx + rect.hx)
-    minY = Math.min(minY, rect.cy - rect.hy)
-    maxY = Math.max(maxY, rect.cy + rect.hy)
-    if (Math.abs(x - rect.cx) <= rect.hx && Math.abs(y - rect.cy) <= rect.hy) return
-  }
-  if (x < minX || x > maxX || y < minY || y > maxY) return
-  const distance = 1
-  intersects.push({
-    distance,
-    point: gapPoint.copy(raycaster.ray.origin).addScaledVector(raycaster.ray.direction, distance),
-    object: mesh,
-  })
 }
 
 function raycastEnlargedPlates(
@@ -349,8 +285,13 @@ function raycastEnlargedPlates(
   const previousSphere = mesh.boundingSphere
   mesh.count = floorCount
   mesh.boundingSphere = null
+  const before = intersects.length
   try {
     InstancedMesh.prototype.raycast.call(mesh, raycaster, intersects)
+    // 徽标画在楼和树前面，命中也要排在更近的楼体之前。空隙没有交点，留给场景拾取。
+    for (let index = before; index < intersects.length; index += 1) {
+      intersects[index].distance *= 1e-4
+    }
   } finally {
     for (let index = 0; index < floorCount; index += 1) {
       pickMatrix.fromArray(saved, index * 16)
