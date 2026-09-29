@@ -20,8 +20,8 @@ export const CAMERA_POSES: Record<CameraId | 'overview', CameraPose> = {
   p2f001: { position: [260, 48, -120], target: [45, 42, 58], fov: 36 },
   p2f002: { position: [190, 64, 145], target: [-18, 50, 2], fov: 42 },
   p2f003: { position: [-140, 50, 206], target: [44, 56, 38], fov: 40 },
-  // 东北偏东的高机位朝西。研发中心占画面宽约三分之一在左，塔楼在右后方，楼顶上方留天空，前景是道路和绿地。
-  east: { position: [300, 110, -40], target: [30, 10, 45], fov: 50 },
+  // 平视，正对研发中心东立面朝正西。研发中心占画面宽约三分之一在左，塔楼在它右后方，前景是东侧道路和绿地。
+  east: { position: [280, 45, 20], target: [103, 45, 20], fov: 60 },
 }
 
 export const CAMERA_LIMITS = {
