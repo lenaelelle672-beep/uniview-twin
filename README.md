@@ -65,4 +65,4 @@ npm test
 
 | 文件 | 来源 | 许可证 |
 | --- | --- | --- |
-| `public/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky)，Poly Haven 1k HDR。作者 Greg Zaal（原片）、Jarod Guest（天空编辑） | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `public/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky)，Poly Haven 1k 等距柱状 HDR（1024×512）。作者 Greg Zaal（原片）、Jarod Guest（天空编辑）。原始 1,435,119 字节，gzip 954,159 字节。性能档和均衡档共用这一张，只做反射 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |

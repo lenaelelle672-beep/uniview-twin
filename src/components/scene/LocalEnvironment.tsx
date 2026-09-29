@@ -5,8 +5,8 @@ import type { MeshStandardMaterial } from 'three'
 import { curtainMaterial, eaveMaterial, finMaterial, grilleMaterial, jointMaterial } from '../../scene/materials'
 
 /**
- * Poly Haven CC0，Kloofendal 48d Partly Cloudy (Pure Sky) 1k。
- * 不传 background，避免天空再占一次绘制。
+ * Poly Haven CC0，Kloofendal 48d Partly Cloudy (Pure Sky) 1k（1024×512）。
+ * 性能档和均衡档共用这一张，只做反射。不传 background，避免天空再占一次绘制。
  */
 export const OUTDOOR_HDR_URL = '/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr'
 

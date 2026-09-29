@@ -102,8 +102,8 @@ export function SceneCanvas() {
 
   return (
     <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={quality}>
+      {/* 不按性能档重建画布。换档会新建 WebGLRenderer，three 按渲染器缓存的 PMREM 会再生成一次。dpr 和阴影在同一个画布上更新。 */}
       <Canvas
-        key={quality}
         dpr={qualityDprRange(quality)}
         shadows={quality === 'perf' ? false : 'percentage'}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
