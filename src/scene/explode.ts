@@ -45,3 +45,67 @@ export function explodeProgress(from: number, to: number, elapsed: number): numb
   const shaped = easing.cubic.out(elapsed / EXPLODE_DURATION_S)
   return from + (to - from) * shaped
 }
+
+/** 与 listFloorSpecs 同一序号：B1 = 0，F1 = 1，…，F22 = 22。 */
+export function explodeFloorIndex(id: string): number {
+  if (id === 'B1') return 0
+  const level = Number(id.slice(1))
+  if (!Number.isInteger(level) || level < 1 || level > FLOOR_COUNT - 1) {
+    throw new Error(`楼层序号超出 0～${FLOOR_COUNT - 1}：${id}`)
+  }
+  return level
+}
+
+/** 徽标竖直偏移。与该层外壳一样，只调用 explodeOffset。进度 0 时为 0。 */
+export function badgeExplodeOffset(floorId: string, progress: number): number {
+  return explodeOffset(explodeFloorIndex(floorId), progress)
+}
+
+export interface ExplodeMotion {
+  progress: number
+  /** 0.8 秒展开或收拢还没走完。这段时间徽标隐藏。 */
+  animating: boolean
+}
+
+interface MotionClock {
+  from: number
+  to: number
+  start: number
+  progress: number
+}
+
+let motionClock: MotionClock = { from: 0, to: 0, start: -1, progress: 0 }
+
+/** 测试重置。运行时不要调用。 */
+export function resetExplodeMotion(): void {
+  motionClock = { from: 0, to: 0, start: -1, progress: 0 }
+}
+
+/**
+ * 外壳和徽标共用这一份进度。同一时刻重复调用结果相同。
+ * 离开总览时立刻回到 0，与原来的 ExplodedLayout 一致。
+ */
+export function stepExplodeMotion(exploded: boolean, view: string, now: number): ExplodeMotion {
+  const target = exploded && view === 'building' ? 1 : 0
+  if (view !== 'building') {
+    motionClock = { from: 0, to: 0, start: now, progress: 0 }
+    return { progress: 0, animating: false }
+  }
+  if (motionClock.to !== target || motionClock.start < 0) {
+    const from = motionClock.progress
+    motionClock = {
+      from,
+      to: target,
+      start: now,
+      progress: explodeProgress(from, target, 0),
+    }
+  } else {
+    motionClock.progress = explodeProgress(motionClock.from, motionClock.to, now - motionClock.start)
+  }
+  return { progress: motionClock.progress, animating: motionClock.progress !== target }
+}
+
+export function readExplodeMotion(): ExplodeMotion {
+  if (motionClock.start < 0) return { progress: 0, animating: false }
+  return { progress: motionClock.progress, animating: motionClock.progress !== motionClock.to }
+}

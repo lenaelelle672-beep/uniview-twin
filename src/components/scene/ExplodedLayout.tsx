@@ -2,7 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useRef } from 'react'
 import type { Object3D } from 'three'
 import { listFloorSpecs } from '../../data/floors'
-import { explodeOffset, explodeProgress, floorWorldSpan } from '../../scene/explode'
+import { explodeOffset, floorWorldSpan, stepExplodeMotion } from '../../scene/explode'
 import { useTwinStore } from '../../store/store'
 
 const specs = listFloorSpecs()
@@ -13,29 +13,13 @@ const specs = listFloorSpecs()
  */
 export function ExplodedLayout() {
   const scene = useThree((state) => state.scene)
-  const exploded = useTwinStore((state) => state.exploded)
-  const view = useTwinStore((state) => state.view)
-  const anim = useRef({ from: 0, to: 0, start: -1, progress: 0 })
   const cache = useRef(new Map<string, Object3D>())
 
   useFrame(({ clock }) => {
+    const { exploded, view } = useTwinStore.getState()
     const target = exploded && view === 'building' ? 1 : 0
-    const now = clock.elapsedTime
-    if (view !== 'building') {
-      anim.current.progress = 0
-      anim.current.from = 0
-      anim.current.to = 0
-      anim.current.start = now
-    } else if (anim.current.to !== target || anim.current.start < 0) {
-      anim.current.from = anim.current.progress
-      anim.current.to = target
-      anim.current.start = now
-      anim.current.progress = explodeProgress(anim.current.from, target, 0)
-    } else {
-      anim.current.progress = explodeProgress(anim.current.from, anim.current.to, now - anim.current.start)
-    }
-
-    const progress = anim.current.progress
+    // 与徽标共用 stepExplodeMotion。同一帧再调一次，进度不变。
+    const { progress } = stepExplodeMotion(exploded, view, clock.elapsedTime)
     const floors: NonNullable<Window['__twinExplode']>['floors'] = []
 
     specs.forEach((spec, index) => {

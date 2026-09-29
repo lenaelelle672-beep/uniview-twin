@@ -2,6 +2,7 @@ import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import {
   Color,
+  Group,
   InstancedBufferAttribute,
   InstancedMesh,
   Matrix4,
@@ -38,6 +39,7 @@ import {
   writeBadgeDigitPositions,
   type BadgeDigitLayout,
 } from '../../scene/badgeDigits'
+import { badgeExplodeOffset, readExplodeMotion, stepExplodeMotion } from '../../scene/explode'
 import { ALARM_MARKER_ORDER, BADGE_DIGIT_ORDER, BADGE_PLATE_ORDER } from '../../scene/overlayOrder'
 import { useTwinStore } from '../../store/store'
 
@@ -75,6 +77,7 @@ export function FloorBadges() {
   const texture = useLoader(TextureLoader, atlasUrl)
   const cssWidth = useThree((state) => state.size.width)
   const cssHeight = useThree((state) => state.size.height)
+  const groupRef = useRef<Group>(null)
   const meshRef = useRef<InstancedMesh>(null)
   const digitRef = useRef<Mesh>(null)
   const alarmRef = useRef<Mesh>(null)
@@ -189,13 +192,21 @@ export function FloorBadges() {
     }
   }, [alarm, alarmMaterial, digitMaterial, digits])
 
-  useFrame(({ camera: frameCamera }) => {
+  const show = !hidden && anchors.length > 0
+
+  useFrame(({ camera: frameCamera, clock }) => {
     viewportHeight.current = cssHeight
     syncViewport(plateMaterial, cssHeight)
     syncViewport(digitMaterial, cssHeight)
     syncViewport(alarmMaterial, cssHeight)
-    if (hidden || anchors.length === 0 || !(frameCamera instanceof PerspectiveCamera)) {
+    const { exploded, view } = useTwinStore.getState()
+    // 与 ExplodedLayout 共用进度。动画的 0.8 秒内先藏起来，结束后再落到新高度。
+    const motion = stepExplodeMotion(exploded, view, clock.elapsedTime)
+    const conceal = hidden || motion.animating
+    if (groupRef.current) groupRef.current.visible = show && !motion.animating
+    if (conceal || anchors.length === 0 || !(frameCamera instanceof PerspectiveCamera)) {
       window.__twinBadgeCenters = []
+      window.__twinBadges = 0
       if (meshRef.current) meshRef.current.count = 0
       return
     }
@@ -212,7 +223,11 @@ export function FloorBadges() {
       cssHeight,
       cssWidth,
     )
+    if (motion.progress !== 0) {
+      for (const center of centers) center.y += badgeExplodeOffset(center.id, motion.progress)
+    }
     window.__twinBadgeCenters = centers
+    window.__twinBadges = anchors.length
     const mesh = meshRef.current
     if (mesh) {
       const floorCount = centers.length
@@ -233,9 +248,8 @@ export function FloorBadges() {
     placeGlyphs(alarmRef.current, alarm, centers)
   })
 
-  const show = !hidden && anchors.length > 0
   return (
-    <group name="FloorBadges" visible={show}>
+    <group name="FloorBadges" ref={groupRef} visible={show}>
       <instancedMesh
         name="BadgePlates"
         key={capacity}
@@ -247,20 +261,20 @@ export function FloorBadges() {
         visible={show}
         renderOrder={BADGE_PLATE_ORDER}
         raycast={(raycaster, intersects) => {
-          if (!show) return
+          if (!show || readExplodeMotion().animating) return
           const mesh = meshRef.current
           const active = raycaster.camera
           if (!mesh || !(active instanceof PerspectiveCamera)) return
           raycastEnlargedPlates(mesh, active, cssHeight, raycaster, intersects)
         }}
         onClick={(event) => {
-          if (!show || event.delta > 2 || event.instanceId == null) return
+          if (!show || readExplodeMotion().animating || event.delta > 2 || event.instanceId == null) return
           event.stopPropagation()
           const floor = floors[event.instanceId % floors.length]
           if (floor) setSelectedFloor(floor.id)
         }}
         onDoubleClick={(event) => {
-          if (!show || event.delta > 2 || event.instanceId == null) return
+          if (!show || readExplodeMotion().animating || event.delta > 2 || event.instanceId == null) return
           event.stopPropagation()
           const floor = floors[event.instanceId % floors.length]
           if (!floor) return
