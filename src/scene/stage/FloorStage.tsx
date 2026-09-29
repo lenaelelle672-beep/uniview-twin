@@ -7,6 +7,7 @@ import { basementPickOutline } from './b1Plan'
 import { useTwinStore } from '../../store/store'
 import type { DeviceStatus } from '../../types'
 import { B1Interior } from './B1Interior'
+import { showCorridorPeople } from './corridor'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
@@ -73,6 +74,7 @@ function BasementPick() {
 export function FloorStage() {
   const view = useTwinStore((state) => state.view)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
+  const quality = useTwinStore((state) => state.quality)
   const desks = useTwinStore((state) => state.desks)
   const devices = useTwinStore((state) => state.devices)
   const active = activeFloorId(view, selectedFloor)
@@ -95,6 +97,10 @@ export function FloorStage() {
     }
     return floorDesks.map((desk) => STATUS_COLOR[byDesk.get(desk.id) ?? 'offline'])
   }, [devices, floorDesks])
+  const floorDevices = useMemo(() => {
+    if (!active) return []
+    return devices.filter((device) => device.floorId === active)
+  }, [active, devices])
   const spec = active ? floorSpec(active) : null
 
   return (
@@ -102,8 +108,16 @@ export function FloorStage() {
       <FloorCut />
       <FloorStageCamera />
       <BasementPick />
-      {spec && spec.level > 0 && <TowerInterior spec={spec} slots={slots} colors={colors} />}
-      {spec && spec.level < 0 && <B1Interior slots={slots} colors={colors} />}
+      {spec && spec.level > 0 && (
+        <TowerInterior
+          spec={spec}
+          slots={slots}
+          colors={colors}
+          devices={floorDevices}
+          showPeople={showCorridorPeople(quality)}
+        />
+      )}
+      {spec && spec.level < 0 && <B1Interior slots={slots} colors={colors} devices={floorDevices} />}
       <InteriorProbe floorId={active} dataDesks={floorDesks.length} />
     </>
   )

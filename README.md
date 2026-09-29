@@ -59,10 +59,12 @@ npm test
 
 ## 运行时不访问外网
 
-字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自仓库里的室外天空 HDR，用 three 的 `HDRLoader` 在加载时预滤波一次，不使用 drei 的 Environment，也不把贴图设成背景。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。
+字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自仓库里的室外天空 HDR，用 three 的 `HDRLoader` 在加载时预滤波一次，不使用 drei 的 Environment，也不把贴图设成背景。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。楼顶标识是 v2（蓝色 UNV，材质槽 `sign_face` / `sign_face_cn` / `sign_body`）。
 
 室外天空贴图：
 
 | 文件 | 来源 | 许可证 |
 | --- | --- | --- |
 | `public/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky)，Poly Haven 1k 等距柱状 HDR（1024×512）。作者 Greg Zaal（原片）、Jarod Guest（天空编辑）。原始 1,435,119 字节，gzip 954,159 字节。性能档和均衡档共用这一张，只做反射 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+
+单层视图的房间标签使用本地字体 `public/fonts/NotoSansSC-Regular-subset.otf`（Noto Sans CJK SC Regular 子集：GB2312 汉字、ASCII 和常用标点，OFL）。许可全文在 `public/fonts/NotoSansCJK-copyright.txt`。走廊人物在 `public/models/people/`，只在均衡档和高画质的单层视图里加载，性能档不请求这些 GLB。模型是 Poly Pizza 上的 CC0（Quaternius）：[Man in Suit](https://poly.pizza/m/mQnGoME1ez)、[Woman Casual](https://poly.pizza/m/jpKRgGDxhk)、[Animated Human](https://poly.pizza/m/c3Ibh9I3udk)。仓库私有，这些 GLB 不单独对外分发。

@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react'
+import { Suspense, useEffect, useMemo } from 'react'
 import { Color } from 'three'
+import type { Device } from '../../types'
 import { extrudeUp } from '../extrude'
 import { b1SlabOutline, ellipseRing, ringFromAabb } from './b1Plan'
 import { SLAB_M } from './cut'
@@ -50,6 +51,9 @@ import {
   woodMaterial,
 } from './materials'
 import { DeskFlash } from './DeskFlash'
+import { DeviceBadges } from './DeviceBadges'
+import { RoomLabels } from './RoomLabels'
+import { basementRoomLabels } from './roomLabels'
 import { InstancedSlots, Workstations } from './Workstations'
 
 const tables = canteenTables().map((table) => ({ ...table, rot: 0 }))
@@ -57,7 +61,7 @@ const diningChairs = canteenChairs(canteenTables())
 const fanSeats = fanSeatSlots()
 const columns = b1Columns().map((column) => ({ ...column, rot: 0 }))
 
-export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }) {
+export function B1Interior({ slots, colors, devices }: { slots: Slot[]; colors: Color[]; devices: Device[] }) {
   const slab = useMemo(() => {
     const geometry = extrudeUp(b1SlabOutline(), SLAB_M)
     geometry.translate(0, -SLAB_M, 0)
@@ -111,6 +115,10 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
       <DeskFlash floorId="B1" />
+      <DeviceBadges floorId="B1" devices={devices} />
+      <Suspense fallback={null}>
+        <RoomLabels labels={basementRoomLabels()} />
+      </Suspense>
       <Ceiling
         width={B1_CEILING.x1 - B1_CEILING.x0}
         depth={B1_CEILING.z1 - B1_CEILING.z0}
