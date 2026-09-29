@@ -59,7 +59,7 @@ npm test
 
 ## 运行时不访问外网
 
-字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自仓库里的室外天空 HDR，不使用 drei 的 Environment 预设，也不把贴图设成背景。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。
+字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自仓库里的室外天空 HDR，用 three 的 `HDRLoader` 在加载时预滤波一次，不使用 drei 的 Environment，也不把贴图设成背景。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。
 
 室外天空贴图：
 
