@@ -272,8 +272,11 @@ export function createSeatGeometry(): BufferGeometry {
   ])
 }
 
+/** 柱截面边长，与蓝图上的柱点同一尺寸。 */
+export const COLUMN_SIZE_M = 0.62
+
 export function createColumnGeometry(height: number): BufferGeometry {
-  const geometry = new BoxGeometry(0.62, height, 0.62)
+  const geometry = new BoxGeometry(COLUMN_SIZE_M, height, COLUMN_SIZE_M)
   geometry.translate(0, height / 2, 0)
   return geometry
 }

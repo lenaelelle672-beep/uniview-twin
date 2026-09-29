@@ -34,6 +34,22 @@ interface TwinLocateMetrics {
   deskId: string
 }
 
+interface TwinExplodeFloor {
+  id: string
+  offset: number
+  groupY: number | null
+  bottom: number
+  top: number
+}
+
+interface TwinExplodeStats {
+  progress: number
+  exploded: boolean
+  gap: number
+  overlap: boolean
+  floors: TwinExplodeFloor[]
+}
+
 interface Window {
   __twinReady?: boolean
   __twinStats?: TwinRenderStats
@@ -73,4 +89,5 @@ interface Window {
   __twinLocate?: TwinLocateMetrics
   __twinHighlight?: string
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
+  __twinExplode?: TwinExplodeStats
 }

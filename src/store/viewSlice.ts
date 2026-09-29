@@ -34,6 +34,8 @@ export interface ViewSlice {
   setSelectedFloor: (floorId: string | null) => void
   setHoveredFloor: (floorId: string | null) => void
   setFocusedDeskId: (deskId: string | null) => void
+  /** 蓝图点选工位：记下工位和该工位电脑，不改变当前视图。 */
+  selectDesk: (deskId: string) => void
   setCam: (cam: CameraId | null) => void
   /** 双击楼层时递增。飞入本身由 enterFloor 进入单层。 */
   emitFloorFly: (floorId: string) => void
@@ -75,6 +77,17 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   setSelectedFloor: (selectedFloor) => set({ selectedFloor }),
   setHoveredFloor: (hoveredFloor) => set({ hoveredFloor }),
   setFocusedDeskId: (focusedDeskId) => set({ focusedDeskId }),
+  selectDesk: (deskId) => {
+    const splitAt = deskId.lastIndexOf('-')
+    const floorId = splitAt > 0 ? deskId.slice(0, splitAt) : ''
+    if (!isFloorId(floorId)) return
+    const pc = get().devices.find((device) => device.deskId === deskId && device.type === 'pc')
+    set({
+      selectedFloor: floorId,
+      focusedDeskId: deskId,
+      focusedDeviceId: pc?.id ?? null,
+    })
+  },
   setCam: (cam) => set({ cam }),
   emitFloorFly: (floorId) =>
     set({

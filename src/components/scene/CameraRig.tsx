@@ -47,6 +47,7 @@ export function CameraRig({
 }) {
   const cam = useTwinStore((state) => state.cam)
   const view = useTwinStore((state) => state.view)
+  const exploded = useTwinStore((state) => state.exploded)
   const controls = useRef<CameraControls>(null)
   const camera = useThree((state) => state.camera)
   const size = useThree((state) => state.size)

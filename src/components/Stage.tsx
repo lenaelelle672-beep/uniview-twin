@@ -1,14 +1,17 @@
 import { useEffect } from 'react'
+import { BlueprintView } from '../blueprint/BlueprintView'
 import { useTwinStore } from '../store/store'
 import { SceneCanvas } from './Scene'
 
 export function Stage() {
   const view = useTwinStore((state) => state.view)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
+  const exploded = useTwinStore((state) => state.exploded)
   const status = useTwinStore((state) => state.status)
   const error = useTwinStore((state) => state.error)
   const posNotice = useTwinStore((state) => state.posNotice)
   const exitFloor = useTwinStore((state) => state.exitFloor)
+  const setExploded = useTwinStore((state) => state.setExploded)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -22,7 +25,7 @@ export function Stage() {
   }, [])
 
   return (
-    <main className="stage" aria-label="场景">
+    <main className="stage" aria-label="场景" data-exploded={exploded ? 'true' : 'false'}>
       {status === 'loading' && (
         <p className="banner" role="status">
           正在加载数据…
@@ -38,20 +41,27 @@ export function Stage() {
           {posNotice}
         </p>
       )}
-      {view === 'blueprint' ? (
-        <div className="blueprint-placeholder" role="region" aria-label="蓝图视图">
-          <p>蓝图台账将在后续任务中提供。</p>
-        </div>
-      ) : (
-        <SceneCanvas />
-      )}
+      {view === 'blueprint' ? <BlueprintView /> : <SceneCanvas />}
       {view === 'floor' && (
         <button type="button" className="back-button" title="Esc 返回总览" onClick={() => exitFloor()}>
           返回总览
         </button>
       )}
+      {view === 'building' && (
+        <button
+          type="button"
+          className={exploded ? 'explode-button is-active' : 'explode-button'}
+          aria-label={exploded ? '收拢楼层' : '爆炸视图'}
+          aria-pressed={exploded}
+          onClick={() => setExploded(!exploded)}
+        >
+          {exploded ? '收拢楼层' : '爆炸视图'}
+        </button>
+      )}
       {view !== 'blueprint' && (
-        <p className="view-chip">{view === 'floor' ? `单层视图${selectedFloor ? ` · ${selectedFloor}` : ''}` : '总览视图'}</p>
+        <p className="view-chip">
+          {view === 'floor' ? `单层视图${selectedFloor ? ` · ${selectedFloor}` : ''}` : exploded ? '总览视图 · 爆炸' : '总览视图'}
+        </p>
       )}
     </main>
   )
