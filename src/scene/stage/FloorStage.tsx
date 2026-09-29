@@ -3,7 +3,7 @@ import { useLayoutEffect, useMemo } from 'react'
 import { InstancedMesh } from 'three'
 import { floorSpec } from '../../data/floors'
 import { extrudeUp } from '../extrude'
-import { courtyardHole } from '../massing'
+import { basementPickOutline } from './b1Plan'
 import { useTwinStore } from '../../store/store'
 import type { DeviceStatus } from '../../types'
 import { B1Interior } from './B1Interior'
@@ -50,7 +50,7 @@ function BasementPick() {
   const enterFloor = useTwinStore((state) => state.enterFloor)
   const inside = useTwinStore((state) => state.view === 'floor')
   const geometry = useMemo(() => {
-    const pick = extrudeUp(courtyardHole(), 0.08)
+    const pick = extrudeUp(basementPickOutline(), 0.08)
     pick.translate(0, 0.42, 0)
     return pick
   }, [])

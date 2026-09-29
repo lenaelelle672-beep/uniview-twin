@@ -1,5 +1,6 @@
 import { floorSpec, type FloorSpec } from '../../data/floors'
 import type { CameraPose } from '../cameras'
+import { b1SlabBounds } from './b1Plan'
 import { SLAB_M } from './cut'
 
 /**
@@ -22,10 +23,12 @@ function towerPose(spec: FloorSpec): CameraPose {
 }
 
 function basementPose(): CameraPose {
-  // 与裙楼楼板一起南移，仍从南侧俯看食堂和扇形报告厅。
+  const bounds = b1SlabBounds()
+  const cx = (bounds.x0 + bounds.x1) / 2
+  const cz = (bounds.z0 + bounds.z1) / 2
   return {
-    position: [-4.05, 56, 166.7],
-    target: [-2.05, -5.25, 98.7],
-    fov: 52,
+    position: [cx, 108, cz + 18],
+    target: [cx, -5.25, cz],
+    fov: 48,
   }
 }

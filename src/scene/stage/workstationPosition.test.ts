@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { floorIdList, floorSpec } from '../../data/floors'
 import { createMockData } from '../../data/mockData'
-import { FOOTPRINT, TOWER } from '../siteGeometry'
+import { TOWER } from '../siteGeometry'
+import { pointInB1Slab } from './b1Plan'
 import { WORKSTATIONS_PER_FLOOR, workstationPosition } from './workstationPosition'
 
 function insideSlab(floorId: string, x: number, z: number): boolean {
-  const slab = floorId === 'B1' ? FOOTPRINT : TOWER
-  return x > slab.minX && x < slab.maxX && z > slab.minZ && z < slab.maxZ
+  if (floorId === 'B1') return pointInB1Slab(x, z)
+  return x > TOWER.minX && x < TOWER.maxX && z > TOWER.minZ && z < TOWER.maxZ
 }
 
 describe('workstationPosition', () => {

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { Color } from 'three'
-import { FOOTPRINT, footprintOutline } from '../siteGeometry'
 import { extrudeUp } from '../extrude'
+import { b1SlabOutline, ellipseRing, ringFromAabb } from './b1Plan'
 import { SLAB_M } from './cut'
 import { Ceiling } from './Ceiling'
 import {
@@ -20,9 +20,12 @@ import {
 } from './geometry'
 import {
   B1_ATRIUM,
-  B1_SHIFT,
+  B1_CEILING,
+  B1_PLAZA,
   b1Columns,
+  b1CoreOffset,
   canteenChairs,
+  canteenFloorSize,
   canteenPadCenter,
   canteenTables,
   fanOutline,
@@ -53,31 +56,21 @@ const diningChairs = canteenChairs(canteenTables())
 const fanSeats = fanSeatSlots()
 const columns = b1Columns().map((column) => ({ ...column, rot: 0 }))
 
-function ellipsePoints(cx: number, cz: number, rx: number, rz: number, segments: number): Array<[number, number]> {
-  const points: Array<[number, number]> = []
-  for (let i = 0; i < segments; i += 1) {
-    const t = (i / segments) * Math.PI * 2
-    points.push([cx + Math.cos(t) * rx, cz + Math.sin(t) * rz])
-  }
-  return points
-}
-
 export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }) {
   const slab = useMemo(() => {
-    const geometry = extrudeUp(footprintOutline(), SLAB_M)
+    const geometry = extrudeUp(b1SlabOutline(), SLAB_M)
     geometry.translate(0, -SLAB_M, 0)
     return geometry
   }, [])
   const fan = useMemo(() => extrudeUp(fanOutline(), 0.08), [])
-  const court = useMemo(
-    () => extrudeUp(ellipsePoints(B1_ATRIUM.cx, B1_ATRIUM.cz, B1_ATRIUM.rx, B1_ATRIUM.rz, 36), 0.05),
-    [],
-  )
+  const court = useMemo(() => extrudeUp(ringFromAabb(B1_PLAZA), 0.05), [])
   const courtInner = useMemo(
-    () => extrudeUp(ellipsePoints(B1_ATRIUM.cx, B1_ATRIUM.cz, B1_ATRIUM.rx - 3.2, B1_ATRIUM.rz - 1.8, 28), 0.08),
+    () => extrudeUp(ellipseRing(B1_ATRIUM.cx, B1_ATRIUM.cz, B1_ATRIUM.rx, B1_ATRIUM.rz, 36), 0.08),
     [],
   )
   const canteen = canteenPadCenter()
+  const canteenSize = canteenFloorSize()
+  const core = b1CoreOffset()
   useEffect(() => {
     return () => {
       slab.dispose()
@@ -87,8 +80,8 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
     }
   }, [court, courtInner, fan, slab])
 
-  const ceilingX = (FOOTPRINT.minX + FOOTPRINT.maxX) / 2
-  const ceilingZ = (FOOTPRINT.minZ + FOOTPRINT.maxZ) / 2
+  const ceilingX = (B1_CEILING.x0 + B1_CEILING.x1) / 2
+  const ceilingZ = (B1_CEILING.z0 + B1_CEILING.z1) / 2
 
   return (
     <group name="FloorInterior" position={[0, -5.5 + SLAB_M, 0]} onDoubleClick={(event) => event.stopPropagation()}>
@@ -99,7 +92,7 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
       <mesh geometry={stageGeometry} material={stageMaterial} castShadow receiveShadow />
       <InstancedSlots name="FanSeats" geometry={seatGeometry} material={seatMaterial} slots={fanSeats} />
       <mesh position={[canteen.x, 0.02, canteen.z]} material={canteenMaterial} receiveShadow>
-        <boxGeometry args={[11.2, 0.04, 15.6]} />
+        <boxGeometry args={[canteenSize.w, 0.04, canteenSize.d]} />
       </mesh>
       <InstancedSlots name="CanteenTables" geometry={roundTableGeometry} material={woodMaterial} slots={tables} />
       <InstancedSlots name="CanteenChairs" geometry={diningChairGeometry} material={chairMaterial} slots={diningChairs} />
@@ -107,7 +100,7 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
       <mesh geometry={privateWoodGeometry} material={woodMaterial} castShadow receiveShadow />
       <mesh geometry={privateChairGeometry} material={chairMaterial} />
       <mesh geometry={privateGlassGeometry} material={meetingGlassMaterial} />
-      <group position={[B1_SHIFT.x, 0, B1_SHIFT.z]}>
+      <group position={[core.x, 0, core.z]}>
         <mesh geometry={coreFloorGeometry} material={coreMaterial} receiveShadow />
         <mesh geometry={towerCoreGeometry} material={coreWallMaterial} castShadow receiveShadow />
         <mesh geometry={elevatorGeometry} material={darkMaterial} />
@@ -115,8 +108,8 @@ export function B1Interior({ slots, colors }: { slots: Slot[]; colors: Color[] }
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
       <Ceiling
-        width={FOOTPRINT.maxX - FOOTPRINT.minX}
-        depth={FOOTPRINT.maxZ - FOOTPRINT.minZ}
+        width={B1_CEILING.x1 - B1_CEILING.x0}
+        depth={B1_CEILING.z1 - B1_CEILING.z0}
         x={ceilingX}
         y={5.5 - SLAB_M - 0.08}
         z={ceilingZ}

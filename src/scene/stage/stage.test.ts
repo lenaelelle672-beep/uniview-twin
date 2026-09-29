@@ -7,6 +7,8 @@ import {
   activeFloorId,
   cutElevation,
   hiddenFloorIds,
+  isBasementSlabHidden,
+  isBasementZonesHidden,
   isFloorCurtainOpen,
   isFloorShellHidden,
   isRoofHidden,
@@ -53,6 +55,24 @@ describe('单层剖切', () => {
     expect(isFloorCurtainOpen('floor', 'F12', 'F11')).toBe(false)
     expect(isRoofHidden('floor', 'F3')).toBe(true)
     expect(isRoofHidden('building', 'F3')).toBe(false)
+  })
+
+  it('地上单层隐藏 B1 楼板和色块，总览和 B1 不隐藏', () => {
+    const samples: Array<[Parameters<typeof isBasementSlabHidden>[0], string | null]> = [
+      ['building', null],
+      ['building', 'F12'],
+      ['blueprint', 'F12'],
+      ['floor', 'B1'],
+      ['floor', null],
+    ]
+    for (const [view, floor] of samples) {
+      expect(isBasementSlabHidden(view, floor)).toBe(false)
+      expect(isBasementZonesHidden(view, floor)).toBe(false)
+    }
+    for (let level = 1; level <= 22; level += 1) {
+      expect(isBasementSlabHidden('floor', `F${level}`)).toBe(true)
+      expect(isBasementZonesHidden('floor', `F${level}`)).toBe(isBasementSlabHidden('floor', `F${level}`))
+    }
   })
 })
 
@@ -143,7 +163,7 @@ describe('enterFloor / exitFloor', () => {
     expect(useTwinStore.getState().selectedFloor).toBeNull()
   })
 
-  it('F12 机位压到该层附近，B1 机位看向地下室', () => {
+  it('F12 机位压到该层附近，B1 机位俯看地下室楼板', () => {
     const f12 = floorCameraPose('F12')
     expect(f12.position[1]).toBeGreaterThan(48)
     expect(f12.position[1]).toBeLessThan(64)
@@ -153,8 +173,9 @@ describe('enterFloor / exitFloor', () => {
     expect(distance).toBeLessThan(40)
     const b1 = floorCameraPose('B1')
     expect(b1.target[1]).toBeLessThan(-4)
-    expect(b1.position[1]).toBeLessThan(64)
-    expect(b1.position[1]).toBeGreaterThan(8)
+    expect(b1.position[1]).toBeGreaterThan(80)
+    const overhead = Math.hypot(b1.position[0] - b1.target[0], b1.position[2] - b1.target[2])
+    expect(overhead).toBeLessThan(40)
   })
 })
 
