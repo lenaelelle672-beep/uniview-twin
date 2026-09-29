@@ -141,10 +141,61 @@ function columnPoint(floor: { id: string; elevation: number; height: number }, t
   return target
 }
 
+/** 底板离画布边缘的空隙。侧栏贴着画布，留出这点空隙就不会压到侧栏。 */
+const SCREEN_MARGIN_PX = 4
+
+function containBadgeRow(
+  positionOf: Map<string, Vector3>,
+  right: Vector3,
+  viewDir: Vector3,
+  eye: Vector3,
+  proj11: number,
+  viewportHeight: number,
+  viewportWidth: number,
+  scaleAt: (point: Vector3) => number,
+) {
+  if (viewportWidth <= 0 || viewportHeight <= 0) return
+  const proj00 = (proj11 * viewportHeight) / viewportWidth
+  const rel = new Vector3()
+  for (let iter = 0; iter < 4; iter += 1) {
+    let minLeft = Number.POSITIVE_INFINITY
+    let maxRight = Number.NEGATIVE_INFINITY
+    let leftDepth = 1
+    let rightDepth = 1
+    for (const pos of positionOf.values()) {
+      rel.copy(pos).sub(eye)
+      const depth = Math.max(rel.dot(viewDir), 1e-3)
+      const pxPerMeter = (proj00 * viewportWidth * 0.5) / depth
+      const centerPx = viewportWidth * 0.5 + rel.dot(right) * pxPerMeter
+      const halfPx = scaleAt(pos) * BADGE_WIDTH * 0.5 * pxPerMeter
+      const leftPx = centerPx - halfPx
+      const rightPx = centerPx + halfPx
+      if (leftPx < minLeft) {
+        minLeft = leftPx
+        leftDepth = depth
+      }
+      if (rightPx > maxRight) {
+        maxRight = rightPx
+        rightDepth = depth
+      }
+    }
+    const leftOverflow = SCREEN_MARGIN_PX - minLeft
+    const rightOverflow = maxRight - (viewportWidth - SCREEN_MARGIN_PX)
+    if (leftOverflow <= 0.5 && rightOverflow <= 0.5) return
+    const shiftPx =
+      leftOverflow > 0 && rightOverflow > 0 ? (leftOverflow - rightOverflow) / 2 : leftOverflow > 0 ? leftOverflow : -rightOverflow
+    const depth = shiftPx >= 0 ? leftDepth : rightDepth
+    const pxPerMeter = (proj00 * viewportWidth * 0.5) / Math.max(depth, 1e-3)
+    const world = shiftPx / Math.max(pxPerMeter, 1e-3)
+    for (const pos of positionOf.values()) pos.addScaledVector(right, world)
+  }
+}
+
 /**
  * 整块徽标的屏幕中心。奇数层在相机左侧，偶数层在右侧，两侧再各分一列，
  * 使同一列至少隔四层。列距不小于放大后的整块徽标宽。B1 在 F1 下方外侧。
  * 锚点高度保持在楼层上，避免把徽标推进地面。
+ * 画布比窗口窄时，整列沿相机右方向平移，列距不变，底板留在画面内。
  */
 export function layoutBadgeCenters(
   floors: Array<{ id: string; elevation: number; height: number }>,
@@ -153,6 +204,7 @@ export function layoutBadgeCenters(
   eye: Vector3,
   proj11: number,
   viewportHeight: number,
+  viewportWidth: number,
 ): BadgePlacement[] {
   const depthScratch = new Vector3()
   const scaleAt = (point: Vector3) => {
@@ -181,6 +233,7 @@ export function layoutBadgeCenters(
     }
     positionOf.set(basement.id, base.addScaledVector(right, (-1 - 1.5) * slot(k)))
   }
+  containBadgeRow(positionOf, right, viewDir, eye, proj11, viewportHeight, viewportWidth, scaleAt)
   return floors.map((floor) => {
     const pos = positionOf.get(floor.id) ?? columnPoint(floor, new Vector3())
     return { id: floor.id, x: pos.x, y: pos.y, z: pos.z }

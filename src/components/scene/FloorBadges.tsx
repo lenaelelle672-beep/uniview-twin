@@ -186,7 +186,15 @@ export function FloorBadges() {
     up.set(0, 1, 0).applyQuaternion(frameCamera.quaternion)
     viewDir.set(0, 0, -1).applyQuaternion(frameCamera.quaternion)
     const proj11 = frameCamera.projectionMatrix.elements[5]
-    const centers = layoutBadgeCenters(floors, right, viewDir, frameCamera.position, proj11, cssHeight)
+    const centers = layoutBadgeCenters(
+      floors,
+      right,
+      viewDir,
+      frameCamera.position,
+      proj11,
+      cssHeight,
+      cssWidth,
+    )
     window.__twinBadgeCenters = centers
     plateNdc.length = 0
     if (cssWidth > 0 && cssHeight > 0) {

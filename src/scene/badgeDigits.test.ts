@@ -125,6 +125,8 @@ describe('徽标数字图集', () => {
         { width: 1920, height: 1080 },
         { width: 1366, height: 768 },
         { width: 1024, height: 576 },
+        // 1024 窗口、左右侧栏展开后画布大约是这个尺寸。
+        { width: 596, height: 520 },
       ]) {
         const camera = new PerspectiveCamera(view.fov, size.width / size.height, 0.35, 2400)
         camera.position.copy(view.eye)
@@ -140,6 +142,7 @@ describe('徽标数字图集', () => {
           camera.position,
           camera.projectionMatrix.elements[5],
           size.height,
+          size.width,
         )
         const f1 = centers.find((item) => item.id === 'F1')
         const f2 = centers.find((item) => item.id === 'F2')
