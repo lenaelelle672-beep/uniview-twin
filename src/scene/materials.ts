@@ -33,13 +33,13 @@ function facadeUv(): string {
 }
 
 export function createCurtainMaterial(): MeshPhysicalMaterial {
-  const grid = new Color('#d5dee8')
+  const grid = new Color('#3d5870')
   const strength = { value: 0.78 }
   const material = new MeshPhysicalMaterial({
-    color: '#3e5164',
-    metalness: 0.88,
-    roughness: 0.08,
-    envMapIntensity: 1.35,
+    color: '#4a4e52',
+    metalness: 0.8,
+    roughness: 0.06,
+    envMapIntensity: 1.15,
     side: FrontSide,
   })
   material.userData.grid = grid
@@ -108,10 +108,24 @@ export const highlightJointMaterial = new MeshStandardMaterial({
   toneMapped: false,
 })
 export const finMaterial = new MeshStandardMaterial({
-  color: '#343b42',
-  roughness: 0.32,
-  metalness: 0.8,
-  envMapIntensity: 0.7,
+  color: '#c5cad3',
+  roughness: 0.42,
+  metalness: 0.48,
+  envMapIntensity: 0.42,
+})
+/** 弧形檐口铝板带。只赋给裙房那条带，避免把实体墙一起刷白。 */
+export const eaveMaterial = new MeshStandardMaterial({
+  color: '#e7eef1',
+  roughness: 0.46,
+  metalness: 0.28,
+  envMapIntensity: 0.3,
+})
+/** 研发中心下层和可见石材基座。 */
+export const baseMaterial = new MeshStandardMaterial({
+  color: '#8f8c89',
+  roughness: 0.86,
+  metalness: 0.02,
+  envMapIntensity: 0.2,
 })
 export const stoneMaterial = new MeshStandardMaterial({ color: '#d7d2c8', roughness: 0.86, metalness: 0 })
 export const courtWallMaterial = new MeshStandardMaterial({
@@ -120,11 +134,11 @@ export const courtWallMaterial = new MeshStandardMaterial({
   metalness: 0,
   side: DoubleSide,
 })
-export const grassMaterial = new MeshStandardMaterial({ color: '#4c8a3e', roughness: 0.96, metalness: 0 })
-export const pavingMaterial = new MeshStandardMaterial({ color: '#c9bba6', roughness: 0.9, metalness: 0 })
+export const grassMaterial = new MeshStandardMaterial({ color: '#5d6b38', roughness: 0.96, metalness: 0 })
+export const pavingMaterial = new MeshStandardMaterial({ color: '#c5d0d8', roughness: 0.88, metalness: 0 })
 export const deckMaterial = new MeshStandardMaterial({ color: '#d9d5cc', roughness: 0.88, metalness: 0 })
-export const roadMaterial = new MeshStandardMaterial({ color: '#2a2f35', roughness: 0.94, metalness: 0.04 })
-export const sidewalkMaterial = new MeshStandardMaterial({ color: '#b5aea3', roughness: 0.91, metalness: 0 })
+export const roadMaterial = new MeshStandardMaterial({ color: '#2c2e3c', roughness: 0.94, metalness: 0.02 })
+export const sidewalkMaterial = new MeshStandardMaterial({ color: '#b7c6d0', roughness: 0.88, metalness: 0 })
 export const zebraMaterial = new MeshStandardMaterial({ color: '#f2f2f0', roughness: 0.7, metalness: 0 })
 export const plinthMaterial = new MeshStandardMaterial({ color: '#8d8d8d', roughness: 0.8, metalness: 0 })
 
@@ -146,11 +160,22 @@ export function applySurfaceMode(mode: SurfaceMode) {
     grilleMaterial.envMapIntensity = 0.2
     solidMaterial.color.set('#f3f3f3')
     jointMaterial.color.set('#f7f7f7')
+    jointMaterial.metalness = 0.04
+    jointMaterial.roughness = 0.5
+    jointMaterial.envMapIntensity = 0.08
     revealMaterial.color.set('#2a3138')
     finMaterial.color.set('#d5d8dc')
     finMaterial.metalness = 0.08
     finMaterial.roughness = 0.5
     finMaterial.envMapIntensity = 0.2
+    eaveMaterial.color.set('#f4f5f6')
+    eaveMaterial.metalness = 0.04
+    eaveMaterial.roughness = 0.55
+    eaveMaterial.envMapIntensity = 0.08
+    baseMaterial.color.set('#e4e4e4')
+    baseMaterial.metalness = 0
+    baseMaterial.roughness = 0.8
+    baseMaterial.envMapIntensity = 0.08
     stoneMaterial.color.set('#e6e6e6')
     courtWallMaterial.color.set('#e6e6e6')
     deckMaterial.color.set('#dedede')
@@ -170,10 +195,18 @@ export function applySurfaceMode(mode: SurfaceMode) {
     solidMaterial.color.set('#c8ced6')
     jointMaterial.color.set('#f3f6fa')
     revealMaterial.color.set('#1c2430')
-    finMaterial.color.set('#6e767e')
-    finMaterial.metalness = 0.62
-    finMaterial.roughness = 0.38
-    finMaterial.envMapIntensity = 0.28
+    finMaterial.color.set('#9aa0aa')
+    finMaterial.metalness = 0.4
+    finMaterial.roughness = 0.46
+    finMaterial.envMapIntensity = 0.2
+    eaveMaterial.color.set('#c5ced4')
+    eaveMaterial.metalness = 0.2
+    eaveMaterial.roughness = 0.5
+    eaveMaterial.envMapIntensity = 0.16
+    baseMaterial.color.set('#6a6764')
+    baseMaterial.metalness = 0.02
+    baseMaterial.roughness = 0.88
+    baseMaterial.envMapIntensity = 0.1
     stoneMaterial.color.set('#8a867e')
     courtWallMaterial.color.set('#8a867e')
     deckMaterial.color.set('#6e6a64')
@@ -183,32 +216,43 @@ export function applySurfaceMode(mode: SurfaceMode) {
     sidewalkMaterial.color.set('#2c3034')
     zebraMaterial.color.set('#d8d8d4')
   } else {
-    curtainMaterial.color.set('#3e5164')
-    curtainMaterial.metalness = 0.88
-    curtainMaterial.roughness = 0.08
-    curtainMaterial.envMapIntensity = 1.35
+    curtainMaterial.color.set('#9aa0a6')
+    curtainMaterial.metalness = 0.98
+    curtainMaterial.roughness = 0.03
+    curtainMaterial.envMapIntensity = 2.05
     curtainMaterial.emissive.set('#000000')
     curtainMaterial.emissiveIntensity = 0
-    grid.set('#d5dee8')
-    strength.value = 0.8
-    grilleMaterial.color.set('#3a424a')
-    grilleMaterial.metalness = 0.78
-    grilleMaterial.roughness = 0.36
-    grilleMaterial.envMapIntensity = 0.7
+    grid.set('#142636')
+    strength.value = 0.92
+    grilleMaterial.color.set('#5a6e84')
+    grilleMaterial.metalness = 0.55
+    grilleMaterial.roughness = 0.4
+    grilleMaterial.envMapIntensity = 0.45
     solidMaterial.color.set('#f4f5f7')
-    jointMaterial.color.set('#e7eef5')
+    jointMaterial.color.set('#5e7388')
+    jointMaterial.metalness = 0.35
+    jointMaterial.roughness = 0.5
+    jointMaterial.envMapIntensity = 0.35
     revealMaterial.color.set('#5d6874')
-    finMaterial.color.set('#343b42')
-    finMaterial.metalness = 0.8
-    finMaterial.roughness = 0.32
-    finMaterial.envMapIntensity = 0.7
-    stoneMaterial.color.set('#d7d2c8')
-    courtWallMaterial.color.set('#c4bfb4')
+    finMaterial.color.set('#a8b0be')
+    finMaterial.metalness = 0.22
+    finMaterial.roughness = 0.5
+    finMaterial.envMapIntensity = 0.36
+    eaveMaterial.color.set('#f4f8fa')
+    eaveMaterial.metalness = 0.42
+    eaveMaterial.roughness = 0.32
+    eaveMaterial.envMapIntensity = 0.85
+    baseMaterial.color.set('#d4c8bc')
+    baseMaterial.metalness = 0.02
+    baseMaterial.roughness = 0.88
+    baseMaterial.envMapIntensity = 0.15
+    stoneMaterial.color.set('#b0ada8')
+    courtWallMaterial.color.set('#9a9692')
     deckMaterial.color.set('#d9d5cc')
-    grassMaterial.color.set('#4c8a3e')
-    pavingMaterial.color.set('#c9bba6')
-    roadMaterial.color.set('#2a2f35')
-    sidewalkMaterial.color.set('#b5aea3')
+    grassMaterial.color.set('#52762c')
+    pavingMaterial.color.set('#d5e3ec')
+    roadMaterial.color.set('#1c1e30')
+    sidewalkMaterial.color.set('#e7f1f6')
     zebraMaterial.color.set('#f2f2f0')
   }
   const touched: Material[] = [
@@ -218,6 +262,8 @@ export function applySurfaceMode(mode: SurfaceMode) {
     jointMaterial,
     revealMaterial,
     finMaterial,
+    eaveMaterial,
+    baseMaterial,
     stoneMaterial,
     courtWallMaterial,
     grassMaterial,
