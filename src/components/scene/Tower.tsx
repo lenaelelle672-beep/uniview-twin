@@ -15,6 +15,7 @@ import { TOWER } from '../../scene/siteGeometry'
 import { createTowerGlass } from '../../scene/towerGlass'
 import { useTwinStore } from '../../store/store'
 import { RoofSign } from './InstancedProp'
+import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
 import { useFloorActions } from './floorPick'
 
 const BAND = 0.78
@@ -56,12 +57,15 @@ function FloorShell({ id, elevation, height }: { id: string; elevation: number; 
         geometry={glass}
         material={selected ? highlightCurtainMaterial : curtainMaterial}
         visible={!opened}
+        renderOrder={selected ? BUILDING_HIGHLIGHT_ORDER : 0}
       />
       <mesh
+        name={`FloorBand-${id}`}
         geometry={band}
         material={selected ? highlightJointMaterial : jointMaterial}
         castShadow
         receiveShadow
+        renderOrder={selected ? BUILDING_HIGHLIGHT_ORDER : 0}
       />
     </group>
   )

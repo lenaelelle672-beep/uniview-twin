@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { PerspectiveCamera, Vector3 } from 'three'
+import { Color, PerspectiveCamera, Vector3 } from 'three'
 import { listFloorSpecs } from '../data/floors'
 import { BADGE_ALARM_X, BADGE_CHIP_W, BADGE_HEIGHT, BADGE_ID_X, BADGE_MIN_SCREEN_PX, BADGE_WIDTH, badgeAnchor } from './badges'
+import { ALARM_MARKER_ORDER, BADGE_DIGIT_ORDER, BADGE_PLATE_ORDER, BUILDING_HIGHLIGHT_ORDER } from './overlayOrder'
 import {
   BADGE_GLYPH_HEIGHT,
   badgeProjectedPixels,
   badgeScreenScale,
+  buildAlarmMarkerGeometry,
   buildBadgeDigitGeometry,
   glyphFrame,
   layoutBadgeCenters,
+  patchAlarmMarkerShader,
   patchBadgeDigitVertexShader,
   patchBadgePlateVertexShader,
   writeBadgeDigitPositions,
@@ -194,6 +197,38 @@ describe('徽标数字图集', () => {
         }
       }
     }
+  })
+
+  it('告警标记叠在数字上面，选中高亮再叠在告警上面', () => {
+    expect(BADGE_DIGIT_ORDER).toBe(BADGE_PLATE_ORDER + 1)
+    expect(ALARM_MARKER_ORDER).toBeGreaterThan(BADGE_DIGIT_ORDER)
+    expect(BUILDING_HIGHLIGHT_ORDER).toBeGreaterThan(ALARM_MARKER_ORDER)
+  })
+
+  it('告警色块和告警数字绕同一中心，数字写在色块之后', () => {
+    const floors = [{ id: 'F1', alarmCount: 8, offlineCount: 0, elevation: 0, height: 6 }]
+    const { geometry, local, anchorIndex } = buildAlarmMarkerGeometry(floors)
+    const part = geometry.getAttribute('markerPart')
+    expect(part.getX(0)).toBe(0)
+    expect(part.getX(3)).toBe(0)
+    expect(part.getX(4)).toBe(1)
+    const chipCenter = (local[0] + local[3]) / 2
+    expect(chipCenter).toBeCloseTo(BADGE_ALARM_X, 4)
+    const digitCenter = (local[4 * 3] + local[7 * 3]) / 2
+    expect(digitCenter).toBeCloseTo(BADGE_ALARM_X, 4)
+    expect(anchorIndex[0]).toBe(0)
+    expect(anchorIndex[4]).toBe(0)
+    const shader = {
+      vertexShader: '#include <common>\nvoid main() {\n#include <begin_vertex>\n}\n',
+      fragmentShader: '#include <common>\nvoid main() {\n#include <map_fragment>\n}\n',
+      uniforms: {} as Record<string, { value: unknown }>,
+    }
+    patchAlarmMarkerShader(shader, 768)
+    expect(shader.vertexShader).toContain('vMarkerPart = markerPart;')
+    expect(shader.fragmentShader).toContain('vMarkerPart < 0.5')
+    expect(shader.fragmentShader).toContain('uniform vec3 alarmColor')
+    expect((shader.uniforms.alarmColor.value as Color).equals(new Color('#b42318'))).toBe(true)
+    geometry.dispose()
   })
 
   it('告警数字以色块中心对齐', () => {

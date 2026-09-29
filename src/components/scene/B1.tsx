@@ -4,6 +4,7 @@ import { extrudeUp } from '../../scene/extrude'
 import { highlightJointMaterial, solidMaterial, stoneMaterial } from '../../scene/materials'
 import { footprintOutline, TOWER } from '../../scene/siteGeometry'
 import { useTwinStore } from '../../store/store'
+import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
 import { useFloorActions } from './floorPick'
 
 export function B1({ model }: { model: boolean }) {
@@ -28,8 +29,20 @@ export function B1({ model }: { model: boolean }) {
 
   return (
     <group name="B1" position={[0, -5.5, 0]} {...actions}>
-      <mesh geometry={slab} material={slabMaterial} receiveShadow />
-      <mesh geometry={towerSlab} material={slabMaterial} receiveShadow />
+      <mesh
+        name="B1Slab"
+        geometry={slab}
+        material={slabMaterial}
+        receiveShadow
+        renderOrder={selected ? BUILDING_HIGHLIGHT_ORDER : 0}
+      />
+      <mesh
+        name="B1TowerSlab"
+        geometry={towerSlab}
+        material={slabMaterial}
+        receiveShadow
+        renderOrder={selected ? BUILDING_HIGHLIGHT_ORDER : 0}
+      />
       {!model && <mesh name="B1Zones" geometry={zones} material={zoneBlockMaterial} />}
     </group>
   )

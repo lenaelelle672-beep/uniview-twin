@@ -19,7 +19,6 @@ import {
 } from 'three'
 import atlasUrl from '../../../assets/ready/textures/badge-digits-bold.png'
 import {
-  BADGE_ALARM_X,
   BADGE_CHIP_H,
   BADGE_CHIP_W,
   BADGE_HEIGHT,
@@ -30,22 +29,22 @@ import {
 import {
   badgeProjectedPixels,
   badgeScreenScale,
+  buildAlarmMarkerGeometry,
   buildBadgeDigitGeometry,
   layoutBadgeCenters,
+  patchAlarmMarkerShader,
   patchBadgeDigitVertexShader,
   patchBadgePlateVertexShader,
   writeBadgeDigitPositions,
+  type BadgeDigitLayout,
 } from '../../scene/badgeDigits'
+import { ALARM_MARKER_ORDER, BADGE_DIGIT_ORDER, BADGE_PLATE_ORDER } from '../../scene/overlayOrder'
 import { useTwinStore } from '../../store/store'
 
 const PLATE = new Color('#172433')
-const ALARM = new Color('#b42318')
 const OFFLINE = new Color('#5d6775')
 const PLATE_Z = 0.02
 const CHIP_Z = 0.05
-/** 楼体和树用默认 0。底板是 N，数字是 N+1，数字画在底板上面。 */
-const BADGE_PLATE_ORDER = 10
-const BADGE_DIGIT_ORDER = BADGE_PLATE_ORDER + 1
 
 const right = new Vector3()
 const up = new Vector3()
@@ -78,17 +77,17 @@ export function FloorBadges() {
   const cssHeight = useThree((state) => state.size.height)
   const meshRef = useRef<InstancedMesh>(null)
   const digitRef = useRef<Mesh>(null)
+  const alarmRef = useRef<Mesh>(null)
   const viewportHeight = useRef(cssHeight)
   const anchors = useMemo(() => floors.map((floor) => badgeAnchor(floor)), [floors])
   const plateGeometry = useMemo(() => {
     const geometry = new PlaneGeometry(1, 1)
     const floorCount = Math.max(Math.floor(Math.max(anchors.length, 1)), 1)
-    const capacity = floorCount * 3
+    const capacity = floorCount * 2
     const shifts = new InstancedBufferAttribute(new Float32Array(capacity * 3), 3)
     for (let index = 0; index < floorCount; index += 1) {
       shifts.setXYZ(index, 0, 0, PLATE_Z)
-      shifts.setXYZ(floorCount + index, BADGE_ALARM_X / BADGE_CHIP_W, 0, CHIP_Z)
-      shifts.setXYZ(floorCount * 2 + index, BADGE_OFFLINE_X / BADGE_CHIP_W, 0, CHIP_Z)
+      shifts.setXYZ(floorCount + index, BADGE_OFFLINE_X / BADGE_CHIP_W, 0, CHIP_Z)
     }
     geometry.setAttribute('badgeShift', shifts)
     return geometry
@@ -107,7 +106,11 @@ export function FloorBadges() {
     }
     return material
   }, [])
-  const digits = useMemo(() => (floors.length === 0 ? null : buildBadgeDigitGeometry(floors)), [floors])
+  const digits = useMemo(
+    () => (floors.length === 0 ? null : buildBadgeDigitGeometry(floors, { alarmDigits: false })),
+    [floors],
+  )
+  const alarm = useMemo(() => (floors.length === 0 ? null : buildAlarmMarkerGeometry(floors)), [floors])
   const digitMaterial = useMemo(() => {
     const material = new MeshBasicMaterial({
       color: '#ffffff',
@@ -128,7 +131,25 @@ export function FloorBadges() {
     }
     return material
   }, [texture])
-  const capacity = Math.max(anchors.length, 1) * 3
+  const alarmMaterial = useMemo(() => {
+    const material = new MeshBasicMaterial({
+      color: '#ffffff',
+      map: texture,
+      alphaTest: 0.2,
+      alphaToCoverage: true,
+      transparent: false,
+      toneMapped: false,
+      depthTest: false,
+      depthWrite: false,
+    })
+    material.customProgramCacheKey = () => 'badge-alarm-marker'
+    material.onBeforeCompile = (shader) => {
+      patchAlarmMarkerShader(shader, viewportHeight.current)
+      material.userData.shader = shader
+    }
+    return material
+  }, [texture])
+  const capacity = Math.max(anchors.length, 1) * 2
 
   useLayoutEffect(() => {
     viewportHeight.current = cssHeight
@@ -147,8 +168,7 @@ export function FloorBadges() {
     if (!mesh || hidden || anchors.length === 0) return
     anchors.forEach((_, index) => {
       mesh.setColorAt(index, PLATE)
-      mesh.setColorAt(anchors.length + index, ALARM)
-      mesh.setColorAt(anchors.length * 2 + index, OFFLINE)
+      mesh.setColorAt(anchors.length + index, OFFLINE)
     })
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }, [anchors, hidden])
@@ -164,13 +184,16 @@ export function FloorBadges() {
     return () => {
       digits?.geometry.dispose()
       digitMaterial.dispose()
+      alarm?.geometry.dispose()
+      alarmMaterial.dispose()
     }
-  }, [digitMaterial, digits])
+  }, [alarm, alarmMaterial, digitMaterial, digits])
 
   useFrame(({ camera: frameCamera }) => {
     viewportHeight.current = cssHeight
     syncViewport(plateMaterial, cssHeight)
     syncViewport(digitMaterial, cssHeight)
+    syncViewport(alarmMaterial, cssHeight)
     if (hidden || anchors.length === 0 || !(frameCamera instanceof PerspectiveCamera)) {
       window.__twinBadgeCenters = []
       if (meshRef.current) meshRef.current.count = 0
@@ -201,29 +224,20 @@ export function FloorBadges() {
       centers.forEach((center, index) => {
         centerScratch.set(center.x, center.y, center.z)
         writeInstance(mesh, floorCount + index, centerScratch, BADGE_CHIP_W, BADGE_CHIP_H, frameCamera.quaternion)
-        writeInstance(mesh, floorCount * 2 + index, centerScratch, BADGE_CHIP_W, BADGE_CHIP_H, frameCamera.quaternion)
       })
-      mesh.count = floorCount * 3
+      mesh.count = floorCount * 2
       mesh.instanceMatrix.needsUpdate = true
     }
-    const digit = digitRef.current
-    if (!digit || !digits) return
-    const positions = digit.geometry.attributes.position.array as Float32Array
     billboardZ.copy(viewDir).negate()
-    writeBadgeDigitPositions(positions, digits.local, digits.anchorIndex, centers, right, up, billboardZ)
-    digit.geometry.attributes.position.needsUpdate = true
-    const centerAttr = digit.geometry.getAttribute('badgeCenter')
-    for (let index = 0; index < digits.anchorIndex.length; index += 1) {
-      const center = centers[digits.anchorIndex[index]]
-      centerAttr.setXYZ(index, center.x, center.y, center.z)
-    }
-    centerAttr.needsUpdate = true
+    placeGlyphs(digitRef.current, digits, centers)
+    placeGlyphs(alarmRef.current, alarm, centers)
   })
 
   const show = !hidden && anchors.length > 0
   return (
     <group name="FloorBadges" visible={show}>
       <instancedMesh
+        name="BadgePlates"
         key={capacity}
         ref={meshRef}
         args={[plateGeometry, plateMaterial, capacity]}
@@ -256,6 +270,7 @@ export function FloorBadges() {
       />
       {digits && (
         <mesh
+          name="BadgeDigits"
           ref={digitRef}
           geometry={digits.geometry}
           material={digitMaterial}
@@ -267,8 +282,39 @@ export function FloorBadges() {
           raycast={() => null}
         />
       )}
+      {alarm && (
+        <mesh
+          name="BadgeAlarm"
+          ref={alarmRef}
+          geometry={alarm.geometry}
+          material={alarmMaterial}
+          frustumCulled={false}
+          castShadow={false}
+          receiveShadow={false}
+          visible={show}
+          renderOrder={ALARM_MARKER_ORDER}
+          raycast={() => null}
+        />
+      )}
     </group>
   )
+}
+
+function placeGlyphs(
+  mesh: Mesh | null,
+  layout: BadgeDigitLayout | null,
+  centers: Array<{ x: number; y: number; z: number }>,
+) {
+  if (!mesh || !layout) return
+  const positions = mesh.geometry.attributes.position.array as Float32Array
+  writeBadgeDigitPositions(positions, layout.local, layout.anchorIndex, centers, right, up, billboardZ)
+  mesh.geometry.attributes.position.needsUpdate = true
+  const centerAttr = mesh.geometry.getAttribute('badgeCenter')
+  for (let index = 0; index < layout.anchorIndex.length; index += 1) {
+    const center = centers[layout.anchorIndex[index]]
+    centerAttr.setXYZ(index, center.x, center.y, center.z)
+  }
+  centerAttr.needsUpdate = true
 }
 
 function raycastEnlargedPlates(
@@ -278,7 +324,7 @@ function raycastEnlargedPlates(
   raycaster: Raycaster,
   intersects: Intersection[],
 ) {
-  const floorCount = Math.floor(mesh.count / 3)
+  const floorCount = Math.floor(mesh.count / 2)
   if (floorCount === 0) return
   const saved = new Float32Array(floorCount * 16)
   const savedCount = mesh.count

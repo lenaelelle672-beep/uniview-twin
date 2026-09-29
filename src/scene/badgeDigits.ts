@@ -1,8 +1,10 @@
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { BufferAttribute, BufferGeometry, PlaneGeometry, Vector3 } from 'three'
+import { BufferAttribute, BufferGeometry, Color, PlaneGeometry, Vector3 } from 'three'
 import atlas from '../../assets/ready/textures/badge-digits-bold.json'
 import {
   BADGE_ALARM_X,
+  BADGE_CHIP_H,
+  BADGE_CHIP_W,
   BADGE_COLUMN_X,
   BADGE_COLUMN_Z,
   BADGE_HEIGHT,
@@ -86,12 +88,16 @@ function appendString(
   }
 }
 
-export function buildBadgeDigitGeometry(floors: BadgeDigitSource[]): BadgeDigitLayout {
+export function buildBadgeDigitGeometry(
+  floors: BadgeDigitSource[],
+  options?: { alarmDigits?: boolean },
+): BadgeDigitLayout {
+  const alarmDigits = options?.alarmDigits !== false
   const parts: PlaneGeometry[] = []
   const anchorIds: number[] = []
   floors.forEach((floor, index) => {
     appendString(parts, anchorIds, index, floor.id, BADGE_ID_X)
-    appendString(parts, anchorIds, index, String(floor.alarmCount), BADGE_ALARM_X)
+    if (alarmDigits) appendString(parts, anchorIds, index, String(floor.alarmCount), BADGE_ALARM_X)
     appendString(parts, anchorIds, index, String(floor.offlineCount), BADGE_OFFLINE_X)
   })
   const geometry = mergeGeometries(parts, false)
@@ -254,6 +260,95 @@ function assignBadgeScaleUniforms(
   shader.uniforms.badgeViewportHeight = { value: viewportHeight }
   shader.uniforms.badgeWorldHeight = { value: BADGE_HEIGHT }
   shader.uniforms.badgeMinPixelHeight = { value: BADGE_MIN_SCREEN_PX }
+}
+
+const alarmColor = new Color('#b42318')
+
+function tagMarkerPart(geometry: PlaneGeometry, kind: number) {
+  const count = geometry.getAttribute('position').count
+  const values = new Float32Array(count)
+  values.fill(kind)
+  geometry.setAttribute('markerPart', new BufferAttribute(values, 1))
+}
+
+/**
+ * 告警标记：先写红底色块，再写告警数字。同一次绘制里后写的三角形盖住先写的，
+ * 所以数字留在色块上面，整块的 renderOrder 仍高于楼层号。
+ */
+export function buildAlarmMarkerGeometry(floors: BadgeDigitSource[]): BadgeDigitLayout {
+  const parts: PlaneGeometry[] = []
+  const anchorIds: number[] = []
+  floors.forEach((floor, index) => {
+    const chip = new PlaneGeometry(BADGE_CHIP_W, BADGE_CHIP_H)
+    chip.translate(BADGE_ALARM_X, 0, 0.05)
+    tagMarkerPart(chip, 0)
+    parts.push(chip)
+    anchorIds.push(index, index, index, index)
+    const before = parts.length
+    appendString(parts, anchorIds, index, String(floor.alarmCount), BADGE_ALARM_X)
+    for (let part = before; part < parts.length; part += 1) tagMarkerPart(parts[part], 1)
+  })
+  const geometry = mergeGeometries(parts, false)
+  parts.forEach((part) => part.dispose())
+  if (!geometry) throw new Error('告警标记网格合并失败')
+  const position = geometry.attributes.position.array as Float32Array
+  const centers = new Float32Array(anchorIds.length * 3)
+  for (let index = 0; index < anchorIds.length; index += 1) {
+    const anchor = badgeAnchor(floors[anchorIds[index]])
+    centers[index * 3] = anchor.x
+    centers[index * 3 + 1] = anchor.y
+    centers[index * 3 + 2] = anchor.z
+  }
+  geometry.setAttribute('badgeCenter', new BufferAttribute(centers, 3))
+  geometry.computeBoundingSphere()
+  return {
+    geometry,
+    local: position.slice(),
+    anchorIndex: Uint16Array.from(anchorIds),
+  }
+}
+
+export function patchAlarmMarkerShader(
+  shader: { vertexShader: string; fragmentShader: string; uniforms: Record<string, { value: unknown }> },
+  viewportHeight: number,
+) {
+  assignBadgeScaleUniforms(shader, viewportHeight)
+  shader.uniforms.alarmColor = { value: alarmColor }
+  const vertex = shader.vertexShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+attribute vec3 badgeCenter;
+attribute float markerPart;
+varying float vMarkerPart;
+${BADGE_UNIFORMS}`,
+    )
+    .replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+vMarkerPart = markerPart;
+vec4 mvC = modelViewMatrix * vec4(badgeCenter, 1.0);
+${BADGE_SCALE}transformed = badgeCenter + (transformed - badgeCenter) * k;
+`,
+    )
+  if (!vertex.includes('vMarkerPart = markerPart')) throw new Error('告警标记顶点着色器没有接上')
+  shader.vertexShader = vertex
+  const fragment = shader.fragmentShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+varying float vMarkerPart;
+uniform vec3 alarmColor;
+`,
+    )
+    .replace(
+      '#include <map_fragment>',
+      `#include <map_fragment>
+if (vMarkerPart < 0.5) diffuseColor = vec4(alarmColor, 1.0);
+`,
+    )
+  if (!fragment.includes('vMarkerPart < 0.5')) throw new Error('告警标记片元着色器没有接上')
+  shader.fragmentShader = fragment
 }
 
 export function patchBadgeDigitVertexShader(
