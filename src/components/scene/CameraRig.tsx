@@ -37,9 +37,9 @@ function collapsedBounds(group: Group): Box3 {
   return bounds
 }
 
-function applyCameraLimits(rig: CameraControls) {
+function applyCameraLimits(rig: CameraControls, maxDistance: number) {
   rig.minDistance = CAMERA_LIMITS.minDistance
-  rig.maxDistance = CAMERA_LIMITS.maxDistance
+  rig.maxDistance = maxDistance
   rig.minPolarAngle = CAMERA_LIMITS.minPolarAngle
   rig.infinityDolly = false
 
@@ -72,6 +72,7 @@ export function CameraRig({
   const exploded = useTwinStore((state) => state.exploded)
   const spread = view === 'building' && exploded
   const controls = useRef<CameraControls>(null)
+  const distanceCap = useRef(CAMERA_LIMITS.maxDistance)
   const camera = useThree((state) => state.camera)
   const size = useThree((state) => state.size)
 
@@ -88,6 +89,7 @@ export function CameraRig({
     rig.smoothTime = 0
     rig.minDistance = CAMERA_LIMITS.minDistance
     rig.maxDistance = CAMERA_LIMITS.maxDistance
+    distanceCap.current = CAMERA_LIMITS.maxDistance
     if (!cam) {
       if (!group) return
       const bounds = collapsedBounds(group)
@@ -113,12 +115,17 @@ export function CameraRig({
         pose.target[2],
         false,
       )
+      // 展开后的框比 maxDistance 能框住的高。先放开最远距离让 fitToBox 算够，
+      // 再把这个距离当本次上限，否则每帧的限制会把相机拉回 maxDistance，顶层出画。
+      if (spread) rig.maxDistance = Infinity
       void rig.fitToBox(bounds, false, {
         paddingLeft: 6,
         paddingRight: 6,
         paddingTop: 8,
         paddingBottom: 6,
       })
+      if (spread) distanceCap.current = Math.max(CAMERA_LIMITS.maxDistance, rig.distance)
+      rig.maxDistance = distanceCap.current
       rig.maxPolarAngle = Math.PI
       rig.setBoundary(
         new Box3(new Vector3(-500, CAMERA_LIMITS.minTargetY, -500), new Vector3(500, 240, 500)),
@@ -144,14 +151,14 @@ export function CameraRig({
     rig.setBoundary(
       new Box3(new Vector3(-500, CAMERA_LIMITS.minTargetY, -500), new Vector3(500, 240, 500)),
     )
-    applyCameraLimits(rig)
+    applyCameraLimits(rig, distanceCap.current)
     rig.update(0)
   }, [cam, camera, fitGeneration, fitRef, size.height, size.width, spread, view])
 
   useFrame(() => {
     const rig = controls.current
     if (!rig || view === 'floor') return
-    applyCameraLimits(rig)
+    applyCameraLimits(rig, distanceCap.current)
   }, -2)
 
   return <CameraControls ref={controls} makeDefault smoothTime={0} />
