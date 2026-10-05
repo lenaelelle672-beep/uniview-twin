@@ -1,0 +1,736 @@
+{
+  "views": {
+    "f12-balanced": {
+      "quality": "balanced",
+      "floorId": "F12",
+      "lastRenderCalls": 175,
+      "frameCalls": 175,
+      "medianFrameCalls": 175,
+      "attribCalls": 175,
+      "shadow": 42,
+      "main": 133,
+      "roomLabels": 26,
+      "corridorPeople": 24,
+      "floorInterior": 79,
+      "top": [
+        {
+          "path": "FloorInterior/RoomLabels",
+          "pass": "main",
+          "calls": 26,
+          "tris": 232
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 19,
+          "tris": 46971
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "main",
+          "calls": 16,
+          "tris": 2640
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "shadow",
+          "calls": 10,
+          "tris": 2208
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "shadow",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "shadow",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "shadow",
+          "calls": 3,
+          "tris": 8232
+        },
+        {
+          "path": "tree_leaves_shadow",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 13560
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 360
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 12000
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationChairs",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 4800
+        },
+        {
+          "path": "FloorInterior/FloorPlate/FloorSlab",
+          "pass": "main",
+          "calls": 2,
+          "tris": 24
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "main",
+          "calls": 2,
+          "tris": 360
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "main",
+          "calls": 2,
+          "tris": 12000
+        }
+      ],
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f18-balanced": {
+      "quality": "balanced",
+      "floorId": "F18",
+      "lastRenderCalls": 192,
+      "frameCalls": 192,
+      "medianFrameCalls": 192,
+      "attribCalls": 192,
+      "shadow": 48,
+      "main": 144,
+      "roomLabels": 26,
+      "corridorPeople": 24,
+      "floorInterior": 79,
+      "top": [
+        {
+          "path": "FloorInterior/RoomLabels",
+          "pass": "main",
+          "calls": 26,
+          "tris": 232
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 19,
+          "tris": 46971
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "main",
+          "calls": 16,
+          "tris": 2640
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "shadow",
+          "calls": 10,
+          "tris": 2208
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "shadow",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "shadow",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "shadow",
+          "calls": 3,
+          "tris": 8232
+        },
+        {
+          "path": "tree_leaves_shadow",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 13560
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 360
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 12000
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationChairs",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 4800
+        },
+        {
+          "path": "FloorInterior/FloorPlate/FloorSlab",
+          "pass": "main",
+          "calls": 2,
+          "tris": 24
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "main",
+          "calls": 2,
+          "tris": 360
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "main",
+          "calls": 2,
+          "tris": 12000
+        }
+      ],
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f3-balanced": {
+      "quality": "balanced",
+      "floorId": "F3",
+      "lastRenderCalls": 148,
+      "frameCalls": 148,
+      "medianFrameCalls": 148,
+      "attribCalls": 148,
+      "shadow": 33,
+      "main": 115,
+      "roomLabels": 26,
+      "corridorPeople": 24,
+      "floorInterior": 79,
+      "top": [
+        {
+          "path": "FloorInterior/RoomLabels",
+          "pass": "main",
+          "calls": 26,
+          "tris": 232
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 19,
+          "tris": 46971
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "main",
+          "calls": 16,
+          "tris": 2640
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "shadow",
+          "calls": 10,
+          "tris": 2208
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "shadow",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "shadow",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "shadow",
+          "calls": 3,
+          "tris": 8232
+        },
+        {
+          "path": "tree_leaves_shadow",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 13560
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 360
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 12000
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationChairs",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 4800
+        },
+        {
+          "path": "FloorInterior/FloorPlate/FloorSlab",
+          "pass": "main",
+          "calls": 2,
+          "tris": 24
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "main",
+          "calls": 2,
+          "tris": 360
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "main",
+          "calls": 2,
+          "tris": 12000
+        }
+      ],
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f12-perf": {
+      "quality": "perf",
+      "floorId": "F12",
+      "lastRenderCalls": 70,
+      "frameCalls": 70,
+      "medianFrameCalls": 70,
+      "attribCalls": 70,
+      "shadow": 0,
+      "main": 70,
+      "roomLabels": 13,
+      "corridorPeople": 0,
+      "floorInterior": 28,
+      "top": [
+        {
+          "path": "FloorInterior/RoomLabels",
+          "pass": "main",
+          "calls": 13,
+          "tris": 116
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "main",
+          "calls": 8,
+          "tris": 1320
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 7,
+          "tris": 11022
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F11/FloorCurtain-F11",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F10/FloorCurtain-F10",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F9/FloorCurtain-F9",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F8/FloorCurtain-F8",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F7/FloorCurtain-F7",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F6/FloorCurtain-F6",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F5/FloorCurtain-F5",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F4/FloorCurtain-F4",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F3/FloorCurtain-F3",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F2/FloorCurtain-F2",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F1/FloorCurtain-F1",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        }
+      ],
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f18-perf": {
+      "quality": "perf",
+      "floorId": "F18",
+      "lastRenderCalls": 81,
+      "frameCalls": 81,
+      "medianFrameCalls": 69,
+      "attribCalls": 81,
+      "shadow": 0,
+      "main": 81,
+      "roomLabels": 13,
+      "corridorPeople": 0,
+      "floorInterior": 28,
+      "top": [
+        {
+          "path": "FloorInterior/RoomLabels",
+          "pass": "main",
+          "calls": 13,
+          "tris": 116
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "main",
+          "calls": 8,
+          "tris": 1320
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 7,
+          "tris": 11022
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F17/FloorCurtain-F17",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F16/FloorCurtain-F16",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F15/FloorCurtain-F15",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F14/FloorCurtain-F14",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F13/FloorCurtain-F13",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F12/FloorCurtain-F12",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F11/FloorCurtain-F11",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F10/FloorCurtain-F10",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F9/FloorCurtain-F9",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F8/FloorCurtain-F8",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F7/FloorCurtain-F7",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        }
+      ],
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f3-perf": {
+      "quality": "perf",
+      "floorId": "F3",
+      "lastRenderCalls": 52,
+      "frameCalls": 52,
+      "medianFrameCalls": 52,
+      "attribCalls": 52,
+      "shadow": 0,
+      "main": 52,
+      "roomLabels": 13,
+      "corridorPeople": 0,
+      "floorInterior": 28,
+      "top": [
+        {
+          "path": "FloorInterior/RoomLabels",
+          "pass": "main",
+          "calls": 13,
+          "tris": 116
+        },
+        {
+          "path": "FloorInterior",
+          "pass": "main",
+          "calls": 8,
+          "tris": 1320
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 7,
+          "tris": 11022
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 5,
+          "tris": 1856
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 4,
+          "tris": 868
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F2/FloorCurtain-F2",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F1/FloorCurtain-F1",
+          "pass": "main",
+          "calls": 1,
+          "tris": 8
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F3/FloorBand-F3",
+          "pass": "main",
+          "calls": 1,
+          "tris": 48
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F2/FloorBand-F2",
+          "pass": "main",
+          "calls": 1,
+          "tris": 48
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F1/FloorBand-F1",
+          "pass": "main",
+          "calls": 1,
+          "tris": 48
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium/CourtyardWall",
+          "pass": "main",
+          "calls": 1,
+          "tris": 144
+        },
+        {
+          "path": "Park",
+          "pass": "main",
+          "calls": 1,
+          "tris": 208
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Parcel",
+          "pass": "main",
+          "calls": 1,
+          "tris": 304
+        },
+        {
+          "path": "FloorInterior/FloorPlate/FloorSlab",
+          "pass": "main",
+          "calls": 1,
+          "tris": 12
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "main",
+          "calls": 1,
+          "tris": 180
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "main",
+          "calls": 1,
+          "tris": 6000
+        }
+      ],
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    }
+  }
+}
