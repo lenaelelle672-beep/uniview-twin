@@ -99,4 +99,5 @@ interface Window {
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
   __twinEnvMaterials?: TwinEnvMaterial[]
+  __twinGrille?: Array<{ name: string; type: string; visible: boolean; world: number[]; box: number[] | null }>
 }

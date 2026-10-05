@@ -47,9 +47,10 @@ describe('轮廓挤出', () => {
   it('8F 东墙 102.26 m、南墙 59.06 m 直墙，格栅挂在南端', () => {
     const wall = eastWall()
     const upper = eastUpperOutline()
-    const eastXs = upper.filter(([x]) => x > 99).map(([x]) => x)
+    const eastXs = upper.filter(([x]) => x > 98.5).map(([x]) => x)
     expect(eastXs.length).toBeGreaterThan(1)
     expect(eastXs[0]).toBeCloseTo(eastXs[1], 6)
+    expect(eastXs[0]).toBeCloseTo(wall.faceX - 0.6, 3)
     expect(wall.faceX).toBeCloseTo(100.0535, 3)
     expect(wall.length).toBeCloseTo(102.26, 2)
     expect(wall.southLength).toBeCloseTo(59.06, 2)

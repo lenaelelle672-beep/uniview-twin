@@ -75,8 +75,13 @@ export function eastWall(): EastWall {
   }
 }
 
+/** 上层东缘内收，把外皮让给格栅，不平移挂点。 */
+export const EAST_UPPER_EAST_INSET_M = 0.6
+
 export function eastUpperOutline(): Array<[number, number]> {
-  return eastBlockOutline()
+  return eastBlockOutline().map(([x, z]) =>
+    x > EAST_FACE_X - 0.25 ? [x - EAST_UPPER_EAST_INSET_M, z] : [x, z],
+  )
 }
 
 /** 19.6 m 以下缩进的裙房。东、南各退约 1.2 m，给格栅让出外皮。 */

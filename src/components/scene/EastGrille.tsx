@@ -1,7 +1,7 @@
 import { Detailed } from '@react-three/drei'
 import { useLoader } from '@react-three/fiber'
 import { useLayoutEffect, useMemo } from 'react'
-import { Mesh, MeshStandardMaterial } from 'three'
+import { DoubleSide, Mesh, MeshStandardMaterial } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { registerReflectiveEnvMaterial } from './LocalEnvironment'
 import { eastGrilleMount } from '../../scene/massing'
@@ -17,11 +17,15 @@ function tuneEastGrille(root: Mesh['parent']) {
   root.traverse((child) => {
     const mesh = child as Mesh
     if (!mesh.isMesh) return
+    mesh.frustumCulled = false
+    mesh.castShadow = true
+    mesh.receiveShadow = true
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
     for (const material of materials) {
       if (!(material instanceof MeshStandardMaterial)) continue
       if (material.name !== 'east_grille') continue
       material.envMapIntensity = EAST_GRILLE_INTENSITY
+      material.side = DoubleSide
       registerReflectiveEnvMaterial(material)
     }
   })
