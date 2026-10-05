@@ -1,9 +1,6 @@
 import type { RoomLabel } from '../scene/stage/roomLabels'
 import type { FloorPlan, FloorRoom } from './types'
 
-/** 每层最多挂这么多房间名。每个 Text 是一次绘制，要给 officeDesks 和余量留调用。 */
-export const MAX_ROOM_LABELS = 10
-
 const PRIORITY = [
   /电梯厅|核心筒|合用前室/,
   /前台/,
@@ -23,7 +20,7 @@ const PRIORITY = [
 
 /**
  * 非房间标注：机电风口/电井、卫生间符号、门洞尺寸、常开常闭、单字母代号。
- * 只挂房间名，这类 CAD 残留不进标签。
+ * 只挂房间名，这类 CAD 残留不进标签。不过滤条数、不按同名截断。
  */
 const ANNOTATION =
   /尾气|强电|弱电|送风|排风|补风|新风|排烟|油烟|空调|暖通|水泵|配电|机房|设备|管井|风井|烟井|取风|门洞|常开|常闭|尺寸|上空|找坡|坡顶|坡底|防火隔墙|卫生|厕所|网络机房|加压|暗门/
@@ -42,12 +39,9 @@ export function isRoomName(name: string): boolean {
   return true
 }
 
-function scoreRoom(room: FloorRoom): number | null {
-  if (!isRoomName(room.name)) return null
+function scoreRoom(room: FloorRoom): number {
   const index = PRIORITY.findIndex((pattern) => pattern.test(room.name))
-  if (index >= 0) return index
-  if (room.polygon && room.confidence !== 'none' && room.confidence !== 'low') return PRIORITY.length + 1
-  return null
+  return index >= 0 ? index : PRIORITY.length
 }
 
 function displayName(name: string): string {
@@ -57,13 +51,6 @@ function displayName(name: string): string {
   if (/洽谈/.test(name)) return '洽谈室'
   if (/会议/.test(name)) return name.startsWith('会议') ? name.slice(0, 8) : '会议室'
   return name.length > 8 ? name.slice(0, 8) : name
-}
-
-function sameNameCap(text: string): number {
-  if (text === '会议室') return 2
-  if (text === '洽谈室' || text === '茶水间') return 2
-  if (text === '电梯厅' || text === '前台') return 1
-  return 1
 }
 
 function outlineSpan(outline: Array<[number, number]>): number {
@@ -80,20 +67,22 @@ function outlineSpan(outline: Array<[number, number]>): number {
   return Math.max(maxX - minX, maxZ - minZ)
 }
 
+/** 重名只靠稳定 id 和就近散开，不删。位移钳在锚点附近，避免大批标签被斥力推出楼板。 */
 function separateEndpoints(labels: RoomLabel[], minSep: number): RoomLabel[] {
+  const maxDrift = Math.min(8, Math.max(3.2, minSep * 0.85))
   const next = labels.map((label, index) => {
     const angle = (index / Math.max(labels.length, 1)) * Math.PI * 2
-    const ring = minSep * 0.55
+    const ring = Math.min(minSep * 0.22, 1.4)
     return {
       ...label,
       label: [
         label.anchor[0] + Math.cos(angle) * ring,
-        3.2 + (index % 2) * 0.55,
+        3.2 + (index % 3) * 0.28,
         label.anchor[2] + Math.sin(angle) * ring,
       ] as [number, number, number],
     }
   })
-  for (let iter = 0; iter < 14; iter += 1) {
+  for (let iter = 0; iter < 10; iter += 1) {
     let moved = false
     for (let i = 0; i < next.length; i += 1) {
       for (let j = i + 1; j < next.length; j += 1) {
@@ -113,6 +102,15 @@ function separateEndpoints(labels: RoomLabel[], minSep: number): RoomLabel[] {
     }
     if (!moved) break
   }
+  for (const label of next) {
+    const dx = label.label[0] - label.anchor[0]
+    const dz = label.label[2] - label.anchor[2]
+    const drift = Math.hypot(dx, dz)
+    if (drift <= maxDrift) continue
+    const scale = maxDrift / drift
+    label.label[0] = label.anchor[0] + dx * scale
+    label.label[2] = label.anchor[2] + dz * scale
+  }
   return next
 }
 
@@ -124,48 +122,42 @@ export interface RoomLabelFilterStats {
   dropped: string[]
 }
 
+export function roomNamesFromPlan(plan: FloorPlan): FloorRoom[] {
+  return plan.rooms
+    .filter((room) => isRoomName(room.name))
+    .slice()
+    .sort((left, right) => scoreRoom(left) - scoreRoom(right) || left.name.localeCompare(right.name, 'zh'))
+}
+
 export function roomLabelFilterStats(plan: FloorPlan): RoomLabelFilterStats {
   const dropped = plan.rooms.filter((room) => !isRoomName(room.name)).map((room) => room.name)
+  const labels = roomLabelsFromPlan(plan)
   return {
     floorId: plan.floorId,
     before: plan.rooms.length,
     after: plan.rooms.length - dropped.length,
-    shown: roomLabelsFromPlan(plan).length,
+    shown: labels.length,
     dropped: [...new Set(dropped)],
   }
 }
 
 export function roomLabelsFromPlan(plan: FloorPlan): RoomLabel[] {
-  const ranked = plan.rooms
-    .map((room) => ({ room, score: scoreRoom(room) }))
-    .filter((item): item is { room: FloorRoom; score: number } => item.score != null)
-    .sort((left, right) => left.score - right.score || left.room.name.localeCompare(right.room.name, 'zh'))
-
-  const picked: FloorRoom[] = []
-  const usedSpot = new Set<string>()
-  const usedName = new Map<string, number>()
-  for (const item of ranked) {
-    const text = displayName(item.room.name)
-    const spot = `${text}@${item.room.label[0].toFixed(2)},${item.room.label[1].toFixed(2)}`
-    if (usedSpot.has(spot)) continue
-    const count = usedName.get(text) ?? 0
-    if (count >= sameNameCap(text)) continue
-    usedSpot.add(spot)
-    usedName.set(text, count + 1)
-    picked.push(item.room)
-    if (picked.length >= MAX_ROOM_LABELS) break
-  }
-
+  const rooms = roomNamesFromPlan(plan)
+  const used = new Set<string>()
   const span = outlineSpan(plan.outline)
-  const labels = picked.map((room) => {
-    const text = displayName(room.name)
+  const density = Math.max(rooms.length, 1)
+  const minSep = Math.max(2.4, (span > 70 ? 7.2 : 4.2) / Math.sqrt(density / 12))
+  const labels = rooms.map((room, index) => {
     const [x, z] = room.label
+    let id = `${plan.floorId}:${room.id}`
+    if (used.has(id)) id = `${id}:${index}`
+    used.add(id)
     return {
-      id: `${plan.floorId}:${room.id}`,
-      text,
+      id,
+      text: displayName(room.name),
       anchor: [x, 2.05, z] as [number, number, number],
       label: [x, 3.2, z] as [number, number, number],
     }
   })
-  return separateEndpoints(labels, span > 70 ? 16 : 7.2)
+  return separateEndpoints(labels, minSep)
 }

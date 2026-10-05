@@ -26,7 +26,7 @@ export function FloorDecor({
   return (
     <>
       <DeviceBadges floorId={floorId} devices={devices} />
-      <RoomLabels labels={labels} />
+      <RoomLabels floorId={floorId} labels={labels} />
       {showPeople ? <CorridorPeople enabled paths={paths} /> : null}
     </>
   )

@@ -15,7 +15,15 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "three": "0.186.1",
+    "troika-three-text": "0.53.0",
+    "troika-three-utils": "0.53.0",
+    "troika-worker-utils": "0.53.0",
     "zustand": "5.0.15"
+  },
+  "overrides": {
+    "troika-three-text": "0.53.0",
+    "troika-three-utils": "0.53.0",
+    "troika-worker-utils": "0.53.0"
   },
   "devDependencies": {
     "@types/node": "^26.6.4",

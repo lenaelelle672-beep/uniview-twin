@@ -101,6 +101,7 @@ interface Window {
   __twinProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }
   __twinInterior?: TwinInteriorStats
   __twinLabelPx?: TwinLabelPx
+  __twinLabelPackMs?: number
   __twinFloor?: TwinFloorProbe
   __twinCut?: TwinCutStats
   __twinRig?: {

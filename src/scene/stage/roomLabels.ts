@@ -25,7 +25,7 @@ export function worldFontSizeForDistance(
 
 /** drei Text 的 characters，用来只预排这些字，避免回退字体。洽/丙始终编进子集。 */
 export function roomLabelCharacters(labels: RoomLabel[]): string {
-  return Array.from(new Set(`${labels.map((label) => label.text).join('')}洽丙`)).join('')
+  return Array.from(new Set(`${labels.map((label) => label.text).join('')}洽丙嗆`)).join('')
 }
 
 /** 标准层：三间会议室、茶水间、前台、电梯厅。引线终点在房间上方。 */

@@ -20,10 +20,10 @@ describe('房间引线标签', () => {
     expect(TROIKA_TEXT_CONFIG.defaultFontURL).toBe(ROOM_LABEL_FONT)
   })
 
-  it('图纸层标签放在 JSON 的 label 点上，地下室仍用原方案，总数不超过 30', () => {
+  it('图纸层标签放在 JSON 的 label 点上，地下室仍用原方案，id 唯一', () => {
     const labels = roomLabelsFromPlan(getFloorPlan('F12')!)
     const basement = basementRoomLabels()
-    expect(labels.length + basement.length).toBeLessThanOrEqual(30)
+    expect(labels.length).toBeGreaterThan(10)
     const text = labels.map((label) => label.text).join(' ')
     expect(text).toMatch(/会议|茶水|电梯/)
     for (const label of [...labels, ...basement]) {
@@ -36,6 +36,7 @@ describe('房间引线标签', () => {
     expect(characters).not.toMatch(/\s/)
     expect(characters).toMatch(/洽/)
     expect(characters).toMatch(/丙/)
+    expect(characters).toMatch(/嗆/)
     expect(new Set(labels.map((label) => label.id)).size).toBe(labels.length)
     expect(new Set(basement.map((label) => label.id)).size).toBe(basement.length)
   })

@@ -3,7 +3,7 @@ import { getFloorPlan } from './cache'
 import { floorDeskCount, FLOOR_DESK_COUNTS } from './deskCounts'
 import { hydrateAllAboveGrade, hydrateFloorFromDisk } from './hydrateForTests'
 import { pointInRing } from './parsePlan'
-import { isRoomName, roomLabelFilterStats, roomLabelsFromPlan, MAX_ROOM_LABELS } from './labels'
+import { isRoomName, roomLabelFilterStats, roomLabelsFromPlan } from './labels'
 
 hydrateAllAboveGrade()
 
@@ -42,11 +42,12 @@ describe('楼层图纸', () => {
     }
   })
 
-  it('房间标签只挂房间名，有稳定 id，且不超过上限', () => {
+  it('房间标签只挂房间名，有稳定唯一 id，不过滤条数', () => {
     const plan = getFloorPlan('F12')!
+    const stats = roomLabelFilterStats(plan)
     const labels = roomLabelsFromPlan(plan)
-    expect(labels.length).toBeGreaterThan(0)
-    expect(labels.length).toBeLessThanOrEqual(MAX_ROOM_LABELS)
+    expect(labels.length).toBe(stats.after)
+    expect(stats.shown).toBe(stats.after)
     const text = labels.map((label) => label.text).join(' ')
     expect(text).toMatch(/会议|茶水|电梯/)
     expect(text).not.toMatch(/尾气|强电|送风|排风|门洞|常开/)
@@ -79,7 +80,7 @@ describe('楼层图纸', () => {
     for (let level = 1; level <= 22; level += 1) {
       const stats = roomLabelFilterStats(getFloorPlan(`F${level}`)!)
       expect(stats.after).toBeLessThan(stats.before)
-      expect(stats.shown).toBeLessThanOrEqual(MAX_ROOM_LABELS)
+      expect(stats.shown).toBe(stats.after)
       expect(stats.dropped.length).toBeGreaterThan(0)
     }
   })
