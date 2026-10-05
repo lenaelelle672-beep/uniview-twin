@@ -9,8 +9,8 @@ import {
   towerRow,
 } from './levels'
 
-describe('levels.json 标高', () => {
-  it('塔楼标高只从 levels.json 读，屋面 100.2', () => {
+describe('外壳标高常量', () => {
+  it('塔楼标高来自 levels.ts 常量，屋面 100.2', () => {
     expect(TOWER_ROOF_M).toBe(LEVELS.towerRoof_m)
     expect(TOWER_ROOF_M).toBeCloseTo(100.2, 5)
     expect(floorSpec('F1').elevation).toBe(0)
@@ -20,7 +20,7 @@ describe('levels.json 标高', () => {
     expect(listFloorSpecs()).toHaveLength(23)
   })
 
-  it('东侧研发块和弧形研发中心标高也只来自 levels.json', () => {
+  it('东侧研发块和弧形研发中心标高也来自 levels.ts 常量', () => {
     expect(EAST_PARAPET_TOP_M).toBe(LEVELS.eastBlockParapetTop_m)
     expect(EAST_PARAPET_TOP_M).toBeCloseTo(45.3, 5)
     expect(CURVED_RND_ROOF_M).toBeCloseTo(17.65, 5)

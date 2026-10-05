@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { extrudeUp } from '../../scene/extrude'
 import {
@@ -16,8 +16,9 @@ import { NORTH_WING_OUTLINE } from '../../scene/shell/rings'
 import { FOOTPRINT } from '../../scene/siteGeometry'
 import { curtainMaterial, finMaterial, solidMaterial } from '../../scene/materials'
 import type { QualityTier } from '../../types'
-import { EastGrille } from './EastGrille'
 import { FinRow } from './Fins'
+
+const EastGrille = lazy(() => import('./EastGrille'))
 
 const LOWER_TOP = EAST_LOWER_TOP_M
 
@@ -74,7 +75,11 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
         height={EAST_ROOF_M - LOWER_TOP - 0.15}
         outwardFrom={focus}
       />
-      {!model && <EastGrille quality={quality} />}
+      {!model && (
+        <Suspense fallback={null}>
+          <EastGrille quality={quality} />
+        </Suspense>
+      )}
     </group>
   )
 }

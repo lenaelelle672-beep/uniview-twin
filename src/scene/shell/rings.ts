@@ -1,11 +1,14 @@
 /**
- * 外壳挤出用的紧凑轮廓。数字来自 assets/ready/floors 的 JSON，不另写一份标高。
- * 塔楼总览用 F13.outlineOverview（南弧 4 段）；单层视图用 F13.outline。
+ * 外壳挤出用的紧凑轮廓（D112：运行时不读楼层 JSON）。
+ * 塔楼总览用 F13 outlineOverview（南弧 4 段）；单层视图用 F13 outline。
+ * 来源文件（已从本 PR 删除，以 a 单 public/floors 为准）：
+ * `assets/ready/floors/F13.json`
+ * sha256 64905731b2ef7b842aaccb131f8fddcd701e0d75f4a36c44225c549b4925e23f
  */
 
 export type Ring = Array<[number, number]>
 
-/** F13.json outlineOverview.polygons[0] */
+/** F13.json `outlineOverview.polygons[0]`，来源 sha256 见文件头。 */
 export const TOWER_OUTLINE_OVERVIEW: Ring = [
   [-30.1432, -14.8969],
   [29.0409, -14.8969],
@@ -32,7 +35,7 @@ export const TOWER_OUTLINE_OVERVIEW: Ring = [
   [-30.1432, -2.295],
 ]
 
-/** F13.json outline[0]，单层视图用 */
+/** F13.json `outline[0]`，单层视图用；来源 sha256 见文件头。 */
 export const TOWER_OUTLINE: Ring = [
   [-30.1432, -14.8969],
   [29.0409, -14.8969],

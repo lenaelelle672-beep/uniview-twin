@@ -1,7 +1,7 @@
 import { Detailed } from '@react-three/drei'
-import { useLoader } from '@react-three/fiber'
-import { useLayoutEffect, useMemo } from 'react'
-import { DoubleSide, Mesh, MeshStandardMaterial } from 'three'
+import { useFrame, useLoader } from '@react-three/fiber'
+import { useLayoutEffect, useMemo, useState } from 'react'
+import { DoubleSide, Mesh, MeshStandardMaterial, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { registerReflectiveEnvMaterial } from './LocalEnvironment'
 import { eastGrilleMount } from '../../scene/massing'
@@ -40,18 +40,31 @@ function GrilleModel({ url }: { url: string }) {
   return <primitive object={scene} />
 }
 
+const mountWorld = new Vector3()
+
+function BalancedGrille() {
+  const [near, setNear] = useState(false)
+  const mount = eastGrilleMount()
+  useFrame(({ camera }) => {
+    mountWorld.set(...mount.position)
+    if (camera.position.distanceTo(mountWorld) < 90) setNear(true)
+  })
+  if (!near) return <GrilleModel url={EAST_GRILLE_LO} />
+  return (
+    <Detailed distances={[0, 80]}>
+      <GrilleModel url={EAST_GRILLE_HI} />
+      <GrilleModel url={EAST_GRILLE_LO} />
+    </Detailed>
+  )
+}
+
 export function EastGrille({ quality }: { quality: QualityTier }) {
   const mount = eastGrilleMount()
   return (
     <group name="EastGrille" position={mount.position} rotation={mount.rotation}>
-      {quality === 'perf' ? (
-        <GrilleModel url={EAST_GRILLE_LO} />
-      ) : (
-        <Detailed distances={[0, 80]}>
-          <GrilleModel url={EAST_GRILLE_HI} />
-          <GrilleModel url={EAST_GRILLE_LO} />
-        </Detailed>
-      )}
+      {quality === 'perf' ? <GrilleModel url={EAST_GRILLE_LO} /> : <BalancedGrille />}
     </group>
   )
 }
+
+export default EastGrille
