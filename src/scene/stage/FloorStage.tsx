@@ -11,7 +11,7 @@ import { showCorridorPeople } from './corridor'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
-import { STATUS_COLOR } from './status'
+import { MONITOR_DISPLAY_COLOR } from './materials'
 import { workstationPosition } from './workstationPosition'
 import { MonitorSamples } from './MonitorSamples'
 import { TowerInterior } from './TowerInterior'
@@ -96,7 +96,7 @@ export function FloorStage() {
     for (const device of devices) {
       if (device.type === 'pc' && device.deskId) byDesk.set(device.deskId, device.status)
     }
-    return floorDesks.map((desk) => STATUS_COLOR[byDesk.get(desk.id) ?? 'offline'])
+    return floorDesks.map((desk) => MONITOR_DISPLAY_COLOR[byDesk.get(desk.id) ?? 'offline'])
   }, [devices, floorDesks])
   const floorDevices = useMemo(() => {
     if (!active) return []

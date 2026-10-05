@@ -1,19 +1,18 @@
-import { DoubleSide, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
+import { Color, DoubleSide, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
 
 /** 三维屏显示色。蓝图仍用 STATUS_HEX；这里单独写成显示色，保证告警/在线亮度比 ≥1.5。 */
 export const MONITOR_DISPLAY_SRGB = {
-  alarm: '#ff6b66',
-  online: '#21864f',
+  alarm: '#ff8078',
+  online: '#176a40',
   idle: '#2b58b3',
   offline: '#757b82',
 } as const
 
-function srgbVec3(hex: string): string {
-  const value = Number.parseInt(hex.slice(1), 16)
-  const r = ((value >> 16) & 255) / 255
-  const g = ((value >> 8) & 255) / 255
-  const b = (value & 255) / 255
-  return `vec3(${r.toFixed(6)}, ${g.toFixed(6)}, ${b.toFixed(6)})`
+export const MONITOR_DISPLAY_COLOR = {
+  online: new Color(MONITOR_DISPLAY_SRGB.online),
+  idle: new Color(MONITOR_DISPLAY_SRGB.idle),
+  alarm: new Color(MONITOR_DISPLAY_SRGB.alarm),
+  offline: new Color(MONITOR_DISPLAY_SRGB.offline),
 }
 
 export const slabMaterial = new MeshStandardMaterial({ color: '#e6e1d8', roughness: 0.86, metalness: 0.02 })
@@ -29,25 +28,11 @@ export const chairMaterial = new MeshStandardMaterial({ color: '#3c4654', roughn
 export const monitorMaterial = new MeshBasicMaterial({
   color: '#ffffff',
   vertexColors: true,
-  // 本网格在合成器之后、NoToneMapping 通道里画。这里写死显示色，三层亮度一致。
+  // 合成器之后、NoToneMapping 通道里画。实例色就是显示色，三层亮度一致。
   toneMapped: false,
+  depthTest: false,
+  depthWrite: false,
 })
-monitorMaterial.onBeforeCompile = (shader) => {
-  shader.fragmentShader = shader.fragmentShader.replace(
-    '#include <opaque_fragment>',
-    `#include <opaque_fragment>
-     #ifdef USE_COLOR
-     float alarmMask = step(0.72, vColor.r) * step(vColor.g, 0.42) * step(vColor.b, 0.42);
-     float onlineMask = step(0.35, vColor.g) * step(vColor.r + 0.15, vColor.g) * step(vColor.b + 0.05, vColor.g);
-     float idleMask = step(0.55, vColor.b) * step(vColor.r, 0.45) * step(vColor.g, 0.45);
-     vec3 rest = ${srgbVec3(MONITOR_DISPLAY_SRGB.offline)};
-     rest = mix(rest, ${srgbVec3(MONITOR_DISPLAY_SRGB.idle)}, idleMask);
-     rest = mix(rest, ${srgbVec3(MONITOR_DISPLAY_SRGB.online)}, onlineMask);
-     gl_FragColor.rgb = mix(rest, ${srgbVec3(MONITOR_DISPLAY_SRGB.alarm)}, alarmMask);
-     #endif`,
-  )
-}
-monitorMaterial.customProgramCacheKey = () => 'monitor-untoned-display'
 export const kitchenMaterial = new MeshStandardMaterial({ color: '#d5dbdf', roughness: 0.42, metalness: 0.35 })
 export const fanFloorMaterial = new MeshStandardMaterial({ color: '#3e4652', roughness: 0.84, metalness: 0.04 })
 export const seatMaterial = new MeshStandardMaterial({ color: '#c43648', roughness: 0.62, metalness: 0.06 })

@@ -4,7 +4,7 @@ import { floorSpec } from '../../data/floors'
 import { TOWER } from '../siteGeometry'
 import { monitorPlateCorners } from './geometry'
 import type { Slot } from './layout'
-import { STATUS_COLOR } from './status'
+import { MONITOR_DISPLAY_COLOR } from './materials'
 import { SLAB_M } from './cut'
 
 const corner = new Vector3()
@@ -48,8 +48,8 @@ function boxFromCorners(
   let y = minY + padY
   let w = maxX - padX - x
   let h = maxY - padY - y
-  const minW = 10
-  const minH = 8
+  const minW = 4
+  const minH = 4
   if (w < minW) {
     x -= (minW - w) / 2
     w = minW
@@ -71,10 +71,11 @@ function pickBox(
   width: number,
   height: number,
 ) {
+  // 楼板在画面中上部。靠下的投影会落到塔楼立面上，取样会变成深色玻璃。
   const inner = candidates.filter((item) => {
     const cx = item.box.x + item.box.w / 2
     const cy = item.box.y + item.box.h / 2
-    return cx > width * 0.18 && cx < width * 0.82 && cy > height * 0.18 && cy < height * 0.82
+    return cx > width * 0.2 && cx < width * 0.8 && cy > height * 0.26 && cy < height * 0.5
   })
   const pool = inner.length > 0 ? inner : candidates
   return [...pool].sort((a, b) => b.box.w * b.box.h - a.box.w * a.box.h)[0] ?? null
@@ -109,8 +110,8 @@ export function MonitorSamples({
       )
       const box = boxFromCorners(projected, width, height)
       if (!box) return
-      if (color.getHex() === STATUS_COLOR.alarm.getHex()) alarm.push({ deskId, box })
-      if (color.getHex() === STATUS_COLOR.online.getHex()) online.push({ deskId, box })
+      if (color.getHex() === MONITOR_DISPLAY_COLOR.alarm.getHex()) alarm.push({ deskId, box })
+      if (color.getHex() === MONITOR_DISPLAY_COLOR.online.getHex()) online.push({ deskId, box })
     })
     window.__twinMonitorBoxes = {
       floorId,

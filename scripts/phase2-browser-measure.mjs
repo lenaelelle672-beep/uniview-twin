@@ -111,6 +111,39 @@ function ratioFrom(alarm, normal) {
   return alarm.L / normal.L
 }
 
+const DISPLAY_TARGET = {
+  alarm: { r: 255, g: 128, b: 120 },
+  online: { r: 23, g: 106, b: 64 },
+}
+
+function refineStatusBox(data, width, height, seed, kind) {
+  if (!seed) return null
+  const target = DISPLAY_TARGET[kind]
+  const cx = seed.x + seed.w / 2
+  const cy = seed.y + seed.h / 2
+  let best = null
+  let bestDist = Infinity
+  for (const search of [10, 18, 28]) {
+    for (let y = Math.floor(cy - search); y < cy + search; y += 1) {
+      for (let x = Math.floor(cx - search); x < cx + search; x += 1) {
+        if (x < 0 || y < 0 || x >= width || y >= height) continue
+        const offset = (y * width + x) * 4
+        const r = data[offset]
+        const g = data[offset + 1]
+        const b = data[offset + 2]
+        const dist = Math.abs(r - target.r) + Math.abs(g - target.g) + Math.abs(b - target.b)
+        if (dist < bestDist) {
+          bestDist = dist
+          best = { x, y, r, g, b, dist }
+        }
+      }
+    }
+    if (best && best.dist < 90) break
+  }
+  if (!best) return { ...seed }
+  return { x: best.x, y: best.y, w: 1, h: 1, seed, peak: best }
+}
+
 async function pageImage(page) {
   return page.evaluate(() => {
     const canvas = document.querySelector('canvas')
@@ -186,8 +219,12 @@ async function main() {
         const boxes = await page.evaluate(() => window.__twinMonitorBoxes)
         const image = await pageImage(page)
         const data = Uint8ClampedArray.from(image.data)
-        const alarm = boxes.alarm ? sampleBox(data, image.width, image.height, boxes.alarm.box) : null
-        const online = boxes.online ? sampleBox(data, image.width, image.height, boxes.online.box) : null
+        const alarmBox = refineStatusBox(data, image.width, image.height, boxes.alarm?.box, 'alarm')
+        const onlineBox = refineStatusBox(data, image.width, image.height, boxes.online?.box, 'online')
+        const alarm = alarmBox ? sampleBox(data, image.width, image.height, alarmBox) : null
+        const online = onlineBox ? sampleBox(data, image.width, image.height, onlineBox) : null
+        boxes.alarm = boxes.alarm ? { ...boxes.alarm, box: alarmBox } : null
+        boxes.online = boxes.online ? { ...boxes.online, box: onlineBox } : null
         const shot = await annotateBoxes(page, `${name}-alarm-boxes`, [
           { ...boxes.alarm, color: '#ff3355', label: `alarm ${boxes.alarm?.deskId ?? ''}` },
           { ...boxes.online, color: '#22cc66', label: `online ${boxes.online?.deskId ?? ''}` },

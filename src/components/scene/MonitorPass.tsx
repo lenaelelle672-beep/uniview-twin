@@ -16,11 +16,15 @@ export function MonitorPass({ renderPriority }: { renderPriority: number }) {
     const prevExposure = gl.toneMappingExposure
     const prevAutoClear = gl.autoClear
     const prevMask = camera.layers.mask
+    const prevBackground = scene.background
     gl.autoClear = false
     gl.toneMapping = NoToneMapping
     gl.toneMappingExposure = 1
     camera.layers.set(MONITOR_LAYER)
+    scene.background = null
+    gl.clearDepth()
     gl.render(scene, camera)
+    scene.background = prevBackground
     camera.layers.mask = prevMask
     gl.toneMapping = prevTone
     gl.toneMappingExposure = prevExposure
