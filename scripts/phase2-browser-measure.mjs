@@ -176,6 +176,42 @@ function samplePatches(data, width, height, entry) {
   }))
 }
 
+function bestInnerBox(data, width, height, seed, target) {
+  if (!boxAreaOk(seed)) return null
+  let best = { x: seed.x, y: seed.y, w: 4, h: 4 }
+  let bestDist = Infinity
+  const x0 = Math.floor(seed.x)
+  const y0 = Math.floor(seed.y)
+  const x1 = Math.max(x0, Math.ceil(seed.x + seed.w) - 4)
+  const y1 = Math.max(y0, Math.ceil(seed.y + seed.h) - 4)
+  for (let y = y0; y <= y1; y += 1) {
+    for (let x = x0; x <= x1; x += 1) {
+      const sample = sampleBox(data, width, height, { x, y, w: 4, h: 4 })
+      if (!sample) continue
+      const dist = Math.abs(sample.r - target.r) + Math.abs(sample.g - target.g) + Math.abs(sample.b - target.b)
+      if (dist < bestDist) {
+        bestDist = dist
+        best = { x, y, w: 4, h: 4 }
+      }
+    }
+  }
+  return { box: best, sample: sampleBox(data, width, height, best), dist: bestDist }
+}
+
+async function flyToDesk(page, floorId, deskId) {
+  await page.evaluate(
+    (floor, desk) => {
+      window.__twinFocusDevice?.({ floor, deskId: desk })
+    },
+    floorId,
+    deskId,
+  )
+  await page
+    .waitForFunction((id) => window.__twinLocate?.deskId === id || window.__twinFlyEnd?.deskId === id, { timeout: 20_000 }, deskId)
+    .catch(() => {})
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)))
+}
+
 async function pageImage(page) {
   return page.evaluate(() => {
     const canvas = document.querySelector('canvas')
@@ -284,13 +320,53 @@ async function main() {
             { timeout: 90_000 },
             floorId,
           )
-          await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)))
-          const boxes = await page.evaluate(() => window.__twinMonitorBoxes)
-          const image = await pageImage(page)
-          const data = Uint8ClampedArray.from(image.data)
-          const alarmPatches = samplePatches(data, image.width, image.height, boxes.alarm)
-          const onlinePatches = samplePatches(data, image.width, image.height, boxes.online)
-          const onlineMean = onlinePatches[0]?.sample ?? null
+          await screenshotCanvas(page, `${name}-slab`)
+          const deskIds = await page.evaluate((id) => {
+            const devices = window.__twinDevices ?? []
+            const alarm = devices.find((device) => device.floorId === id && device.status === 'alarm' && device.deskId)
+            const online = devices.find((device) => device.floorId === id && device.status === 'online' && device.deskId)
+            return { alarm: alarm?.deskId ?? window.__twinMonitorBoxes?.alarm?.deskId, online: online?.deskId ?? window.__twinMonitorBoxes?.online?.deskId }
+          }, floorId)
+          await flyToDesk(page, floorId, deskIds.alarm)
+          await page
+            .waitForFunction((id) => window.__twinMonitorBoxes?.alarm?.deskId === id && window.__twinMonitorBoxes.alarm.box.w >= 8, {
+              timeout: 20_000,
+            }, deskIds.alarm)
+            .catch(() => {})
+          await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)))
+          const alarmBoxes = await page.evaluate(() => window.__twinMonitorBoxes)
+          const alarmImage = await pageImage(page)
+          const alarmData = Uint8ClampedArray.from(alarmImage.data)
+          const alarmInner = bestInnerBox(alarmData, alarmImage.width, alarmImage.height, alarmBoxes.alarm?.box, {
+            r: 255,
+            g: 106,
+            b: 92,
+          })
+          const alarmPatches = [
+            ...samplePatches(alarmData, alarmImage.width, alarmImage.height, alarmBoxes.alarm),
+            ...(alarmInner ? [{ name: 'inner4', box: alarmInner.box, sample: alarmInner.sample }] : []),
+          ]
+          const shot = await annotateBoxes(page, `${name}-alarm-boxes`, [
+            { box: alarmBoxes.alarm?.box, color: '#ff3355', label: `alarm ${alarmBoxes.alarm?.deskId ?? ''}` },
+            ...(alarmBoxes.alarm?.patches ?? []).map((patch) => ({ box: patch.box, color: '#ff88aa', label: patch.name })),
+            ...(alarmInner ? [{ box: alarmInner.box, color: '#ffcc00', label: 'inner4' }] : []),
+          ])
+          await flyToDesk(page, floorId, deskIds.online)
+          await page
+            .waitForFunction((id) => window.__twinMonitorBoxes?.online?.deskId === id && window.__twinMonitorBoxes.online.box.w >= 8, {
+              timeout: 20_000,
+            }, deskIds.online)
+            .catch(() => {})
+          await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)))
+          const onlineBoxes = await page.evaluate(() => window.__twinMonitorBoxes)
+          const onlineImage = await pageImage(page)
+          const onlineData = Uint8ClampedArray.from(onlineImage.data)
+          const onlineInner = bestInnerBox(onlineData, onlineImage.width, onlineImage.height, onlineBoxes.online?.box, {
+            r: 23,
+            g: 106,
+            b: 64,
+          })
+          const onlineMean = onlineInner?.sample ?? samplePatches(onlineData, onlineImage.width, onlineImage.height, onlineBoxes.online)[0]?.sample ?? null
           const patchRatios = alarmPatches
             .map((item) => ({
               name: item.name,
@@ -301,17 +377,9 @@ async function main() {
             }))
             .filter((item) => item.ratio != null)
           const worst = patchRatios.reduce((best, item) => (best == null || item.ratio < best.ratio ? item : best), null)
-          const alarm = worst?.sample ?? alarmPatches[0]?.sample ?? null
+          const alarm = worst?.sample ?? alarmInner?.sample ?? alarmPatches[0]?.sample ?? null
           const hsv = alarm ? rgbToHsv(alarm.r, alarm.g, alarm.b) : null
-          const shot = await annotateBoxes(page, `${name}-alarm-boxes`, [
-            { box: boxes.alarm?.box, color: '#ff3355', label: `alarm ${boxes.alarm?.deskId ?? ''}` },
-            { box: boxes.online?.box, color: '#22cc66', label: `online ${boxes.online?.deskId ?? ''}` },
-            ...(boxes.alarm?.patches ?? []).map((patch) => ({
-              box: patch.box,
-              color: '#ff88aa',
-              label: patch.name,
-            })),
-          ])
+          const boxes = { ...alarmBoxes, online: onlineBoxes.online }
           await screenshotCanvas(page, name)
           const external = requests.filter((url) => !url.startsWith(baseUrl) && !url.startsWith('data:') && !url.startsWith('blob:'))
           const entry = {

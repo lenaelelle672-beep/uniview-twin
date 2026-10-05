@@ -6,6 +6,7 @@ import {
   AgXToneMapping,
   Color,
   Group,
+  InstancedMesh,
   Mesh,
   MeshBasicMaterial,
   MeshDepthMaterial,
@@ -20,7 +21,7 @@ import {
   type WebGLRenderer,
 } from 'three'
 import { HorizontalBlurShader, VerticalBlurShader } from 'three-stdlib'
-import { blitColor, blitDepth, ensureMonitorTarget, releaseMonitorTarget } from '../../../scene/monitorDepth'
+import { blitDepth, ensureMonitorTarget, releaseMonitorTarget } from '../../../scene/monitorDepth'
 import { MONITOR_LAYER } from '../../../scene/overlayOrder'
 import {
   CONTACT_SHADOW_FAR,
@@ -37,14 +38,23 @@ const copyMesh = new Mesh(
 )
 
 class CaptureSceneDepthPass extends Pass {
-  constructor() {
-    super('CaptureSceneDepthPass')
+  constructor(scene: Scene) {
+    super('CaptureSceneDepthPass', scene)
     this.needsSwap = false
   }
 
   render(renderer: WebGLRenderer, inputBuffer: WebGLRenderTarget) {
+    if (!this.scene.getObjectByName('WorkstationMonitors')) return
     const dest = ensureMonitorTarget(inputBuffer.width, inputBuffer.height)
+    const previous = renderer.getRenderTarget()
+    renderer.setRenderTarget(dest)
+    renderer.clear(true, true, false)
+    renderer.setRenderTarget(previous)
     blitDepth(renderer, inputBuffer, dest)
+    const gl = renderer.getContext()
+    for (let i = 0; i < 4; i += 1) {
+      if (gl.getError() === gl.NO_ERROR) break
+    }
   }
 }
 
@@ -57,30 +67,60 @@ class MonitorAfterTonePass extends Pass {
   render(renderer: WebGLRenderer, inputBuffer: WebGLRenderTarget) {
     if (!this.scene.getObjectByName('WorkstationMonitors')) return
     const dest = ensureMonitorTarget(inputBuffer.width, inputBuffer.height)
-    blitColor(renderer, inputBuffer, dest)
-
     const prevTone = renderer.toneMapping
     const prevExposure = renderer.toneMappingExposure
     const prevAutoClear = renderer.autoClear
     const prevMask = this.camera.layers.mask
     const prevBackground = this.scene.background
     const prevTarget = renderer.getRenderTarget()
+
+    const material = copyMesh.material as MeshBasicMaterial
+    material.map = inputBuffer.texture
     renderer.autoClear = false
+    renderer.setRenderTarget(dest)
+    renderer.clear(true, false, false)
+    renderer.render(copyMesh, copyCamera)
+
+    const gl = renderer.getContext()
+    const hidden: Array<{ object: { visible: boolean }; visible: boolean }> = []
+    const keep = new Set<object>()
+    for (const name of ['FloorInterior', 'FloorPlate']) {
+      const root = this.scene.getObjectByName(name)
+      if (!root) continue
+      root.traverse((child) => keep.add(child))
+      let parent = root.parent
+      while (parent) {
+        keep.add(parent)
+        parent = parent.parent
+      }
+    }
+    this.scene.traverse((object) => {
+      if (!(object instanceof Mesh) && !(object instanceof InstancedMesh)) return
+      if (keep.has(object) || !object.visible) return
+      hidden.push({ object, visible: true })
+      object.visible = false
+    })
+    this.camera.layers.enableAll()
+    this.camera.layers.disable(MONITOR_LAYER)
+    gl.colorMask(false, false, false, false)
+    renderer.clear(false, true, false)
+    renderer.render(this.scene, this.camera)
+    gl.colorMask(true, true, true, true)
+    for (const item of hidden) item.object.visible = item.visible
+
     renderer.toneMapping = NoToneMapping
     renderer.toneMappingExposure = 1
     this.camera.layers.set(MONITOR_LAYER)
     this.scene.background = null
-    renderer.setRenderTarget(dest)
     renderer.render(this.scene, this.camera)
     this.scene.background = prevBackground
     this.camera.layers.mask = prevMask
     renderer.toneMapping = prevTone
     renderer.toneMappingExposure = prevExposure
 
-    const material = copyMesh.material as MeshBasicMaterial
     material.map = dest.texture
-    renderer.autoClear = true
     renderer.setRenderTarget(inputBuffer)
+    renderer.clear(true, false, false)
     renderer.render(copyMesh, copyCamera)
     renderer.autoClear = prevAutoClear
     renderer.setRenderTarget(prevTarget)
@@ -88,7 +128,8 @@ class MonitorAfterTonePass extends Pass {
 }
 
 function CaptureSceneDepth() {
-  const pass = useMemo(() => new CaptureSceneDepthPass(), [])
+  const scene = useThree((state) => state.scene)
+  const pass = useMemo(() => new CaptureSceneDepthPass(scene), [scene])
   return <primitive object={pass} />
 }
 
@@ -297,7 +338,7 @@ export function PostFX({ onLive, active = true }: { onLive?: () => void; active?
   return (
     <>
       <ToneMappingBridge active={active} />
-      <EffectComposer enabled={active} multisampling={2} enableNormalPass={false} stencilBuffer={false} renderPriority={1}>
+      <EffectComposer enabled={active} multisampling={0} enableNormalPass={false} stencilBuffer={false} renderPriority={1}>
         <ComposerBudget active={active} />
         <CaptureSceneDepth />
         <BalancedAO />

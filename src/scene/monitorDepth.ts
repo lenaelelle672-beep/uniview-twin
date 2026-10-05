@@ -1,4 +1,4 @@
-import { WebGLRenderTarget, type WebGLRenderer } from 'three'
+import { HalfFloatType, LinearFilter, WebGLRenderTarget, type WebGLRenderer } from 'three'
 
 let monitorTarget: WebGLRenderTarget | null = null
 
@@ -104,6 +104,9 @@ export function ensureMonitorTarget(width: number, height: number) {
     depthBuffer: true,
     stencilBuffer: false,
     samples: 0,
+    type: HalfFloatType,
+    minFilter: LinearFilter,
+    magFilter: LinearFilter,
   })
   monitorTarget.texture.generateMipmaps = false
   monitorTarget.texture.name = 'MonitorAfterTone.SingleSample'
@@ -129,16 +132,16 @@ export function balancedTargetInventory(width: number, height: number) {
       width,
       height,
       format: 'RGBA16F+Depth',
-      samples: 2,
-      bytes: msaaColorBytes(width, height, 8, 2) + msaaColorBytes(width, height, 4, 2),
+      samples: 1,
+      bytes: msaaColorBytes(width, height, 8, 1) + msaaColorBytes(width, height, 4, 1),
     },
     {
       name: 'composer.output',
       width,
       height,
       format: 'RGBA16F+Depth',
-      samples: 2,
-      bytes: msaaColorBytes(width, height, 8, 2) + msaaColorBytes(width, height, 4, 2),
+      samples: 1,
+      bytes: msaaColorBytes(width, height, 8, 1) + msaaColorBytes(width, height, 4, 1),
     },
     { name: 'n8ao.write', width: halfW, height: halfH, format: 'RGBA8', samples: 1, bytes: halfW * halfH * 4 },
     { name: 'n8ao.read', width: halfW, height: halfH, format: 'RGBA8', samples: 1, bytes: halfW * halfH * 4 },
@@ -153,9 +156,9 @@ export function balancedTargetInventory(width: number, height: number) {
       name: 'monitorAfterTone',
       width,
       height,
-      format: 'RGBA8+Depth',
+      format: 'RGBA16F+Depth',
       samples: 1,
-      bytes: width * height * 4 + width * height * 4,
+      bytes: width * height * 8 + width * height * 4,
     },
   ]
   const bytes = items.reduce((sum, item) => sum + item.bytes, 0)
