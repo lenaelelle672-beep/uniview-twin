@@ -177,6 +177,7 @@ export function FloorStage() {
             deskIds={floorDesks.map((desk) => desk.id)}
           />
         )}
+        {/* 总览不挂 MonitorSamples；进单层才加载该 chunk。 */}
       </Suspense>
       <InteriorProbe floorId={active} dataDesks={floorDesks.length} />
     </>

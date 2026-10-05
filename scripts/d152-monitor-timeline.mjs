@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
- * D152：常速 / Fast 3G 网络时间线：首帧、__twinReady、预取、MonitorSamples chunk。
+ * D152：均衡档常速 / Fast 3G 各 3 轮。每轮报首帧 / 预取 / MonitorSamples，
+ * MonitorSamples 必须晚于预取资源（floorDecor|textRuntime|BlueprintView）。
  */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -10,6 +11,7 @@ const require = createRequire(import.meta.url)
 const puppeteer = require('puppeteer-core')
 const baseUrl = (process.argv[2] ?? 'http://127.0.0.1:5190').replace(/\/$/, '')
 const evidenceDir = resolve(process.cwd(), 'docs/T012-evidence')
+const ROUNDS = Number(process.env.ROUNDS ?? 3)
 
 function chromePath() {
   return (
@@ -25,7 +27,12 @@ function chromePath() {
   )
 }
 
-async function measure(browser, network) {
+function firstStart(entries) {
+  if (!entries.length) return null
+  return Math.min(...entries.map((entry) => entry.start))
+}
+
+async function measure(browser, network, round) {
   const page = await browser.newPage()
   await page.setCacheEnabled(false)
   await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
@@ -44,7 +51,7 @@ async function measure(browser, network) {
   await page.waitForFunction(() => window.__twinReady === true && window.__twinPrefetchAt != null, {
     timeout: 180_000,
   })
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 2500)))
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 3500)))
   const marks = await page.evaluate(() => {
     const resources = performance.getEntriesByType('resource').map((entry) => ({
       name: entry.name.replace(location.origin, ''),
@@ -54,27 +61,31 @@ async function measure(browser, network) {
     return {
       firstFrameAt: window.__twinFirstFrameAt ?? null,
       readyAt: window.__twinReadyAt ?? null,
-      prefetchAt: window.__twinPrefetchAt ?? null,
+      prefetchMark: window.__twinPrefetchAt ?? null,
       monitor: resources.filter((entry) => /MonitorSamples/i.test(entry.name)),
       prefetchChunks: resources.filter((entry) => /floorDecor|textRuntime|BlueprintView/i.test(entry.name)),
-      resources: resources.filter((entry) => /MonitorSamples|floorDecor|textRuntime|BlueprintView|\.hdr/i.test(entry.name)),
     }
   })
   await page.close()
-  const monitorStart = marks.monitor[0]?.start ?? null
-  const prefetchStart = marks.prefetchAt
-  const first = marks.firstFrameAt
-  const between = first != null && prefetchStart != null && monitorStart != null && monitorStart > first && monitorStart < prefetchStart
+  const firstFrameAt = marks.firstFrameAt
+  const prefetchAt = firstStart(marks.prefetchChunks) ?? marks.prefetchMark
+  const monitorSamplesAt = firstStart(marks.monitor)
+  const afterPrefetch = monitorSamplesAt != null && prefetchAt != null && monitorSamplesAt > prefetchAt
+  const between = firstFrameAt != null && prefetchAt != null && monitorSamplesAt != null && monitorSamplesAt > firstFrameAt && monitorSamplesAt < prefetchAt
   return {
     network,
+    round,
     wallMs: Date.now() - nav,
-    firstFrameAt: marks.firstFrameAt,
+    firstFrameAt,
+    prefetchAt,
+    monitorSamplesAt,
+    prefetchMark: marks.prefetchMark,
     readyAt: marks.readyAt,
-    prefetchAt: marks.prefetchAt,
     monitorSamples: marks.monitor,
     prefetchChunks: marks.prefetchChunks,
-    ok: monitorStart == null || !between,
+    afterPrefetch,
     betweenFirstAndPrefetch: between,
+    ok: afterPrefetch && !between,
   }
 }
 
@@ -90,12 +101,24 @@ async function main() {
       '--no-sandbox',
     ],
   })
-  const report = {
-    baseUrl,
-    normal: await measure(browser, 'normal'),
-    fast3g: await measure(browser, 'fast3g'),
+  const report = { baseUrl, quality: 'balanced', rounds: ROUNDS, networks: {}, failures: [] }
+  for (const network of ['normal', 'fast3g']) {
+    const rows = []
+    for (let round = 1; round <= ROUNDS; round += 1) {
+      const row = await measure(browser, network, round)
+      rows.push(row)
+      console.error(
+        `${network}#${round} first=${row.firstFrameAt?.toFixed?.(1)} prefetch=${row.prefetchAt?.toFixed?.(1)} monitor=${row.monitorSamplesAt?.toFixed?.(1)} afterPrefetch=${row.afterPrefetch}`,
+      )
+      if (!row.ok) {
+        report.failures.push(
+          `${network}#${round} monitor ${row.monitorSamplesAt} vs prefetch ${row.prefetchAt} first ${row.firstFrameAt}`,
+        )
+      }
+    }
+    report.networks[network] = rows
   }
-  report.ok = report.normal.ok && report.fast3g.ok
+  report.ok = report.failures.length === 0
   await browser.close()
   await mkdir(evidenceDir, { recursive: true })
   await writeFile(resolve(evidenceDir, 'd152-monitor-timeline.json'), JSON.stringify(report, null, 2))
