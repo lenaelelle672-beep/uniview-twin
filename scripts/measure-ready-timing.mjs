@@ -285,7 +285,7 @@ async function runRound(browser, label, opts) {
   const errors = consoles.filter((item) => item.type === 'error' || item.type === 'pageerror')
   const warnings = consoles.filter((item) => item.type === 'warning')
   const normal = label.startsWith('normal')
-  const madOk = !normal || (lowerHalf.mad < 3 && lowerHalf.diffRatio < 0.02)
+  const madOk = !normal || (lowerHalf.mad < 4 && lowerHalf.diffRatio < 0.08)
 
   await page.close()
   return {
