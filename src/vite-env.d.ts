@@ -80,14 +80,6 @@ interface TwinExplodeStats {
   floors: TwinExplodeFloor[]
 }
 
-interface TwinEnvMaterial {
-  key: string
-  name: string
-  matched: boolean
-  envMapIntensity: number
-  hasEnvMap: boolean
-}
-
 interface TwinSampleBox {
   x: number
   y: number
@@ -108,6 +100,14 @@ interface TwinFacadeBoxes {
   canvas: { width: number; height: number }
   selected: TwinSampleBox
   neighbor: TwinSampleBox
+}
+
+interface TwinEnvMaterial {
+  key: string
+  name: string
+  matched: boolean
+  envMapIntensity: number
+  hasEnvMap: boolean
 }
 
 interface Window {
@@ -171,21 +171,6 @@ interface Window {
   __twinHighlight?: string
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
-  __twinEnvMaterials?: TwinEnvMaterial[]
-  __twinGrille?: Array<{ name: string; type: string; visible: boolean; world: number[]; box: number[] | null }>
-  __twinRaycast?: (
-    x1: number,
-    y1: number,
-    z1: number,
-    x2: number,
-    y2: number,
-    z2: number,
-  ) => Array<{ name: string; parent: string; distance: number; point: number[] }>
-  __twinCanvasProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }
-  __twinPick?: (
-    cx: number,
-    cy: number,
-  ) => { name: string; parent: string; material: string; distance: number; point: [number, number, number] } | null
   __twinMonitorBoxes?: TwinMonitorBoxes
   __twinFacadeBoxes?: TwinFacadeBoxes
   __twinSetExploded?: (exploded: boolean) => void
@@ -234,4 +219,19 @@ interface Window {
     scratch?: HTMLCanvasElement
     scratchCtx?: CanvasRenderingContext2D | null
   }
+  __twinEnvMaterials?: TwinEnvMaterial[]
+  __twinGrille?: Array<{ name: string; type: string; visible: boolean; world: number[]; box: number[] | null }>
+  __twinRaycast?: (
+    x1: number,
+    y1: number,
+    z1: number,
+    x2: number,
+    y2: number,
+    z2: number,
+  ) => Array<{ name: string; parent: string; distance: number; point: number[] }>
+  __twinCanvasProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }
+  __twinPick?: (
+    cx: number,
+    cy: number,
+  ) => { name: string; parent: string; material: string; distance: number; point: [number, number, number] } | null
 }

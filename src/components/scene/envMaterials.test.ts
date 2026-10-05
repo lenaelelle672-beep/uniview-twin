@@ -3,14 +3,11 @@ import { curtainMaterial, eaveMaterial, finMaterial, grilleMaterial, jointMateri
 import { REFLECTIVE_ENV_MATERIALS } from './LocalEnvironment'
 
 describe('反射材质名单', () => {
-  it('五个自带材质按中文名登记，且 name 与键一致', () => {
-    expect(REFLECTIVE_ENV_MATERIALS['幕墙']).toBe(curtainMaterial)
-    expect(REFLECTIVE_ENV_MATERIALS['接缝']).toBe(jointMaterial)
-    expect(REFLECTIVE_ENV_MATERIALS['格栅']).toBe(grilleMaterial)
-    expect(REFLECTIVE_ENV_MATERIALS['檐口']).toBe(eaveMaterial)
-    expect(REFLECTIVE_ENV_MATERIALS['铝翅']).toBe(finMaterial)
-    for (const [name, material] of Object.entries(REFLECTIVE_ENV_MATERIALS)) {
-      expect(material.name).toBe(name)
-    }
+  it('五个自带材质按英文键登记', () => {
+    expect(REFLECTIVE_ENV_MATERIALS.curtain).toBe(curtainMaterial)
+    expect(REFLECTIVE_ENV_MATERIALS.joint).toBe(jointMaterial)
+    expect(REFLECTIVE_ENV_MATERIALS.grille).toBe(grilleMaterial)
+    expect(REFLECTIVE_ENV_MATERIALS.eave).toBe(eaveMaterial)
+    expect(REFLECTIVE_ENV_MATERIALS.fin).toBe(finMaterial)
   })
 })

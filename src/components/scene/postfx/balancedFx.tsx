@@ -22,7 +22,7 @@ import {
 } from 'three'
 import { HorizontalBlurShader, VerticalBlurShader } from 'three-stdlib'
 import { BLIT_SITES, balancedTargetInventory } from '../../../scene/monitorBudget'
-import { blitDepth, ensureMonitorTarget, overlayDepthBudget, releaseMonitorTarget } from '../../../scene/monitorDepth'
+import { ensureMonitorTarget, overlayDepthBudget, releaseMonitorTarget } from '../../../scene/monitorDepth'
 import { MONITOR_LAYER } from '../../../scene/overlayOrder'
 import {
   CONTACT_SHADOW_FAR,
@@ -37,27 +37,6 @@ const copyMesh = new Mesh(
   new PlaneGeometry(2, 2),
   new MeshBasicMaterial({ depthTest: false, depthWrite: false, toneMapped: false }),
 )
-
-class CaptureSceneDepthPass extends Pass {
-  constructor(scene: Scene) {
-    super('CaptureSceneDepthPass', scene)
-    this.needsSwap = false
-  }
-
-  render(renderer: WebGLRenderer, inputBuffer: WebGLRenderTarget) {
-    if (!this.scene.getObjectByName('WorkstationMonitors')) return
-    const dest = ensureMonitorTarget(inputBuffer.width, inputBuffer.height)
-    const previous = renderer.getRenderTarget()
-    renderer.setRenderTarget(dest)
-    renderer.clear(true, true, false)
-    renderer.setRenderTarget(previous)
-    blitDepth(renderer, inputBuffer, dest)
-    const gl = renderer.getContext()
-    for (let i = 0; i < 4; i += 1) {
-      if (gl.getError() === gl.NO_ERROR) break
-    }
-  }
-}
 
 class MonitorAfterTonePass extends Pass {
   constructor(scene: Scene, camera: Camera) {
@@ -126,12 +105,6 @@ class MonitorAfterTonePass extends Pass {
     renderer.autoClear = prevAutoClear
     renderer.setRenderTarget(prevTarget)
   }
-}
-
-function CaptureSceneDepth() {
-  const scene = useThree((state) => state.scene)
-  const pass = useMemo(() => new CaptureSceneDepthPass(scene), [scene])
-  return <primitive object={pass} />
 }
 
 function MonitorAfterTone() {
@@ -341,7 +314,7 @@ export function ContactGround({ active = true }: { active?: boolean }) {
  * 只在第一次切到均衡档之后保持挂载。切回性能档时 enabled=false 并收缩渲染目标，
  * shader 程序复用，不再每切一次重新编译。
  * D119：告警屏在 AgX 之后画进单采样、带场景深度的离屏 FBO，再用全屏四边形写回合成器。
- * 深度用 blitDepth 从合成器 FBO 拷到这张离屏目标，绝不 blit 到默认帧缓冲。
+ * 深度由 MonitorAfterTone 在离屏 FBO 里重画楼层，不再 blit 合成器深度（避免 MSAA/格式警告）。
  */
 export function PostFX({ onLive, active = true }: { onLive?: () => void; active?: boolean }) {
   return (
@@ -349,7 +322,6 @@ export function PostFX({ onLive, active = true }: { onLive?: () => void; active?
       <ToneMappingBridge active={active} />
       <EffectComposer enabled={active} multisampling={0} enableNormalPass={false} stencilBuffer={false} renderPriority={1}>
         <ComposerBudget active={active} />
-        <CaptureSceneDepth />
         <BalancedAO />
         <ToneMapping mode={ToneMappingMode.AGX} />
         <MonitorAfterTone />

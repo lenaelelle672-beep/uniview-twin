@@ -1,0 +1,221 @@
+{
+  "alarms": {
+    "f12-balanced": {
+      "ratio": 2.8274853902651174,
+      "alarm": {
+        "r": 248.1524064171123,
+        "g": 108.91176470588235,
+        "b": 96.0187165775401,
+        "L": 0.3174766267456247
+      },
+      "online": {
+        "r": 28.972631578947368,
+        "g": 107.14736842105263,
+        "b": 68.32,
+        "L": 0.11228232260321483
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f18-balanced": {
+      "ratio": 2.8154212997277677,
+      "alarm": {
+        "r": 248.2326203208556,
+        "g": 108.29144385026738,
+        "b": 95.08288770053476,
+        "L": 0.31613442366243505
+      },
+      "online": {
+        "r": 28.972631578947368,
+        "g": 107.14947368421052,
+        "b": 68.32,
+        "L": 0.11228672017683575
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f3-balanced": {
+      "ratio": 2.8321151722306412,
+      "alarm": {
+        "r": 248.02941176470588,
+        "g": 109.20855614973262,
+        "b": 96.40374331550802,
+        "L": 0.31795650424570987
+      },
+      "online": {
+        "r": 28.966315789473683,
+        "g": 107.14105263157894,
+        "b": 68.32,
+        "L": 0.1122682111812846
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f12-perf": {
+      "ratio": 2.836440581671574,
+      "alarm": {
+        "r": 249.0855614973262,
+        "g": 108.80748663101605,
+        "b": 95.41978609625669,
+        "L": 0.3188559035171001
+      },
+      "online": {
+        "r": 29.021052631578947,
+        "g": 107.20210526315789,
+        "b": 68.4042105263158,
+        "L": 0.11241409588393056
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f18-perf": {
+      "ratio": 2.8630768533649977,
+      "alarm": {
+        "r": 249.90374331550802,
+        "g": 109.10695187165776,
+        "b": 95.70320855614973,
+        "L": 0.3210539834002743
+      },
+      "online": {
+        "r": 29.251012145748987,
+        "g": 107.0425101214575,
+        "b": 68.57894736842105,
+        "L": 0.11213599908187477
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    },
+    "f3-perf": {
+      "ratio": 2.840800931311712,
+      "alarm": {
+        "r": 249.06417112299465,
+        "g": 108.79144385026738,
+        "b": 95.33155080213903,
+        "L": 0.31876630183780474
+      },
+      "online": {
+        "r": 29.18825910931174,
+        "g": 107.08502024291498,
+        "b": 68.53441295546558,
+        "L": 0.11221001032642493
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      }
+    }
+  },
+  "switches": [
+    {
+      "label": "cold-balanced",
+      "calls": 120,
+      "memory": {
+        "textures": 20,
+        "geometries": 76,
+        "programs": 38
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c1",
+      "calls": 120,
+      "memory": {
+        "textures": 20,
+        "geometries": 77,
+        "programs": 47
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c2",
+      "calls": 120,
+      "memory": {
+        "textures": 20,
+        "geometries": 77,
+        "programs": 47
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c3",
+      "calls": 120,
+      "memory": {
+        "textures": 20,
+        "geometries": 77,
+        "programs": 47
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c4",
+      "calls": 120,
+      "memory": {
+        "textures": 20,
+        "geometries": 77,
+        "programs": 47
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c5",
+      "calls": 120,
+      "memory": {
+        "textures": 20,
+        "geometries": 77,
+        "programs": 47
+      },
+      "quality": "balanced"
+    }
+  ],
+  "failures": [],
+  "overview": {
+    "calls": 120,
+    "memory": {
+      "textures": 20,
+      "geometries": 76,
+      "programs": 38
+    },
+    "quality": "balanced"
+  },
+  "overviewConsole": {
+    "errors": 0,
+    "warnings": 0,
+    "blit": 0
+  },
+  "switchHold": {
+    "c2": {
+      "textures": 20,
+      "geometries": 77,
+      "programs": 47
+    },
+    "c5": {
+      "textures": 20,
+      "geometries": 77,
+      "programs": 47
+    },
+    "hold": true
+  },
+  "ok": true
+}

@@ -8,10 +8,10 @@ import {
   EAST_GRILLE_LO,
   preloadEastGrilleHi,
 } from '../../scene/eastGrilleAssets'
+import { grilleMaterial } from '../../scene/materials'
 import { eastGrilleMount } from '../../scene/massing'
 import { installMeshopt } from '../../scene/meshopt'
 import type { QualityTier } from '../../types'
-import { registerReflectiveEnvMaterial } from './LocalEnvironment'
 
 export { EAST_GRILLE_HI, EAST_GRILLE_INTENSITY, EAST_GRILLE_LO }
 
@@ -29,7 +29,15 @@ function tuneEastGrille(root: Object3D | null) {
       if (material.name !== 'east_grille') continue
       material.envMapIntensity = EAST_GRILLE_INTENSITY
       material.side = DoubleSide
-      registerReflectiveEnvMaterial(material)
+      if (material.envMap !== grilleMaterial.envMap) {
+        material.envMap = grilleMaterial.envMap
+        material.needsUpdate = true
+      }
+      if (material.clippingPlanes !== grilleMaterial.clippingPlanes) {
+        material.clippingPlanes = grilleMaterial.clippingPlanes
+        material.clipShadows = grilleMaterial.clipShadows
+        material.needsUpdate = true
+      }
     }
   })
 }
@@ -40,6 +48,11 @@ function GrilleModel({ url }: { url: string }) {
   useLayoutEffect(() => {
     tuneEastGrille(scene)
   }, [scene])
+  useFrame(() => {
+    if (scene.userData.twinGrilleEnv === grilleMaterial.envMap) return
+    tuneEastGrille(scene)
+    scene.userData.twinGrilleEnv = grilleMaterial.envMap
+  })
   return <primitive object={scene} />
 }
 

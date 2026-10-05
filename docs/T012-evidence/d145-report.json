@@ -1,0 +1,95 @@
+{
+  "head": "a2a98c43eb8333297d562e72488274f56e242871",
+  "lsRemote": "a2a98c43eb8333297d562e72488274f56e242871",
+  "blit": "removed CaptureSceneDepth blitDepth; MonitorAfterTone redraws floor depth in FBO",
+  "calls": {
+    "f12-balanced": {
+      "frame": 175,
+      "lastRender": 175,
+      "shadow": 42,
+      "main": 133,
+      "roomLabels": 26,
+      "minusLabels": 149,
+      "blit": 0
+    },
+    "f18-balanced": {
+      "frame": 192,
+      "lastRender": 192,
+      "shadow": 48,
+      "main": 144,
+      "roomLabels": 26,
+      "minusLabels": 166,
+      "blit": 0
+    },
+    "f3-balanced": {
+      "frame": 148,
+      "lastRender": 148,
+      "shadow": 33,
+      "main": 115,
+      "roomLabels": 26,
+      "minusLabels": 122,
+      "blit": 0
+    },
+    "f12-perf": {
+      "frame": 70,
+      "lastRender": 70,
+      "shadow": 0,
+      "main": 70,
+      "roomLabels": 13,
+      "minusLabels": 57,
+      "blit": 0
+    },
+    "f18-perf": {
+      "frame": 81,
+      "lastRender": 81,
+      "shadow": 0,
+      "main": 81,
+      "roomLabels": 13,
+      "minusLabels": 68,
+      "blit": 0
+    },
+    "f3-perf": {
+      "frame": 52,
+      "lastRender": 52,
+      "shadow": 0,
+      "main": 52,
+      "roomLabels": 13,
+      "minusLabels": 39,
+      "blit": 0
+    }
+  },
+  "stackEstimate": {
+    "f12BalancedMinusLabelsPlusBatch": 150
+  },
+  "gzip9": {
+    "hardGate": 426679,
+    "balancedFx": 101113,
+    "main": 394507,
+    "mainDeltaVsD140": 2,
+    "perfFirst": 413102,
+    "perfFx": false
+  },
+  "overviewCalls": 120,
+  "alarms": {
+    "f12-balanced": 2.8274853902651174,
+    "f18-balanced": 2.8154212997277677,
+    "f3-balanced": 2.8321151722306412,
+    "f12-perf": 2.836440581671574,
+    "f18-perf": 2.8630768533649977,
+    "f3-perf": 2.840800931311712
+  },
+  "switch": {
+    "c2": {
+      "textures": 20,
+      "geometries": 77,
+      "programs": 47
+    },
+    "c5": {
+      "textures": 20,
+      "geometries": 77,
+      "programs": 47
+    },
+    "hold": true
+  },
+  "console": "0/0 blit 0; perf ReadPixels stall only if harness reads pixels"
+}

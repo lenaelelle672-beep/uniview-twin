@@ -4,6 +4,7 @@ import { InstancedMesh, Mesh } from 'three'
 import { PICK_VOLUME_LAYER } from '../pickLayers'
 import { floorSpec } from '../../data/floors'
 import { isFloorHydrated } from '../../floors/cache'
+import { loadFloorPlan } from '../../floors/loadFloor'
 import { extrudeUp } from '../extrude'
 import { basementPickOutline } from './b1Plan'
 import { useTwinStore } from '../../store/store'
@@ -14,7 +15,6 @@ import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
 import { MONITOR_DISPLAY_COLOR } from './materials'
 import { workstationPosition } from './workstationPosition'
-import { loadFloorPlan } from '../../floors/loadFloor'
 
 const JsonFloorInterior = lazy(async () => {
   const mod = await import('../../floors/JsonFloorInterior')

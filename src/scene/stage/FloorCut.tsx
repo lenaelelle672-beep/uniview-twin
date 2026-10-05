@@ -11,7 +11,7 @@ import {
   solidMaterial,
   stoneMaterial,
 } from '../materials'
-import { listReflectiveEnvMaterials } from '../../components/scene/LocalEnvironment'
+import { REFLECTIVE_ENV_MATERIALS } from '../../components/scene/LocalEnvironment'
 import { useTwinStore } from '../../store/store'
 import { cutElevation } from './cut'
 
@@ -40,7 +40,7 @@ export function FloorCut() {
     if (cut == null) {
       if (enabled.current) {
         gl.localClippingEnabled = false
-        for (const material of [...SHELL_MATERIALS, ...listReflectiveEnvMaterials()]) {
+        for (const material of [...SHELL_MATERIALS, ...Object.values(REFLECTIVE_ENV_MATERIALS)]) {
           material.clippingPlanes = null
           material.clipShadows = false
           material.needsUpdate = true
@@ -52,7 +52,7 @@ export function FloorCut() {
     plane.constant = cut
     if (!enabled.current) {
       gl.localClippingEnabled = true
-      for (const material of [...SHELL_MATERIALS, ...listReflectiveEnvMaterials()]) {
+      for (const material of [...SHELL_MATERIALS, ...Object.values(REFLECTIVE_ENV_MATERIALS)]) {
         material.clippingPlanes = planes
         material.clipShadows = true
         material.needsUpdate = true
@@ -61,7 +61,7 @@ export function FloorCut() {
     }
     return () => {
       gl.localClippingEnabled = false
-      for (const material of [...SHELL_MATERIALS, ...listReflectiveEnvMaterials()]) {
+      for (const material of [...SHELL_MATERIALS, ...Object.values(REFLECTIVE_ENV_MATERIALS)]) {
         material.clippingPlanes = null
         material.clipShadows = false
         material.needsUpdate = true
