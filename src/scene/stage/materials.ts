@@ -10,7 +10,13 @@ export const columnMaterial = new MeshStandardMaterial({ color: '#f7f8fa', rough
 export const ceilingMaterial = new MeshStandardMaterial({ color: '#f3f5f7', roughness: 0.9, metalness: 0, side: DoubleSide })
 export const deskMaterial = new MeshStandardMaterial({ color: '#d9d0c3', roughness: 0.7, metalness: 0.04 })
 export const chairMaterial = new MeshStandardMaterial({ color: '#3c4654', roughness: 0.62, metalness: 0.08 })
-export const monitorMaterial = new MeshStandardMaterial({ color: '#ffffff', roughness: 0.35, metalness: 0.12 })
+export const monitorMaterial = new MeshStandardMaterial({
+  color: '#ffffff',
+  roughness: 0.35,
+  metalness: 0.12,
+  // 均衡档合成器会整图做 AgX。告警红屏不拆调用，关掉色调映射才能保住红色和 ≥1.5 亮度比。
+  toneMapped: false,
+})
 export const kitchenMaterial = new MeshStandardMaterial({ color: '#d5dbdf', roughness: 0.42, metalness: 0.35 })
 export const fanFloorMaterial = new MeshStandardMaterial({ color: '#3e4652', roughness: 0.84, metalness: 0.04 })
 export const seatMaterial = new MeshStandardMaterial({ color: '#c43648', roughness: 0.62, metalness: 0.06 })

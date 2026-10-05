@@ -30,11 +30,63 @@ export function RenderProbe() {
   }, [camera, gl])
 
   useFrame(() => {
+    gl.info.autoReset = false
+    gl.info.reset()
+  }, -1)
+
+  useFrame(() => {
     window.__twinStats = {
       calls: gl.info.render.calls,
       triangles: gl.info.render.triangles,
     }
-  })
+    const watch = window.__twinFrameWatch
+    if (!watch?.active) return
+    const source = gl.domElement
+    if (!watch.scratch) {
+      watch.scratch = document.createElement('canvas')
+      watch.scratchCtx = watch.scratch.getContext('2d', { willReadFrequently: true })
+    }
+    const scratch = watch.scratch
+    const ctx = watch.scratchCtx
+    if (!ctx) return
+    scratch.width = source.width
+    scratch.height = source.height
+    ctx.drawImage(source, 0, 0)
+    const image = ctx.getImageData(0, 0, scratch.width, scratch.height)
+    watch.frames.push(classifyFrame(image.data, image.width, image.height, performance.now()))
+  }, 8)
 
   return null
+}
+
+function classifyFrame(data: Uint8ClampedArray, width: number, height: number, at: number) {
+  let empty = 0
+  let dark = 0
+  const total = width * height
+  const step = Math.max(1, Math.floor(total / 4000))
+  let samples = 0
+  for (let index = 0; index < total; index += step) {
+    const offset = index * 4
+    const r = data[offset]
+    const g = data[offset + 1]
+    const b = data[offset + 2]
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    samples += 1
+    if (max < 8) dark += 1
+    // 清屏色 #c5d7ea 或全黑，几乎没有建筑细节
+    if (max < 8 || (Math.abs(r - 197) < 12 && Math.abs(g - 215) < 12 && Math.abs(b - 234) < 12 && max - min < 18)) {
+      empty += 1
+    }
+  }
+  const emptyRatio = empty / samples
+  const darkRatio = dark / samples
+  return {
+    at,
+    width,
+    height,
+    emptyRatio,
+    darkRatio,
+    empty: emptyRatio > 0.97 || darkRatio > 0.92,
+  }
 }

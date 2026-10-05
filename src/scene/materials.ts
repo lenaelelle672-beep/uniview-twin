@@ -235,7 +235,8 @@ export function applySurfaceMode(mode: SurfaceMode) {
     eaveMaterial.metalness = 0.42
     eaveMaterial.roughness = 0.32
     eaveMaterial.envMapIntensity = 0.85
-    baseMaterial.color.set('#d4c8bc')
+    // 照片 16/17 基座是暖灰 #aaa7a5，#d4c8bc 在 east 机位会读成偏米色 #c1bcb8。
+    baseMaterial.color.set('#aea9a5')
     baseMaterial.metalness = 0.02
     baseMaterial.roughness = 0.88
     baseMaterial.envMapIntensity = 0.15

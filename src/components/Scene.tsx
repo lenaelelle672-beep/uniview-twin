@@ -1,5 +1,6 @@
+import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
-import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
@@ -12,10 +13,14 @@ import { RenderProbe } from './scene/RenderProbe'
 import { ParcelMesh, Site } from './scene/Site'
 import { ExplodedLayout } from './scene/ExplodedLayout'
 import { Tower } from './scene/Tower'
+import { useBalancedWarmup } from './scene/useBalancedWarmup'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { useTwinStore } from '../store/store'
+
+const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
+const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.PostFX })))
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
@@ -31,6 +36,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const night = mode === 'night'
   const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
+  const extrasReady = useBalancedWarmup(quality)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
@@ -79,11 +85,23 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <group visible={!openBasement}>
           <Site model={model} night={night} quality={quality} />
         </group>
-        <FloorBadges />
+        {extrasReady && (
+          <Suspense fallback={null}>
+            <ContactGround />
+          </Suspense>
+        )}
         <ExplodedLayout />
         <FloorStage />
+        <Hud renderPriority={extrasReady ? 2 : 1}>
+          <FloorBadges />
+        </Hud>
         <RenderProbe />
       </Suspense>
+      {extrasReady && (
+        <Suspense fallback={null}>
+          <PostFX />
+        </Suspense>
+      )}
     </>
   )
 }

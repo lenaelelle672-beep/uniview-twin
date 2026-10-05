@@ -90,4 +90,15 @@ interface Window {
   __twinHighlight?: string
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
+  __twinWarmup?: {
+    compileMs: number
+    totalMs: number
+    firstSwitch: boolean
+  }
+  __twinFrameWatch?: {
+    active: boolean
+    frames: Array<{ at: number; width: number; height: number; emptyRatio: number; darkRatio: number; empty: boolean }>
+    scratch?: HTMLCanvasElement
+    scratchCtx?: CanvasRenderingContext2D | null
+  }
 }
