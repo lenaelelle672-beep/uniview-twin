@@ -5,14 +5,16 @@ import { InstancedMesh, Mesh, MeshStandardMaterial, Object3D, Quaternion, Scene,
 import { propNightEmissive } from '../../scene/props/emissive'
 import type { Placement } from '../../scene/siteGeometry'
 import { installMeshopt } from '../../scene/meshopt'
+import { markTreeLoReady } from '../../scene/overviewReady'
 
 const TREE_HI = '/models/street-tree-hi.glb'
 const TREE_LO = '/models/street-tree-lo.glb'
 const LAMP = '/models/street-lamp.glb'
 const LEAF_MATERIAL = 'tree_leaves'
 
-// 只预加载每档都会用到的模型。精细树不能在这里预加载，否则性能档也会请求它。
+// 灯和树 lo 三档都用（主树或阴影）。精细树不预加载，避免性能档也去拉。
 useLoader.preload(GLTFLoader, LAMP, installMeshopt)
+useLoader.preload(GLTFLoader, TREE_LO, installMeshopt)
 
 function collectMeshes(root: Object3D): Mesh[] {
   const meshes: Mesh[] = []
@@ -64,6 +66,7 @@ export function InstancedProp({
   leafCastShadow?: boolean
 }) {
   const gltf = useLoader(GLTFLoader, url, installMeshopt)
+  if (url === TREE_LO) markTreeLoReady()
   const meshes = useMemo(() => collectMeshes(gltf.scene), [gltf])
   const refs = useRef<Array<InstancedMesh | null>>([])
 
@@ -129,6 +132,7 @@ export function FoliageShadow({
 }) {
   const gl = useThree((state) => state.gl)
   const gltf = useLoader(GLTFLoader, url, installMeshopt)
+  markTreeLoReady()
   const leaf = useMemo(
     () => collectMeshes(gltf.scene).find((mesh) => materialName(mesh) === LEAF_MATERIAL) ?? null,
     [gltf],

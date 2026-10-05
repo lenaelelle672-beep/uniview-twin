@@ -38,11 +38,19 @@ export function markSuspenseReady(): void {
   tryMarkOverviewReady()
 }
 
+/** D137：树 lo 与 HDR/格栅同一套闸。白模（HDR 不要求）也不等树。 */
+export function markTreeLoReady(): void {
+  const w = tw()
+  if (w.__twinTreeLoReadyAt == null) w.__twinTreeLoReadyAt = performance.now()
+  tryMarkOverviewReady()
+}
+
 export function tryMarkOverviewReady(): void {
   const w = tw()
   if (w.__twinReady) return
   if (!w.__twinSuspenseReady) return
   if (w.__twinHdrRequired !== false && w.__twinHdrReadyAt == null) return
+  if (w.__twinHdrRequired !== false && w.__twinTreeLoReadyAt == null) return
   w.__twinReady = true
   w.__twinReadyAt = performance.now()
 }
@@ -54,6 +62,7 @@ export function resetOverviewReadyMarks(): void {
   delete w.__twinReadyAt
   delete w.__twinFirstFrameAt
   delete w.__twinFirstFrameUnixMs
+  delete w.__twinTreeLoReadyAt
 }
 
 export function resetHdrReadyMarks(): void {

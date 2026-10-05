@@ -67,6 +67,7 @@ interface Window {
   __twinHdrLoadedUnixMs?: number
   __twinHdrReadyAt?: number
   __twinHdrReadyUnixMs?: number
+  __twinTreeLoReadyAt?: number
   __twinFirstFrameAt?: number
   __twinFirstFrameUnixMs?: number
   __twinPrefetchAt?: number

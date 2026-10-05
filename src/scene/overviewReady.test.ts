@@ -4,6 +4,7 @@ import {
   markHdrNotRequired,
   markHdrPmremReady,
   markSuspenseReady,
+  markTreeLoReady,
   resetHdrReadyMarks,
   resetOverviewReadyMarks,
 } from './overviewReady'
@@ -33,6 +34,7 @@ describe('总览就绪闸门 D126', () => {
     const loaded = tw().__twinHdrLoadedAt!
     markHdrPmremReady()
     const pmrem = tw().__twinHdrReadyAt!
+    markTreeLoReady()
     markSuspenseReady()
     expect(tw().__twinReady).toBe(true)
     expect(tw().__twinReadyAt).toBeGreaterThanOrEqual(pmrem)
@@ -43,6 +45,14 @@ describe('总览就绪闸门 D126', () => {
     markHdrNotRequired()
     expect(tw().__twinReady).toBeFalsy()
     markSuspenseReady()
+    expect(tw().__twinReady).toBe(true)
+  })
+
+  it('Suspense 和 HDR 到了但树 lo 没到，不置 __twinReady', () => {
+    markHdrPmremReady()
+    markSuspenseReady()
+    expect(tw().__twinReady).toBeFalsy()
+    markTreeLoReady()
     expect(tw().__twinReady).toBe(true)
   })
 })
