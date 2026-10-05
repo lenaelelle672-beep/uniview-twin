@@ -50,7 +50,7 @@ type DetailedProps = { distances: number[]; children?: ReactNode }
 function BalancedGrille() {
   const [near, setNear] = useState(false)
   const [hiReady, setHiReady] = useState(false)
-  const [DetailedImpl, setDetailedImpl] = useState<ComponentType<DetailedProps> | null>(null)
+  const [detailedPack, setDetailedPack] = useState<{ Detailed: ComponentType<DetailedProps> } | null>(null)
   const mount = eastGrilleMount()
   useFrame(({ camera }) => {
     mountWorld.set(...mount.position)
@@ -70,17 +70,17 @@ function BalancedGrille() {
     }
   }, [hiReady, near])
   useEffect(() => {
-    if (!near || !hiReady || DetailedImpl) return
+    if (!near || !hiReady || detailedPack) return
     let cancelled = false
     void import('@react-three/drei/core/Detailed').then((mod) => {
-      if (!cancelled) setDetailedImpl(() => mod.Detailed)
+      if (!cancelled) setDetailedPack({ Detailed: mod.Detailed })
     })
     return () => {
       cancelled = true
     }
-  }, [DetailedImpl, hiReady, near])
-  if (!near || !hiReady || !DetailedImpl) return <GrilleModel url={EAST_GRILLE_LO} />
-  const Detailed = DetailedImpl
+  }, [detailedPack, hiReady, near])
+  if (!near || !hiReady || !detailedPack) return <GrilleModel url={EAST_GRILLE_LO} />
+  const Detailed = detailedPack.Detailed
   return (
     <Detailed distances={[0, 80]}>
       <GrilleModel url={EAST_GRILLE_HI} />
