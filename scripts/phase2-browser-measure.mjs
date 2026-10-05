@@ -123,7 +123,7 @@ function refineStatusBox(data, width, height, seed, kind) {
   const cy = seed.y + seed.h / 2
   let best = null
   let bestDist = Infinity
-  for (const search of [10, 18, 28]) {
+  for (const search of [12, 22, 40]) {
     for (let y = Math.floor(cy - search); y < cy + search; y += 1) {
       for (let x = Math.floor(cx - search); x < cx + search; x += 1) {
         if (x < 0 || y < 0 || x >= width || y >= height) continue
@@ -132,6 +132,9 @@ function refineStatusBox(data, width, height, seed, kind) {
         const g = data[offset + 1]
         const b = data[offset + 2]
         const dist = Math.abs(r - target.r) + Math.abs(g - target.g) + Math.abs(b - target.b)
+        const hueOk =
+          kind === 'alarm' ? r > 160 && r > g + 36 && r > b + 36 : g > 70 && g > r + 16 && g > b
+        if (!hueOk) continue
         if (dist < bestDist) {
           bestDist = dist
           best = { x, y, r, g, b, dist }
@@ -175,7 +178,7 @@ async function open(browser, search) {
 
 async function main() {
   await mkdir(outDir, { recursive: true })
-  const browser = await puppeteer.launch({
+  let browser = await puppeteer.launch({
     executablePath: chromePath(),
     headless: true,
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
@@ -208,13 +211,22 @@ async function main() {
       await page.close()
     }
 
+    await browser.close()
+    browser = await puppeteer.launch({
+      executablePath: chromePath(),
+      headless: true,
+      args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
+    })
+
     for (const quality of ['perf', 'balanced']) {
       for (const floorId of ['F3', 'F12', 'F18']) {
         const name = `${floorId.toLowerCase()}-${quality}`
         const { page, consoles, requests } = await open(browser, `?q=${quality}&view=floor&floor=${floorId}`)
-        await page.waitForFunction(() => window.__twinMonitorBoxes?.floorId === floorId && window.__twinMonitorBoxes.alarm && window.__twinMonitorBoxes.online, {
-          timeout: 45_000,
-        })
+        await page.waitForFunction(
+          (id) => window.__twinMonitorBoxes?.floorId === id && window.__twinMonitorBoxes.alarm && window.__twinMonitorBoxes.online,
+          { timeout: 90_000 },
+          floorId,
+        )
         await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)))
         const boxes = await page.evaluate(() => window.__twinMonitorBoxes)
         const image = await pageImage(page)
