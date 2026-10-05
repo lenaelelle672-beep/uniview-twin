@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { installMeshopt } from './meshopt'
 import type { QualityTier } from '../types'
 
-export const EAST_GRILLE_INTENSITY = 2.0
+export const EAST_GRILLE_INTENSITY = 2.05
 export const EAST_GRILLE_HI = '/models/east-grille-v4-hi.glb'
 export const EAST_GRILLE_LO = '/models/east-grille-v4-lo.glb'
 

@@ -1,6 +1,5 @@
-import { Detailed } from '@react-three/drei'
 import { useFrame, useLoader } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
 import { DoubleSide, Mesh, MeshStandardMaterial, Object3D, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import {
@@ -46,9 +45,12 @@ function GrilleModel({ url }: { url: string }) {
 
 const mountWorld = new Vector3()
 
+type DetailedProps = { distances: number[]; children?: ReactNode }
+
 function BalancedGrille() {
   const [near, setNear] = useState(false)
   const [hiReady, setHiReady] = useState(false)
+  const [DetailedImpl, setDetailedImpl] = useState<ComponentType<DetailedProps> | null>(null)
   const mount = eastGrilleMount()
   useFrame(({ camera }) => {
     mountWorld.set(...mount.position)
@@ -67,7 +69,18 @@ function BalancedGrille() {
       cancelled = true
     }
   }, [hiReady, near])
-  if (!near || !hiReady) return <GrilleModel url={EAST_GRILLE_LO} />
+  useEffect(() => {
+    if (!near || !hiReady || DetailedImpl) return
+    let cancelled = false
+    void import('@react-three/drei/core/Detailed').then((mod) => {
+      if (!cancelled) setDetailedImpl(() => mod.Detailed)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [DetailedImpl, hiReady, near])
+  if (!near || !hiReady || !DetailedImpl) return <GrilleModel url={EAST_GRILLE_LO} />
+  const Detailed = DetailedImpl
   return (
     <Detailed distances={[0, 80]}>
       <GrilleModel url={EAST_GRILLE_HI} />
