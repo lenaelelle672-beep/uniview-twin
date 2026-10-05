@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { Box3, type BufferGeometry } from 'three'
+import { floorDeskCount } from '../../floors/deskCounts'
+import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { floorIdList } from '../../data/floors'
 import { DESKS_PER_FLOOR, createMockData } from '../../data/mockData'
 import { resetTwinStore, useTwinStore } from '../../store/store'
@@ -20,12 +22,8 @@ import {
   B1_CORE,
   B1_ROOMS,
   COLUMN_EDGE_CLEAR_M,
-  CORE,
   FAN,
   KITCHEN,
-  MEETINGS,
-  PANTRY,
-  RECEPTION,
   b1Columns,
   canteenTables,
   columnEdgeDistance,
@@ -37,7 +35,9 @@ import {
 } from './layout'
 import { obliqueOverviewSeed } from './poses'
 import { pcStatusOf } from './status'
-import { WORKSTATIONS_PER_FLOOR, workstationPosition } from './workstationPosition'
+import { WORKSTATIONS_PER_FLOOR, workstationPosition, workstationsOnFloor } from './workstationPosition'
+
+hydrateAllAboveGrade()
 
 function inside(x: number, z: number, box: { x0: number; x1: number; z0: number; z1: number }, pad = 0) {
   return x > box.x0 - pad && x < box.x1 + pad && z > box.z0 - pad && z < box.z1 + pad
@@ -84,29 +84,20 @@ describe('单层剖切', () => {
 })
 
 describe('工位布置', () => {
-  it('标准层和 B1 的工位数量与数据条数一致，并避开房间', () => {
-    for (const floorId of ['F1', 'F12', 'F22', 'B1']) {
-      const slots = layoutWorkstations(floorId, DESKS_PER_FLOOR)
-      expect(slots).toHaveLength(DESKS_PER_FLOOR)
-      const nearest = minSpacing(slots)
-      expect(nearest).toBeGreaterThan(1.45)
-      for (const slot of slots) {
-        if (floorId === 'B1') {
-          expect(inside(slot.x, slot.z, B1_CORE, 0.4)).toBe(false)
-          expect(inside(slot.x, slot.z, KITCHEN, 0.3)).toBe(false)
-          expect(inFan(slot.x, slot.z, 0.3)).toBe(false)
-        } else {
-          expect(slot.x).toBeGreaterThan(TOWER.minX + 0.8)
-          expect(slot.x).toBeLessThan(TOWER.maxX - 0.8)
-          expect(slot.z).toBeGreaterThan(TOWER.minZ + 0.8)
-          expect(slot.z).toBeLessThan(TOWER.maxZ - 0.8)
-          expect(inside(slot.x, slot.z, CORE, 0.4)).toBe(false)
-          expect(inside(slot.x, slot.z, RECEPTION, 0.3)).toBe(false)
-          expect(inside(slot.x, slot.z, PANTRY, 0.3)).toBe(false)
-          for (const room of MEETINGS) expect(inside(slot.x, slot.z, room, 0.3)).toBe(false)
-        }
-      }
+  it('B1 仍按楼板公式排 100 个；地上层工位数跟图纸一致', () => {
+    const basement = layoutWorkstations('B1', DESKS_PER_FLOOR)
+    expect(basement).toHaveLength(DESKS_PER_FLOOR)
+    expect(minSpacing(basement)).toBeGreaterThan(1.45)
+    for (const slot of basement) {
+      expect(inside(slot.x, slot.z, B1_CORE, 0.4)).toBe(false)
+      expect(inside(slot.x, slot.z, KITCHEN, 0.3)).toBe(false)
+      expect(inFan(slot.x, slot.z, 0.3)).toBe(false)
     }
+    expect(workstationsOnFloor('F12')).toBe(184)
+    expect(workstationsOnFloor('F1')).toBe(floorDeskCount('F1'))
+    const tower = workstationPosition('F12', 'F12-1')
+    expect(tower.x).toBeGreaterThan(TOWER.minX)
+    expect(tower.x).toBeLessThan(TOWER.maxX)
   })
 
   it('少量工位也能排下，不会多生成', () => {
@@ -135,7 +126,7 @@ describe('设备状态上色', () => {
   it('显示器颜色跟该工位电脑状态走', () => {
     const data = createMockData()
     const desks = data.desks.filter((desk) => desk.floorId === 'F12')
-    expect(desks).toHaveLength(DESKS_PER_FLOOR)
+    expect(desks).toHaveLength(floorDeskCount('F12'))
     const statuses = new Set(desks.map((desk) => pcStatusOf(data.devices, desk.id)))
     expect(statuses.has('online')).toBe(true)
     expect(statuses.has('idle')).toBe(true)
@@ -183,7 +174,7 @@ describe('enterFloor / exitFloor', () => {
 })
 
 describe('工位避柱', () => {
-  it('塔楼桌心到柱边至少 1.10 m，桌子和柱子包围盒不相交', () => {
+  it('B1 桌心到柱边至少 1.10 m；地上层照图保留，违规见 deskRule 清单', () => {
     const desk = geometryBounds(deskGeometry)
     const column = geometryBounds(columnGeometry)
     const deskHalfX = (desk.max.x - desk.min.x) / 2
@@ -193,23 +184,20 @@ describe('工位避柱', () => {
     expect(deskHalfX + columnHalfX).toBeCloseTo(1.01, 5)
     expect(COLUMN_EDGE_CLEAR_M).toBe(1.1)
 
-    for (const floorId of floorIdList()) {
-      const columns = floorId === 'B1' ? b1Columns() : towerColumns()
-      for (let index = 1; index <= WORKSTATIONS_PER_FLOOR; index += 1) {
-        const place = workstationPosition(floorId, `${floorId}-${index}`)
-        const slot = { x: place.x, z: place.z, rot: 0 }
-        for (const columnPoint of columns) {
-          const dx = Math.abs(place.x - columnPoint.x)
-          const dz = Math.abs(place.z - columnPoint.z)
-          const overlaps = dx < deskHalfX + columnHalfX - 1e-6 && dz < deskHalfZ + columnHalfZ - 1e-6
-          expect(overlaps).toBe(false)
-          expect(deskHitsColumn(slot, columnPoint)).toBe(false)
-          if (floorId !== 'B1') {
-            expect(columnEdgeDistance(place.x, place.z, columnPoint)).toBeGreaterThanOrEqual(COLUMN_EDGE_CLEAR_M - 1e-9)
-          }
-        }
+    const columns = b1Columns()
+    for (let index = 1; index <= WORKSTATIONS_PER_FLOOR; index += 1) {
+      const place = workstationPosition('B1', `B1-${index}`)
+      const slot = { x: place.x, z: place.z, rot: 0 }
+      for (const columnPoint of columns) {
+        const dx = Math.abs(place.x - columnPoint.x)
+        const dz = Math.abs(place.z - columnPoint.z)
+        const overlaps = dx < deskHalfX + columnHalfX - 1e-6 && dz < deskHalfZ + columnHalfZ - 1e-6
+        expect(overlaps).toBe(false)
+        expect(deskHitsColumn(slot, columnPoint)).toBe(false)
+        expect(columnEdgeDistance(place.x, place.z, columnPoint)).toBeGreaterThanOrEqual(COLUMN_EDGE_CLEAR_M - 1e-9)
       }
     }
+    expect(workstationsOnFloor('F12')).toBe(184)
   })
 })
 

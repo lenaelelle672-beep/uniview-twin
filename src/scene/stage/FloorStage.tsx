@@ -1,7 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { lazy, Suspense, useLayoutEffect, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo } from 'react'
 import { InstancedMesh } from 'three'
 import { floorSpec } from '../../data/floors'
+import { loadFloorPlan } from '../../floors/loadFloor'
 import { extrudeUp } from '../extrude'
 import { basementPickOutline } from './b1Plan'
 import { useTwinStore } from '../../store/store'
@@ -13,8 +14,16 @@ import { FloorStageCamera } from './FloorStageCamera'
 import { MONITOR_DISPLAY_COLOR } from './materials'
 import { workstationPosition } from './workstationPosition'
 
-const B1Interior = lazy(() => import('./B1Interior').then((mod) => ({ default: mod.B1Interior })))
-const TowerInterior = lazy(() => import('./TowerInterior').then((mod) => ({ default: mod.TowerInterior })))
+const JsonFloorInterior = lazy(async () => {
+  const mod = await import('../../floors/JsonFloorInterior')
+  return { default: mod.JsonFloorInterior }
+})
+
+const B1Interior = lazy(async () => {
+  const mod = await import('./B1Interior')
+  return { default: mod.B1Interior }
+})
+
 const MonitorSamples = lazy(() => import('./MonitorSamples').then((mod) => ({ default: mod.MonitorSamples })))
 
 function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDesks: number }) {
@@ -45,9 +54,10 @@ function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDes
     }
     const mesh = scene.getObjectByName('WorkstationDesks') as InstancedMesh | undefined
     window.__twinInterior = {
+      ...window.__twinInterior,
       floorId,
       dataDesks,
-      renderedDesks: mesh?.count ?? 0,
+      renderedDesks: mesh?.count ?? window.__twinInterior?.renderedDesks ?? 0,
     }
   })
   return null
@@ -88,14 +98,6 @@ export function FloorStage() {
     if (!active) return []
     return desks.filter((desk) => desk.floorId === active).sort((desk, other) => desk.index - other.index)
   }, [active, desks])
-  const slots = useMemo(() => {
-    if (!active) return []
-    // D027：不读 desk.x/y/z。落点只来自 workstationPosition。
-    return floorDesks.map((desk) => {
-      const position = workstationPosition(desk.floorId, desk.id)
-      return { x: position.x, z: position.z, rot: 0 }
-    })
-  }, [active, floorDesks])
   const colors = useMemo(() => {
     const byDesk = new Map<string, DeviceStatus>()
     for (const device of devices) {
@@ -108,6 +110,24 @@ export function FloorStage() {
     return devices.filter((device) => device.floorId === active)
   }, [active, devices])
   const spec = active ? floorSpec(active) : null
+  useEffect(() => {
+    if (!active || active === 'B1') return
+    void loadFloorPlan(active)
+  }, [active])
+  const slots = useMemo(() => {
+    if (!active || active === 'B1') return []
+    return floorDesks.map((desk) => {
+      const position = workstationPosition(desk.floorId, desk.id)
+      return { x: position.x, z: position.z, rot: 0 }
+    })
+  }, [active, floorDesks])
+  const basementSlots = useMemo(() => {
+    if (active !== 'B1') return []
+    return floorDesks.map((desk) => {
+      const position = workstationPosition(desk.floorId, desk.id)
+      return { x: position.x, z: position.z, rot: position.rot }
+    })
+  }, [active, floorDesks])
 
   return (
     <>
@@ -116,15 +136,14 @@ export function FloorStage() {
       <BasementPick />
       <Suspense fallback={null}>
         {spec && spec.level > 0 && (
-          <TowerInterior
+          <JsonFloorInterior
             spec={spec}
-            slots={slots}
             colors={colors}
             devices={floorDevices}
             showPeople={showCorridorPeople(quality)}
           />
         )}
-        {spec && spec.level < 0 && <B1Interior slots={slots} colors={colors} devices={floorDevices} />}
+        {spec && spec.level < 0 && <B1Interior slots={basementSlots} colors={colors} devices={floorDevices} />}
         {spec && spec.level > 0 && (
           <MonitorSamples
             floorId={spec.id}

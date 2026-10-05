@@ -1,4 +1,5 @@
 import type { Device } from '../../types'
+import type { Point } from './corridor'
 import { CorridorPeople } from './CorridorPeople'
 import { DeviceBadges } from './DeviceBadges'
 import { RoomLabels } from './RoomLabels'
@@ -14,17 +15,19 @@ export function FloorDecor({
   devices,
   labels,
   showPeople = false,
+  paths,
 }: {
   floorId: string
   devices: Device[]
   labels: RoomLabel[]
   showPeople?: boolean
+  paths?: Point[][]
 }) {
   return (
     <>
       <DeviceBadges floorId={floorId} devices={devices} />
-      <RoomLabels labels={labels} />
-      {showPeople ? <CorridorPeople enabled /> : null}
+      <RoomLabels floorId={floorId} labels={labels} />
+      {showPeople ? <CorridorPeople enabled paths={paths} /> : null}
     </>
   )
 }

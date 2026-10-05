@@ -9,9 +9,11 @@ const projected = new Vector3()
 export function RenderProbe() {
   const camera = useThree((state) => state.camera)
   const gl = useThree((state) => state.gl)
+  const scene = useThree((state) => state.scene)
 
   useEffect(() => {
     markSuspenseReady()
+    window.__twinScene = scene
     window.__twinProject = (x, y, z) => {
       const rect = gl.domElement.getBoundingClientRect()
       projected.set(x, y, z).project(camera)
@@ -40,7 +42,7 @@ export function RenderProbe() {
       delete window.__twinSetExploded
       unsubscribe()
     }
-  }, [camera, gl])
+  }, [camera, gl, scene])
 
   useFrame(() => {
     gl.info.autoReset = false

@@ -1,9 +1,11 @@
+import { floorDeskCount } from '../floors/deskCounts'
 import type { Desk, Device, DeviceStatus, Person, TwinData, Zone } from '../types'
 import { listFloorSpecs } from './floors'
 import { mulberry32 } from './random'
 import { attachFloorCounts } from './counts'
 
 export const MOCK_SEED = 20260928
+/** B1 仍是 100。地上层按图纸工位数，请用 floorDeskCount。 */
 export const DESKS_PER_FLOOR = 100
 export const ALARM_HEAVY_FLOORS = ['F3', 'F12', 'F18'] as const
 
@@ -13,12 +15,13 @@ const OFFLINE_RATIO = 0.06
 const SURNAMES = ['张', '王', '李', '赵', '陈', '刘', '杨', '黄', '周', '吴']
 const GIVEN = ['伟', '芳', '娜', '敏', '静', '强', '磊', '洋', '艳', '杰', '婷', '浩']
 
-function zoneFor(floorId: string, index: number): Zone {
+function zoneFor(floorId: string, index: number, count: number): Zone {
   if (floorId === 'B1') return 'podium'
   const level = Number(floorId.slice(1))
-  if (level >= 6) return 'tower'
-  if (index > 90) return 'east'
-  if (index > 70) return 'podium'
+  if (level >= 9) return 'tower'
+  if (count <= 3) return index === 1 ? 'tower' : index === 2 ? 'podium' : 'east'
+  if (index > count * 0.7) return 'east'
+  if (index > count * 0.45) return 'podium'
   return 'tower'
 }
 
@@ -48,11 +51,17 @@ function statusQuota(count: number, alarmHeavy: boolean, rng: () => number): Dev
     const normalCeiling = Math.round(nominalAlarm * 1.4)
     alarm = Math.max(alarm, normalCeiling + 4)
   }
-  const offline = jitterAround(Math.round(count * OFFLINE_RATIO), rng)
-  const idle = Math.round(count * IDLE_RATIO)
-  const online = count - alarm - idle - offline
+  let offline = jitterAround(Math.round(count * OFFLINE_RATIO), rng)
+  let idle = Math.round(count * IDLE_RATIO)
+  let online = count - alarm - idle - offline
+  while (online < 1 && alarm + idle + offline > 0) {
+    if (offline > 0) offline -= 1
+    else if (alarm > 1) alarm -= 1
+    else idle -= 1
+    online = count - alarm - idle - offline
+  }
   if (online < 1) {
-    throw new Error(`在线设备不足：${online}/${count}`)
+    return Array.from({ length: count }, () => 'online' as const)
   }
   return [
     ...Array.from({ length: online }, () => 'online' as const),
@@ -94,9 +103,10 @@ export function createMockData(seed = MOCK_SEED): TwinData {
     const pending: Array<Omit<Device, 'status'>> = []
     const alarmHeavy = (ALARM_HEAVY_FLOORS as readonly string[]).includes(spec.id)
 
-    for (let index = 1; index <= DESKS_PER_FLOOR; index += 1) {
+    const deskCount = floorDeskCount(spec.id)
+    for (let index = 1; index <= deskCount; index += 1) {
       const id = `${spec.id}-${index}`
-      const zone = zoneFor(spec.id, index)
+      const zone = zoneFor(spec.id, index, deskCount)
       const { x, z } = deskPosition(index)
       desks.push({ id, floorId: spec.id, index, zone, x, y: spec.elevation, z })
       people.push({
@@ -114,7 +124,7 @@ export function createMockData(seed = MOCK_SEED): TwinData {
         id: `${spec.id}-PR${printer}`,
         floorId: spec.id,
         type: 'printer',
-        zone: zoneFor(spec.id, printer),
+        zone: zoneFor(spec.id, printer, deskCount),
       })
     }
 
@@ -124,7 +134,7 @@ export function createMockData(seed = MOCK_SEED): TwinData {
         id: `${spec.id}-CAM${camera}`,
         floorId: spec.id,
         type: 'camera',
-        zone: zoneFor(spec.id, camera),
+        zone: zoneFor(spec.id, camera, deskCount),
       })
     }
 

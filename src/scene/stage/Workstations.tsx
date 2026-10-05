@@ -34,7 +34,7 @@ export function InstancedSlots({
     slots.forEach((slot, index) => {
       dummy.position.set(slot.x, 0, slot.z)
       dummy.rotation.set(0, slot.rot, 0)
-      dummy.scale.set(1, 1, 1)
+      dummy.scale.set(slot.sx ?? 1, slot.sy ?? 1, slot.sz ?? 1)
       dummy.updateMatrix()
       mesh.setMatrixAt(index, dummy.matrix)
       if (colors) mesh.setColorAt(index, colors[index] ?? colors[0])

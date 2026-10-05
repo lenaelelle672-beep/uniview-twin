@@ -28,10 +28,11 @@ describe('工位搜索', () => {
     expect(searchWorkstations(data, '   ')).toEqual([])
   })
 
-  it('非法工位号不能解析，合法编号能落到 1～100', () => {
+  it('非法工位号不能解析，合法编号能落到本层工位数', () => {
     expect(resolveWorkstationRef('F99-1')).toBeNull()
     expect(resolveWorkstationRef('F12-0')).toBeNull()
-    expect(resolveWorkstationRef('F12-101')).toBeNull()
+    expect(resolveWorkstationRef('F12-185')).toBeNull()
+    expect(resolveWorkstationRef('F12-101')).toEqual({ floorId: 'F12', deskId: 'F12-101', index: 101 })
     expect(resolveWorkstationRef('F12-66')).toEqual({ floorId: 'F12', deskId: 'F12-66', index: 66 })
     expect(resolveWorkstationRef('B1-8')).toEqual({ floorId: 'B1', deskId: 'B1-8', index: 8 })
     expect(invalidPosMessage('F99-1')).toContain('找不到工位 F99-1')

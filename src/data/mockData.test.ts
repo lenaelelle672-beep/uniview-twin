@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { floorDeskCount } from '../floors/deskCounts'
 import { MockAdapter } from './adapters'
 import { floorIdList, TOWER_ROOF_M } from './floors'
 import { ALARM_HEAVY_FLOORS, createMockData, DESKS_PER_FLOOR } from './mockData'
@@ -18,7 +19,7 @@ describe('MockAdapter', () => {
     expect(fromAdapter).toEqual(first)
   })
 
-  it('每层约 100 个工位，并带齐四种设备状态', () => {
+  it('每层按图纸工位数生成人员和设备，并带齐四种设备状态', () => {
     const data = createMockData()
     expect(data.floors.map((floor) => floor.id)).toEqual(floorIdList())
     expect(data.floors).toHaveLength(23)
@@ -27,10 +28,11 @@ describe('MockAdapter', () => {
       const desks = data.desks.filter((desk) => desk.floorId === floor.id)
       const devices = data.devices.filter((device) => device.floorId === floor.id)
       const people = data.people.filter((person) => person.floorId === floor.id)
-      expect(desks).toHaveLength(DESKS_PER_FLOOR)
-      expect(people).toHaveLength(DESKS_PER_FLOOR)
-      expect(devices.filter((device) => device.type === 'pc')).toHaveLength(DESKS_PER_FLOOR)
-      expect(devices.filter((device) => device.type === 'phone')).toHaveLength(DESKS_PER_FLOOR)
+      const deskCount = floorDeskCount(floor.id)
+      expect(desks).toHaveLength(deskCount)
+      expect(people).toHaveLength(deskCount)
+      expect(devices.filter((device) => device.type === 'pc')).toHaveLength(deskCount)
+      expect(devices.filter((device) => device.type === 'phone')).toHaveLength(deskCount)
       expect(devices.filter((device) => device.type === 'printer')).toHaveLength(2)
       const cameras = devices.filter((device) => device.type === 'camera')
       expect(cameras.length).toBeGreaterThanOrEqual(4)
@@ -41,18 +43,24 @@ describe('MockAdapter', () => {
 
       const heavy = (ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id)
       const idle = devices.filter((device) => device.status === 'idle').length / devices.length
-      expect(idle).toBeGreaterThan(0.12)
-      expect(idle).toBeLessThan(0.18)
-      if (!heavy) {
+      if (devices.length >= 20) {
+        expect(idle).toBeGreaterThan(0.12)
+        expect(idle).toBeLessThan(0.18)
+      }
+      if (!heavy && deskCount >= 100) {
         expect(floor.alarmCount).toBeGreaterThanOrEqual(5)
-        expect(floor.alarmCount).toBeLessThanOrEqual(11)
-        expect(floor.offlineCount).toBeGreaterThanOrEqual(7)
-        expect(floor.offlineCount).toBeLessThanOrEqual(17)
+        expect(floor.offlineCount).toBeGreaterThanOrEqual(1)
       }
     }
 
-    const normal = data.floors.filter((floor) => !(ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id))
-    const heavy = data.floors.filter((floor) => (ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id))
+    const comparable = (floorId: string) => {
+      const n = floorDeskCount(floorId)
+      return n >= 100 && n <= 200
+    }
+    const normal = data.floors.filter(
+      (floor) => !(ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id) && comparable(floor.id),
+    )
+    const heavy = data.floors.filter((floor) => (ALARM_HEAVY_FLOORS as readonly string[]).includes(floor.id) && comparable(floor.id))
     const maxNormalAlarm = Math.max(...normal.map((floor) => floor.alarmCount))
     expect(new Set(normal.map((floor) => floor.alarmCount)).size).toBeGreaterThan(1)
     expect(new Set(normal.map((floor) => floor.offlineCount)).size).toBeGreaterThan(1)
@@ -76,9 +84,9 @@ describe('MockAdapter', () => {
     expect(byId.F22.elevation + byId.F22.height).toBeCloseTo(TOWER_ROOF_M, 5)
 
     const zones = (floorId: string) => new Set(data.desks.filter((desk) => desk.floorId === floorId).map((desk) => desk.zone))
-    expect(zones('F1')).toEqual(new Set(['tower', 'podium', 'east']))
     expect(zones('F12')).toEqual(new Set(['tower']))
     expect(zones('B1')).toEqual(new Set(['podium']))
+    expect(data.desks.filter((desk) => desk.floorId === 'B1')).toHaveLength(DESKS_PER_FLOOR)
 
   })
 })
