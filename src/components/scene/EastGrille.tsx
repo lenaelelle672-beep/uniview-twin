@@ -1,5 +1,5 @@
 import { useFrame, useLoader } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { DoubleSide, Mesh, MeshStandardMaterial, Object3D, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import {
@@ -48,9 +48,6 @@ const mountWorld = new Vector3()
 function BalancedGrille() {
   const [near, setNear] = useState(false)
   const [hiReady, setHiReady] = useState(false)
-  const [detailedPack, setDetailedPack] = useState<{
-    Detailed: (props: { distances: number[]; children?: ReactNode }) => ReactNode
-  } | null>(null)
   const mount = eastGrilleMount()
   useFrame(({ camera }) => {
     mountWorld.set(...mount.position)
@@ -69,24 +66,8 @@ function BalancedGrille() {
       cancelled = true
     }
   }, [hiReady, near])
-  useEffect(() => {
-    if (!near || !hiReady || detailedPack) return
-    let cancelled = false
-    void import('@react-three/drei/core/Detailed').then((mod) => {
-      if (!cancelled) setDetailedPack({ Detailed: mod.Detailed as (props: { distances: number[]; children?: ReactNode }) => ReactNode })
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [detailedPack, hiReady, near])
-  if (!near || !hiReady || !detailedPack) return <GrilleModel url={EAST_GRILLE_LO} />
-  const Detailed = detailedPack.Detailed
-  return (
-    <Detailed distances={[0, 80]}>
-      <GrilleModel url={EAST_GRILLE_HI} />
-      <GrilleModel url={EAST_GRILLE_LO} />
-    </Detailed>
-  )
+  // 不静态导入 drei Detailed，避免首屏多一个 327 B chunk。靠近后再只挂 hi。
+  return <GrilleModel url={!near || !hiReady ? EAST_GRILLE_LO : EAST_GRILLE_HI} />
 }
 
 export function EastGrille({ quality }: { quality: QualityTier }) {
