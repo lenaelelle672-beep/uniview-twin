@@ -1,14 +1,19 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
-import { Box3, Vector3 } from 'three'
+import { Box3, Raycaster, Vector3 } from 'three'
 import { useTwinStore } from '../../store/store'
 
 const projected = new Vector3()
 const grilleBox = new Box3()
+const raycaster = new Raycaster()
+const rayOrigin = new Vector3()
+const rayTarget = new Vector3()
+const rayDir = new Vector3()
 
 export function RenderProbe() {
   const camera = useThree((state) => state.camera)
   const gl = useThree((state) => state.gl)
+  const scene = useThree((state) => state.scene)
 
   useEffect(() => {
     window.__twinReady = true
@@ -21,16 +26,32 @@ export function RenderProbe() {
         behind: projected.z > 1,
       }
     }
+    window.__twinRaycast = (x1, y1, z1, x2, y2, z2) => {
+      rayOrigin.set(x1, y1, z1)
+      rayTarget.set(x2, y2, z2)
+      rayDir.copy(rayTarget).sub(rayOrigin)
+      const span = rayDir.length()
+      raycaster.set(rayOrigin, rayDir.normalize())
+      raycaster.far = span + 1
+      return raycaster.intersectObjects(scene.children, true).slice(0, 8).map((hit) => ({
+        name: hit.object.name,
+        parent: hit.object.parent?.name ?? '',
+        distance: hit.distance,
+        point: hit.point.toArray(),
+      }))
+    }
     const unsubscribe = useTwinStore.subscribe((state) => {
       window.__twinFly = state.floorFlyRequest
+      window.__twinView = state.view
+      window.__twinSelected = state.selectedFloor
     })
+    window.__twinView = useTwinStore.getState().view
+    window.__twinSelected = useTwinStore.getState().selectedFloor
     return () => {
       window.__twinReady = false
       unsubscribe()
     }
-  }, [camera, gl])
-
-  const scene = useThree((state) => state.scene)
+  }, [camera, gl, scene])
 
   useFrame(() => {
     window.__twinStats = {

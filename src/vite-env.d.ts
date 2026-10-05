@@ -100,4 +100,14 @@ interface Window {
   __twinExplode?: TwinExplodeStats
   __twinEnvMaterials?: TwinEnvMaterial[]
   __twinGrille?: Array<{ name: string; type: string; visible: boolean; world: number[]; box: number[] | null }>
+  __twinView?: string
+  __twinSelected?: string | null
+  __twinRaycast?: (
+    x1: number,
+    y1: number,
+    z1: number,
+    x2: number,
+    y2: number,
+    z2: number,
+  ) => Array<{ name: string; parent: string; distance: number; point: number[] }>
 }
