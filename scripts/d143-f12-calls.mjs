@@ -68,7 +68,17 @@ async function measure(page, quality, floorId) {
     { timeout: 90_000 },
     floorId,
   )
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 2500)))
+  await page.waitForFunction(
+    (wantPeople) => {
+      const scene = window.__perf?.scenes?.[0]
+      if (!scene?.getObjectByName('RoomLabels')) return false
+      if (wantPeople && !scene.getObjectByName('CorridorPeople')) return false
+      return true
+    },
+    { timeout: 60_000 },
+    quality !== 'perf',
+  )
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)))
 
   const sample = await page.evaluate(async () => {
     const P = window.__perf

@@ -10,7 +10,7 @@ import {
   jointMaterial,
   solidMaterial,
 } from '../../scene/materials'
-import { isFloorCurtainOpen, isFloorShellHidden, isFloorShellShadowDisabled, isRoofHidden } from '../../scene/stage/cut'
+import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
 import { TOWER } from '../../scene/siteGeometry'
 import { createTowerGlass } from '../../scene/towerGlass'
 import { useTwinStore } from '../../store/store'
@@ -49,7 +49,6 @@ function FloorShell({ id, elevation, height }: { id: string; elevation: number; 
   const hidden = useTwinStore((state) => isFloorShellHidden(state.view, state.selectedFloor, elevation))
   const opened = useTwinStore((state) => isFloorCurtainOpen(state.view, state.selectedFloor, id))
   const selected = useTwinStore((state) => state.view === 'building' && state.selectedFloor === id)
-  const shellShadow = useTwinStore((state) => !isFloorShellShadowDisabled(state.view, state.selectedFloor, elevation))
   const actions = useFloorActions(id)
   return (
     <group name={`FloorShell-${id}`} visible={!hidden} {...actions}>
@@ -64,7 +63,7 @@ function FloorShell({ id, elevation, height }: { id: string; elevation: number; 
         name={`FloorBand-${id}`}
         geometry={band}
         material={selected ? highlightJointMaterial : jointMaterial}
-        castShadow={shellShadow}
+        castShadow
         receiveShadow
         renderOrder={selected ? BUILDING_HIGHLIGHT_ORDER : 0}
       />

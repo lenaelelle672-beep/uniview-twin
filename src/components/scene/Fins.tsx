@@ -11,7 +11,6 @@ export function FinRow({
   depth = 0.42,
   thickness = 0.07,
   outwardFrom,
-  castShadow = true,
 }: {
   points: Array<[number, number]>
   spacing: number
@@ -20,7 +19,6 @@ export function FinRow({
   depth?: number
   thickness?: number
   outwardFrom: [number, number]
-  castShadow?: boolean
 }) {
   const fins = useMemo(() => finsAlong(points, spacing, outwardFrom, depth * 0.45), [depth, outwardFrom, points, spacing])
   const geometry = useMemo(() => new BoxGeometry(thickness, height, depth), [depth, height, thickness])
@@ -47,7 +45,7 @@ export function FinRow({
     <instancedMesh
       ref={ref}
       args={[geometry, finMaterial, fins.length]}
-      castShadow={castShadow}
+      castShadow
       receiveShadow
       frustumCulled={false}
     />
