@@ -70,11 +70,11 @@ export function plazaPage(): Array<[number, number]> {
  * 凸侧是 stroke-width 6 的粗弧（西段 r≈71.7 m，东端收到 8F）。
  */
 export function podiumPage(): Array<[number, number]> {
-  const front = arcPoints(FRONT_RADIUS_PT, 0, -Math.PI / 2, 32)
+  const front = arcPoints(FRONT_RADIUS_PT, 0, -Math.PI / 2, 16)
   const southY = surveyToPage(86355.182, 76021.29)[1]
   const towerEast = surveyToPage(86355.182, 76021.29)[0]
-  const farWest = cubicPoints([1910.11, 858.24], [1962.5, 887.49], [2007.16, 928.8], [2040.39, 978.76], 12)
-  const farEast = cubicPoints([2040.34, 978.87], [2089.38, 1052.57], [2099.98, 1145.36], [2068.84, 1228.23], 12)
+  const farWest = cubicPoints([1910.11, 858.24], [1962.5, 887.49], [2007.16, 928.8], [2040.39, 978.76], 8)
+  const farEast = cubicPoints([2040.34, 978.87], [2089.38, 1052.57], [2099.98, 1145.36], [2068.84, 1228.23], 8)
   return dedupe([
     ...front,
     [ARC_CENTER_PAGE[0], southY],
@@ -85,7 +85,7 @@ export function podiumPage(): Array<[number, number]> {
 }
 
 export function podiumFrontPage(): Array<[number, number]> {
-  return arcPoints(FRONT_RADIUS_PT, 0, -Math.PI / 2, 32)
+  return arcPoints(FRONT_RADIUS_PT, 0, -Math.PI / 2, 16)
 }
 
 export function pageRingToWorld(points: Array<[number, number]>): Array<[number, number]> {

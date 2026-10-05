@@ -54,15 +54,15 @@ export function Podium({ model }: { model: boolean }) {
   const outline = useMemo(() => podiumOutline(), [])
   const focus = useMemo(() => podiumFocus(), [])
   const shell = useMemo(() => {
-    const main = extrudeUp(outline, PODIUM_HEIGHT_M)
-    const addon = extrudeUp(PODIUM_SOUTH_ADDON, PODIUM_HEIGHT_M)
+    const main = extrudeUp(outline, PODIUM_HEIGHT_M, [], 'top')
+    const addon = extrudeUp(PODIUM_SOUTH_ADDON, PODIUM_HEIGHT_M, [], 'top')
     const merged = mergeGeometries([main, addon])
     main.dispose()
     addon.dispose()
     if (!merged) throw new Error('裙楼几何为空')
     return merged
   }, [outline])
-  const band = useMemo(() => extrudeUp(outset(outline, 0.16, focus), 0.42), [focus, outline])
+  const band = useMemo(() => extrudeUp(outset(outline, 0.16, focus), 0.42, [], 'top'), [focus, outline])
   const basin = useMemo(() => makeBasin(), [])
   const arc = useMemo(() => podiumFrontArc(), [])
   const materials = model ? [solidMaterial, solidMaterial] : [solidMaterial, curtainMaterial]

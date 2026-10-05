@@ -1,4 +1,4 @@
-import { BoxGeometry, PlaneGeometry, Vector3, type BufferGeometry, type NormalBufferAttributes } from 'three'
+import { PlaneGeometry, Vector3, type BufferGeometry, type NormalBufferAttributes } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { Ring } from './rings'
 
@@ -64,25 +64,34 @@ export function createRingGlass(ring: Ring, elevation: number, height: number, i
   return merged
 }
 
-/** 沿折线外侧放一圈楼层条或女儿墙。 */
+/** 沿折线外侧放一圈楼层条或女儿墙。默认只留外露面（D125-3）。 */
 export function createRingBand(
   ring: Ring,
   yCenter: number,
   height: number,
   thickness = 0.28,
   outset = 0.12,
+  faces: 'outer' | 'outer-top' = 'outer',
 ): BufferGeometry {
   const centroid = ringCentroid(ring)
-  const parts: BoxGeometry[] = []
+  const parts: PlaneGeometry[] = []
   for (let i = 0; i < ring.length; i += 1) {
     const a = ring[i]
     const b = ring[(i + 1) % ring.length]
     const { len, nx, nz, mx, mz } = edgeOutward(a, b, centroid)
     if (len < 0.08) continue
-    const box = new BoxGeometry(len + 0.08, height, thickness)
-    box.rotateY(Math.atan2(nx, nz))
-    box.translate(mx + nx * (outset + thickness / 2), yCenter, mz + nz * (outset + thickness / 2))
-    parts.push(box)
+    const plane = new PlaneGeometry(len + 0.08, height)
+    plane.rotateY(Math.atan2(nx, nz))
+    plane.translate(mx + nx * (outset + thickness / 2), yCenter, mz + nz * (outset + thickness / 2))
+    faceOutward(plane, new Vector3(nx, 0, nz))
+    parts.push(plane)
+    if (faces === 'outer-top') {
+      const top = new PlaneGeometry(len + 0.08, thickness)
+      top.rotateX(-Math.PI / 2)
+      top.rotateY(Math.atan2(nx, nz))
+      top.translate(mx + nx * (outset + thickness / 2), yCenter + height / 2, mz + nz * (outset + thickness / 2))
+      parts.push(top)
+    }
   }
   const merged = mergeGeometries(parts)
   parts.forEach((geometry) => geometry.dispose())

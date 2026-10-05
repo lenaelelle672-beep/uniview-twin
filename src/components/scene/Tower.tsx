@@ -12,7 +12,7 @@ import {
 } from '../../scene/materials'
 import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
 import { createRingBand, TOWER_BAND } from '../../scene/shell/facade'
-import { TOWER_OUTLINE, TOWER_OUTLINE_OVERVIEW } from '../../scene/shell/rings'
+import { TOWER_OUTLINE_OVERVIEW } from '../../scene/shell/rings'
 import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
 import { createFloorTowerGlass, createTowerGlass } from '../../scene/towerGlass'
 import { useTwinStore } from '../../store/store'
@@ -72,10 +72,10 @@ export function Tower({ night }: { night: boolean }) {
   const roofHidden = useTwinStore((state) => isRoofHidden(state.view, state.selectedFloor))
   const parapet = useMemo(() => {
     const height = TOWER_PARAPET_TOP_M - TOWER_ROOF_M
-    return createRingBand(TOWER_OUTLINE_OVERVIEW, TOWER_ROOF_M + height / 2, height, 0.36, 0.1)
+    return createRingBand(TOWER_OUTLINE_OVERVIEW, TOWER_ROOF_M + height / 2, height, 0.36, 0.1, 'outer-top')
   }, [])
   const roof = useMemo(() => {
-    const geometry = extrudeUp(TOWER_OUTLINE, 0.35)
+    const geometry = extrudeUp(TOWER_OUTLINE_OVERVIEW, 0.35, [], 'top')
     geometry.translate(0, TOWER_ROOF_M - 0.35, 0)
     return geometry
   }, [])

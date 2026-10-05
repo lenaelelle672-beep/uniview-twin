@@ -2,6 +2,7 @@ import { lazy, useMemo } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { preloadEastGrilleForQuality } from '../../scene/eastGrilleAssets'
 import { extrudeUp } from '../../scene/extrude'
+import { createRingBand } from '../../scene/shell/facade'
 import {
   eastFloorBandLevels,
   eastGrilleMount,
@@ -30,10 +31,10 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
   const upperOutline = useMemo(() => eastUpperOutline(), [])
   const lowerOutline = useMemo(() => eastLowerOutline(), [])
   const solid = useMemo(() => {
-    const upper = extrudeUp(upperOutline, EAST_ROOF_M - LOWER_TOP)
+    const upper = extrudeUp(upperOutline, EAST_ROOF_M - LOWER_TOP, [], 'top')
     upper.clearGroups()
     upper.translate(0, LOWER_TOP, 0)
-    const lower = extrudeUp(lowerOutline, LOWER_TOP)
+    const lower = extrudeUp(lowerOutline, LOWER_TOP, [], 'top')
     lower.clearGroups()
     const merged = mergeGeometries([upper, lower])
     upper.dispose()
@@ -42,7 +43,7 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
     return merged
   }, [lowerOutline, upperOutline])
   const wing = useMemo(() => {
-    const geometry = extrudeUp(NORTH_WING_OUTLINE, northWingTopM())
+    const geometry = extrudeUp(NORTH_WING_OUTLINE, northWingTopM(), [], 'top')
     geometry.clearGroups()
     return geometry
   }, [])
@@ -53,11 +54,7 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
   )
   const seams = useMemo(() => {
     const levels = [...eastFloorBandLevels(), EAST_ROOF_M]
-    const parts = levels.map((level) => {
-      const geometry = extrudeUp(outset(upperOutline, 0.12, focus), 0.2)
-      geometry.translate(0, level, 0)
-      return geometry
-    })
+    const parts = levels.map((level) => createRingBand(outset(upperOutline, 0.12, focus), level + 0.1, 0.2))
     const merged = mergeGeometries(parts)
     parts.forEach((geometry) => geometry.dispose())
     if (!merged) throw new Error('东楼分层线为空')

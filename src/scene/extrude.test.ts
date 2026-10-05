@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Object3D, Vector3 } from 'three'
 import { extrudeUp } from './extrude'
+import { createRingBand } from './shell/facade'
 import { courtyardHole, eastGrilleMount, eastLowerOutline, eastUpperOutline, eastWall, podiumOutline } from './massing'
 import { EAST_ROOF_M } from './siteGeometry'
 import { TOWER_OUTLINE_OVERVIEW } from './shell/rings'
@@ -80,6 +81,41 @@ describe('轮廓挤出', () => {
     expect(along.toArray()).toEqual([expect.closeTo(0, 5), expect.closeTo(0, 5), expect.closeTo(-1, 5)])
     expect(up.toArray()).toEqual([expect.closeTo(0, 5), expect.closeTo(1, 5), expect.closeTo(0, 5)])
     expect(outward.toArray()).toEqual([expect.closeTo(1, 5), expect.closeTo(0, 5), expect.closeTo(0, 5)])
+  })
+
+  it('去掉底面后顶面和侧面还在', () => {
+    const both = extrudeUp(
+      [
+        [0, 0],
+        [10, 0],
+        [10, 4],
+        [0, 4],
+      ],
+      3,
+    )
+    const top = extrudeUp(
+      [
+        [0, 0],
+        [10, 0],
+        [10, 4],
+        [0, 4],
+      ],
+      3,
+      [],
+      'top',
+    )
+    const count = (geometry: { getIndex: () => { count: number } | null; getAttribute: (name: string) => { count: number } }) =>
+      (geometry.getIndex()?.count ?? geometry.getAttribute('position').count) / 3
+    expect(count(both)).toBeGreaterThan(count(top))
+    both.dispose()
+    top.dispose()
+  })
+
+  it('楼层条只留外露面，总览轮廓每边两三角', () => {
+    const band = createRingBand(TOWER_OUTLINE_OVERVIEW, 1, 0.78)
+    const tris = (band.getIndex()?.count ?? band.getAttribute('position').count) / 3
+    expect(tris).toBeLessThanOrEqual(TOWER_OUTLINE_OVERVIEW.length * 2)
+    band.dispose()
   })
 
   it('塔楼总览轮廓含南弧且每 90° 不超过 16 段', () => {

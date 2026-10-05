@@ -28,7 +28,7 @@ import {
 export function ParcelMesh() {
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const court = useMemo(() => courtyardHole(), [])
-  const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court]), [court])
+  const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court], 'top'), [court])
   return (
     <mesh
       name="Parcel"
@@ -85,8 +85,8 @@ export function Site({ model, night, quality }: { model: boolean; night: boolean
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const furniture = useMemo(() => placeStreetFurniture(), [])
   const court = useMemo(() => courtyardHole(), [])
-  const park = useMemo(() => extrudeUp(PARK, 0.02, [court]), [court])
-  const plinth = useMemo(() => extrudeUp(footprintOutline(), 0.2), [])
+  const park = useMemo(() => extrudeUp(PARK, 0.02, [court], 'top'), [court])
+  const plinth = useMemo(() => extrudeUp(footprintOutline(), 0.2, [], 'top'), [])
   const sidewalk = useMemo(() => ribbonGeometry(sidewalkRibbons(), 0.08), [])
   const roads = useMemo(() => ribbonGeometry(roadRibbons(), 0.12), [])
   const zebras = useMemo(() => {
