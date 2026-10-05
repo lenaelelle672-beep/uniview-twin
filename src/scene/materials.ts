@@ -123,6 +123,7 @@ export const baseMaterial = new MeshStandardMaterial({
   color: '#8f8c89',
   roughness: 0.86,
   metalness: 0.02,
+  envMapIntensity: 0.2,
 })
 export const stoneMaterial = new MeshStandardMaterial({ color: '#d7d2c8', roughness: 0.86, metalness: 0 })
 export const courtWallMaterial = new MeshStandardMaterial({
@@ -185,6 +186,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     baseMaterial.color.set('#e4e4e4')
     baseMaterial.metalness = 0
     baseMaterial.roughness = 0.8
+    baseMaterial.envMapIntensity = 0.08
     stoneMaterial.color.set('#e6e6e6')
     courtWallMaterial.color.set('#e6e6e6')
     deckMaterial.color.set('#dedede')
@@ -215,6 +217,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     baseMaterial.color.set('#6a6764')
     baseMaterial.metalness = 0.02
     baseMaterial.roughness = 0.88
+    baseMaterial.envMapIntensity = 0.1
     stoneMaterial.color.set('#8a867e')
     courtWallMaterial.color.set('#8a867e')
     deckMaterial.color.set('#6e6a64')
@@ -254,6 +257,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     baseMaterial.color.set('#7f7b77')
     baseMaterial.metalness = 0.02
     baseMaterial.roughness = 0.88
+    baseMaterial.envMapIntensity = 0.15
     stoneMaterial.color.set('#b0ada8')
     courtWallMaterial.color.set('#9a9692')
     deckMaterial.color.set('#d9d5cc')

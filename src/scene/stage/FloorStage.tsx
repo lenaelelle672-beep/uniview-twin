@@ -1,8 +1,9 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { InstancedMesh, Mesh } from 'three'
 import { PICK_VOLUME_LAYER } from '../pickLayers'
 import { floorSpec } from '../../data/floors'
+import { isFloorHydrated } from '../../floors/cache'
 import { loadFloorPlan } from '../../floors/loadFloor'
 import { extrudeUp } from '../extrude'
 import { basementPickOutline } from './b1Plan'
@@ -114,17 +115,34 @@ export function FloorStage() {
     return devices.filter((device) => device.floorId === active)
   }, [active, devices])
   const spec = active ? floorSpec(active) : null
+  const [hydratedFloor, setHydratedFloor] = useState<string | null>(() =>
+    active && active !== 'B1' && isFloorHydrated(active) ? active : null,
+  )
   useEffect(() => {
-    if (!active || active === 'B1') return
-    void loadFloorPlan(active)
+    if (!active || active === 'B1') {
+      setHydratedFloor(null)
+      return
+    }
+    if (isFloorHydrated(active)) {
+      setHydratedFloor(active)
+      return
+    }
+    let cancelled = false
+    void loadFloorPlan(active).then((plan) => {
+      if (!cancelled) setHydratedFloor(plan.floorId)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [active])
   const slots = useMemo(() => {
     if (!active || active === 'B1') return []
+    if (hydratedFloor !== active || !isFloorHydrated(active)) return []
     return floorDesks.map((desk) => {
       const position = workstationPosition(desk.floorId, desk.id)
       return { x: position.x, z: position.z, rot: 0 }
     })
-  }, [active, floorDesks])
+  }, [active, floorDesks, hydratedFloor])
   const basementSlots = useMemo(() => {
     if (active !== 'B1') return []
     return floorDesks.map((desk) => {
