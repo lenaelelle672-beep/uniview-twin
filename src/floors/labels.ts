@@ -60,10 +60,10 @@ function displayName(name: string): string {
 }
 
 function sameNameCap(text: string): number {
-  if (text === '会议室') return 4
+  if (text === '会议室') return 2
   if (text === '洽谈室' || text === '茶水间') return 2
   if (text === '电梯厅' || text === '前台') return 1
-  return 2
+  return 1
 }
 
 function outlineSpan(outline: Array<[number, number]>): number {
@@ -81,23 +81,33 @@ function outlineSpan(outline: Array<[number, number]>): number {
 }
 
 function separateEndpoints(labels: RoomLabel[], minSep: number): RoomLabel[] {
-  const next = labels.map((label) => ({
-    ...label,
-    label: [label.label[0], label.label[1], label.label[2]] as [number, number, number],
-  }))
-  for (let iter = 0; iter < 10; iter += 1) {
+  const next = labels.map((label, index) => {
+    const angle = (index / Math.max(labels.length, 1)) * Math.PI * 2
+    const ring = minSep * 0.55
+    return {
+      ...label,
+      label: [
+        label.anchor[0] + Math.cos(angle) * ring,
+        3.2 + (index % 2) * 0.55,
+        label.anchor[2] + Math.sin(angle) * ring,
+      ] as [number, number, number],
+    }
+  })
+  for (let iter = 0; iter < 14; iter += 1) {
     let moved = false
     for (let i = 0; i < next.length; i += 1) {
       for (let j = i + 1; j < next.length; j += 1) {
         const dx = next[j].label[0] - next[i].label[0]
         const dz = next[j].label[2] - next[i].label[2]
         const dist = Math.hypot(dx, dz)
-        if (dist >= minSep || dist < 1e-6) continue
-        const push = ((minSep - dist) / 2) * (1 / dist)
-        next[i].label[0] -= dx * push
-        next[i].label[2] -= dz * push
-        next[j].label[0] += dx * push
-        next[j].label[2] += dz * push
+        if (dist >= minSep) continue
+        const nx = dist < 1e-6 ? Math.cos((i + 0.5) * 1.7) : dx / dist
+        const nz = dist < 1e-6 ? Math.sin((i + 0.5) * 1.7) : dz / dist
+        const push = (minSep - Math.max(dist, 0.2)) / 2
+        next[i].label[0] -= nx * push
+        next[i].label[2] -= nz * push
+        next[j].label[0] += nx * push
+        next[j].label[2] += nz * push
         moved = true
       }
     }
@@ -157,5 +167,5 @@ export function roomLabelsFromPlan(plan: FloorPlan): RoomLabel[] {
       label: [x, 3.2, z] as [number, number, number],
     }
   })
-  return separateEndpoints(labels, span > 70 ? 9 : 3.1)
+  return separateEndpoints(labels, span > 70 ? 16 : 7.2)
 }
