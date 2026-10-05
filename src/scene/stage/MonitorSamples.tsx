@@ -50,15 +50,23 @@ function boxFromCorners(
   }
   const rawW = maxX - minX
   const rawH = maxY - minY
-  if (rawW < 4 || rawH < 4) return null
-  const padX = Math.min((rawW - 4) / 2, rawW * inset)
-  const padY = Math.min((rawH - 4) / 2, rawH * inset)
+  if (rawW < 2 || rawH < 2) return null
+  const padX = rawW >= 4 ? Math.min((rawW - 4) / 2, rawW * inset) : 0
+  const padY = rawH >= 4 ? Math.min((rawH - 4) / 2, rawH * inset) : 0
   let x = minX + padX
   let y = minY + padY
   let w = maxX - padX - x
   let h = maxY - padY - y
-  x = Math.max(0, x)
-  y = Math.max(0, y)
+  if (w < 4) {
+    x -= (4 - w) / 2
+    w = 4
+  }
+  if (h < 4) {
+    y -= (4 - h) / 2
+    h = 4
+  }
+  x = Math.max(0, Math.min(width - 4, x))
+  y = Math.max(0, Math.min(height - 4, y))
   w = Math.min(width - x, w)
   h = Math.min(height - y, h)
   if (w < 4 || h < 4) return null

@@ -276,6 +276,9 @@ async function main() {
             `?q=${quality}&view=floor&floor=${floorId}`,
             viewport,
           )
+          const fold = await page.$('button[aria-label="折叠楼层栏"]')
+          if (fold) await fold.click()
+          await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)))
           await page.waitForFunction(
             (id) => window.__twinMonitorBoxes?.floorId === id && window.__twinMonitorBoxes.alarm && window.__twinMonitorBoxes.online,
             { timeout: 90_000 },
