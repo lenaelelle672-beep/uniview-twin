@@ -1,6 +1,6 @@
 import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef } from 'react'
-import { Group } from 'three'
+import { DoubleSide, Group } from 'three'
 import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { BatchedText, Text, preloadFont } from 'troika-three-text'
 import { ROOM_LABEL_FONT, type RoomLabel } from './roomLabels'
@@ -71,6 +71,7 @@ export function BatchedRoomLabels({
         batch.anchorY = 'middle'
         batch.renderOrder = 3
         batch.visible = false
+        batch.frustumCulled = false
         for (const label of labels) {
           const text = new Text()
           text.text = label.text
@@ -83,6 +84,8 @@ export function BatchedRoomLabels({
           text.anchorY = 'middle'
           text.characters = characters
           text.position.set(label.label[0], label.label[1], label.label[2])
+          // 默认字面朝 +Z；单层机位在南侧看向 -Z，固定转 180°，不是 Billboard。
+          text.rotation.y = Math.PI
           text.frustumCulled = false
           batch.addText(text)
           members.push(text)
@@ -93,6 +96,10 @@ export function BatchedRoomLabels({
           batch?.sync(() => resolve())
         })
         if (cancelled || !batch) return
+        const materials = Array.isArray(batch.material) ? batch.material : [batch.material]
+        for (const material of materials) {
+          if (material) material.side = DoubleSide
+        }
         batch.visible = true
         group.add(batch)
         batchRef.current = batch
