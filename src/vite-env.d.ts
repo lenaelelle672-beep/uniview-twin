@@ -119,6 +119,12 @@ interface Window {
   __twinExplode?: TwinExplodeStats
   __twinMonitorBoxes?: TwinMonitorBoxes
   __twinFacadeBoxes?: TwinFacadeBoxes
+  __twinSetExploded?: (exploded: boolean) => void
+  __twinOverlayBudget?: {
+    extraTargets: number
+    extraBytes: number
+    drawingBuffer: { width: number; height: number }
+  }
   __twinWarmup?: {
     compileMs: number
     totalMs: number

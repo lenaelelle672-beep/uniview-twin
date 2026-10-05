@@ -30,8 +30,8 @@ export const monitorMaterial = new MeshBasicMaterial({
   vertexColors: true,
   // 合成器之后、NoToneMapping 通道里画。实例色就是显示色，三层亮度一致。
   toneMapped: false,
-  depthTest: false,
-  depthWrite: false,
+  depthTest: true,
+  depthWrite: true,
 })
 export const kitchenMaterial = new MeshStandardMaterial({ color: '#d5dbdf', roughness: 0.42, metalness: 0.35 })
 export const fanFloorMaterial = new MeshStandardMaterial({ color: '#3e4652', roughness: 0.84, metalness: 0.04 })

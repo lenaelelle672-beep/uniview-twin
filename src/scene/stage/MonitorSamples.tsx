@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Vector3 } from 'three'
 import { floorSpec } from '../../data/floors'
-import { TOWER } from '../siteGeometry'
+import { facadeBandCorners, neighborFloorId, tightenNonOverlapping } from './facadeBoxes'
 import { monitorPlateCorners } from './geometry'
 import type { Slot } from './layout'
 import { MONITOR_DISPLAY_COLOR } from './materials'
@@ -136,29 +136,29 @@ export function FacadeSamples() {
       return
     }
     const spec = floorSpec(selected)
-    const neighborId = spec.level <= 1 ? 'F2' : `F${spec.level - 1}`
+    const neighborId = neighborFloorId(selected)
     const neighbor = floorSpec(neighborId)
     const width = gl.domElement.width
     const height = gl.domElement.height
-    const z = TOWER.maxZ + 0.22
-    const selectedHit = projectCanvas(camera, width, height, 0, spec.elevation + spec.height * 0.48, z)
-    const neighborHit = projectCanvas(camera, width, height, 0, neighbor.elevation + neighbor.height * 0.48, z)
-    if (selectedHit.behind || neighborHit.behind) {
+    const selectedHits = facadeBandCorners(spec.elevation).map((point) =>
+      projectCanvas(camera, width, height, point.x, point.y, point.z),
+    )
+    const neighborHits = facadeBandCorners(neighbor.elevation).map((point) =>
+      projectCanvas(camera, width, height, point.x, point.y, point.z),
+    )
+    const selectedBox = boxFromCorners(selectedHits, width, height)
+    const neighborBox = boxFromCorners(neighborHits, width, height)
+    if (!selectedBox || !neighborBox) {
       delete window.__twinFacadeBoxes
       return
     }
-    const box = (hit: { x: number; y: number }) => ({
-      x: hit.x - 16,
-      y: hit.y - 10,
-      w: 32,
-      h: 20,
-    })
+    const packed = tightenNonOverlapping(selectedBox, neighborBox)
     window.__twinFacadeBoxes = {
       selectedFloor: selected,
       neighborFloor: neighborId,
       canvas: { width, height },
-      selected: box(selectedHit),
-      neighbor: box(neighborHit),
+      selected: packed.selected,
+      neighbor: packed.neighbor,
     }
   })
 

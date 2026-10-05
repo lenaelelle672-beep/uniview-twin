@@ -25,6 +25,7 @@ export function RenderProbe() {
     window.__twinDevices = useTwinStore.getState().devices
     window.__twinFocusDevice = (target) => useTwinStore.getState().focusDevice(target)
     window.__twinSelectFloor = (floorId) => useTwinStore.getState().setSelectedFloor(floorId)
+    window.__twinSetExploded = (exploded) => useTwinStore.getState().setExploded(exploded)
     const unsubscribe = useTwinStore.subscribe((state) => {
       window.__twinFly = state.floorFlyRequest
       window.__twinSelected = state.selectedFloor
@@ -35,6 +36,7 @@ export function RenderProbe() {
       window.__twinReady = false
       delete window.__twinSelected
       delete window.__twinView
+      delete window.__twinSetExploded
       unsubscribe()
     }
   }, [camera, gl])

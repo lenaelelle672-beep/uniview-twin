@@ -10,7 +10,7 @@ import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
 import { FacadeSamples } from '../scene/stage/MonitorSamples'
-import { MonitorPass } from './scene/MonitorPass'
+import { MainScenePass, MonitorPass } from './scene/MonitorPass'
 import { RenderProbe } from './scene/RenderProbe'
 import { ParcelMesh, Site } from './scene/Site'
 import { ExplodedLayout } from './scene/ExplodedLayout'
@@ -95,10 +95,11 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <ExplodedLayout />
         <FloorStage />
       </Suspense>
-      {/* Hud 在性能档必须是 1，drei 只有这时才会代画主场景。均衡档改由合成器画。 */}
+      {/* 性能档由 MainScenePass 代画主场景并留下深度。Hud 一律 3，只画徽标，避免先清深度再画告警屏。 */}
+      {!extrasReady && <MainScenePass renderPriority={1} />}
       <MonitorPass renderPriority={2} />
       <Suspense fallback={null}>
-        <Hud renderPriority={extrasReady ? 3 : 1}>
+        <Hud renderPriority={3}>
           <FloorBadges />
         </Hud>
       </Suspense>

@@ -1,6 +1,9 @@
 import { ContactShadows } from '@react-three/drei/core/ContactShadows'
-import { EffectComposer, N8AO, ToneMapping } from '@react-three/postprocessing'
-import { ToneMappingMode } from 'postprocessing'
+import { EffectComposer, EffectComposerContext, N8AO, ToneMapping } from '@react-three/postprocessing'
+import { Pass, ToneMappingMode } from 'postprocessing'
+import { use, useLayoutEffect, useMemo } from 'react'
+import type { WebGLRenderer, WebGLRenderTarget } from 'three'
+import { blitDepth, ensureSceneDepthTarget, releaseSceneDepthTarget } from '../../../scene/monitorDepth'
 import {
   CONTACT_SHADOW_FAR,
   CONTACT_SHADOW_POSITION,
@@ -8,6 +11,34 @@ import {
   CONTACT_SHADOW_SCALE,
   SHELL_VERSION,
 } from '../../../scene/shellVersion'
+import { useTwinStore } from '../../../store/store'
+
+class KeepSceneDepthPass extends Pass {
+  constructor() {
+    super('KeepSceneDepthPass')
+    this.needsSwap = false
+  }
+
+  render(renderer: WebGLRenderer, inputBuffer: WebGLRenderTarget) {
+    if (useTwinStore.getState().view !== 'floor') return
+    const target = ensureSceneDepthTarget(inputBuffer.width, inputBuffer.height)
+    blitDepth(renderer, inputBuffer, target)
+  }
+}
+
+function DepthKeep() {
+  const { composer } = use(EffectComposerContext)
+  const pass = useMemo(() => new KeepSceneDepthPass(), [])
+  useLayoutEffect(() => {
+    if (!composer) return
+    composer.addPass(pass, 1)
+    return () => {
+      composer.removePass(pass)
+      releaseSceneDepthTarget()
+    }
+  }, [composer, pass])
+  return null
+}
 
 /**
  * 只在模型所在的 Suspense 里、排在楼和场地后面挂。
@@ -37,6 +68,7 @@ export function ContactGround() {
 export function PostFX() {
   return (
     <EffectComposer multisampling={4} enableNormalPass={false} stencilBuffer={false} renderPriority={1}>
+      <DepthKeep />
       <N8AO
         quality="performance"
         halfRes

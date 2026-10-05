@@ -2,9 +2,12 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { applySurfaceMode, baseMaterial } from './materials'
+import { applySurfaceMode, baseMaterial, highlightCurtainMaterial, highlightJointMaterial } from './materials'
+import { floorSpec } from '../data/floors'
+import { boxesOverlap, facadeBandCorners, neighborFloorId } from './stage/facadeBoxes'
 import { MONITOR_DISPLAY_SRGB, monitorMaterial } from './stage/materials'
 import { monitorPlateCorners } from './stage/geometry'
+import { overlayDepthBudget } from './monitorDepth'
 import { CONTACT_SHADOW_RESOLUTION, SHELL_VERSION } from './shellVersion'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -21,6 +24,8 @@ function relativeLuminance(hex: string) {
 describe('T012 第二阶段约束', () => {
   it('告警屏不走色调映射，显示色亮度比 ≥1.5 且仍是红色', () => {
     expect(monitorMaterial.toneMapped).toBe(false)
+    expect(monitorMaterial.depthTest).toBe(true)
+    expect(monitorMaterial.depthWrite).toBe(true)
     const alarm = MONITOR_DISPLAY_SRGB.alarm
     const online = MONITOR_DISPLAY_SRGB.online
     const ar = Number.parseInt(alarm.slice(1, 3), 16)
@@ -54,5 +59,33 @@ describe('T012 第二阶段约束', () => {
     expect(src).not.toMatch(/from ['"]postprocessing['"]/)
     expect(src).toMatch(/lazy\(\(\) => import\('\.\/scene\/postfx\/balancedFx'\)/)
     expect(src).toMatch(/MonitorPass/)
+    expect(src).toMatch(/MainScenePass/)
+  })
+
+  it('选中高亮仍是 #f7eedd，不参与色调映射', () => {
+    expect(highlightCurtainMaterial.color.getHexString()).toBe('f7eedd')
+    expect(highlightJointMaterial.color.getHexString()).toBe('f7eedd')
+    expect(highlightCurtainMaterial.toneMapped).toBe(false)
+    expect(highlightJointMaterial.toneMapped).toBe(false)
+  })
+
+  it('高亮取样落在 F12 / F11 层间带，世界盒不重叠', () => {
+    expect(neighborFloorId('F12')).toBe('F11')
+    const f12 = facadeBandCorners(floorSpec('F12').elevation)
+    const f11 = facadeBandCorners(floorSpec('F11').elevation)
+    const f12MinY = Math.min(...f12.map((point) => point.y))
+    const f11MaxY = Math.max(...f11.map((point) => point.y))
+    expect(f12MinY).toBeGreaterThan(f11MaxY)
+    expect(
+      boxesOverlap(
+        { x: 100, y: 200, w: 20, h: 12 },
+        { x: 100, y: 220, w: 20, h: 12 },
+      ),
+    ).toBe(false)
+  })
+
+  it('告警屏通道只在分配深度目标时计 1 张 RT', () => {
+    expect(overlayDepthBudget(1366, 768, false)).toEqual({ extraTargets: 0, extraBytes: 0 })
+    expect(overlayDepthBudget(1366, 768, true)).toEqual({ extraTargets: 1, extraBytes: 1366 * 768 * 8 })
   })
 })

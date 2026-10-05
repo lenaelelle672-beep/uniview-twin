@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdir, writeFile } from 'node:fs/promises'
+import { copyFile, mkdir, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 
@@ -7,6 +7,7 @@ const require = createRequire(import.meta.url)
 const puppeteer = require('puppeteer-core')
 const baseUrl = process.argv[2] ?? 'http://127.0.0.1:5190'
 const outDir = process.env.ARTIFACT_DIR ?? '/opt/cursor/artifacts/screenshots'
+const evidenceDir = resolve(process.cwd(), 'docs/T012-evidence')
 
 function chromePath() {
   return (
@@ -72,10 +73,18 @@ function sampleBox(data, width, height, box) {
   return { r, g, b, hex: '#' + [r, g, b].map((value) => Math.round(value).toString(16).padStart(2, '0')).join(''), L: relativeLuminance(r, g, b) }
 }
 
+async function keepEvidence(file) {
+  await mkdir(evidenceDir, { recursive: true })
+  const dest = resolve(evidenceDir, file.split('/').pop())
+  if (dest !== file) await copyFile(file, dest)
+  return dest
+}
+
 async function screenshotCanvas(page, name) {
   const canvas = await page.$('canvas')
   const file = resolve(outDir, `${name}.png`)
   await canvas.screenshot({ path: file })
+  await keepEvidence(file)
   return file
 }
 
@@ -103,6 +112,7 @@ async function annotateBoxes(page, name, boxes) {
   const file = resolve(outDir, `${name}.png`)
   const bytes = Buffer.from(dataUrl.split(',')[1], 'base64')
   await writeFile(file, bytes)
+  await keepEvidence(file)
   return file
 }
 
@@ -160,10 +170,25 @@ async function pageImage(page) {
   })
 }
 
-async function open(browser, search) {
+async function lookAt(page, eye, target) {
+  return page.evaluate(
+    async (from, to) => {
+      const rig = window.__twinRig
+      if (!rig?.setLookAt) return false
+      rig.maxPolarAngle = Math.PI
+      await rig.setLookAt(from[0], from[1], from[2], to[0], to[1], to[2], false)
+      rig.update?.(0)
+      return true
+    },
+    eye,
+    target,
+  )
+}
+
+async function open(browser, search, viewport = { width: 1366, height: 768 }) {
   const page = await browser.newPage()
   page.setDefaultTimeout(90_000)
-  await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
+  await page.setViewport({ ...viewport, deviceScaleFactor: 1 })
   const consoles = []
   const requests = []
   page.on('console', (msg) => {
@@ -178,6 +203,7 @@ async function open(browser, search) {
 
 async function main() {
   await mkdir(outDir, { recursive: true })
+  await mkdir(evidenceDir, { recursive: true })
   let browser = await puppeteer.launch({
     executablePath: chromePath(),
     headless: true,
@@ -256,43 +282,112 @@ async function main() {
           external,
           ...(await stats(page)),
         }
+        await writeFile(resolve(evidenceDir, `${name}-alarm-boxes.json`), JSON.stringify(report.alarms[name], null, 2))
         await page.close()
       }
     }
 
     for (const quality of ['perf', 'balanced']) {
-      const { page } = await open(browser, `?q=${quality}`)
-      await page.waitForFunction(() => (window.__twinBadgeCenters ?? []).length >= 12, { timeout: 30_000 })
-      const hit = await page.evaluate(() => {
-        const center = (window.__twinBadgeCenters ?? []).find((item) => item.id === 'F12')
-        if (!center || !window.__twinProject) return null
-        return { id: center.id, ...window.__twinProject(center.x, center.y, center.z) }
-      })
-      if (hit && !hit.behind) {
-        await page.mouse.click(hit.x, hit.y)
+      for (const viewport of [
+        { width: 1366, height: 768 },
+        { width: 1024, height: 768 },
+        { width: 1920, height: 1080 },
+      ]) {
+        const key = `${quality}-${viewport.width}x${viewport.height}`
+        const { page } = await open(browser, `?q=${quality}`, viewport)
+        await page.waitForFunction(() => (window.__twinBadgeCenters ?? []).length >= 12, { timeout: 30_000 })
+        const hit = await page.evaluate(() => {
+          const center = (window.__twinBadgeCenters ?? []).find((item) => item.id === 'F12')
+          if (!center || !window.__twinProject) return null
+          return { id: center.id, ...window.__twinProject(center.x, center.y, center.z) }
+        })
+        if (hit && !hit.behind) {
+          await page.mouse.click(hit.x, hit.y)
+        }
+        await page.evaluate(() => window.__twinSelectFloor?.('F12'))
+        await page.waitForFunction(() => window.__twinSelected === 'F12' && window.__twinView === 'building' && window.__twinFacadeBoxes?.selectedFloor === 'F12', {
+          timeout: 20_000,
+        })
+        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)))
+        const boxes = await page.evaluate(() => window.__twinFacadeBoxes)
+        const image = await pageImage(page)
+        const data = Uint8ClampedArray.from(image.data)
+        const selected = boxes ? sampleBox(data, image.width, image.height, boxes.selected) : null
+        const neighbor = boxes ? sampleBox(data, image.width, image.height, boxes.neighbor) : null
+        const shot = await annotateBoxes(page, `highlight-${key}`, [
+          { box: boxes?.selected, color: '#ffcc33', label: `selected ${boxes?.selectedFloor ?? ''}` },
+          { box: boxes?.neighbor, color: '#66aaff', label: `adjacent ${boxes?.neighborFloor ?? ''}` },
+        ])
+        const entry = {
+          viewport,
+          boxes,
+          selected,
+          neighbor,
+          ratio: ratioFrom(selected, neighbor),
+          overlap:
+            boxes?.selected && boxes?.neighbor
+              ? boxes.selected.y < boxes.neighbor.y + boxes.neighbor.h &&
+                boxes.selected.y + boxes.selected.h > boxes.neighbor.y &&
+                boxes.selected.x < boxes.neighbor.x + boxes.neighbor.w &&
+                boxes.selected.x + boxes.selected.w > boxes.neighbor.x
+              : null,
+          shot,
+        }
+        report.highlight[key] = entry
+        await writeFile(resolve(evidenceDir, `highlight-boxes-${key}.json`), JSON.stringify(entry, null, 2))
+        if (viewport.width === 1366) report.highlight[quality] = entry
+        await page.close()
       }
-      await page.evaluate(() => window.__twinSelectFloor?.('F12'))
-      await page.waitForFunction(() => window.__twinSelected === 'F12' && window.__twinView === 'building' && window.__twinFacadeBoxes?.selectedFloor === 'F12', {
-        timeout: 20_000,
-      })
-      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)))
-      const boxes = await page.evaluate(() => window.__twinFacadeBoxes)
-      const image = await pageImage(page)
-      const data = Uint8ClampedArray.from(image.data)
-      const selected = boxes ? sampleBox(data, image.width, image.height, boxes.selected) : null
-      const neighbor = boxes ? sampleBox(data, image.width, image.height, boxes.neighbor) : null
-      const shot = await annotateBoxes(page, `highlight-${quality}`, [
-        { box: boxes?.selected, color: '#ffcc33', label: `selected ${boxes?.selectedFloor ?? ''}` },
-        { box: boxes?.neighbor, color: '#66aaff', label: `adjacent ${boxes?.neighborFloor ?? ''}` },
-      ])
-      report.highlight[quality] = {
-        boxes,
-        selected,
-        neighbor,
-        ratio: ratioFrom(selected, neighbor),
-        shot,
+    }
+
+    report.occlusion = {}
+    for (const quality of ['perf', 'balanced']) {
+      const { page } = await open(browser, `?q=${quality}&view=floor&floor=F12`)
+      await page.waitForFunction(() => window.__twinView === 'floor' && window.__twinSelected === 'F12', { timeout: 90_000 })
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)))
+      const f12 = 48.16
+      const angles = [
+        ['f12-slab', [8, f12 + 9.4, 22], [0, f12 + 0.6, 0]],
+        ['f12-low-oblique', [16, f12 + 2.1, 20], [0, f12 + 1.1, -2]],
+        ['f12-behind-column', [8.4, f12 + 1.7, 12.4], [8.4, f12 + 1.2, 1]],
+        ['f12-through-core', [0, f12 + 1.8, -1.2], [0, f12 + 1.1, 10]],
+        ['f12-corridor', [18, f12 + 1.6, 6.6], [-10, f12 + 1.2, 6.6]],
+      ]
+      for (const [name, eye, target] of angles) {
+        await lookAt(page, eye, target)
+        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)))
+        const shot = await screenshotCanvas(page, `occlusion-${name}-${quality}`)
+        report.occlusion[`${name}-${quality}`] = { shot, ...(await stats(page)) }
       }
       await page.close()
+
+      const overview = await open(browser, `?q=${quality}`)
+      await overview.page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)))
+      report.occlusion[`overview-${quality}`] = {
+        shot: await screenshotCanvas(overview.page, `occlusion-overview-${quality}`),
+        budget: await overview.page.evaluate(() => window.__twinOverlayBudget ?? null),
+        ...(await stats(overview.page)),
+      }
+      await overview.page.close()
+
+      const east = await open(browser, `?q=${quality}&cam=east`)
+      await east.page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)))
+      report.occlusion[`east-${quality}`] = {
+        shot: await screenshotCanvas(east.page, `occlusion-east-${quality}`),
+        ...(await stats(east.page)),
+      }
+      await east.page.close()
+
+      const exploded = await open(browser, `?q=${quality}`)
+      await exploded.page.evaluate(() => window.__twinSetExploded?.(true))
+      await exploded.page.waitForFunction(() => window.__twinExplode?.exploded === true, { timeout: 15_000 })
+      await exploded.page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)))
+      report.occlusion[`exploded-${quality}`] = {
+        shot: await screenshotCanvas(exploded.page, `occlusion-exploded-${quality}`),
+        explode: await exploded.page.evaluate(() => window.__twinExplode ?? null),
+        ...(await stats(exploded.page)),
+      }
+      await exploded.page.close()
     }
 
     const { page } = await open(browser, '?q=perf')
@@ -359,6 +454,7 @@ async function main() {
   }
 
   await writeFile(resolve(outDir, '../phase2-measure.json'), JSON.stringify(report, null, 2))
+  await writeFile(resolve(evidenceDir, 'phase2-measure.json'), JSON.stringify(report, null, 2))
   console.log(JSON.stringify(report, null, 2))
 }
 
