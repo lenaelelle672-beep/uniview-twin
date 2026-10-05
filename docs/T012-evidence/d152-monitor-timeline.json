@@ -1,0 +1,235 @@
+{
+  "baseUrl": "http://127.0.0.1:5190",
+  "quality": "balanced",
+  "rounds": 3,
+  "networks": {
+    "normal": [
+      {
+        "network": "normal",
+        "round": 1,
+        "wallMs": 12099,
+        "firstFrameAt": 2498.7999999970198,
+        "prefetchAt": 7708.39999999851,
+        "monitorSamplesAt": 8547.89999999851,
+        "prefetchMark": 7708,
+        "readyAt": 2030,
+        "monitorSamples": [
+          {
+            "name": "/assets/MonitorSamples-Tgp1RUFT.js",
+            "start": 8547.89999999851,
+            "duration": 3.199999999254942
+          }
+        ],
+        "prefetchChunks": [
+          {
+            "name": "/assets/floorDecor-CFWmtVtR.js",
+            "start": 7708.39999999851,
+            "duration": 16.800000000745058
+          },
+          {
+            "name": "/assets/textRuntime-BIbZ7Va7.js",
+            "start": 7708.5,
+            "duration": 17.199999999254942
+          },
+          {
+            "name": "/assets/BlueprintView-DABjwd8B.js",
+            "start": 7708.599999997765,
+            "duration": 14.600000001490116
+          }
+        ],
+        "afterPrefetch": true,
+        "betweenFirstAndPrefetch": false,
+        "ok": true
+      },
+      {
+        "network": "normal",
+        "round": 2,
+        "wallMs": 12513,
+        "firstFrameAt": 2461.199999999255,
+        "prefetchAt": 7944.800000000745,
+        "monitorSamplesAt": 8748.699999999255,
+        "prefetchMark": 7944.5,
+        "readyAt": 1664.1000000014901,
+        "monitorSamples": [
+          {
+            "name": "/assets/MonitorSamples-Tgp1RUFT.js",
+            "start": 8748.699999999255,
+            "duration": 3.699999999254942
+          }
+        ],
+        "prefetchChunks": [
+          {
+            "name": "/assets/floorDecor-CFWmtVtR.js",
+            "start": 7944.800000000745,
+            "duration": 8.899999998509884
+          },
+          {
+            "name": "/assets/textRuntime-BIbZ7Va7.js",
+            "start": 7945.300000000745,
+            "duration": 11
+          },
+          {
+            "name": "/assets/BlueprintView-DABjwd8B.js",
+            "start": 7945.39999999851,
+            "duration": 8.100000001490116
+          }
+        ],
+        "afterPrefetch": true,
+        "betweenFirstAndPrefetch": false,
+        "ok": true
+      },
+      {
+        "network": "normal",
+        "round": 3,
+        "wallMs": 12962,
+        "firstFrameAt": 2360,
+        "prefetchAt": 7600.400000002235,
+        "monitorSamplesAt": 8884.5,
+        "prefetchMark": 7600.10000000149,
+        "readyAt": 1600.300000000745,
+        "monitorSamples": [
+          {
+            "name": "/assets/MonitorSamples-Tgp1RUFT.js",
+            "start": 8884.5,
+            "duration": 2.5
+          }
+        ],
+        "prefetchChunks": [
+          {
+            "name": "/assets/floorDecor-CFWmtVtR.js",
+            "start": 7600.400000002235,
+            "duration": 8.799999997019768
+          },
+          {
+            "name": "/assets/BlueprintView-DABjwd8B.js",
+            "start": 7600.60000000149,
+            "duration": 10.099999997764826
+          },
+          {
+            "name": "/assets/textRuntime-BIbZ7Va7.js",
+            "start": 7600.60000000149,
+            "duration": 11.599999997764826
+          }
+        ],
+        "afterPrefetch": true,
+        "betweenFirstAndPrefetch": false,
+        "ok": true
+      }
+    ],
+    "fast3g": [
+      {
+        "network": "fast3g",
+        "round": 1,
+        "wallMs": 21381,
+        "firstFrameAt": 11655.099999997765,
+        "prefetchAt": 16729.199999999255,
+        "monitorSamplesAt": 18349.800000000745,
+        "prefetchMark": 16728.800000000745,
+        "readyAt": 10113.5,
+        "monitorSamples": [
+          {
+            "name": "/assets/MonitorSamples-Tgp1RUFT.js",
+            "start": 18349.800000000745,
+            "duration": 577.2999999970198
+          }
+        ],
+        "prefetchChunks": [
+          {
+            "name": "/assets/floorDecor-CFWmtVtR.js",
+            "start": 16729.199999999255,
+            "duration": 687.6000000014901
+          },
+          {
+            "name": "/assets/BlueprintView-DABjwd8B.js",
+            "start": 16729.39999999851,
+            "duration": 633.9000000022352
+          },
+          {
+            "name": "/assets/textRuntime-BIbZ7Va7.js",
+            "start": 16729.39999999851,
+            "duration": 877.6000000014901
+          }
+        ],
+        "afterPrefetch": true,
+        "betweenFirstAndPrefetch": false,
+        "ok": true
+      },
+      {
+        "network": "fast3g",
+        "round": 2,
+        "wallMs": 20724,
+        "firstFrameAt": 11706.699999999255,
+        "prefetchAt": 16136.89999999851,
+        "monitorSamplesAt": 17761.800000000745,
+        "prefetchMark": 16136.60000000149,
+        "readyAt": 10131.699999999255,
+        "monitorSamples": [
+          {
+            "name": "/assets/MonitorSamples-Tgp1RUFT.js",
+            "start": 17761.800000000745,
+            "duration": 577.8000000007451
+          }
+        ],
+        "prefetchChunks": [
+          {
+            "name": "/assets/floorDecor-CFWmtVtR.js",
+            "start": 16136.89999999851,
+            "duration": 688.7000000029802
+          },
+          {
+            "name": "/assets/textRuntime-BIbZ7Va7.js",
+            "start": 16137,
+            "duration": 874.1999999992549
+          },
+          {
+            "name": "/assets/BlueprintView-DABjwd8B.js",
+            "start": 16137.10000000149,
+            "duration": 615
+          }
+        ],
+        "afterPrefetch": true,
+        "betweenFirstAndPrefetch": false,
+        "ok": true
+      },
+      {
+        "network": "fast3g",
+        "round": 3,
+        "wallMs": 20954,
+        "firstFrameAt": 11639.89999999851,
+        "prefetchAt": 16394,
+        "monitorSamplesAt": 18065.39999999851,
+        "prefetchMark": 16393.5,
+        "readyAt": 10088.699999999255,
+        "monitorSamples": [
+          {
+            "name": "/assets/MonitorSamples-Tgp1RUFT.js",
+            "start": 18065.39999999851,
+            "duration": 580
+          }
+        ],
+        "prefetchChunks": [
+          {
+            "name": "/assets/floorDecor-CFWmtVtR.js",
+            "start": 16394,
+            "duration": 687.1000000014901
+          },
+          {
+            "name": "/assets/textRuntime-BIbZ7Va7.js",
+            "start": 16394,
+            "duration": 877.8999999985099
+          },
+          {
+            "name": "/assets/BlueprintView-DABjwd8B.js",
+            "start": 16394.10000000149,
+            "duration": 632.8999999985099
+          }
+        ],
+        "afterPrefetch": true,
+        "betweenFirstAndPrefetch": false,
+        "ok": true
+      }
+    ]
+  },
+  "failures": [],
+  "ok": true
+}

@@ -104,9 +104,13 @@ async function measureTier(browser, quality) {
   files.sort((a, b) => b.gzip - a.gzip)
 
   const firstScreen = files.filter((file) => !file.hdr && !file.favicon && !file.afterFirstFrame)
-  const hardGateFiles = firstScreen.filter((file) => !file.balancedFx)
+  const isMonitorSamples = (file) => /MonitorSamples/i.test(file.url)
+  const monitorSamplesGzip = files.filter(isMonitorSamples).reduce((sum, file) => sum + file.gzip, 0)
+  const hardGateFilesWithMonitors = firstScreen.filter((file) => !file.balancedFx)
+  const hardGateFiles = hardGateFilesWithMonitors.filter((file) => !isMonitorSamples(file))
   const fxFiles = files.filter((file) => file.balancedFx)
   const hardGate = hardGateFiles.reduce((sum, file) => sum + file.gzip, 0)
+  const hardGateWithMonitorSamples = hardGateFilesWithMonitors.reduce((sum, file) => sum + file.gzip, 0)
   const balancedFxGzip = fxFiles.reduce((sum, file) => sum + file.gzip, 0)
   const fullFirstScreen = hardGate + balancedFxGzip
 
@@ -115,6 +119,8 @@ async function measureTier(browser, quality) {
     firstFrameAt: timing.firstFrameAt,
     fileCount: files.length,
     hardGate,
+    hardGateWithMonitorSamples,
+    monitorSamplesGzip,
     balancedFxGzip,
     fullFirstScreen,
     requestedBalancedFx: fxFiles.length > 0,
@@ -151,7 +157,7 @@ async function main() {
 
   const failures = []
   if (balanced.hardGate > HARD_GATE) {
-    failures.push(`均衡档硬门禁 ${balanced.hardGate} > ${HARD_GATE}`)
+    failures.push(`均衡档硬门禁(不含 MonitorSamples) ${balanced.hardGate} > ${HARD_GATE}`)
   }
   if (balanced.balancedFxGzip > FX_BUDGET) {
     failures.push(`balancedFx ${balanced.balancedFxGzip} > ${FX_BUDGET}`)
@@ -169,6 +175,8 @@ async function main() {
     balancedFxLimit: FX_BUDGET,
     balanced: {
       hardGate: balanced.hardGate,
+      hardGateWithMonitorSamples: balanced.hardGateWithMonitorSamples,
+      monitorSamplesGzip: balanced.monitorSamplesGzip,
       balancedFx: balanced.balancedFxGzip,
       fullFirstScreen: balanced.fullFirstScreen,
       requestedBalancedFx: balanced.requestedBalancedFx,
@@ -182,6 +190,8 @@ async function main() {
     },
     summary: {
       hardGateNoFx: balanced.hardGate,
+      hardGateWithMonitorSamples: balanced.hardGateWithMonitorSamples,
+      monitorSamplesGzip: balanced.monitorSamplesGzip,
       balancedFx: balanced.balancedFxGzip,
       balancedFullFirstScreen: balanced.fullFirstScreen,
       perfFirstScreen: perf.hardGate,

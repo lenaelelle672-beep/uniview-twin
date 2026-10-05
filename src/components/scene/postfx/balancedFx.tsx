@@ -11,6 +11,7 @@ import {
   MeshBasicMaterial,
   MeshDepthMaterial,
   NoToneMapping,
+  SkinnedMesh,
   OrthographicCamera,
   PlaneGeometry,
   ShaderMaterial,
@@ -33,6 +34,18 @@ import {
 
 const drawingSize = new Vector2()
 const copyCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1)
+/** 告警屏深度只要能挡住屏幕的实体。人物/标签/圆标/吊顶再画一遍会白白多几十次。 */
+const MONITOR_DEPTH_SKIP = /^(RoomLabels|DeviceBadges|CorridorPeople|FloorCeiling|FloorGlass|OfficeDesks|WorkstationChairs|DeskFlash|FanSeats|CanteenTables|CanteenChairs)$/
+
+function keepMonitorDepth(object: { name?: string; parent?: unknown; isSkinnedMesh?: boolean }): boolean {
+  if (object instanceof SkinnedMesh || object.isSkinnedMesh) return false
+  let cursor: { name?: string; parent?: unknown } | null = object
+  while (cursor) {
+    if (cursor.name && MONITOR_DEPTH_SKIP.test(cursor.name)) return false
+    cursor = (cursor.parent as { name?: string; parent?: unknown } | null) ?? null
+  }
+  return true
+}
 const copyMesh = new Mesh(
   new PlaneGeometry(2, 2),
   new MeshBasicMaterial({ depthTest: false, depthWrite: false, toneMapped: false }),
@@ -67,7 +80,9 @@ class MonitorAfterTonePass extends Pass {
     for (const name of ['FloorInterior', 'FloorPlate']) {
       const root = this.scene.getObjectByName(name)
       if (!root) continue
-      root.traverse((child) => keep.add(child))
+      root.traverse((child) => {
+        if (keepMonitorDepth(child)) keep.add(child)
+      })
       let parent = root.parent
       while (parent) {
         keep.add(parent)
@@ -172,13 +187,11 @@ function ComposerBudget({ active }: { active: boolean }) {
   const gl = useThree((state) => state.gl)
   const { composer } = use(EffectComposerContext)
   useLayoutEffect(() => {
-    if (active) {
-      gl.getDrawingBufferSize(drawingSize)
+    gl.getDrawingBufferSize(drawingSize)
+    if (drawingSize.x > 1 && drawingSize.y > 1) {
       composer.setSize(drawingSize.x, drawingSize.y)
-      return
     }
-    composer.setSize(1, 1)
-    releaseMonitorTarget()
+    if (!active) releaseMonitorTarget()
   }, [active, composer, gl])
   return null
 }
@@ -314,7 +327,7 @@ export function ContactGround({ active = true }: { active?: boolean }) {
  * 只在第一次切到均衡档之后保持挂载。切回性能档时 enabled=false 并收缩渲染目标，
  * shader 程序复用，不再每切一次重新编译。
  * D119：告警屏在 AgX 之后画进单采样、带场景深度的离屏 FBO，再用全屏四边形写回合成器。
- * 深度由 MonitorAfterTone 在离屏 FBO 里重画楼层，不再 blit 合成器深度（避免 MSAA/格式警告）。
+ * 深度由 MonitorAfterTone 在离屏 FBO 里只重画挡住告警屏的实体，不再 blit 合成器深度。
  */
 export function PostFX({ onLive, active = true }: { onLive?: () => void; active?: boolean }) {
   return (

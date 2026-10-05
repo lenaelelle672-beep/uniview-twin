@@ -43,7 +43,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const shadowSize = quality === 'high' ? 2048 : 1024
   const [composerLive, setComposerLive] = useState(false)
   const [keepFx, setKeepFx] = useState(false)
-  const [afterFirstFrame, setAfterFirstFrame] = useState(false)
+  const [prefetchDone, setPrefetchDone] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
@@ -63,10 +63,21 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
 
   useEffect(() => {
     let cancelled = false
+    const prefetchChunkStarted = () => {
+      const entries = performance.getEntriesByType('resource')
+      return ['floorDecor', 'textRuntime', 'BlueprintView'].every((name) =>
+        entries.some((entry) => entry.name.includes(name)),
+      )
+    }
     const tick = () => {
       if (cancelled) return
-      if (window.__twinFirstFrameAt != null) {
-        setAfterFirstFrame(true)
+      // __twinPrefetchAt 在 import() 之前就写入，不能当“预取已发出”。
+      // 等三个预取包都进 Resource Timing，再隔一帧才挂 FacadeSamples，
+      // 避免 MonitorSamples 和预取抢同一拍、夹到首帧和预取之间。
+      if (window.__twinPrefetchAt != null && prefetchChunkStarted()) {
+        requestAnimationFrame(() => {
+          if (!cancelled) setPrefetchDone(true)
+        })
         return
       }
       requestAnimationFrame(tick)
@@ -139,7 +150,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
           <FloorBadges />
         </Hud>
       </Suspense>
-      {afterFirstFrame && (
+      {prefetchDone && (
         <Suspense fallback={null}>
           <FacadeSamples />
         </Suspense>

@@ -44,7 +44,7 @@ function inside(x: number, z: number, box: { x0: number; x1: number; z0: number;
 }
 
 describe('单层剖切', () => {
-  it('F12 隐藏 F13 及以上，B1 隐藏全部地上层', () => {
+  it('F12 隐藏 F13 及以上，B1 隐藏全部地上层，下层外壳保留', () => {
     expect(hiddenFloorIds('floor', 'F12')).toEqual(floorIdList().filter((id) => id !== 'B1' && Number(id.slice(1)) >= 13))
     expect(hiddenFloorIds('floor', 'B1')).toEqual(floorIdList().filter((id) => id !== 'B1'))
     expect(hiddenFloorIds('floor', 'F22')).toEqual([])
@@ -57,6 +57,7 @@ describe('单层剖切', () => {
     expect(cutElevation('floor', 'B1')).toBeCloseTo(-5.5 + SLAB_M, 5)
     expect(cutElevation('building', 'F12')).toBeNull()
     expect(isFloorShellHidden('floor', 'F12', floorSpec('F13').elevation)).toBe(true)
+    expect(isFloorShellHidden('floor', 'F12', floorSpec('F11').elevation)).toBe(false)
     expect(isFloorShellHidden('floor', 'F12', floorSpec('F12').elevation)).toBe(false)
     expect(isFloorCurtainOpen('floor', 'F12', 'F12')).toBe(true)
     expect(isFloorCurtainOpen('floor', 'F12', 'F11')).toBe(false)

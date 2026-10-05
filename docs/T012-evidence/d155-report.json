@@ -1,0 +1,36 @@
+{
+  "head": "6244729de2c64171ecbae25aa34c4292c7993df0",
+  "afterE207201": ["6244729 fix: clip east_grille hi/lo shadows and keep composer size"],
+  "grilleAssets": {
+    "hi": {
+      "path": "public/models/east-grille-v4-hi.glb",
+      "bytes": 15424,
+      "sha256": "57449b31cbb1272c2d4696ce0346f396dc0f20231148c0ae94c965c2ea1e2889"
+    },
+    "lo": {
+      "path": "public/models/east-grille-v4-lo.glb",
+      "bytes": 9568,
+      "sha256": "529bb7ee09779dfcb9dd029bb42af9404456923de8039012cb0ed3110ac8dd97"
+    },
+    "unchanged": true
+  },
+  "cutWalk": {
+    "F4": { "constant": 19.01, "clipShadows": true },
+    "F12": { "constant": 53.023, "clipShadows": true },
+    "F22": { "constant": 96.057, "clipShadows": true },
+    "overview": { "constant": null, "clipShadows": false }
+  },
+  "vsB": {
+    "F12": { "meanAbs": 0.558, "pctChanged": 3.234 },
+    "F22": { "meanAbs": 0.546, "pctChanged": 3.221 }
+  },
+  "switch5": {
+    "cold": "886x712",
+    "after5": "886x712",
+    "zeroSizeWarnings": 0,
+    "c2": { "textures": 21, "geometries": 78, "programs": 45 },
+    "c5": { "textures": 21, "geometries": 78, "programs": 45 }
+  },
+  "hardGate": { "withoutMonitorSamples": 434778, "withMonitorSamples": 434778 },
+  "d148": { "overviewBalanced": 116, "overviewPerf": 71, "f22Balanced": 146, "gate": 161, "headroom": 15 }
+}

@@ -1,0 +1,299 @@
+{
+  "baseUrl": "http://127.0.0.1:5190",
+  "cold": {
+    "canvas": {
+      "width": 886,
+      "height": 712,
+      "css": {
+        "w": 886,
+        "h": 712
+      }
+    },
+    "drawingBuffer": {
+      "width": 886,
+      "height": 712
+    },
+    "composer": {
+      "width": 886,
+      "height": 712
+    },
+    "memory": {
+      "textures": 21,
+      "geometries": 76,
+      "programs": 34
+    },
+    "quality": "balanced"
+  },
+  "rounds": [
+    {
+      "i": 1,
+      "perf": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 19,
+          "geometries": 76,
+          "programs": 39
+        },
+        "quality": "perf"
+      },
+      "balanced": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 21,
+          "geometries": 78,
+          "programs": 45
+        },
+        "quality": "balanced"
+      }
+    },
+    {
+      "i": 2,
+      "perf": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 19,
+          "geometries": 77,
+          "programs": 43
+        },
+        "quality": "perf"
+      },
+      "balanced": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 21,
+          "geometries": 78,
+          "programs": 45
+        },
+        "quality": "balanced"
+      }
+    },
+    {
+      "i": 3,
+      "perf": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 19,
+          "geometries": 77,
+          "programs": 43
+        },
+        "quality": "perf"
+      },
+      "balanced": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 21,
+          "geometries": 78,
+          "programs": 45
+        },
+        "quality": "balanced"
+      }
+    },
+    {
+      "i": 4,
+      "perf": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 19,
+          "geometries": 77,
+          "programs": 43
+        },
+        "quality": "perf"
+      },
+      "balanced": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 21,
+          "geometries": 78,
+          "programs": 45
+        },
+        "quality": "balanced"
+      }
+    },
+    {
+      "i": 5,
+      "perf": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 19,
+          "geometries": 77,
+          "programs": 43
+        },
+        "quality": "perf"
+      },
+      "balanced": {
+        "canvas": {
+          "width": 886,
+          "height": 712,
+          "css": {
+            "w": 886,
+            "h": 712
+          }
+        },
+        "drawingBuffer": {
+          "width": 886,
+          "height": 712
+        },
+        "composer": {
+          "width": 886,
+          "height": 712
+        },
+        "memory": {
+          "textures": 21,
+          "geometries": 78,
+          "programs": 45
+        },
+        "quality": "balanced"
+      }
+    }
+  ],
+  "warnings": 0,
+  "zeroSizeWarnings": 0,
+  "sameSize": true,
+  "c2": {
+    "textures": 21,
+    "geometries": 78,
+    "programs": 45
+  },
+  "c5": {
+    "textures": 21,
+    "geometries": 78,
+    "programs": 45
+  },
+  "c2c5": true,
+  "ok": true
+}
