@@ -33,6 +33,11 @@ function tuneEastGrille(root: Object3D | null) {
         material.envMap = grilleMaterial.envMap
         material.needsUpdate = true
       }
+      if (material.clippingPlanes !== grilleMaterial.clippingPlanes) {
+        material.clippingPlanes = grilleMaterial.clippingPlanes
+        material.clipShadows = grilleMaterial.clipShadows
+        material.needsUpdate = true
+      }
     }
   })
 }
