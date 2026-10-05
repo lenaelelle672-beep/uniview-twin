@@ -1,5 +1,5 @@
 import { useFrame, useLoader } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useMemo, useState, type ComponentType, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState, type ReactNode } from 'react'
 import { DoubleSide, Mesh, MeshStandardMaterial, Object3D, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import {
@@ -45,12 +45,12 @@ function GrilleModel({ url }: { url: string }) {
 
 const mountWorld = new Vector3()
 
-type DetailedProps = { distances: number[]; children?: ReactNode }
-
 function BalancedGrille() {
   const [near, setNear] = useState(false)
   const [hiReady, setHiReady] = useState(false)
-  const [detailedPack, setDetailedPack] = useState<{ Detailed: ComponentType<DetailedProps> } | null>(null)
+  const [detailedPack, setDetailedPack] = useState<{
+    Detailed: (props: { distances: number[]; children?: ReactNode }) => ReactNode
+  } | null>(null)
   const mount = eastGrilleMount()
   useFrame(({ camera }) => {
     mountWorld.set(...mount.position)
@@ -73,7 +73,7 @@ function BalancedGrille() {
     if (!near || !hiReady || detailedPack) return
     let cancelled = false
     void import('@react-three/drei/core/Detailed').then((mod) => {
-      if (!cancelled) setDetailedPack({ Detailed: mod.Detailed })
+      if (!cancelled) setDetailedPack({ Detailed: mod.Detailed as (props: { distances: number[]; children?: ReactNode }) => ReactNode })
     })
     return () => {
       cancelled = true
