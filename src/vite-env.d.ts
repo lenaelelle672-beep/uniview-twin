@@ -72,6 +72,7 @@ interface TwinExplodeStats {
 
 interface Window {
   __twinReady?: boolean
+  __twinScene?: import('three').Scene
   __twinStats?: TwinRenderStats
   __twinBadges?: number
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>
