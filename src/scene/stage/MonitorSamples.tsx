@@ -42,14 +42,27 @@ function boxFromCorners(
     minY = Math.min(minY, point.y)
     maxY = Math.max(maxY, point.y)
   }
-  const padX = (maxX - minX) * 0.18
-  const padY = (maxY - minY) * 0.18
-  const x = Math.max(0, minX + padX)
-  const y = Math.max(0, minY + padY)
-  const w = Math.min(width, maxX - padX) - x
-  const h = Math.min(height, maxY - padY) - y
+  const padX = (maxX - minX) * 0.08
+  const padY = (maxY - minY) * 0.08
+  let x = minX + padX
+  let y = minY + padY
+  let w = maxX - padX - x
+  let h = maxY - padY - y
+  const minW = 10
+  const minH = 8
+  if (w < minW) {
+    x -= (minW - w) / 2
+    w = minW
+  }
+  if (h < minH) {
+    y -= (minH - h) / 2
+    h = minH
+  }
+  x = Math.max(0, x)
+  y = Math.max(0, y)
+  w = Math.min(width - x, w)
+  h = Math.min(height - y, h)
   if (w < 2 || h < 2) return null
-  if (x < 0 || y < 0 || x + w > width || y + h > height) return null
   return { x, y, w, h }
 }
 

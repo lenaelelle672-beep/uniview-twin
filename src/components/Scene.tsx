@@ -95,9 +95,10 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <ExplodedLayout />
         <FloorStage />
       </Suspense>
-      <MonitorPass renderPriority={extrasReady ? 2 : 1} />
+      {/* Hud 在性能档必须是 1，drei 只有这时才会代画主场景。均衡档改由合成器画。 */}
+      <MonitorPass renderPriority={2} />
       <Suspense fallback={null}>
-        <Hud renderPriority={extrasReady ? 3 : 2}>
+        <Hud renderPriority={extrasReady ? 3 : 1}>
           <FloorBadges />
         </Hud>
       </Suspense>
