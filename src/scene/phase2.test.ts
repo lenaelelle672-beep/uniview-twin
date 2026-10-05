@@ -72,6 +72,16 @@ describe('T012 第二阶段约束', () => {
     expect(src).not.toMatch(/blitFramebuffer/)
     expect(src).not.toMatch(/from ['"].*MonitorSamples['"]/)
     expect(src).not.toMatch(/from ['"].*monitorDepth['"]/)
+    expect(src).toMatch(/prefetchDone &&/)
+    const floor = readFileSync(join(here, 'stage/FloorStage.tsx'), 'utf8')
+    expect(floor).toMatch(/lazy\(\(\) => import\('\.\/MonitorSamples'\)/)
+    expect(floor).toMatch(/spec\.level > 0 && \(/)
+    const proxy = readFileSync(join(here, 'stage/MonitorDepthProxies.tsx'), 'utf8')
+    expect(proxy).toMatch(/WorkstationChairs/)
+    expect(proxy).toMatch(/OfficeDesks/)
+    expect(proxy).toMatch(/forceDoubleSide/)
+    expect(proxy).not.toMatch(/FloorGlass/)
+    expect(proxy).not.toMatch(/from ['"].*MonitorSamples['"]/)
   })
 
   it('blitDepth 拒绝写入默认帧缓冲，MonitorPass 不再调用', () => {
@@ -124,6 +134,10 @@ describe('T012 第二阶段约束', () => {
     const fx = readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8')
     expect(fx).toMatch(/ensureMonitorTarget/)
     expect(fx).toMatch(/MonitorAfterTone/)
+    expect(fx).toMatch(/DEPTH_PROXY_LAYER/)
+    expect(fx).toMatch(/MonitorDepthProxies/)
+    expect(fx).toMatch(/layers\.set\(0\)/)
+    expect(fx).toMatch(/layers\.enable\(DEPTH_PROXY_LAYER\)/)
     expect(fx).not.toMatch(/MonitorInComposer restore/)
   })
 
