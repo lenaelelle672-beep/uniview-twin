@@ -9,22 +9,17 @@ export function activeFloorId(view: ViewMode, selectedFloor: string | null): str
   return selectedFloor
 }
 
-/** 选中层以上的楼层外壳需要隐藏。总览时不隐藏。 */
+/** 单层只留本层外壳。其它层（含下方楼层）藏起来，总览立刻恢复。 */
 export function hiddenFloorIds(view: ViewMode, selectedFloor: string | null): string[] {
   const active = activeFloorId(view, selectedFloor)
   if (!active) return []
-  const elevation = floorSpec(active).elevation
-  const ids: string[] = []
-  for (const id of ['B1', ...Array.from({ length: 22 }, (_, index) => `F${index + 1}`)]) {
-    if (floorSpec(id).elevation > elevation + 0.001) ids.push(id)
-  }
-  return ids
+  return ['B1', ...Array.from({ length: 22 }, (_, index) => `F${index + 1}`)].filter((id) => id !== active)
 }
 
 export function isFloorShellHidden(view: ViewMode, selectedFloor: string | null, elevation: number): boolean {
   const active = activeFloorId(view, selectedFloor)
   if (!active) return false
-  return elevation > floorSpec(active).elevation + 0.001
+  return Math.abs(elevation - floorSpec(active).elevation) > 0.001
 }
 
 /** 进入该层后拿掉本层幕墙，楼板顶面以上的外壳由切面裁掉。 */

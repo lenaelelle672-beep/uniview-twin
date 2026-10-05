@@ -14,7 +14,7 @@ import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
 import { createRingBand, TOWER_BAND } from '../../scene/shell/facade'
 import { TOWER_OUTLINE_OVERVIEW } from '../../scene/shell/rings'
 import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
-import { createFloorTowerGlass, createTowerGlass } from '../../scene/towerGlass'
+import { createTowerGlass } from '../../scene/towerGlass'
 import { useTwinStore } from '../../store/store'
 import { RoofSign } from './RoofSign'
 import { useFloorActions } from './floorPick'
@@ -28,11 +28,7 @@ function FloorShell({
   elevation: number
   height: number
 }) {
-  const view = useTwinStore((state) => state.view)
-  const glass = useMemo(
-    () => (view === 'floor' ? createFloorTowerGlass(elevation, height) : createTowerGlass(elevation, height)),
-    [elevation, height, view],
-  )
+  const glass = useMemo(() => createTowerGlass(elevation, height), [elevation, height])
   const band = useMemo(
     () => createRingBand(TOWER_OUTLINE_OVERVIEW, elevation + TOWER_BAND / 2, TOWER_BAND),
     [elevation],
