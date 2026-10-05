@@ -283,9 +283,16 @@ export function createColumnGeometry(height: number): BufferGeometry {
 
 const privateRooms = privateRoomBoxes(B1_ROOMS)
 
+export function createOfficeDeskGeometry(): BufferGeometry {
+  const top = new BoxGeometry(1, 0.08, 1)
+  top.translate(0, 0.74, 0)
+  return top
+}
+
 export const deskGeometry = createDeskGeometry()
 export const monitorGeometry = createMonitorGeometry()
 export const deskChairGeometry = createDeskChairGeometry()
+export const officeDeskGeometry = createOfficeDeskGeometry()
 export const diningChairGeometry = createDiningChairGeometry()
 export const roundTableGeometry = createRoundTableGeometry()
 export const seatGeometry = createSeatGeometry()

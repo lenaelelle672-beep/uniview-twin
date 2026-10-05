@@ -3,7 +3,12 @@ import { getFloorPlan } from '../../floors/cache'
 import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { roomLabelsFromPlan } from '../../floors/labels'
 import { TROIKA_TEXT_CONFIG } from './disableTroikaCdn'
-import { basementRoomLabels, ROOM_LABEL_FONT, roomLabelCharacters } from './roomLabels'
+import {
+  basementRoomLabels,
+  ROOM_LABEL_FONT,
+  roomLabelCharacters,
+  worldFontSizeForDistance,
+} from './roomLabels'
 
 hydrateAllAboveGrade()
 
@@ -29,5 +34,17 @@ describe('房间引线标签', () => {
     const characters = roomLabelCharacters(labels)
     expect(characters.length).toBeGreaterThan(0)
     expect(characters).not.toMatch(/\s/)
+    expect(characters).toMatch(/洽/)
+    expect(characters).toMatch(/丙/)
+    expect(new Set(labels.map((label) => label.id)).size).toBe(labels.length)
+    expect(new Set(basement.map((label) => label.id)).size).toBe(basement.length)
+  })
+
+  it('远机位把世界字号抬到至少 13 px', () => {
+    const far = worldFontSizeForDistance(180, 768, 48, 13)
+    const near = worldFontSizeForDistance(18, 768, 48, 13)
+    const farPx = (far / ((2 * Math.tan((48 * Math.PI) / 360) * 180) / 768))
+    expect(far).toBeGreaterThan(near)
+    expect(farPx).toBeGreaterThanOrEqual(12.5)
   })
 })

@@ -3,7 +3,7 @@ import { getFloorPlan } from './cache'
 import { floorDeskCount, FLOOR_DESK_COUNTS } from './deskCounts'
 import { hydrateAllAboveGrade, hydrateFloorFromDisk } from './hydrateForTests'
 import { pointInRing } from './parsePlan'
-import { roomLabelsFromPlan, MAX_ROOM_LABELS } from './labels'
+import { isRoomName, roomLabelFilterStats, roomLabelsFromPlan, MAX_ROOM_LABELS } from './labels'
 
 hydrateAllAboveGrade()
 
@@ -42,15 +42,45 @@ describe('楼层图纸', () => {
     }
   })
 
-  it('房间标签放在 JSON 的 label 点上，不超过 24 个', () => {
+  it('房间标签只挂房间名，有稳定 id，且不超过上限', () => {
     const plan = getFloorPlan('F12')!
     const labels = roomLabelsFromPlan(plan)
     expect(labels.length).toBeGreaterThan(0)
     expect(labels.length).toBeLessThanOrEqual(MAX_ROOM_LABELS)
     const text = labels.map((label) => label.text).join(' ')
     expect(text).toMatch(/会议|茶水|电梯/)
+    expect(text).not.toMatch(/尾气|强电|送风|排风|门洞|常开/)
+    const ids = labels.map((label) => label.id)
+    expect(new Set(ids).size).toBe(ids.length)
     for (const label of labels) {
+      expect(label.id).toMatch(/^F12:/)
       expect(label.label[1]).toBeGreaterThan(label.anchor[1])
+    }
+  })
+
+  it('officeDesks 数量跟 JSON 一致', () => {
+    expect(getFloorPlan('F18')!.officeDesks).toHaveLength(2)
+    expect(getFloorPlan('F21')!.officeDesks).toHaveLength(6)
+    expect(getFloorPlan('F22')!.officeDesks).toHaveLength(12)
+    expect(getFloorPlan('F12')!.officeDesks).toHaveLength(0)
+  })
+
+  it('过滤非房间标注，并给出每层过滤前后数量', () => {
+    expect(isRoomName('尾气')).toBe(false)
+    expect(isRoomName('强电')).toBe(false)
+    expect(isRoomName('送风')).toBe(false)
+    expect(isRoomName('排风')).toBe(false)
+    expect(isRoomName('女')).toBe(false)
+    expect(isRoomName('P')).toBe(false)
+    expect(isRoomName('（常开）')).toBe(false)
+    expect(isRoomName('门洞尺寸：206')).toBe(false)
+    expect(isRoomName('洽谈室')).toBe(true)
+    expect(isRoomName('丙类储藏')).toBe(true)
+    for (let level = 1; level <= 22; level += 1) {
+      const stats = roomLabelFilterStats(getFloorPlan(`F${level}`)!)
+      expect(stats.after).toBeLessThan(stats.before)
+      expect(stats.shown).toBeLessThanOrEqual(MAX_ROOM_LABELS)
+      expect(stats.dropped.length).toBeGreaterThan(0)
     }
   })
 

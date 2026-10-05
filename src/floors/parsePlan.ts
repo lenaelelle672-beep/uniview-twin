@@ -1,4 +1,14 @@
-import type { DeskRuleHit, FloorColumn, FloorCore, FloorDesk, FloorPlan, FloorRoom, FloorWall, WalkComponent } from './types'
+import type {
+  DeskRuleHit,
+  FloorColumn,
+  FloorCore,
+  FloorDesk,
+  FloorOfficeDesk,
+  FloorPlan,
+  FloorRoom,
+  FloorWall,
+  WalkComponent,
+} from './types'
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -98,6 +108,7 @@ function parseRooms(raw: unknown): FloorRoom[] {
     if (!label || typeof item.name !== 'string' || item.name.length === 0) continue
     const polygon = item.polygon == null ? null : asRing(item.polygon)
     rooms.push({
+      id: typeof item.id === 'string' && item.id.length > 0 ? item.id : `room-${rooms.length + 1}`,
       name: item.name,
       label,
       polygon: polygon && polygon.length >= 3 ? polygon : null,
@@ -144,6 +155,26 @@ function parseDesks(floorId: string, raw: unknown): FloorDesk[] {
     })
   }
   desks.sort((left, right) => left.n - right.n)
+  return desks
+}
+
+function parseOfficeDesks(floorId: string, raw: unknown): FloorOfficeDesk[] {
+  if (!Array.isArray(raw)) return []
+  const desks: FloorOfficeDesk[] = []
+  for (const item of raw) {
+    if (!isRecord(item)) continue
+    const center = asPair(item.center)
+    const size = asPair(item.size)
+    if (!center || !size) continue
+    const rot = typeof item.rotY === 'number' && Number.isFinite(item.rotY) ? item.rotY : 0
+    desks.push({
+      id: typeof item.id === 'string' && item.id.length > 0 ? item.id : `${floorId}-office-${desks.length + 1}`,
+      x: center[0],
+      z: center[1],
+      rot,
+      size,
+    })
+  }
   return desks
 }
 
@@ -215,6 +246,7 @@ export function parseFloorPlan(floorId: string, raw: unknown): FloorPlan {
     rooms: parseRooms(raw.rooms),
     walls: parseWalls(raw.walls),
     desks,
+    officeDesks: parseOfficeDesks(floorId, raw.officeDesks),
     walkPaths: parseWalkPaths(raw.walkPaths),
     walkMeta: parseWalkMeta(raw.walkMeta),
     deskRule: parseDeskRule(floorId, isRecord(raw.meta) ? raw.meta.deskRule : null),

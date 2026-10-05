@@ -14,10 +14,19 @@ export interface FloorCore {
 }
 
 export interface FloorRoom {
+  id: string
   name: string
   label: [number, number]
   polygon: Array<[number, number]> | null
   confidence: string
+}
+
+export interface FloorOfficeDesk {
+  id: string
+  x: number
+  z: number
+  rot: number
+  size: [number, number]
 }
 
 export interface FloorWall {
@@ -58,6 +67,7 @@ export interface FloorPlan {
   rooms: FloorRoom[]
   walls: FloorWall[]
   desks: FloorDesk[]
+  officeDesks: FloorOfficeDesk[]
   walkPaths: Array<Array<[number, number]>>
   walkMeta: { components: WalkComponent[]; pathCount: number } | null
   deskRule: { min: number; violations: DeskRuleHit[] }

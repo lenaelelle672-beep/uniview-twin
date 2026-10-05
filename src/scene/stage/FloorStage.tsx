@@ -1,5 +1,5 @@
 import { useThree } from '@react-three/fiber'
-import { lazy, Suspense, useLayoutEffect, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo } from 'react'
 import { InstancedMesh } from 'three'
 import { floorSpec } from '../../data/floors'
 import { extrudeUp } from '../extrude'
@@ -12,6 +12,7 @@ import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
 import { STATUS_COLOR } from './status'
 import { workstationPosition } from './workstationPosition'
+import { loadFloorPlan } from '../../floors/loadFloor'
 
 const JsonFloorInterior = lazy(async () => {
   const mod = await import('../../floors/JsonFloorInterior')
@@ -103,6 +104,10 @@ export function FloorStage() {
     return devices.filter((device) => device.floorId === active)
   }, [active, devices])
   const spec = active ? floorSpec(active) : null
+  useEffect(() => {
+    if (!active || active === 'B1') return
+    void loadFloorPlan(active)
+  }, [active])
   const basementSlots = useMemo(() => {
     if (active !== 'B1') return []
     return floorDesks.map((desk) => {

@@ -5,14 +5,14 @@ import type { FloorSpec } from '../data/floors'
 import type { Device } from '../types'
 import { extrudeUp } from '../scene/extrude'
 import { SLAB_M } from '../scene/stage/cut'
-import { COLUMN_SIZE_M, columnGeometry } from '../scene/stage/geometry'
+import { COLUMN_SIZE_M, columnGeometry, officeDeskGeometry } from '../scene/stage/geometry'
 import type { Slot } from '../scene/stage/layout'
-import { columnMaterial, coreWallMaterial, meetingGlassMaterial, slabMaterial } from '../scene/stage/materials'
+import { columnMaterial, coreWallMaterial, meetingGlassMaterial, slabMaterial, woodMaterial } from '../scene/stage/materials'
 import { Ceiling } from '../scene/stage/Ceiling'
 import { DeskFlash } from '../scene/stage/DeskFlash'
 import { FloorDecor } from '../scene/stage/lazyFloorDecor'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
-import { loadFloorPlan } from './loadFloor'
+import { loadFloorPlan, peekFloorPlan } from './loadFloor'
 import { roomLabelsFromPlan } from './labels'
 import type { FloorPlan, FloorWall } from './types'
 
@@ -91,6 +91,17 @@ function JsonFloorReady({
     [plan],
   )
   const glassWalls = useMemo(() => wallSlots(plan.walls, new Set(['glass']), 0.05), [plan])
+  const officeSlots = useMemo<Slot[]>(
+    () =>
+      plan.officeDesks.map((desk) => ({
+        x: desk.x,
+        z: desk.z,
+        rot: desk.rot,
+        sx: desk.size[0],
+        sz: desk.size[1],
+      })),
+    [plan],
+  )
   const labels = useMemo(() => roomLabelsFromPlan(plan), [plan])
   const peoplePaths = useMemo(
     () => plan.walkPaths.map((path) => path.map(([x, z]) => ({ x, z }))),
@@ -120,6 +131,8 @@ function JsonFloorReady({
       jsonColumns: plan.columns.length,
       walkPaths: plan.walkPaths.length,
       labels: labels.length,
+      jsonOfficeDesks: plan.officeDesks.length,
+      renderedOfficeDesks: officeSlots.length,
     }
     window.__twinFloor = {
       floorId: spec.id,
@@ -132,7 +145,7 @@ function JsonFloorReady({
         polygon: core.polygon,
       })),
     }
-  }, [colors.length, labels.length, plan, slots.length, spec.id])
+  }, [colors.length, labels.length, officeSlots.length, plan, slots.length, spec.id])
 
   return (
     <group
@@ -154,6 +167,7 @@ function JsonFloorReady({
         castShadow={false}
       />
       <Workstations slots={slots} colors={colors} />
+      <InstancedSlots name="OfficeDesks" geometry={officeDeskGeometry} material={woodMaterial} slots={officeSlots} />
       <DeskFlash floorId={spec.id} />
       <FloorDecor floorId={spec.id} devices={devices} labels={labels} showPeople={showPeople} paths={peoplePaths} />
       <Ceiling
@@ -178,12 +192,13 @@ export function JsonFloorInterior({
   devices: Device[]
   showPeople: boolean
 }) {
-  const [plan, setPlan] = useState<FloorPlan | null>(null)
+  const [plan, setPlan] = useState<FloorPlan | null>(() => peekFloorPlan(spec.id) ?? null)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
-    setPlan(null)
+    const cached = peekFloorPlan(spec.id)
+    if (cached) setPlan(cached)
     setError(null)
     void loadFloorPlan(spec.id)
       .then((next) => {
@@ -208,6 +223,6 @@ export function JsonFloorInterior({
     }
   }, [colors.length, error, spec.id])
 
-  if (!plan) return null
+  if (!plan || plan.floorId !== spec.id) return null
   return <JsonFloorReady spec={spec} plan={plan} colors={colors} devices={devices} showPeople={showPeople} />
 }

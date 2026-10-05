@@ -21,7 +21,17 @@ interface TwinInteriorStats {
   jsonColumns?: number
   walkPaths?: number
   labels?: number
+  jsonOfficeDesks?: number
+  renderedOfficeDesks?: number
   error?: string
+}
+
+interface TwinLabelPx {
+  fontSize: number
+  px: number
+  minPx: number
+  maxPx: number
+  distance: number
 }
 
 interface TwinFloorProbe {
@@ -79,6 +89,7 @@ interface Window {
   __twinFly?: { floorId: string; nonce: number } | null
   __twinProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }
   __twinInterior?: TwinInteriorStats
+  __twinLabelPx?: TwinLabelPx
   __twinFloor?: TwinFloorProbe
   __twinCut?: TwinCutStats
   __twinRig?: {
