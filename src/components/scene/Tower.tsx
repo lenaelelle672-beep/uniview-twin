@@ -16,7 +16,7 @@ import { TOWER_OUTLINE, TOWER_OUTLINE_OVERVIEW } from '../../scene/shell/rings'
 import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
 import { createFloorTowerGlass, createTowerGlass } from '../../scene/towerGlass'
 import { useTwinStore } from '../../store/store'
-import { RoofSign } from './InstancedProp'
+import { RoofSign } from './RoofSign'
 import { useFloorActions } from './floorPick'
 
 function FloorShell({

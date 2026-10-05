@@ -1,4 +1,6 @@
-import { Billboard, Line, Text } from '@react-three/drei'
+import { Billboard } from '@react-three/drei/core/Billboard'
+import { Line } from '@react-three/drei/core/Line'
+import { LazyText } from './lazyTroikaText'
 import { roomLabelCharacters, ROOM_LABEL_FONT, type RoomLabel } from './roomLabels'
 
 export function RoomLabels({ labels }: { labels: RoomLabel[] }) {
@@ -9,7 +11,7 @@ export function RoomLabels({ labels }: { labels: RoomLabel[] }) {
       <Line points={points} segments color="#5c6b7c" lineWidth={1.5} />
       {labels.map((label) => (
         <Billboard key={label.text} position={label.label}>
-          <Text
+          <LazyText
             font={ROOM_LABEL_FONT}
             characters={characters}
             fontSize={0.78}
@@ -21,7 +23,7 @@ export function RoomLabels({ labels }: { labels: RoomLabel[] }) {
             renderOrder={3}
           >
             {label.text}
-          </Text>
+          </LazyText>
         </Billboard>
       ))}
     </group>

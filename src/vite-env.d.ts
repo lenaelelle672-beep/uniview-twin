@@ -1,5 +1,13 @@
 /// <reference types="vite/client" />
 
+declare module 'troika-three-text' {
+  export function configureTextBuilder(config: {
+    defaultFontURL?: string | null
+    unicodeFontsURL?: string | null
+    useWorker?: boolean
+  }): void
+}
+
 interface TwinRenderStats {
   calls: number
   triangles: number
@@ -60,6 +68,11 @@ interface TwinEnvMaterial {
 
 interface Window {
   __twinReady?: boolean
+  __twinReadyAt?: number
+  __twinFirstFrameAt?: number
+  __twinFirstFrameUnixMs?: number
+  __twinPrefetchAt?: number
+  __twinPrefetchUnixMs?: number
   __twinStats?: TwinRenderStats
   __twinBadges?: number
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>

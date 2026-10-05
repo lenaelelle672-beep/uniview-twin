@@ -9,12 +9,10 @@ import { installMeshopt } from '../../scene/meshopt'
 const TREE_HI = '/models/street-tree-hi.glb'
 const TREE_LO = '/models/street-tree-lo.glb'
 const LAMP = '/models/street-lamp.glb'
-const SIGN = '/models/roof-sign.glb'
 const LEAF_MATERIAL = 'tree_leaves'
 
 // 只预加载每档都会用到的模型。精细树不能在这里预加载，否则性能档也会请求它。
 useLoader.preload(GLTFLoader, LAMP, installMeshopt)
-useLoader.preload(GLTFLoader, SIGN, installMeshopt)
 
 function collectMeshes(root: Object3D): Mesh[] {
   const meshes: Mesh[] = []
@@ -158,17 +156,4 @@ export function FoliageShadow({
   )
 }
 
-export function RoofSign({ night, position }: { night: boolean; position: [number, number, number] }) {
-  const gltf = useLoader(GLTFLoader, SIGN, installMeshopt)
-  const sign = useMemo(() => gltf.scene.clone(true), [gltf])
-  useLayoutEffect(() => {
-    sign.traverse((child) => {
-      const mesh = child as Mesh
-      if (!mesh.isMesh) return
-      tunePropMaterial(mesh.material as MeshStandardMaterial, night)
-    })
-  }, [night, sign])
-  return <primitive object={sign} position={position} />
-}
-
-export const PROP_URL = { TREE_HI, TREE_LO, LAMP, SIGN }
+export const PROP_URL = { TREE_HI, TREE_LO, LAMP }

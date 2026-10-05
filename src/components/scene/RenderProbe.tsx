@@ -19,6 +19,7 @@ export function RenderProbe() {
 
   useEffect(() => {
     window.__twinReady = true
+    window.__twinReadyAt = performance.now()
     window.__twinProject = (x, y, z) => {
       const rect = gl.domElement.getBoundingClientRect()
       projected.set(x, y, z).project(camera)
@@ -81,11 +82,18 @@ export function RenderProbe() {
     window.__twinSelected = useTwinStore.getState().selectedFloor
     return () => {
       window.__twinReady = false
+      delete window.__twinReadyAt
+      delete window.__twinFirstFrameAt
+      delete window.__twinFirstFrameUnixMs
       unsubscribe()
     }
   }, [camera, gl, scene])
 
   useFrame(() => {
+    if (window.__twinFirstFrameAt == null) {
+      window.__twinFirstFrameAt = performance.now()
+      window.__twinFirstFrameUnixMs = Date.now()
+    }
     window.__twinStats = {
       calls: gl.info.render.calls,
       triangles: gl.info.render.triangles,
