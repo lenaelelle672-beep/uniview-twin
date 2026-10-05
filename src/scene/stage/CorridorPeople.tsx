@@ -13,6 +13,7 @@ import {
   pointOnPath,
   towerCorridorPolyline,
   WALK_METERS_PER_SECOND,
+  type Point,
 } from './corridor'
 
 const MAN_HI = '/models/people/man-in-suit.glb'
@@ -63,18 +64,19 @@ function Figure({ gltf, clip }: { gltf: GLTF; clip: string }) {
   )
 }
 
-function CorridorPeopleModels() {
+function CorridorPeopleModels({ paths }: { paths: Point[][] }) {
   const loaded = useLoader(GLTFLoader, URLS, installMeshopt) as GLTF[]
   const [man, woman, manLod, womanLod] = loaded
   const roster = useMemo(() => corridorRoster(CORRIDOR_PEOPLE_COUNT), [])
-  const path = useMemo(() => towerCorridorPolyline(), [])
-  const length = useMemo(() => pathLength(path), [path])
+  const lengths = useMemo(() => paths.map((path) => pathLength(path)), [paths])
   const refs = useRef<Array<Group | null>>([])
 
   const place = (time: number) => {
     roster.forEach((person, index) => {
       const group = refs.current[index]
-      if (!group) return
+      const path = paths[index % paths.length]
+      const length = lengths[index % paths.length]
+      if (!group || !path || length <= 0) return
       const sample = pointOnPath(path, time * WALK_METERS_PER_SECOND + person.offset * length)
       group.position.set(sample.x, 0, sample.z)
       group.rotation.set(0, sample.heading, 0)
@@ -83,7 +85,7 @@ function CorridorPeopleModels() {
 
   useLayoutEffect(() => {
     place(0)
-  }, [length, path, roster])
+  }, [lengths, paths, roster])
 
   useFrame(({ clock }) => {
     place(clock.elapsedTime)
@@ -115,8 +117,9 @@ function CorridorPeopleModels() {
   )
 }
 
-/** 性能档不挂载，因此不会请求人物 GLB。 */
-export function CorridorPeople({ enabled }: { enabled: boolean }) {
-  if (!enabled) return null
-  return <CorridorPeopleModels />
+/** 性能档不挂载，因此不会请求人物 GLB。walkPaths 为空则不放人。 */
+export function CorridorPeople({ enabled, paths }: { enabled: boolean; paths?: Point[][] }) {
+  const resolved = paths && paths.length > 0 ? paths : paths === undefined ? [towerCorridorPolyline()] : []
+  if (!enabled || resolved.length === 0) return null
+  return <CorridorPeopleModels paths={resolved} />
 }

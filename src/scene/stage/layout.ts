@@ -26,6 +26,9 @@ export interface Slot {
   x: number
   z: number
   rot: number
+  sx?: number
+  sy?: number
+  sz?: number
 }
 
 export interface Point {

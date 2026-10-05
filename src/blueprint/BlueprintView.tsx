@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { floorSpec, isFloorId } from '../data/floors'
 import { statusLabel } from '../alarms/labels'
 import { DEVICE_STATUSES } from '../types'
@@ -27,11 +27,37 @@ export function BlueprintView() {
   const floors = useTwinStore((state) => state.floors)
   const selectDesk = useTwinStore((state) => state.selectDesk)
   const [zoom, setZoom] = useState(1)
+  const [planReady, setPlanReady] = useState(selectedFloor === 'B1')
+
+  useEffect(() => {
+    if (!selectedFloor || !isFloorId(selectedFloor) || selectedFloor === 'B1') {
+      setPlanReady(true)
+      return
+    }
+    let cancelled = false
+    setPlanReady(false)
+    void import('../floors/loadFloor').then((mod) =>
+      mod.loadFloorPlan(selectedFloor).then(() => {
+        if (!cancelled) setPlanReady(true)
+      }),
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [selectedFloor])
 
   if (!selectedFloor || !isFloorId(selectedFloor)) {
     return (
       <div className="blueprint" role="region" aria-label="蓝图视图">
         <p className="blueprint-empty">请在左侧选择楼层。</p>
+      </div>
+    )
+  }
+
+  if (!planReady) {
+    return (
+      <div className="blueprint" role="region" aria-label="蓝图视图">
+        <p className="blueprint-empty">正在加载图纸…</p>
       </div>
     )
   }
@@ -104,14 +130,14 @@ export function BlueprintView() {
               className="plan-fan"
             />
           )}
-          {geometry.rooms.map((room) => {
+          {geometry.rooms.map((room, index) => {
             const x = worldX(room.x0, bounds)
             const y = worldY(room.z0, bounds)
             const width = room.x1 - room.x0
             const height = room.z1 - room.z0
             const fontSize = Math.min(1.35, width * 0.22, height * 0.42)
             return (
-              <g key={room.name}>
+              <g key={`${room.name}-${index}`}>
                 <rect x={x} y={y} width={width} height={height} className="plan-room" />
                 <text x={x + width / 2} y={y + height / 2} className="plan-label" fontSize={fontSize}>
                   {room.name}

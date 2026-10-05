@@ -1,13 +1,17 @@
 import { describe, expect, it } from 'vitest'
+import { floorDeskCount } from '../../floors/deskCounts'
+import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { createMockData } from '../../data/mockData'
 import { deviceBadges, STATUS_GLYPH } from './badges'
 import { workstationPosition } from './workstationPosition'
+
+hydrateAllAboveGrade()
 
 describe('设备圆标', () => {
   it('位置来自 workstationPosition，四种形状都有', () => {
     const data = createMockData()
     const badges = deviceBadges('F12', data.devices)
-    expect(badges.length).toBeGreaterThanOrEqual(100)
+    expect(badges.length).toBe(floorDeskCount('F12'))
     const shapes = new Set<string>()
     for (const badge of badges) {
       const position = workstationPosition('F12', badge.deskId)

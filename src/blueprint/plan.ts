@@ -1,3 +1,5 @@
+import { getFloorPlan } from '../floors/cache'
+import type { FloorPlan } from '../floors/types'
 import type { Desk, Device, DeviceStatus } from '../types'
 import {
   B1_ATRIUM,
@@ -132,6 +134,9 @@ export function floorPlanGeometry(floorId: string): FloorPlanGeometry {
     }
   }
 
+  const plan = getFloorPlan(floorId)
+  if (plan) return geometryFromJson(plan)
+
   const outline = { x0: TOWER.minX, x1: TOWER.maxX, z0: TOWER.minZ, z1: TOWER.maxZ }
   const rooms = [
     room('核心筒', CORE),
@@ -147,6 +152,54 @@ export function floorPlanGeometry(floorId: string): FloorPlanGeometry {
     rooms,
     walls: wallRects([...towerCoreBoxes(), ...meetingGlassBoxes()]),
     columns: towerColumns(),
+    atrium: null,
+    fan: null,
+  }
+}
+
+function ringAabb(ring: Array<[number, number]>): { x0: number; x1: number; z0: number; z1: number } {
+  let x0 = Infinity
+  let x1 = -Infinity
+  let z0 = Infinity
+  let z1 = -Infinity
+  for (const [x, z] of ring) {
+    x0 = Math.min(x0, x)
+    x1 = Math.max(x1, x)
+    z0 = Math.min(z0, z)
+    z1 = Math.max(z1, z)
+  }
+  return { x0, x1, z0, z1 }
+}
+
+function geometryFromJson(plan: FloorPlan): FloorPlanGeometry {
+  const outline = ringAabb(plan.outline)
+  const rooms: PlanRoom[] = []
+  for (const item of plan.rooms) {
+    if (!item.polygon || item.polygon.length < 3) continue
+    const box = ringAabb(item.polygon)
+    rooms.push({ name: item.name, ...box })
+  }
+  const walls: PlanRect[] = []
+  for (const wall of plan.walls) {
+    const dx = wall.b[0] - wall.a[0]
+    const dz = wall.b[1] - wall.a[1]
+    const length = Math.hypot(dx, dz)
+    if (length < 0.2) continue
+    walls.push({
+      x: (wall.a[0] + wall.b[0]) / 2,
+      z: (wall.a[1] + wall.b[1]) / 2,
+      w: Math.abs(dx) < Math.abs(dz) ? 0.16 : length,
+      d: Math.abs(dz) < Math.abs(dx) ? 0.16 : length,
+    })
+  }
+  return {
+    floorId: plan.floorId,
+    bounds: boundsOf(outline),
+    outline,
+    slab: plan.outline,
+    rooms: rooms.slice(0, 80),
+    walls: walls.slice(0, 800),
+    columns: plan.columns.map((column) => ({ x: column.x, z: column.z })),
     atrium: null,
     fan: null,
   }
