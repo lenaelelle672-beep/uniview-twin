@@ -343,9 +343,13 @@ async function main() {
           await screenshotCanvas(page, `${name}-slab`)
           const deskIds = await page.evaluate((id) => {
             const devices = window.__twinDevices ?? []
-            const alarm = devices.find((device) => device.floorId === id && device.status === 'alarm' && device.deskId)
-            const online = devices.find((device) => device.floorId === id && device.status === 'online' && device.deskId)
-            return { alarm: alarm?.deskId ?? window.__twinMonitorBoxes?.alarm?.deskId, online: online?.deskId ?? window.__twinMonitorBoxes?.online?.deskId }
+            const alarm =
+              window.__twinMonitorBoxes?.alarm?.deskId ??
+              devices.find((device) => device.floorId === id && device.status === 'alarm' && device.deskId)?.deskId
+            const online =
+              window.__twinMonitorBoxes?.online?.deskId ??
+              devices.find((device) => device.floorId === id && device.status === 'online' && device.deskId)?.deskId
+            return { alarm, online }
           }, floorId)
           await flyToDesk(page, floorId, deskIds.alarm)
           await page

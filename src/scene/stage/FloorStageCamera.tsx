@@ -158,7 +158,8 @@ export function FloorStageCamera() {
     if (deskId) {
       const interior = scene.getObjectByName('FloorInterior')
       if (!interior) return
-      flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, focusSeq > 0 && presented.current)
+      interior.updateMatrixWorld(true)
+      flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, false)
       framedKey.current = key
       return
     }

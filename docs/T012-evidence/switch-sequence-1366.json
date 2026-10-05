@@ -1,0 +1,15 @@
+{
+  "note": "9 clicks after cold perf; settle 2s. textures/geometries 5th balanced == 1st. programs 44→47 then hold.",
+  "sequence": [
+    { "label": "性能(冷启动)", "textures": 2, "geometries": 3, "programs": 3 },
+    { "label": "均衡", "calls": 120, "textures": 20, "geometries": 77, "programs": 44 },
+    { "label": "性能", "calls": 73, "textures": 6, "geometries": 76, "programs": 42 },
+    { "label": "均衡", "calls": 120, "textures": 20, "geometries": 77, "programs": 47 },
+    { "label": "性能", "calls": 73, "textures": 18, "geometries": 76, "programs": 45 },
+    { "label": "均衡", "calls": 120, "textures": 20, "geometries": 77, "programs": 47 },
+    { "label": "性能", "calls": 73, "textures": 18, "geometries": 76, "programs": 45 },
+    { "label": "均衡", "calls": 120, "textures": 20, "geometries": 77, "programs": 47 },
+    { "label": "性能", "calls": 73, "textures": 18, "geometries": 76, "programs": 45 },
+    { "label": "均衡", "calls": 120, "textures": 20, "geometries": 77, "programs": 47 }
+  ]
+}
