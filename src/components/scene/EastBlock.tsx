@@ -1,5 +1,6 @@
-import { lazy, Suspense, useMemo } from 'react'
+import { lazy, useMemo } from 'react'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
+import { preloadEastGrilleForQuality } from '../../scene/eastGrilleAssets'
 import { extrudeUp } from '../../scene/extrude'
 import {
   eastFloorBandLevels,
@@ -18,7 +19,10 @@ import { curtainMaterial, finMaterial, solidMaterial } from '../../scene/materia
 import type { QualityTier } from '../../types'
 import { FinRow } from './Fins'
 
-const EastGrille = lazy(() => import('./EastGrille'))
+/** 主包一解析就拉格栅 chunk；lazy 复用同一 Promise，不进主包。 */
+const eastGrilleImport = import('./EastGrille')
+const EastGrille = lazy(() => eastGrilleImport)
+preloadEastGrilleForQuality()
 
 const LOWER_TOP = EAST_LOWER_TOP_M
 
@@ -75,11 +79,8 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
         height={EAST_ROOF_M - LOWER_TOP - 0.15}
         outwardFrom={focus}
       />
-      {!model && (
-        <Suspense fallback={null}>
-          <EastGrille quality={quality} />
-        </Suspense>
-      )}
+      {/* 与 Scene.tsx 外层 Suspense 同边界，__twinReady 等 chunk + lo GLB。 */}
+      {!model && <EastGrille quality={quality} />}
     </group>
   )
 }

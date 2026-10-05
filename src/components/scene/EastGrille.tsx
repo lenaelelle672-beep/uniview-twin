@@ -1,18 +1,22 @@
 import { Detailed } from '@react-three/drei'
 import { useFrame, useLoader } from '@react-three/fiber'
-import { useLayoutEffect, useMemo, useState } from 'react'
-import { DoubleSide, Mesh, MeshStandardMaterial, Vector3 } from 'three'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { DoubleSide, Mesh, MeshStandardMaterial, Object3D, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { registerReflectiveEnvMaterial } from './LocalEnvironment'
+import {
+  EAST_GRILLE_HI,
+  EAST_GRILLE_INTENSITY,
+  EAST_GRILLE_LO,
+  preloadEastGrilleHi,
+} from '../../scene/eastGrilleAssets'
 import { eastGrilleMount } from '../../scene/massing'
 import { installMeshopt } from '../../scene/meshopt'
 import type { QualityTier } from '../../types'
+import { registerReflectiveEnvMaterial } from './LocalEnvironment'
 
-export const EAST_GRILLE_INTENSITY = 2.00
-export const EAST_GRILLE_HI = '/models/east-grille-v4-hi.glb'
-export const EAST_GRILLE_LO = '/models/east-grille-v4-lo.glb'
+export { EAST_GRILLE_HI, EAST_GRILLE_INTENSITY, EAST_GRILLE_LO }
 
-function tuneEastGrille(root: Mesh['parent']) {
+function tuneEastGrille(root: Object3D | null) {
   if (!root) return
   root.traverse((child) => {
     const mesh = child as Mesh
@@ -44,12 +48,26 @@ const mountWorld = new Vector3()
 
 function BalancedGrille() {
   const [near, setNear] = useState(false)
+  const [hiReady, setHiReady] = useState(false)
   const mount = eastGrilleMount()
   useFrame(({ camera }) => {
     mountWorld.set(...mount.position)
     if (camera.position.distanceTo(mountWorld) < 90) setNear(true)
   })
-  if (!near) return <GrilleModel url={EAST_GRILLE_LO} />
+  useEffect(() => {
+    if (!near || hiReady) return
+    preloadEastGrilleHi()
+    const loader = new GLTFLoader()
+    installMeshopt(loader)
+    let cancelled = false
+    loader.load(EAST_GRILLE_HI, () => {
+      if (!cancelled) setHiReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [hiReady, near])
+  if (!near || !hiReady) return <GrilleModel url={EAST_GRILLE_LO} />
   return (
     <Detailed distances={[0, 80]}>
       <GrilleModel url={EAST_GRILLE_HI} />
