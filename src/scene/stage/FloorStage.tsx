@@ -1,4 +1,4 @@
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useLayoutEffect, useMemo } from 'react'
 import { InstancedMesh } from 'three'
 import { floorSpec } from '../../data/floors'
@@ -35,6 +35,10 @@ function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDes
       roofVisible: Boolean(roof?.visible),
       aboveGradeVisible: Boolean(above?.visible),
     }
+    if (!floorId) delete window.__twinInterior
+  }, [floorId, scene])
+
+  useFrame(() => {
     if (!floorId) {
       delete window.__twinInterior
       return
@@ -45,7 +49,7 @@ function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDes
       dataDesks,
       renderedDesks: mesh?.count ?? 0,
     }
-  }, [dataDesks, floorId, scene])
+  })
   return null
 }
 
