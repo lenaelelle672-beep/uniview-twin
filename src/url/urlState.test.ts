@@ -83,10 +83,10 @@ describe('URL 解析与回写', () => {
   })
 
   it('回写 view、floor、pos、cam、data', () => {
-    applySearchToStore('?data=/sample.json&cam=p2f001&pos=F2-6')
+    applySearchToStore('?data=/sample.json&cam=p2f001&pos=F2-1')
     useTwinStore.getState().setView('blueprint')
     useTwinStore.getState().setSelectedFloor('F2')
-    expect(storeToSearch()).toBe('?view=blueprint&floor=F2&pos=F2-6&cam=p2f001&data=/sample.json')
+    expect(storeToSearch()).toBe('?view=blueprint&floor=F2&pos=F2-1&cam=p2f001&data=/sample.json')
     expect(parseSearch(storeToSearch()).data).toBe('/sample.json')
   })
 

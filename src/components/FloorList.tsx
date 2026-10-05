@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { loadFloorPlan } from '../floors/loadFloor'
 import { useTwinStore } from '../store/store'
 
 interface FloorListProps {
@@ -37,8 +38,14 @@ export function FloorList({ open }: FloorListProps) {
               data-offline={floor.offlineCount}
               aria-label={`${floor.id} ${floor.name}，告警 ${floor.alarmCount}，离线 ${floor.offlineCount}`}
               aria-pressed={selected}
-              onClick={() => setSelectedFloor(floor.id)}
-              onMouseEnter={() => setHoveredFloor(floor.id)}
+              onClick={() => {
+                setSelectedFloor(floor.id)
+                if (floor.id !== 'B1') void loadFloorPlan(floor.id)
+              }}
+              onMouseEnter={() => {
+                setHoveredFloor(floor.id)
+                if (floor.id !== 'B1') void loadFloorPlan(floor.id)
+              }}
               onMouseLeave={() => setHoveredFloor(null)}
               onFocus={() => setHoveredFloor(floor.id)}
               onBlur={() => setHoveredFloor(null)}
