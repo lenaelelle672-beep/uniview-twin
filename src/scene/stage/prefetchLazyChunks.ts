@@ -31,9 +31,8 @@ function nextFrame(): Promise<void> {
 }
 
 /**
- * D120：等总览就绪且第一个完整帧画出之后再预取。
- * 顺序：__twinReady → 首帧 useFrame 时间戳 → 再多 1 个 rAF → 可选 idle → 发请求。
- * 不能只靠 requestIdleCallback / setTimeout。
+ * D120 / D126：HDR+PMREM 与 Suspense 资源都就绪后才 __twinReady，
+ * 再等首帧 useFrame、多 1 个 rAF、可选 idle，然后才发三个 import()。
  */
 export function schedulePrefetchAfterFirstFrame(): () => void {
   let cancelled = false
