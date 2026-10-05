@@ -18,24 +18,56 @@ import { curtainMaterial, eaveMaterial, finMaterial, grilleMaterial, jointMateri
 export const OUTDOOR_HDR_URL = '/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr'
 
 /**
- * 需要各自 envMapIntensity 的材质，按材质名登记。
- * 场景环境光会把未单独挂 envMap 的材质强度换成 environmentIntensity。
- * 以后可以按名字加进来，例如 GLB 材质 `east_grille`。
+ * 需要各自 envMapIntensity 的材质，严格按材质名匹配（D087）。
+ * 石材底座不在名单里，继续走场景 environmentIntensity 0.22（D092）。
  */
 export const REFLECTIVE_ENV_MATERIALS: Record<string, MeshStandardMaterial> = {
-  curtain: curtainMaterial,
-  fin: finMaterial,
-  grille: grilleMaterial,
-  joint: jointMaterial,
-  eave: eaveMaterial,
+  幕墙: curtainMaterial,
+  铝翅: finMaterial,
+  格栅: grilleMaterial,
+  接缝: jointMaterial,
+  檐口: eaveMaterial,
+}
+
+const reflectiveRegistry = new Map<string, MeshStandardMaterial>(Object.entries(REFLECTIVE_ENV_MATERIALS))
+
+let currentEnv: Texture | null = null
+
+function assignOne(name: string, material: MeshStandardMaterial, env: Texture | null) {
+  if (material.name !== name) return
+  if (material.envMap === env) return
+  material.envMap = env
+  material.needsUpdate = true
 }
 
 function assignEnvMap(env: Texture | null) {
-  for (const material of Object.values(REFLECTIVE_ENV_MATERIALS)) {
-    if (material.envMap === env) continue
-    material.envMap = env
-    material.needsUpdate = true
+  currentEnv = env
+  for (const [name, material] of reflectiveRegistry) {
+    assignOne(name, material, env)
   }
+  publishEnvMatch()
+}
+
+export function listReflectiveEnvMaterials(): MeshStandardMaterial[] {
+  return [...reflectiveRegistry.values()]
+}
+
+export function registerReflectiveEnvMaterial(material: MeshStandardMaterial) {
+  if (!material.name) return
+  if (material.name !== 'east_grille' && !(material.name in REFLECTIVE_ENV_MATERIALS)) return
+  reflectiveRegistry.set(material.name, material)
+  assignOne(material.name, material, currentEnv)
+  publishEnvMatch()
+}
+
+function publishEnvMatch() {
+  window.__twinEnvMaterials = [...reflectiveRegistry.entries()].map(([name, material]) => ({
+    key: name,
+    name: material.name,
+    matched: material.name === name,
+    envMapIntensity: material.envMapIntensity,
+    hasEnvMap: material.envMap != null,
+  }))
 }
 
 type EnvEntry = {

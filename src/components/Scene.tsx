@@ -71,7 +71,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
           <group name="AboveGradeContext" visible={!openBasement}>
             {!model && <ParcelMesh />}
             <Podium model={model} />
-            <EastBlock model={model} />
+            <EastBlock model={model} quality={quality} />
             <B1 model={model} />
           </group>
           <FitBump onReady={bumpFit} />

@@ -1,4 +1,4 @@
-import { TOWER } from './siteGeometry'
+import { TOWER_OUTLINE_BOUNDS } from './shell/rings'
 
 /** 徽标世界尺寸。层间距 4.2 m，高度必须小于间距，否则俯视时会叠在一起。 */
 export const BADGE_WIDTH = 9
@@ -16,8 +16,8 @@ export const BADGE_CHIP_W = 2.15
 export const BADGE_CHIP_H = 1.85
 
 /** 塔楼西侧偏南，总览东南机位能看到，又不挡南立面。 */
-export const BADGE_COLUMN_X = TOWER.minX - 16
-export const BADGE_COLUMN_Z = TOWER.maxZ + 4
+export const BADGE_COLUMN_X = TOWER_OUTLINE_BOUNDS.minX - 16
+export const BADGE_COLUMN_Z = TOWER_OUTLINE_BOUNDS.maxZ + 4
 /**
  * 左右两列之间留出的世界间隙（米），随放大倍数一起变，避免放大后的底板相切。
  */

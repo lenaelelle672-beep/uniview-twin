@@ -50,6 +50,14 @@ interface TwinExplodeStats {
   floors: TwinExplodeFloor[]
 }
 
+interface TwinEnvMaterial {
+  key: string
+  name: string
+  matched: boolean
+  envMapIntensity: number
+  hasEnvMap: boolean
+}
+
 interface Window {
   __twinReady?: boolean
   __twinStats?: TwinRenderStats
@@ -90,4 +98,5 @@ interface Window {
   __twinHighlight?: string
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
+  __twinEnvMaterials?: TwinEnvMaterial[]
 }
