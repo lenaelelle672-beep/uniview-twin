@@ -2,6 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 import { Box3, Raycaster, Vector2, Vector3 } from 'three'
 import { markSuspenseReady, resetOverviewReadyMarks } from '../../scene/overviewReady'
+import { PICK_VOLUME_LAYER } from '../../scene/pickLayers'
 import { useTwinStore } from '../../store/store'
 
 const projected = new Vector3()
@@ -34,6 +35,7 @@ export function RenderProbe() {
       rayTarget.set(x2, y2, z2)
       rayDir.copy(rayTarget).sub(rayOrigin)
       const span = rayDir.length()
+      raycaster.layers.disable(PICK_VOLUME_LAYER)
       raycaster.set(rayOrigin, rayDir.normalize())
       raycaster.far = span + 1
       return raycaster.intersectObjects(scene.children, true).slice(0, 8).map((hit) => ({
@@ -55,6 +57,7 @@ export function RenderProbe() {
     window.__twinPick = (cx, cy) => {
       const rect = gl.domElement.getBoundingClientRect()
       ndc.set((cx / rect.width) * 2 - 1, -(cy / rect.height) * 2 + 1)
+      raycaster.layers.disable(PICK_VOLUME_LAYER)
       raycaster.setFromCamera(ndc, camera)
       raycaster.far = 4000
       pickHits.length = 0

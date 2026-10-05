@@ -15,6 +15,7 @@ import { Tower } from './scene/Tower'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
+import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
@@ -39,6 +40,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   return (
     <>
       <color attach="background" args={[background]} />
+      <EnablePickVolumeRaycast />
       <DayExposure mode={mode} />
       <LocalEnvironment enabled={!model} night={night} />
       <hemisphereLight
