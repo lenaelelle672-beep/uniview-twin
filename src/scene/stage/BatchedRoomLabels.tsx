@@ -97,8 +97,6 @@ export function BatchedRoomLabels({
           text.anchorY = 'middle'
           text.characters = characters
           text.position.set(label.label[0], label.label[1], label.label[2])
-          // 默认字面朝 +Z；单层机位在南侧看向 -Z，固定转 180°，不是 Billboard。
-          text.rotation.y = Math.PI
           text.frustumCulled = false
           batch.addText(text)
           members.push(text)
