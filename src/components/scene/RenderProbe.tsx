@@ -77,21 +77,34 @@ export function RenderProbe() {
         point: hit.point.toArray() as [number, number, number],
       }
     }
+    window.__twinSelected = useTwinStore.getState().selectedFloor
+    window.__twinView = useTwinStore.getState().view
+    window.__twinDevices = useTwinStore.getState().devices
+    window.__twinFocusDevice = (target) => useTwinStore.getState().focusDevice(target)
+    window.__twinSelectFloor = (floorId) => useTwinStore.getState().setSelectedFloor(floorId)
+    window.__twinSetExploded = (exploded) => useTwinStore.getState().setExploded(exploded)
     const unsubscribe = useTwinStore.subscribe((state) => {
       window.__twinFly = state.floorFlyRequest
-      window.__twinView = state.view
       window.__twinSelected = state.selectedFloor
+      window.__twinView = state.view
+      window.__twinDevices = state.devices
     })
-    window.__twinView = useTwinStore.getState().view
-    window.__twinSelected = useTwinStore.getState().selectedFloor
     return () => {
       resetOverviewReadyMarks()
+      delete window.__twinSelected
+      delete window.__twinView
+      delete window.__twinSetExploded
       unsubscribe()
     }
   }, [camera, gl, scene])
 
   useFrame(() => {
-    if (window.__twinReady && window.__twinFirstFrameAt == null) {
+    gl.info.autoReset = false
+    gl.info.reset()
+  }, -1)
+
+  useFrame(() => {
+    if (window.__twinReadyAt != null && window.__twinFirstFrameAt == null) {
       window.__twinFirstFrameAt = performance.now()
       window.__twinFirstFrameUnixMs = Date.now()
     }
@@ -119,7 +132,69 @@ export function RenderProbe() {
       })
     })
     if (items.length > 0) window.__twinGrille = items
-  })
+    window.__twinMemory = {
+      textures: gl.info.memory.textures,
+      geometries: gl.info.memory.geometries,
+      programs: gl.info.programs?.length ?? 0,
+    }
+    const watch = window.__twinFrameWatch
+    if (!watch?.active) return
+    const source = gl.domElement
+    if (!watch.scratch) {
+      watch.scratch = document.createElement('canvas')
+      watch.scratchCtx = watch.scratch.getContext('2d', { willReadFrequently: true })
+    }
+    const scratch = watch.scratch
+    const ctx = watch.scratchCtx
+    if (!ctx) return
+    scratch.width = source.width
+    scratch.height = source.height
+    ctx.drawImage(source, 0, 0)
+    const image = ctx.getImageData(0, 0, scratch.width, scratch.height)
+    watch.frames.push(
+      classifyFrame(image.data, image.width, image.height, performance.now(), Boolean(gl.domElement.closest('.scene-root')?.querySelector('[data-twin-freeze]'))),
+    )
+  }, 8)
 
   return null
+}
+
+function classifyFrame(data: Uint8ClampedArray, width: number, height: number, at: number, freezeUp: boolean) {
+  let empty = 0
+  let dark = 0
+  let building = 0
+  const total = width * height
+  const step = Math.max(1, Math.floor(total / 4000))
+  let samples = 0
+  for (let index = 0; index < total; index += step) {
+    const offset = index * 4
+    const r = data[offset]
+    const g = data[offset + 1]
+    const b = data[offset + 2]
+    const max = Math.max(r, g, b)
+    const min = Math.min(r, g, b)
+    samples += 1
+    if (max < 8) dark += 1
+    // 清屏色 #c5d7ea 或全黑，几乎没有建筑细节
+    if (max < 8 || (Math.abs(r - 197) < 12 && Math.abs(g - 215) < 12 && Math.abs(b - 234) < 12 && max - min < 18)) {
+      empty += 1
+    } else if (b > r + 8 && g > 80 && max - min > 20) {
+      building += 1
+    }
+  }
+  const emptyRatio = empty / samples
+  const darkRatio = dark / samples
+  const buildingRatio = building / samples
+  const badgeOnly = emptyRatio > 0.8 && buildingRatio < 0.04 && darkRatio > 0.005 && darkRatio < 0.25
+  return {
+    at,
+    width,
+    height,
+    emptyRatio,
+    darkRatio,
+    buildingRatio,
+    badgeOnly,
+    freezeUp,
+    empty: emptyRatio > 0.97 || darkRatio > 0.92,
+  }
 }

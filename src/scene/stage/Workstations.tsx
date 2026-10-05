@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
 import { Color, InstancedMesh, Material, Object3D, BufferGeometry } from 'three'
-import { ALARM_MARKER_ORDER } from '../overlayOrder'
+import { ALARM_MARKER_ORDER, MONITOR_LAYER } from '../overlayOrder'
 import { chairMaterial, deskMaterial, monitorMaterial } from './materials'
 import type { Slot } from './layout'
 import { deskChairGeometry, deskGeometry, monitorGeometry } from './geometry'
@@ -15,6 +15,7 @@ export function InstancedSlots({
   colors,
   castShadow = true,
   renderOrder = 0,
+  layer,
 }: {
   name: string
   geometry: BufferGeometry
@@ -23,6 +24,7 @@ export function InstancedSlots({
   colors?: Color[]
   castShadow?: boolean
   renderOrder?: number
+  layer?: number
 }) {
   const ref = useRef<InstancedMesh>(null)
 
@@ -41,7 +43,8 @@ export function InstancedSlots({
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
     mesh.computeBoundingSphere()
-  }, [colors, slots])
+    if (layer != null) mesh.layers.set(layer)
+  }, [colors, layer, slots])
 
   if (slots.length === 0) return null
   return (
@@ -69,8 +72,9 @@ export function Workstations({ slots, colors }: { slots: Slot[]; colors: Color[]
         material={monitorMaterial}
         slots={slots}
         colors={colors}
-        // 告警红屏和同网格里的其他状态共用这次绘制。renderOrder 高于徽标数字，进单层后徽标已隐藏。
+        // 告警红屏和同网格里的其他状态共用这次绘制。单独一层，合成器之后再画。
         renderOrder={ALARM_MARKER_ORDER}
+        layer={MONITOR_LAYER}
       />
     </group>
   )

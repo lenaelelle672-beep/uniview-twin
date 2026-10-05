@@ -1,5 +1,6 @@
+import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
-import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
@@ -8,15 +9,23 @@ import { EastBlock } from './scene/EastBlock'
 import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
+import { MainScenePass, MonitorPass } from './scene/MonitorPass'
 import { RenderProbe } from './scene/RenderProbe'
 import { ParcelMesh, Site } from './scene/Site'
 import { ExplodedLayout } from './scene/ExplodedLayout'
 import { Tower } from './scene/Tower'
+import { useBalancedWarmup } from './scene/useBalancedWarmup'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
+
+const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
+const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.PostFX })))
+const FacadeSamples = lazy(() =>
+  import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
+)
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
@@ -32,10 +41,41 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const night = mode === 'night'
   const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
+  const [composerLive, setComposerLive] = useState(false)
+  const [keepFx, setKeepFx] = useState(false)
+  const [afterFirstFrame, setAfterFirstFrame] = useState(false)
+  const extrasReady = useBalancedWarmup(quality, composerLive)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
   const bumpFit = useCallback(() => setFitGeneration((value) => value + 1), [])
+
+  useLayoutEffect(() => {
+    if (quality === 'perf') {
+      setComposerLive(false)
+      window.__twinComposerLive = false
+    }
+  }, [quality])
+
+  useLayoutEffect(() => {
+    if (extrasReady) setKeepFx(true)
+  }, [extrasReady])
+
+  useEffect(() => {
+    let cancelled = false
+    const tick = () => {
+      if (cancelled) return
+      if (window.__twinFirstFrameAt != null) {
+        setAfterFirstFrame(true)
+        return
+      }
+      requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <>
@@ -82,11 +122,33 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <group visible={!openBasement}>
           <Site model={model} night={night} quality={quality} />
         </group>
-        <FloorBadges />
+        {keepFx && (
+          <Suspense fallback={null}>
+            <ContactGround active={quality !== 'perf'} />
+          </Suspense>
+        )}
         <ExplodedLayout />
         <FloorStage />
         <RenderProbe />
       </Suspense>
+      {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
+      {!composerLive && <MainScenePass renderPriority={1} />}
+      <MonitorPass renderPriority={2} drawOverlay={!composerLive} />
+      <Suspense fallback={null}>
+        <Hud renderPriority={3}>
+          <FloorBadges />
+        </Hud>
+      </Suspense>
+      {afterFirstFrame && (
+        <Suspense fallback={null}>
+          <FacadeSamples />
+        </Suspense>
+      )}
+      {keepFx && (
+        <Suspense fallback={null}>
+          <PostFX active={quality !== 'perf'} onLive={() => setComposerLive(true)} />
+        </Suspense>
+      )}
     </>
   )
 }

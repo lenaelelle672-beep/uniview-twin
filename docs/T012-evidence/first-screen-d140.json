@@ -1,0 +1,241 @@
+{
+  "label": "d140",
+  "baseUrl": "http://127.0.0.1:5190",
+  "method": "python gzip.compress(9)",
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "hardGateLimit": 436361,
+  "balancedFxLimit": 105000,
+  "balanced": {
+    "hardGate": 426677,
+    "balancedFx": 101498,
+    "fullFirstScreen": 528175,
+    "requestedBalancedFx": true,
+    "files": [
+      {
+        "url": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+        "bytes": 1435119,
+        "gzip": 954159,
+        "hdr": true,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-lluB4Vxv.js",
+        "bytes": 1396446,
+        "gzip": 394505,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/balancedFx-eWFv3H7k.js",
+        "bytes": 232110,
+        "gzip": 101498,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": true,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-tree-hi.glb",
+        "bytes": 16540,
+        "gzip": 13577,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/roof-sign.glb",
+        "bytes": 10548,
+        "gzip": 5061,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/badge-digits-bold-C_MyspKJ.png",
+        "bytes": 4995,
+        "gzip": 4237,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-tree-lo.glb",
+        "bytes": 5696,
+        "gzip": 3466,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-bJxa6yS3.css",
+        "bytes": 9762,
+        "gzip": 2822,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-lamp.glb",
+        "bytes": 5812,
+        "gzip": 2666,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/geometry-Bcwb8hlf.js",
+        "bytes": 5649,
+        "gzip": 2489,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/assets/MonitorSamples-Br9IXFhG.js",
+        "bytes": 3248,
+        "gzip": 1549,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/?q=balanced",
+        "bytes": 483,
+        "gzip": 343,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/favicon.svg",
+        "bytes": 548,
+        "gzip": 188,
+        "hdr": false,
+        "favicon": true,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      }
+    ]
+  },
+  "perf": {
+    "firstScreen": 413100,
+    "balancedFx": 0,
+    "requestedBalancedFx": false,
+    "files": [
+      {
+        "url": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+        "bytes": 1435119,
+        "gzip": 954159,
+        "hdr": true,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-lluB4Vxv.js",
+        "bytes": 1396446,
+        "gzip": 394505,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/roof-sign.glb",
+        "bytes": 10548,
+        "gzip": 5061,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/badge-digits-bold-C_MyspKJ.png",
+        "bytes": 4995,
+        "gzip": 4237,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-tree-lo.glb",
+        "bytes": 5696,
+        "gzip": 3466,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-bJxa6yS3.css",
+        "bytes": 9762,
+        "gzip": 2822,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-lamp.glb",
+        "bytes": 5812,
+        "gzip": 2666,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/geometry-Bcwb8hlf.js",
+        "bytes": 5649,
+        "gzip": 2489,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/assets/MonitorSamples-Br9IXFhG.js",
+        "bytes": 3248,
+        "gzip": 1549,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/?q=perf",
+        "bytes": 483,
+        "gzip": 343,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      }
+    ]
+  },
+  "summary": {
+    "hardGateNoFx": 426677,
+    "balancedFx": 101498,
+    "balancedFullFirstScreen": 528175,
+    "perfFirstScreen": 413100
+  },
+  "ok": true,
+  "failures": []
+}

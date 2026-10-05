@@ -1,4 +1,4 @@
-import { useThree } from '@react-three/fiber'
+import { useFrame, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo } from 'react'
 import { InstancedMesh, Mesh } from 'three'
 import { PICK_VOLUME_LAYER } from '../pickLayers'
@@ -11,7 +11,7 @@ import { showCorridorPeople } from './corridor'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
-import { STATUS_COLOR } from './status'
+import { MONITOR_DISPLAY_COLOR } from './materials'
 import { workstationPosition } from './workstationPosition'
 import { loadFloorPlan } from '../../floors/loadFloor'
 
@@ -24,6 +24,11 @@ const B1Interior = lazy(async () => {
   const mod = await import('./B1Interior')
   return { default: mod.B1Interior }
 })
+
+const TowerInterior = lazy(() => import('./TowerInterior').then((mod) => ({ default: mod.TowerInterior })))
+const MonitorSamples = lazy(() => import('./MonitorSamples').then((mod) => ({ default: mod.MonitorSamples })))
+
+export { TowerInterior as LazyTowerInterior }
 
 function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDesks: number }) {
   const scene = useThree((state) => state.scene)
@@ -43,6 +48,10 @@ function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDes
       roofVisible: Boolean(roof?.visible),
       aboveGradeVisible: Boolean(above?.visible),
     }
+    if (!floorId) delete window.__twinInterior
+  }, [floorId, scene])
+
+  useFrame(() => {
     if (!floorId) {
       delete window.__twinInterior
       return
@@ -54,7 +63,7 @@ function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDes
       dataDesks,
       renderedDesks: mesh?.count ?? window.__twinInterior?.renderedDesks ?? 0,
     }
-  }, [dataDesks, floorId, scene])
+  })
   return null
 }
 
@@ -96,12 +105,19 @@ export function FloorStage() {
     if (!active) return []
     return desks.filter((desk) => desk.floorId === active).sort((desk, other) => desk.index - other.index)
   }, [active, desks])
+  const slots = useMemo(() => {
+    if (!active) return []
+    return floorDesks.map((desk) => {
+      const position = workstationPosition(desk.floorId, desk.id)
+      return { x: position.x, z: position.z, rot: 0 }
+    })
+  }, [active, floorDesks])
   const colors = useMemo(() => {
     const byDesk = new Map<string, DeviceStatus>()
     for (const device of devices) {
       if (device.type === 'pc' && device.deskId) byDesk.set(device.deskId, device.status)
     }
-    return floorDesks.map((desk) => STATUS_COLOR[byDesk.get(desk.id) ?? 'offline'])
+    return floorDesks.map((desk) => MONITOR_DISPLAY_COLOR[byDesk.get(desk.id) ?? 'offline'])
   }, [devices, floorDesks])
   const floorDevices = useMemo(() => {
     if (!active) return []
@@ -135,6 +151,14 @@ export function FloorStage() {
           />
         )}
         {spec && spec.level < 0 && <B1Interior slots={basementSlots} colors={colors} devices={floorDevices} />}
+        {spec && spec.level > 0 && (
+          <MonitorSamples
+            floorId={spec.id}
+            slots={slots}
+            colors={colors}
+            deskIds={floorDesks.map((desk) => desk.id)}
+          />
+        )}
       </Suspense>
       <InteriorProbe floorId={active} dataDesks={floorDesks.length} />
     </>

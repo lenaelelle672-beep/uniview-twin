@@ -1,0 +1,16 @@
+{
+  "date": "2026-10-05",
+  "method": "python gzip.compress(9), each file separately",
+  "viewport": { "width": 1366, "height": 768 },
+  "hardGateLimit": 436361,
+  "balancedFxLimit": 105000,
+  "summary": {
+    "hardGateNoFx": 396970,
+    "balancedFx": 101485,
+    "balancedFullFirstScreen": 498455,
+    "perfFirstScreen": 396970
+  },
+  "perfRequestedBalancedFx": false,
+  "ff20070BalancedFx": 100199,
+  "ok": true
+}

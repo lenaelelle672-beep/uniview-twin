@@ -88,6 +88,28 @@ interface TwinEnvMaterial {
   hasEnvMap: boolean
 }
 
+interface TwinSampleBox {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+interface TwinMonitorBoxes {
+  floorId: string
+  canvas: { width: number; height: number }
+  alarm: { deskId: string; box: TwinSampleBox; patches?: Array<{ name: string; box: TwinSampleBox }> } | null
+  online: { deskId: string; box: TwinSampleBox; patches?: Array<{ name: string; box: TwinSampleBox }> } | null
+}
+
+interface TwinFacadeBoxes {
+  selectedFloor: string
+  neighborFloor: string
+  canvas: { width: number; height: number }
+  selected: TwinSampleBox
+  neighbor: TwinSampleBox
+}
+
 interface Window {
   __twinReady?: boolean
   __twinReadyAt?: number
@@ -103,6 +125,11 @@ interface Window {
   __twinPrefetchAt?: number
   __twinPrefetchUnixMs?: number
   __twinScene?: import('three').Scene
+  __twinSelected?: string | null
+  __twinView?: string
+  __twinDevices?: Array<{ id: string; deskId?: string; floorId: string; type: string; status: string }>
+  __twinFocusDevice?: (target: { floor: string; deskId: string | null; deviceId?: string | null }) => void
+  __twinSelectFloor?: (floorId: string | null) => void
   __twinStats?: TwinRenderStats
   __twinBadges?: number
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>
@@ -146,8 +173,6 @@ interface Window {
   __twinExplode?: TwinExplodeStats
   __twinEnvMaterials?: TwinEnvMaterial[]
   __twinGrille?: Array<{ name: string; type: string; visible: boolean; world: number[]; box: number[] | null }>
-  __twinView?: string
-  __twinSelected?: string | null
   __twinRaycast?: (
     x1: number,
     y1: number,
@@ -161,4 +186,52 @@ interface Window {
     cx: number,
     cy: number,
   ) => { name: string; parent: string; material: string; distance: number; point: [number, number, number] } | null
+  __twinMonitorBoxes?: TwinMonitorBoxes
+  __twinFacadeBoxes?: TwinFacadeBoxes
+  __twinSetExploded?: (exploded: boolean) => void
+  __twinOverlayBudget?: {
+    extraTargets: number
+    extraBytes: number
+    drawingBuffer: { width: number; height: number }
+  }
+  __twinGlProbe?: {
+    samples: number
+    errors: number[]
+    samplesReliableOnSwiftShader: boolean
+  }
+  __twinMemory?: {
+    textures: number
+    geometries: number
+    programs: number
+  }
+  __twinTargetInventory?: {
+    width: number
+    height: number
+    items: Array<{ name: string; width: number; height: number; format: string; samples: number; bytes: number }>
+    bytes: number
+    mib: number
+  }
+  __twinBlitSites?: ReadonlyArray<{ file: string; fn: string; dest: string }>
+  __twinComposerLive?: boolean
+  __twinWarmup?: {
+    compileMs: number
+    totalMs: number
+    firstSwitch: boolean
+  }
+  __twinFrameWatch?: {
+    active: boolean
+    frames: Array<{
+      at: number
+      width: number
+      height: number
+      emptyRatio: number
+      darkRatio: number
+      buildingRatio?: number
+      badgeOnly?: boolean
+      freezeUp?: boolean
+      empty: boolean
+    }>
+    scratch?: HTMLCanvasElement
+    scratchCtx?: CanvasRenderingContext2D | null
+  }
 }
