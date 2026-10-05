@@ -2,7 +2,9 @@ import { useMemo } from 'react'
 import { BufferGeometry, Float32BufferAttribute } from 'three'
 import { COURT_DEPTH_M, COURT_SLOPE_M } from '../../scene/siteGeometry'
 import { extrudeUp } from '../../scene/extrude'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { courtyardHole, outset, podiumFrontArc, podiumFocus, podiumOutline, PODIUM_HEIGHT_M } from '../../scene/massing'
+import { PODIUM_SOUTH_ADDON } from '../../scene/shell/rings'
 import { courtWallMaterial, curtainMaterial, eaveMaterial, solidMaterial } from '../../scene/materials'
 import { FinRow } from './Fins'
 
@@ -51,8 +53,16 @@ function makeBasin() {
 export function Podium({ model }: { model: boolean }) {
   const outline = useMemo(() => podiumOutline(), [])
   const focus = useMemo(() => podiumFocus(), [])
-  const shell = useMemo(() => extrudeUp(outline, PODIUM_HEIGHT_M), [outline])
-  const band = useMemo(() => extrudeUp(outset(outline, 0.16, focus), 0.42), [focus, outline])
+  const shell = useMemo(() => {
+    const main = extrudeUp(outline, PODIUM_HEIGHT_M, [], 'top')
+    const addon = extrudeUp(PODIUM_SOUTH_ADDON, PODIUM_HEIGHT_M, [], 'top')
+    const merged = mergeGeometries([main, addon])
+    main.dispose()
+    addon.dispose()
+    if (!merged) throw new Error('裙楼几何为空')
+    return merged
+  }, [outline])
+  const band = useMemo(() => extrudeUp(outset(outline, 0.16, focus), 0.42, [], 'top'), [focus, outline])
   const basin = useMemo(() => makeBasin(), [])
   const arc = useMemo(() => podiumFrontArc(), [])
   const materials = model ? [solidMaterial, solidMaterial] : [solidMaterial, curtainMaterial]
@@ -60,7 +70,13 @@ export function Podium({ model }: { model: boolean }) {
   return (
     <group name="Podium">
       <mesh geometry={shell} material={materials} castShadow receiveShadow />
-      <mesh geometry={band} material={model ? solidMaterial : eaveMaterial} position={[0, 5.75, 0]} castShadow receiveShadow />
+      <mesh
+        geometry={band}
+        material={model ? solidMaterial : eaveMaterial}
+        position={[0, PODIUM_HEIGHT_M - 0.45, 0]}
+        castShadow
+        receiveShadow
+      />
       <mesh name="CourtyardWall" geometry={basin} material={courtWallMaterial} receiveShadow />
       <FinRow points={arc} spacing={2.2} y={PODIUM_HEIGHT_M / 2} height={PODIUM_HEIGHT_M * 0.92} outwardFrom={focus} />
     </group>
