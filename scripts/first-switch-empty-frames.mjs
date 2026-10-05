@@ -121,6 +121,9 @@ async function main() {
     rows: rows.map(({ frames, ...row }) => ({ ...row, frameCount: frames.length })),
   }
   await writeFile(resolve(outDir, 'report.json'), JSON.stringify({ ...report, rows }, null, 2))
+  const evidenceDir = resolve(here, '../docs/T012-evidence')
+  await mkdir(evidenceDir, { recursive: true })
+  await writeFile(resolve(evidenceDir, 'first-switch-empty-frames.json'), JSON.stringify({ ...report, rows }, null, 2))
   console.log(JSON.stringify(report, null, 2))
   if (badgeOnlyAfterUnfreeze > 0) process.exitCode = 1
 }

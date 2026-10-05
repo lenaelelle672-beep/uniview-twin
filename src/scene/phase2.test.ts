@@ -6,8 +6,8 @@ import { applySurfaceMode, baseMaterial, highlightCurtainMaterial, highlightJoin
 import { floorSpec } from '../data/floors'
 import { boxesOverlap, facadeGlassCorners, neighborFloorId } from './stage/facadeBoxes'
 import { MONITOR_DISPLAY_SRGB, monitorMaterial } from './stage/materials'
-import { monitorPlateCorners } from './stage/geometry'
-import { overlayDepthBudget } from './monitorDepth'
+import { monitorPlateCorners, monitorScreenCorners, monitorScreenPatchCorners } from './stage/geometry'
+import { blitDepth, overlayDepthBudget } from './monitorDepth'
 import { CONTACT_SHADOW_RESOLUTION, SHELL_VERSION } from './shellVersion'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -24,6 +24,7 @@ function relativeLuminance(hex: string) {
 describe('T012 第二阶段约束', () => {
   it('告警屏不走色调映射，显示色亮度比 ≥1.5 且仍是红色', () => {
     expect(monitorMaterial.toneMapped).toBe(false)
+    expect(monitorMaterial.vertexColors).toBe(false)
     expect(monitorMaterial.depthTest).toBe(true)
     expect(monitorMaterial.depthWrite).toBe(true)
     const alarm = MONITOR_DISPLAY_SRGB.alarm
@@ -33,13 +34,21 @@ describe('T012 第二阶段约束', () => {
     const ab = Number.parseInt(alarm.slice(5, 7), 16)
     expect(ar).toBeGreaterThan(ag)
     expect(ar).toBeGreaterThan(ab)
+    const max = Math.max(ar, ag, ab)
+    const min = Math.min(ar, ag, ab)
+    expect((max - min) / max).toBeGreaterThanOrEqual(0.5)
     expect(relativeLuminance(alarm) / relativeLuminance(online)).toBeGreaterThanOrEqual(1.5)
   })
 
-  it('告警屏取样框按底座投影，三层同一套局部坐标', () => {
-    const corners = monitorPlateCorners({ x: 2, z: -3, rot: 0 }, 48)
-    expect(corners).toHaveLength(4)
-    expect(corners.every((point) => Math.abs(point.y - (48 + 0.16 + 0.804)) < 1e-6)).toBe(true)
+  it('告警屏取样框落在屏幕面上，底座坐标仍可用', () => {
+    const plate = monitorPlateCorners({ x: 2, z: -3, rot: 0 }, 48)
+    expect(plate).toHaveLength(4)
+    expect(plate.every((point) => Math.abs(point.y - (48 + 0.16 + 0.804)) < 1e-6)).toBe(true)
+    const screen = monitorScreenCorners({ x: 2, z: -3, rot: 0 }, 48)
+    expect(screen).toHaveLength(8)
+    expect(Math.min(...screen.map((point) => point.y))).toBeGreaterThan(48 + 0.16 + 0.7)
+    const patch = monitorScreenPatchCorners({ x: 2, z: -3, rot: 0 }, 48, { u: 0, v: 0, su: 0.26, sv: 0.26 })
+    expect(patch).toHaveLength(4)
   })
 
   it('白天研发块底座不再用偏米色 #d4c8bc', () => {
@@ -63,13 +72,17 @@ describe('T012 第二阶段约束', () => {
     expect(src).not.toMatch(/blitFramebuffer/)
   })
 
-  it('源码不再往默认帧缓冲 blit 深度', () => {
-    const files = [
-      readFileSync(join(here, 'monitorDepth.ts'), 'utf8'),
-      readFileSync(join(here, '../components/scene/MonitorPass.tsx'), 'utf8'),
-      readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8'),
-    ]
-    expect(files.some((src) => src.includes('blitFramebuffer'))).toBe(false)
+  it('blitDepth 拒绝写入默认帧缓冲，MonitorPass 不再调用', () => {
+    const depth = readFileSync(join(here, 'monitorDepth.ts'), 'utf8')
+    const pass = readFileSync(join(here, '../components/scene/MonitorPass.tsx'), 'utf8')
+    const fx = readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8')
+    expect(pass).not.toMatch(/blitDepth\s*\(/)
+    expect(pass).not.toMatch(/blitFramebuffer/)
+    expect(fx).toMatch(/blitDepth\(renderer, source, inputBuffer\)/)
+    expect(fx).not.toMatch(/blitDepth\([^)]*null/)
+    expect(depth).toMatch(/dest == null/)
+    expect(depth).toMatch(/blitFramebuffer/)
+    expect(() => blitDepth({} as never, {} as never, null as never)).toThrow(/default framebuffer/)
   })
 
   it('选中高亮仍是 #f7eedd，不参与色调映射', () => {

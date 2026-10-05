@@ -39,6 +39,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
   const [composerLive, setComposerLive] = useState(false)
+  const [keepFx, setKeepFx] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
@@ -51,6 +52,10 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
       window.__twinComposerLive = false
     }
   }, [quality])
+
+  useLayoutEffect(() => {
+    if (extrasReady) setKeepFx(true)
+  }, [extrasReady])
 
   return (
     <>
@@ -95,9 +100,9 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <group visible={!openBasement}>
           <Site model={model} night={night} quality={quality} />
         </group>
-        {extrasReady && (
+        {keepFx && (
           <Suspense fallback={null}>
-            <ContactGround />
+            <ContactGround active={quality !== 'perf'} />
           </Suspense>
         )}
         <ExplodedLayout />
@@ -113,9 +118,9 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
       </Suspense>
       <RenderProbe />
       <FacadeSamples />
-      {extrasReady && (
+      {keepFx && (
         <Suspense fallback={null}>
-          <PostFX onLive={() => setComposerLive(true)} />
+          <PostFX active={quality !== 'perf'} onLive={() => setComposerLive(true)} />
         </Suspense>
       )}
     </>

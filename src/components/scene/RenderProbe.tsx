@@ -54,6 +54,7 @@ export function RenderProbe() {
     window.__twinMemory = {
       textures: gl.info.memory.textures,
       geometries: gl.info.memory.geometries,
+      programs: gl.info.programs?.length ?? 0,
     }
     const watch = window.__twinFrameWatch
     if (!watch?.active) return

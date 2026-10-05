@@ -223,10 +223,83 @@ export function createDeskGeometry(): BufferGeometry {
   ])
 }
 
-/** 工位局部坐标：屏幕中心、底座顶面中心。取样框按底座投影，躲开悬浮徽标。 */
+/** 工位局部坐标：屏幕中心、底座顶面中心。亮度取样改走屏幕面，不再用底座。 */
 export const MONITOR_SCREEN_LOCAL = { x: 0, y: 1.02, z: -0.22 }
+export const MONITOR_SCREEN_SIZE = { w: 0.52, h: 0.32, d: 0.028 }
+export const MONITOR_SCREEN_TILT = -0.42
 export const MONITOR_PLATE_LOCAL = { x: 0, y: 0.804, z: 0.02 }
 export const MONITOR_PLATE_SIZE = { w: 0.72, h: 0.028, d: 0.46 }
+
+export function toWorldOnSlot(
+  slot: { x: number; z: number; rot?: number },
+  local: { x: number; y: number; z: number },
+  elevation: number,
+  slab = 0.16,
+) {
+  const cos = Math.cos(slot.rot ?? 0)
+  const sin = Math.sin(slot.rot ?? 0)
+  return {
+    x: slot.x + local.x * cos - local.z * sin,
+    y: elevation + slab + local.y,
+    z: slot.z + local.x * sin + local.z * cos,
+  }
+}
+
+function screenLocalPoint(lx: number, ly: number, lz: number) {
+  const cos = Math.cos(MONITOR_SCREEN_TILT)
+  const sin = Math.sin(MONITOR_SCREEN_TILT)
+  return {
+    x: MONITOR_SCREEN_LOCAL.x + lx,
+    y: MONITOR_SCREEN_LOCAL.y + ly * cos - lz * sin,
+    z: MONITOR_SCREEN_LOCAL.z + ly * sin + lz * cos,
+  }
+}
+
+/** 屏幕盒 8 个角。投影后的外接框落在屏幕面上，不含底座和桌面。 */
+export function monitorScreenCorners(slot: { x: number; z: number; rot?: number }, elevation: number, slab = 0.16) {
+  const hw = MONITOR_SCREEN_SIZE.w / 2
+  const hh = MONITOR_SCREEN_SIZE.h / 2
+  const hd = MONITOR_SCREEN_SIZE.d / 2
+  const corners: Array<{ x: number; y: number; z: number }> = []
+  for (const sx of [-1, 1]) {
+    for (const sy of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        corners.push(toWorldOnSlot(slot, screenLocalPoint(sx * hw, sy * hh, sz * hd), elevation, slab))
+      }
+    }
+  }
+  return corners
+}
+
+export const MONITOR_SCREEN_PATCHES = [
+  { name: 'center', u: 0, v: 0, su: 0.26, sv: 0.26 },
+  { name: 'tl', u: -0.26, v: 0.26, su: 0.2, sv: 0.2 },
+  { name: 'tr', u: 0.26, v: 0.26, su: 0.2, sv: 0.2 },
+  { name: 'bl', u: -0.26, v: -0.26, su: 0.2, sv: 0.2 },
+  { name: 'br', u: 0.26, v: -0.26, su: 0.2, sv: 0.2 },
+] as const
+
+/** 同一块屏幕上的多个内缩面片，验收取均值后报最小比值。 */
+export function monitorScreenPatchCorners(
+  slot: { x: number; z: number; rot?: number },
+  elevation: number,
+  patch: { u: number; v: number; su: number; sv: number },
+  slab = 0.16,
+) {
+  const hw = (MONITOR_SCREEN_SIZE.w / 2) * patch.su
+  const hh = (MONITOR_SCREEN_SIZE.h / 2) * patch.sv
+  const zFront = MONITOR_SCREEN_SIZE.d / 2
+  const cu = (MONITOR_SCREEN_SIZE.w / 2) * patch.u
+  const cv = (MONITOR_SCREEN_SIZE.h / 2) * patch.v
+  return (
+    [
+      [cu - hw, cv - hh],
+      [cu + hw, cv - hh],
+      [cu + hw, cv + hh],
+      [cu - hw, cv + hh],
+    ] as const
+  ).map(([lx, ly]) => toWorldOnSlot(slot, screenLocalPoint(lx, ly, zFront), elevation, slab))
+}
 
 export function monitorPlateCorners(slot: { x: number; z: number; rot?: number }, elevation: number, slab = 0.16) {
   const halfW = MONITOR_PLATE_SIZE.w / 2

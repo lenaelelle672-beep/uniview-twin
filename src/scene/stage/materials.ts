@@ -2,7 +2,8 @@ import { Color, DoubleSide, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandar
 
 /** 三维屏显示色。蓝图仍用 STATUS_HEX；这里单独写成显示色，保证告警/在线亮度比 ≥1.5。 */
 export const MONITOR_DISPLAY_SRGB = {
-  alarm: '#ff8078',
+  // 略提高饱和度，4×4 均值和 AgX 之后仍能看出红色（H≈5°，S≈0.64）。
+  alarm: '#ff6a5c',
   online: '#176a40',
   idle: '#2b58b3',
   offline: '#757b82',
@@ -27,8 +28,9 @@ export const deskMaterial = new MeshStandardMaterial({ color: '#d9d0c3', roughne
 export const chairMaterial = new MeshStandardMaterial({ color: '#3c4654', roughness: 0.62, metalness: 0.08 })
 export const monitorMaterial = new MeshBasicMaterial({
   color: '#ffffff',
-  vertexColors: true,
-  // 合成器之后、NoToneMapping 通道里画。实例色就是显示色，三层亮度一致。
+  // 颜色走 InstancedMesh.instanceColor。打开 vertexColors 但几何没有 color 属性会画成黑屏。
+  vertexColors: false,
+  // 合成器之内、NoToneMapping 通道里画。实例色就是显示色，三层亮度一致。
   toneMapped: false,
   depthTest: true,
   depthWrite: true,

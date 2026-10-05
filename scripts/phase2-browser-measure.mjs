@@ -27,6 +27,16 @@ async function waitReady(page) {
   await page.waitForFunction(() => window.__twinReady === true && (window.__twinStats?.calls ?? 0) > 0, {
     timeout: 90_000,
   })
+  await page
+    .waitForFunction(
+      () => {
+        const quality = document.querySelector('.scene-root')?.dataset.quality
+        if (quality !== 'balanced') return true
+        return window.__twinComposerLive === true && document.querySelector('.scene-root')?.dataset.fxReady === '1'
+      },
+      { timeout: 45_000 },
+    )
+    .catch(() => {})
   await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1200)))
 }
 
@@ -40,6 +50,8 @@ async function stats(page) {
     memory: window.__twinMemory ?? null,
     glProbe: window.__twinGlProbe ?? null,
     budget: window.__twinOverlayBudget ?? null,
+    inventory: window.__twinTargetInventory ?? null,
+    blitSites: window.__twinBlitSites ?? null,
     composerLive: window.__twinComposerLive ?? false,
   }))
 }
@@ -50,6 +62,28 @@ function relativeLuminance(r, g, b) {
     return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
   })
   return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+}
+
+function rgbToHsv(r, g, b) {
+  const rr = r / 255
+  const gg = g / 255
+  const bb = b / 255
+  const max = Math.max(rr, gg, bb)
+  const min = Math.min(rr, gg, bb)
+  const delta = max - min
+  let h = 0
+  if (delta !== 0) {
+    if (max === rr) h = ((gg - bb) / delta) % 6
+    else if (max === gg) h = (bb - rr) / delta + 2
+    else h = (rr - gg) / delta + 4
+    h *= 60
+    if (h < 0) h += 360
+  }
+  return { h, s: max === 0 ? 0 : delta / max, v: max }
+}
+
+function isRedHue(h) {
+  return h <= 20 || h >= 340
 }
 
 function sampleBox(data, width, height, box) {
@@ -125,40 +159,21 @@ function ratioFrom(alarm, normal) {
   return alarm.L / normal.L
 }
 
-const DISPLAY_TARGET = {
-  alarm: { r: 255, g: 128, b: 120 },
-  online: { r: 23, g: 106, b: 64 },
+function boxAreaOk(box) {
+  return box && box.w >= 4 && box.h >= 4
 }
 
-function refineStatusBox(data, width, height, seed, kind) {
-  if (!seed) return null
-  const target = DISPLAY_TARGET[kind]
-  const cx = seed.x + seed.w / 2
-  const cy = seed.y + seed.h / 2
-  let best = null
-  let bestDist = Infinity
-  for (const search of [12, 22, 40]) {
-    for (let y = Math.floor(cy - search); y < cy + search; y += 1) {
-      for (let x = Math.floor(cx - search); x < cx + search; x += 1) {
-        if (x < 0 || y < 0 || x >= width || y >= height) continue
-        const offset = (y * width + x) * 4
-        const r = data[offset]
-        const g = data[offset + 1]
-        const b = data[offset + 2]
-        const dist = Math.abs(r - target.r) + Math.abs(g - target.g) + Math.abs(b - target.b)
-        const hueOk =
-          kind === 'alarm' ? r > 160 && r > g + 36 && r > b + 36 : g > 70 && g > r + 16 && g > b
-        if (!hueOk) continue
-        if (dist < bestDist) {
-          bestDist = dist
-          best = { x, y, r, g, b, dist }
-        }
-      }
-    }
-    if (best && best.dist < 90) break
-  }
-  if (!best) return { ...seed }
-  return { x: best.x, y: best.y, w: 1, h: 1, seed, peak: best }
+function samplePatches(data, width, height, entry) {
+  if (!entry?.box) return []
+  const boxes = [
+    { name: 'full', box: entry.box },
+    ...((entry.patches ?? []).filter((patch) => boxAreaOk(patch.box))),
+  ].filter((item) => boxAreaOk(item.box))
+  return boxes.map((item) => ({
+    name: item.name,
+    box: item.box,
+    sample: sampleBox(data, width, height, item.box),
+  }))
 }
 
 async function pageImage(page) {
@@ -249,45 +264,77 @@ async function main() {
     })
 
     for (const quality of ['perf', 'balanced']) {
-      for (const floorId of ['F3', 'F12', 'F18']) {
-        const name = `${floorId.toLowerCase()}-${quality}`
-        const { page, consoles, requests } = await open(browser, `?q=${quality}&view=floor&floor=${floorId}`)
-        await page.waitForFunction(
-          (id) => window.__twinMonitorBoxes?.floorId === id && window.__twinMonitorBoxes.alarm && window.__twinMonitorBoxes.online,
-          { timeout: 90_000 },
-          floorId,
-        )
-        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)))
-        const boxes = await page.evaluate(() => window.__twinMonitorBoxes)
-        const image = await pageImage(page)
-        const data = Uint8ClampedArray.from(image.data)
-        const alarmBox = refineStatusBox(data, image.width, image.height, boxes.alarm?.box, 'alarm')
-        const onlineBox = refineStatusBox(data, image.width, image.height, boxes.online?.box, 'online')
-        const alarm = alarmBox ? sampleBox(data, image.width, image.height, alarmBox) : null
-        const online = onlineBox ? sampleBox(data, image.width, image.height, onlineBox) : null
-        boxes.alarm = boxes.alarm ? { ...boxes.alarm, box: alarmBox } : null
-        boxes.online = boxes.online ? { ...boxes.online, box: onlineBox } : null
-        const shot = await annotateBoxes(page, `${name}-alarm-boxes`, [
-          { ...boxes.alarm, color: '#ff3355', label: `alarm ${boxes.alarm?.deskId ?? ''}` },
-          { ...boxes.online, color: '#22cc66', label: `online ${boxes.online?.deskId ?? ''}` },
-        ])
-        await screenshotCanvas(page, name)
-        const external = requests.filter((url) => !url.startsWith(baseUrl) && !url.startsWith('data:') && !url.startsWith('blob:'))
-        report.alarms[name] = {
-          floorId,
-          quality,
-          boxes,
-          alarm,
-          online,
-          ratio: ratioFrom(alarm, online),
-          hueStillRed: alarm ? alarm.r > alarm.g && alarm.r > alarm.b : false,
-          shot,
-          consoles,
-          external,
-          ...(await stats(page)),
+      for (const viewport of [
+        { width: 1366, height: 768 },
+        { width: 1024, height: 768 },
+        { width: 1920, height: 1080 },
+      ]) {
+        for (const floorId of ['F3', 'F12', 'F18']) {
+          const name = `${floorId.toLowerCase()}-${quality}-${viewport.width}x${viewport.height}`
+          const { page, consoles, requests } = await open(
+            browser,
+            `?q=${quality}&view=floor&floor=${floorId}`,
+            viewport,
+          )
+          await page.waitForFunction(
+            (id) => window.__twinMonitorBoxes?.floorId === id && window.__twinMonitorBoxes.alarm && window.__twinMonitorBoxes.online,
+            { timeout: 90_000 },
+            floorId,
+          )
+          await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)))
+          const boxes = await page.evaluate(() => window.__twinMonitorBoxes)
+          const image = await pageImage(page)
+          const data = Uint8ClampedArray.from(image.data)
+          const alarmPatches = samplePatches(data, image.width, image.height, boxes.alarm)
+          const onlinePatches = samplePatches(data, image.width, image.height, boxes.online)
+          const onlineMean = onlinePatches[0]?.sample ?? null
+          const patchRatios = alarmPatches
+            .map((item) => ({
+              name: item.name,
+              box: item.box,
+              sample: item.sample,
+              hsv: item.sample ? rgbToHsv(item.sample.r, item.sample.g, item.sample.b) : null,
+              ratio: ratioFrom(item.sample, onlineMean),
+            }))
+            .filter((item) => item.ratio != null)
+          const worst = patchRatios.reduce((best, item) => (best == null || item.ratio < best.ratio ? item : best), null)
+          const alarm = worst?.sample ?? alarmPatches[0]?.sample ?? null
+          const hsv = alarm ? rgbToHsv(alarm.r, alarm.g, alarm.b) : null
+          const shot = await annotateBoxes(page, `${name}-alarm-boxes`, [
+            { box: boxes.alarm?.box, color: '#ff3355', label: `alarm ${boxes.alarm?.deskId ?? ''}` },
+            { box: boxes.online?.box, color: '#22cc66', label: `online ${boxes.online?.deskId ?? ''}` },
+            ...(boxes.alarm?.patches ?? []).map((patch) => ({
+              box: patch.box,
+              color: '#ff88aa',
+              label: patch.name,
+            })),
+          ])
+          await screenshotCanvas(page, name)
+          const external = requests.filter((url) => !url.startsWith(baseUrl) && !url.startsWith('data:') && !url.startsWith('blob:'))
+          const entry = {
+            floorId,
+            quality,
+            viewport,
+            boxes,
+            alarm,
+            online: onlineMean,
+            patches: patchRatios,
+            ratio: worst?.ratio ?? null,
+            minRatio: worst?.ratio ?? null,
+            hsv,
+            hueStillRed: hsv ? isRedHue(hsv.h) : false,
+            saturationOk: hsv ? hsv.s >= 0.5 : false,
+            notWhite: alarm ? alarm.r - Math.max(alarm.g, alarm.b) > 24 : false,
+            shot,
+            consoles,
+            external,
+            ...(await stats(page)),
+          }
+          report.alarms[name] = entry
+          if (viewport.width === 1366) report.alarms[`${floorId.toLowerCase()}-${quality}`] = entry
+          await writeFile(resolve(evidenceDir, `${name}-alarm-boxes.json`), JSON.stringify(entry, null, 2))
+          await page.close()
         }
-        await writeFile(resolve(evidenceDir, `${name}-alarm-boxes.json`), JSON.stringify(report.alarms[name], null, 2))
-        await page.close()
       }
     }
 
@@ -394,7 +441,7 @@ async function main() {
       await exploded.page.close()
     }
 
-    const { page } = await open(browser, '?q=perf')
+    const { page, consoles } = await open(browser, '?q=perf')
     const clicks = []
     for (let index = 0; index < 23; index += 1) {
       const hit = await page.evaluate((i) => {
@@ -434,7 +481,8 @@ async function main() {
 
     await page.goto(`${baseUrl}/?q=perf`, { waitUntil: 'networkidle0' })
     await waitReady(page)
-    const sequence = ['均衡', '性能', '均衡', '性能', '均衡']
+    report.switches.push({ label: '性能(冷启动)', ...(await stats(page)), consoles: [] })
+    const sequence = ['均衡', '性能', '均衡', '性能', '均衡', '性能', '均衡', '性能', '均衡']
     for (const label of sequence) {
       await page.click(`button[aria-label="画质：${label}"]`)
       await page.waitForFunction(
@@ -452,6 +500,7 @@ async function main() {
       await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)))
       report.switches.push({ label, ...(await stats(page)) })
     }
+    report.switchConsoles = consoles
     await page.close()
   } finally {
     await browser.close()

@@ -1,8 +1,9 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { EffectComposer, N8AO, ToneMapping } from '@react-three/postprocessing'
+import { EffectComposer, EffectComposerContext, N8AO, ToneMapping } from '@react-three/postprocessing'
 import { Pass, ToneMappingMode } from 'postprocessing'
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { use, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
+  AgXToneMapping,
   Color,
   Group,
   Mesh,
@@ -11,12 +12,14 @@ import {
   OrthographicCamera,
   PlaneGeometry,
   ShaderMaterial,
+  Vector2,
   WebGLRenderTarget,
   type Camera,
   type Scene,
   type WebGLRenderer,
 } from 'three'
 import { HorizontalBlurShader, VerticalBlurShader } from 'three-stdlib'
+import { blitDepth } from '../../../scene/monitorDepth'
 import { MONITOR_LAYER } from '../../../scene/overlayOrder'
 import {
   CONTACT_SHADOW_FAR,
@@ -25,13 +28,25 @@ import {
   CONTACT_SHADOW_SCALE,
 } from '../../../scene/shellVersion'
 
+const composerSceneDepth: { current: WebGLRenderTarget | null } = { current: null }
+const drawingSize = new Vector2()
+
 class MonitorDrawPass extends Pass {
-  constructor(scene: Scene, camera: Camera) {
-    super('MonitorDrawPass', scene, camera)
+  restore: boolean
+
+  constructor(scene: Scene, camera: Camera, restore = false) {
+    super(restore ? 'MonitorRestorePass' : 'MonitorDrawPass', scene, camera)
     this.needsSwap = false
+    this.restore = restore
   }
 
   render(renderer: WebGLRenderer, inputBuffer: WebGLRenderTarget) {
+    if (!this.restore) {
+      composerSceneDepth.current = inputBuffer
+    } else {
+      const source = composerSceneDepth.current
+      if (source && source !== inputBuffer) blitDepth(renderer, source, inputBuffer)
+    }
     if (!this.scene.getObjectByName('WorkstationMonitors')) return
     const prevTone = renderer.toneMapping
     const prevExposure = renderer.toneMappingExposure
@@ -55,10 +70,10 @@ class MonitorDrawPass extends Pass {
   }
 }
 
-function MonitorInComposer() {
+function MonitorInComposer({ restore = false }: { restore?: boolean }) {
   const scene = useThree((state) => state.scene)
   const camera = useThree((state) => state.camera)
-  const pass = useMemo(() => new MonitorDrawPass(scene, camera), [camera, scene])
+  const pass = useMemo(() => new MonitorDrawPass(scene, camera, restore), [camera, restore, scene])
   return <primitive object={pass} />
 }
 
@@ -82,82 +97,125 @@ function BalancedAO() {
   )
 }
 
-function MarkComposerLive({ onLive }: { onLive?: () => void }) {
-  const once = useRef(false)
+function MarkComposerLive({ onLive, active }: { onLive?: () => void; active: boolean }) {
+  const armed = useRef(false)
   useFrame(() => {
-    if (once.current) return
-    once.current = true
+    if (!active) {
+      armed.current = false
+      return
+    }
+    if (armed.current) return
+    armed.current = true
     window.__twinComposerLive = true
     onLive?.()
   }, 2)
   return null
 }
 
+function ToneMappingBridge({ active }: { active: boolean }) {
+  const gl = useThree((state) => state.gl)
+  useLayoutEffect(() => {
+    gl.toneMapping = active ? NoToneMapping : AgXToneMapping
+  }, [active, gl])
+  useFrame(() => {
+    gl.toneMapping = active ? NoToneMapping : AgXToneMapping
+  }, -2)
+  return null
+}
+
+function ComposerBudget({ active }: { active: boolean }) {
+  const gl = useThree((state) => state.gl)
+  const { composer } = use(EffectComposerContext)
+  useLayoutEffect(() => {
+    if (active) {
+      gl.getDrawingBufferSize(drawingSize)
+      composer.setSize(drawingSize.x, drawingSize.y)
+      return
+    }
+    composer.setSize(1, 1)
+  }, [active, composer, gl])
+  return null
+}
+
+type ContactMaterials = {
+  depthMaterial: MeshDepthMaterial
+  horizontalBlurMaterial: ShaderMaterial
+  verticalBlurMaterial: ShaderMaterial
+}
+
+let contactMaterials: ContactMaterials | null = null
+
+function getContactMaterials(): ContactMaterials {
+  if (contactMaterials) return contactMaterials
+  const depthMaterial = new MeshDepthMaterial()
+  depthMaterial.depthTest = false
+  depthMaterial.depthWrite = false
+  const shadowColor = new Color('#2c261c')
+  depthMaterial.onBeforeCompile = (shader) => {
+    shader.uniforms.ucolor = { value: shadowColor }
+    shader.fragmentShader = shader.fragmentShader.replace(
+      'void main() {',
+      'uniform vec3 ucolor;\nvoid main() {',
+    )
+    shader.fragmentShader = shader.fragmentShader.replace(
+      'vec4( vec3( 1.0 - fragCoordZ ), opacity );',
+      'vec4( ucolor * fragCoordZ * 2.0, ( 1.0 - fragCoordZ ) * 1.0 );',
+    )
+  }
+  const horizontalBlurMaterial = new ShaderMaterial(HorizontalBlurShader)
+  const verticalBlurMaterial = new ShaderMaterial(VerticalBlurShader)
+  verticalBlurMaterial.depthTest = false
+  horizontalBlurMaterial.depthTest = false
+  contactMaterials = { depthMaterial, horizontalBlurMaterial, verticalBlurMaterial }
+  return contactMaterials
+}
+
 /**
- * drei ContactShadows 卸载时不 dispose 渲染目标和几何。
- * 这里自己管生命周期，切回性能档时把 2 张贴图和 1 个几何体释放掉。
+ * 接触阴影的材质跨切档复用，避免 programs 持续上涨。
+ * 渲染目标和几何在均衡档卸载时 dispose。
  */
-function DisposableContactShadows() {
+function DisposableContactShadows({ active }: { active: boolean }) {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const group = useRef<Group>(null)
   const camera = useRef<OrthographicCamera>(null)
   const baked = useRef(false)
   const scale = CONTACT_SHADOW_SCALE
-  const resources = useMemo(() => {
+  const materials = useMemo(() => getContactMaterials(), [])
+  const [targets, setTargets] = useState<{
+    renderTarget: WebGLRenderTarget
+    renderTargetBlur: WebGLRenderTarget
+    planeGeometry: PlaneGeometry
+    blurPlane: Mesh
+  } | null>(null)
+
+  useLayoutEffect(() => {
+    if (!active) {
+      baked.current = false
+      setTargets(null)
+      return
+    }
     const renderTarget = new WebGLRenderTarget(CONTACT_SHADOW_RESOLUTION, CONTACT_SHADOW_RESOLUTION)
     const renderTargetBlur = new WebGLRenderTarget(CONTACT_SHADOW_RESOLUTION, CONTACT_SHADOW_RESOLUTION)
     renderTarget.texture.generateMipmaps = false
     renderTargetBlur.texture.generateMipmaps = false
     const planeGeometry = new PlaneGeometry(scale, scale).rotateX(Math.PI / 2)
     const blurPlane = new Mesh(planeGeometry)
-    const depthMaterial = new MeshDepthMaterial()
-    depthMaterial.depthTest = false
-    depthMaterial.depthWrite = false
-    const shadowColor = new Color('#2c261c')
-    depthMaterial.onBeforeCompile = (shader) => {
-      shader.uniforms.ucolor = { value: shadowColor }
-      shader.fragmentShader = shader.fragmentShader.replace(
-        'void main() {',
-        'uniform vec3 ucolor;\nvoid main() {',
-      )
-      shader.fragmentShader = shader.fragmentShader.replace(
-        'vec4( vec3( 1.0 - fragCoordZ ), opacity );',
-        'vec4( ucolor * fragCoordZ * 2.0, ( 1.0 - fragCoordZ ) * 1.0 );',
-      )
+    setTargets({ renderTarget, renderTargetBlur, planeGeometry, blurPlane })
+    baked.current = false
+    return () => {
+      renderTarget.dispose()
+      renderTargetBlur.dispose()
+      planeGeometry.dispose()
+      baked.current = false
     }
-    const horizontalBlurMaterial = new ShaderMaterial(HorizontalBlurShader)
-    const verticalBlurMaterial = new ShaderMaterial(VerticalBlurShader)
-    verticalBlurMaterial.depthTest = false
-    horizontalBlurMaterial.depthTest = false
-    return {
-      renderTarget,
-      renderTargetBlur,
-      planeGeometry,
-      blurPlane,
-      depthMaterial,
-      horizontalBlurMaterial,
-      verticalBlurMaterial,
-    }
-  }, [scale])
-
-  useLayoutEffect(
-    () => () => {
-      resources.renderTarget.dispose()
-      resources.renderTargetBlur.dispose()
-      resources.planeGeometry.dispose()
-      resources.depthMaterial.dispose()
-      resources.horizontalBlurMaterial.dispose()
-      resources.verticalBlurMaterial.dispose()
-    },
-    [resources],
-  )
+  }, [active, scale])
 
   useFrame(() => {
-    if (baked.current || !camera.current || !group.current) return
+    if (!active || baked.current || !camera.current || !group.current || !targets) return
     baked.current = true
-    const { renderTarget, renderTargetBlur, blurPlane, depthMaterial, horizontalBlurMaterial, verticalBlurMaterial } =
-      resources
+    const { renderTarget, renderTargetBlur, blurPlane } = targets
+    const { depthMaterial, horizontalBlurMaterial, verticalBlurMaterial } = materials
     const blurOnce = (amount: number) => {
       blurPlane.visible = true
       blurPlane.material = horizontalBlurMaterial
@@ -187,10 +245,12 @@ function DisposableContactShadows() {
     scene.background = prevBackground
   })
 
+  if (!active || !targets) return null
+
   return (
     <group ref={group} position={CONTACT_SHADOW_POSITION} rotation-x={Math.PI / 2}>
-      <mesh geometry={resources.planeGeometry} scale={[1, -1, 1]} rotation={[-Math.PI / 2, 0, 0]}>
-        <meshBasicMaterial transparent map={resources.renderTarget.texture} opacity={0.5} depthWrite={false} />
+      <mesh geometry={targets.planeGeometry} scale={[1, -1, 1]} rotation={[-Math.PI / 2, 0, 0]}>
+        <meshBasicMaterial transparent map={targets.renderTarget.texture} opacity={0.5} depthWrite={false} />
       </mesh>
       <orthographicCamera
         ref={camera}
@@ -200,24 +260,27 @@ function DisposableContactShadows() {
   )
 }
 
-export function ContactGround() {
-  return <DisposableContactShadows />
+export function ContactGround({ active = true }: { active?: boolean }) {
+  return <DisposableContactShadows active={active} />
 }
 
 /**
- * 只在非性能档挂载。合成器会把 gl.toneMapping 强制成 NoToneMapping，
- * 所以 AgX 必须写在合成器末尾，不能只靠 Canvas 上的设置。
- * 告警屏插在 RenderPass 之后、色调映射之前，直接写进合成器带深度的缓冲。
+ * 只在第一次切到均衡档之后保持挂载。切回性能档时 enabled=false 并收缩渲染目标，
+ * shader 程序复用，不再每切一次重新编译。
+ * 告警屏先写进合成器带深度的缓冲（色调映射前），AgX 之后再按同一份深度还原显示色，保住红色。
  */
-export function PostFX({ onLive }: { onLive?: () => void }) {
+export function PostFX({ onLive, active = true }: { onLive?: () => void; active?: boolean }) {
   return (
     <>
-      <EffectComposer multisampling={2} enableNormalPass={false} stencilBuffer={false} renderPriority={1}>
+      <ToneMappingBridge active={active} />
+      <EffectComposer enabled={active} multisampling={2} enableNormalPass={false} stencilBuffer={false} renderPriority={1}>
+        <ComposerBudget active={active} />
         <MonitorInComposer />
         <BalancedAO />
         <ToneMapping mode={ToneMappingMode.AGX} />
+        <MonitorInComposer restore />
       </EffectComposer>
-      <MarkComposerLive onLive={onLive} />
+      <MarkComposerLive onLive={onLive} active={active} />
     </>
   )
 }

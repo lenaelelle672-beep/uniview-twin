@@ -60,8 +60,8 @@ interface TwinSampleBox {
 interface TwinMonitorBoxes {
   floorId: string
   canvas: { width: number; height: number }
-  alarm: { deskId: string; box: TwinSampleBox } | null
-  online: { deskId: string; box: TwinSampleBox } | null
+  alarm: { deskId: string; box: TwinSampleBox; patches?: Array<{ name: string; box: TwinSampleBox }> } | null
+  online: { deskId: string; box: TwinSampleBox; patches?: Array<{ name: string; box: TwinSampleBox }> } | null
 }
 
 interface TwinFacadeBoxes {
@@ -133,7 +133,16 @@ interface Window {
   __twinMemory?: {
     textures: number
     geometries: number
+    programs: number
   }
+  __twinTargetInventory?: {
+    width: number
+    height: number
+    items: Array<{ name: string; width: number; height: number; format: string; samples: number; bytes: number }>
+    bytes: number
+    mib: number
+  }
+  __twinBlitSites?: ReadonlyArray<{ file: string; fn: string; dest: string }>
   __twinComposerLive?: boolean
   __twinWarmup?: {
     compileMs: number
