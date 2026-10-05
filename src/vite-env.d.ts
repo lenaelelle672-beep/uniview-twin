@@ -52,6 +52,10 @@ interface TwinExplodeStats {
 
 interface Window {
   __twinReady?: boolean
+  __twinSelected?: string | null
+  __twinView?: string
+  __twinDevices?: Array<{ id: string; deskId?: string; floorId: string; type: string; status: string }>
+  __twinFocusDevice?: (target: { floor: string; deskId: string | null; deviceId?: string | null }) => void
   __twinStats?: TwinRenderStats
   __twinBadges?: number
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>

@@ -14,9 +14,20 @@ export const monitorMaterial = new MeshStandardMaterial({
   color: '#ffffff',
   roughness: 0.35,
   metalness: 0.12,
-  // 均衡档合成器会整图做 AgX。告警红屏不拆调用，关掉色调映射才能保住红色和 ≥1.5 亮度比。
+  // 合成器整图做 AgX，材质 toneMapped=false 挡不住。告警实例在着色器里抬亮度，不拆调用。
   toneMapped: false,
 })
+monitorMaterial.onBeforeCompile = (shader) => {
+  shader.fragmentShader = shader.fragmentShader.replace(
+    '#include <opaque_fragment>',
+    `#include <opaque_fragment>
+     #ifdef USE_COLOR
+     float alarmMask = step(0.72, vColor.r) * step(vColor.g, 0.42) * step(vColor.b, 0.42);
+     gl_FragColor.rgb = mix(gl_FragColor.rgb, vec3(18.0, 0.03, 0.02), alarmMask);
+     #endif`,
+  )
+}
+monitorMaterial.customProgramCacheKey = () => 'monitor-alarm-boost'
 export const kitchenMaterial = new MeshStandardMaterial({ color: '#d5dbdf', roughness: 0.42, metalness: 0.35 })
 export const fanFloorMaterial = new MeshStandardMaterial({ color: '#3e4652', roughness: 0.84, metalness: 0.04 })
 export const seatMaterial = new MeshStandardMaterial({ color: '#c43648', roughness: 0.62, metalness: 0.06 })

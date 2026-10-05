@@ -92,11 +92,13 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         )}
         <ExplodedLayout />
         <FloorStage />
+      </Suspense>
+      <Suspense fallback={null}>
         <Hud renderPriority={extrasReady ? 2 : 1}>
           <FloorBadges />
         </Hud>
-        <RenderProbe />
       </Suspense>
+      <RenderProbe />
       {extrasReady && (
         <Suspense fallback={null}>
           <PostFX />

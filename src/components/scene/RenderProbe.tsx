@@ -20,11 +20,20 @@ export function RenderProbe() {
         behind: projected.z > 1,
       }
     }
+    window.__twinSelected = useTwinStore.getState().selectedFloor
+    window.__twinView = useTwinStore.getState().view
+    window.__twinDevices = useTwinStore.getState().devices
+    window.__twinFocusDevice = (target) => useTwinStore.getState().focusDevice(target)
     const unsubscribe = useTwinStore.subscribe((state) => {
       window.__twinFly = state.floorFlyRequest
+      window.__twinSelected = state.selectedFloor
+      window.__twinView = state.view
+      window.__twinDevices = state.devices
     })
     return () => {
       window.__twinReady = false
+      delete window.__twinSelected
+      delete window.__twinView
       unsubscribe()
     }
   }, [camera, gl])

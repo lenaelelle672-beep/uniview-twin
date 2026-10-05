@@ -21,7 +21,7 @@ export function ContactGround() {
       position={CONTACT_SHADOW_POSITION}
       scale={CONTACT_SHADOW_SCALE}
       far={CONTACT_SHADOW_FAR}
-      opacity={0.38}
+      opacity={0.5}
       blur={2.1}
       smooth
       resolution={CONTACT_SHADOW_RESOLUTION}

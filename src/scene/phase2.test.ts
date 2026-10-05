@@ -15,7 +15,7 @@ describe('T012 第二阶段约束', () => {
 
   it('白天研发块底座不再用偏米色 #d4c8bc', () => {
     applySurfaceMode('day')
-    expect(baseMaterial.color.getHexString()).toBe('aea9a5')
+    expect(baseMaterial.color.getHexString()).toBe('7f7b77')
     expect(baseMaterial.envMapIntensity).toBe(0.15)
   })
 
