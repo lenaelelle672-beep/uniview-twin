@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType } from 'react'
-import { prefetchLazyChunks } from '../scene/stage/prefetchLazyChunks'
+import { schedulePrefetchAfterFirstFrame } from '../scene/stage/prefetchLazyChunks'
 import { useTwinStore } from '../store/store'
 import { SceneCanvas } from './Scene'
 
@@ -38,24 +38,7 @@ export function Stage() {
 
   useEffect(() => {
     if (view !== 'building') return
-    let timeoutId = 0
-    let idleId = 0
-    const startPrefetch = () => {
-      timeoutId = window.setTimeout(() => {
-        prefetchLazyChunks()
-      }, 2500)
-    }
-    if (typeof window.requestIdleCallback === 'function') {
-      idleId = window.requestIdleCallback(startPrefetch, { timeout: 4000 })
-    } else {
-      startPrefetch()
-    }
-    return () => {
-      if (idleId && typeof window.cancelIdleCallback === 'function') {
-        window.cancelIdleCallback(idleId)
-      }
-      window.clearTimeout(timeoutId)
-    }
+    return schedulePrefetchAfterFirstFrame()
   }, [view])
 
   const showBlueprint = view === 'blueprint' && BlueprintView !== null
