@@ -9,4 +9,4 @@ python3 assets/tools/font-subset/subset.py \
   --output public/fonts/NotoSansSC-Regular-subset.woff
 ```
 
-字符表：`charset.txt` = ASCII 可打印 + 页面固定文案 + 词频前 3500 汉字。不包含「嗆」，用来验收缺字不走 CDN。当前产物约 640,060 字节，低于 640 KiB 上限。
+字符表：`charset.txt` = ASCII 可打印 + 中文标点 + 页面固定文案 + 《现代汉语常用字表》3500 字（及少量页面补字）。不包含「嗆」，用来验收缺字不走 CDN。产物 625,660 字节（D037 口径 625,668 B，woff + zopfli + kern）。
