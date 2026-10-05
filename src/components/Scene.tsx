@@ -61,10 +61,19 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   }, [extrasReady])
 
   useEffect(() => {
-    let raf = requestAnimationFrame(() => {
-      raf = requestAnimationFrame(() => setAfterFirstFrame(true))
-    })
-    return () => cancelAnimationFrame(raf)
+    let cancelled = false
+    const tick = () => {
+      if (cancelled) return
+      if (window.__twinFirstFrameAt != null) {
+        setAfterFirstFrame(true)
+        return
+      }
+      requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   return (

@@ -132,6 +132,18 @@ describe('T012 第二阶段约束', () => {
     expect(src).toMatch(/gl\.compile\(scene, camera\)/)
   })
 
+  it('就绪只走 overviewReady，Scene 和 Probe 不置 __twinReady', () => {
+    const scene = readFileSync(join(here, '../components/Scene.tsx'), 'utf8')
+    const probe = readFileSync(join(here, '../components/scene/RenderProbe.tsx'), 'utf8')
+    const ready = readFileSync(join(here, 'overviewReady.ts'), 'utf8')
+    expect(scene).not.toMatch(/__twinReady\s*=/)
+    expect(probe).not.toMatch(/__twinReady\s*=/)
+    expect(probe).toMatch(/markSuspenseReady/)
+    expect(ready).toMatch(/w\.__twinReady = true/)
+    expect(scene).toMatch(/__twinFirstFrameAt/)
+    expect(scene).toMatch(/lazy\(\(\) => import\('\.\/scene\/postfx\/balancedFx'\)/)
+  })
+
   it('D125 首屏量法用 Python gzip.compress(9)，且 blit 只进均衡档包', () => {
     const measure = readFileSync(join(here, '../../scripts/measure-first-screen.mjs'), 'utf8')
     expect(measure).toMatch(/gzip\.compress\([^,]+,\s*9\)/)

@@ -57,15 +57,6 @@ async function measureTier(browser, quality) {
   const page = await browser.newPage()
   await page.setCacheEnabled(false)
   await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
-  await page.evaluateOnNewDocument(() => {
-    window.__twinFirstFrameAt = null
-    const mark = () => {
-      requestAnimationFrame(() => {
-        if (window.__twinFirstFrameAt == null) window.__twinFirstFrameAt = performance.now()
-      })
-    }
-    mark()
-  })
 
   const bodies = new Map()
   page.on('response', async (response) => {
