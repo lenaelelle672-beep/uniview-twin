@@ -26,7 +26,10 @@ const B1Interior = lazy(async () => {
   return { default: mod.B1Interior }
 })
 
+const TowerInterior = lazy(() => import('./TowerInterior').then((mod) => ({ default: mod.TowerInterior })))
 const MonitorSamples = lazy(() => import('./MonitorSamples').then((mod) => ({ default: mod.MonitorSamples })))
+
+export { TowerInterior as LazyTowerInterior }
 
 function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDesks: number }) {
   const scene = useThree((state) => state.scene)
