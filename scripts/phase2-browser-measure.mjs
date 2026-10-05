@@ -215,7 +215,7 @@ async function open(browser, search, viewport = { width: 1366, height: 768 }) {
   })
   page.on('pageerror', (error) => consoles.push({ type: 'pageerror', text: error.message }))
   page.on('request', (request) => requests.push(request.url()))
-  await page.goto(`${baseUrl}/${search}`, { waitUntil: 'networkidle0' })
+  await page.goto(`${baseUrl}/${search}`, { waitUntil: 'load' })
   await waitReady(page)
   return { page, consoles, requests }
 }
@@ -226,7 +226,7 @@ async function main() {
   let browser = await puppeteer.launch({
     executablePath: chromePath(),
     headless: true,
-    args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
+    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
   })
   const report = { views: {}, switches: [], badges: {}, alarms: {}, highlight: {}, stone: {}, network: {} }
 
@@ -260,7 +260,7 @@ async function main() {
     browser = await puppeteer.launch({
       executablePath: chromePath(),
       headless: true,
-      args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
+      args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
     })
 
     for (const quality of ['perf', 'balanced']) {

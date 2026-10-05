@@ -50,7 +50,7 @@ async function runRound(browser, index) {
   page.on('request', (request) => {
     requests.push(request.url())
   })
-  await page.goto(`${baseUrl}/?q=perf`, { waitUntil: 'networkidle0', timeout: 90_000 })
+  await page.goto(`${baseUrl}/?q=perf`, { waitUntil: 'load', timeout: 90_000 })
   await waitReady(page)
   await page.evaluate(() => {
     window.__twinFrameWatch = { active: true, frames: [] }
@@ -97,7 +97,7 @@ async function main() {
   const browser = await puppeteer.launch({
     executablePath,
     headless: true,
-    args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'],
+    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox'],
   })
   const rows = []
   try {

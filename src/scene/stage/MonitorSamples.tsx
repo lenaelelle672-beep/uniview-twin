@@ -2,7 +2,12 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Vector3 } from 'three'
 import { floorSpec } from '../../data/floors'
 import { facadeGlassCorners, neighborFloorId, tightenNonOverlapping } from './facadeBoxes'
-import { MONITOR_SCREEN_PATCHES, monitorScreenCorners, monitorScreenPatchCorners } from './geometry'
+import {
+  MONITOR_SCREEN_PATCHES,
+  monitorPlateCorners,
+  monitorScreenCorners,
+  monitorScreenPatchCorners,
+} from './geometry'
 import type { Slot } from './layout'
 import { MONITOR_DISPLAY_COLOR } from './materials'
 import { SLAB_M } from './cut'
@@ -43,13 +48,15 @@ function boxFromCorners(
     minY = Math.min(minY, point.y)
     maxY = Math.max(maxY, point.y)
   }
-  const padX = (maxX - minX) * inset
-  const padY = (maxY - minY) * inset
+  const rawW = maxX - minX
+  const rawH = maxY - minY
+  if (rawW < 4 || rawH < 4) return null
+  const padX = Math.min((rawW - 4) / 2, rawW * inset)
+  const padY = Math.min((rawH - 4) / 2, rawH * inset)
   let x = minX + padX
   let y = minY + padY
   let w = maxX - padX - x
   let h = maxY - padY - y
-  if (w < 4 || h < 4) return null
   x = Math.max(0, x)
   y = Math.max(0, y)
   w = Math.min(width - x, w)
@@ -121,21 +128,33 @@ export function MonitorSamples({
         ),
         width,
         height,
-        0.16,
+        0.12,
       )
-      if (!screen) return
-      const patches = MONITOR_SCREEN_PATCHES.flatMap((patch) => {
-        const box = boxFromCorners(
-          monitorScreenPatchCorners(slot, elevation, patch, SLAB_M).map((point) =>
-            projectCanvas(camera, width, height, point.x, point.y, point.z),
-          ),
-          width,
-          height,
-          0.08,
-        )
-        return box ? [{ name: patch.name, box }] : []
-      })
-      const entry = { deskId, box: screen, patches }
+      const plate = boxFromCorners(
+        monitorPlateCorners(slot, elevation, SLAB_M).map((point) =>
+          projectCanvas(camera, width, height, point.x, point.y, point.z),
+        ),
+        width,
+        height,
+        0.22,
+      )
+      const box = screen ?? plate
+      if (!box) return
+      const patches = [
+        ...MONITOR_SCREEN_PATCHES.flatMap((patch) => {
+          const next = boxFromCorners(
+            monitorScreenPatchCorners(slot, elevation, patch, SLAB_M).map((point) =>
+              projectCanvas(camera, width, height, point.x, point.y, point.z),
+            ),
+            width,
+            height,
+            0.06,
+          )
+          return next ? [{ name: patch.name, box: next }] : []
+        }),
+        ...(plate ? [{ name: 'plate', box: plate }] : []),
+      ]
+      const entry = { deskId, box, patches }
       if (color.getHex() === MONITOR_DISPLAY_COLOR.alarm.getHex()) alarm.push(entry)
       if (color.getHex() === MONITOR_DISPLAY_COLOR.online.getHex()) online.push(entry)
     })
