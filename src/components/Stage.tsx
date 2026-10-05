@@ -1,11 +1,7 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { useEffect, useState, type ComponentType } from 'react'
+import { prefetchLazyChunks } from '../scene/stage/prefetchLazyChunks'
 import { useTwinStore } from '../store/store'
 import { SceneCanvas } from './Scene'
-
-const BlueprintView = lazy(async () => {
-  const mod = await import('../blueprint/BlueprintView')
-  return { default: mod.BlueprintView }
-})
 
 export function Stage() {
   const view = useTwinStore((state) => state.view)
@@ -16,6 +12,7 @@ export function Stage() {
   const posNotice = useTwinStore((state) => state.posNotice)
   const exitFloor = useTwinStore((state) => state.exitFloor)
   const setExploded = useTwinStore((state) => state.setExploded)
+  const [BlueprintView, setBlueprintView] = useState<ComponentType | null>(null)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -27,6 +24,41 @@ export function Stage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  useEffect(() => {
+    if (view !== 'blueprint' || BlueprintView) return
+    let cancelled = false
+    void import('../blueprint/BlueprintView').then((mod) => {
+      if (!cancelled) setBlueprintView(() => mod.BlueprintView)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [BlueprintView, view])
+
+  useEffect(() => {
+    if (view !== 'building') return
+    let timeoutId = 0
+    let idleId = 0
+    const startPrefetch = () => {
+      timeoutId = window.setTimeout(() => {
+        prefetchLazyChunks()
+      }, 2500)
+    }
+    if (typeof window.requestIdleCallback === 'function') {
+      idleId = window.requestIdleCallback(startPrefetch, { timeout: 4000 })
+    } else {
+      startPrefetch()
+    }
+    return () => {
+      if (idleId && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(idleId)
+      }
+      window.clearTimeout(timeoutId)
+    }
+  }, [view])
+
+  const showBlueprint = view === 'blueprint' && BlueprintView !== null
 
   return (
     <main className="stage" aria-label="场景" data-exploded={exploded ? 'true' : 'false'}>
@@ -45,13 +77,12 @@ export function Stage() {
           {posNotice}
         </p>
       )}
-      {view === 'blueprint' ? (
-        <Suspense fallback={null}>
-          <BlueprintView />
-        </Suspense>
-      ) : (
-        <SceneCanvas />
+      {view === 'blueprint' && !showBlueprint && (
+        <p className="banner" role="status">
+          正在打开蓝图…
+        </p>
       )}
+      {showBlueprint && BlueprintView ? <BlueprintView /> : <SceneCanvas />}
       {view === 'floor' && (
         <button type="button" className="back-button" title="Esc 返回总览" onClick={() => exitFloor()}>
           返回总览

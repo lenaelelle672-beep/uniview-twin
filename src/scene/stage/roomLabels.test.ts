@@ -15,7 +15,7 @@ describe('房间引线标签', () => {
     expect(TROIKA_TEXT_CONFIG.defaultFontURL).toBe(ROOM_LABEL_FONT)
   })
 
-  it('图纸层标签放在 label 点上，地下室仍用原方案，总数不超过 30', () => {
+  it('图纸层标签放在 JSON 的 label 点上，地下室仍用原方案，总数不超过 30', () => {
     const labels = roomLabelsFromPlan(getFloorPlan('F12')!)
     const basement = basementRoomLabels()
     expect(labels.length + basement.length).toBeLessThanOrEqual(30)
