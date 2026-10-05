@@ -136,17 +136,36 @@ export function FloorStageCamera() {
   const scene = useThree((state) => state.scene)
   const size = useThree((state) => state.size)
   const presented = useRef(false)
+  const framedKey = useRef('')
 
   useFrame(() => {
     presented.current = true
     const end = window.__twinFlyEnd
-    if (!end) return
-    const perspective = camera as PerspectiveCamera
-    const dx = perspective.position.x - end.x
-    const dy = perspective.position.y - end.y
-    const dz = perspective.position.z - end.z
-    if (window.__twinLocate?.deskId === end.deskId) return
-    if (dx * dx + dy * dy + dz * dz < 1.2 * 1.2) markLocated(end.deskId, end.started)
+    if (end && window.__twinLocate?.deskId !== end.deskId) {
+      const perspective = camera as PerspectiveCamera
+      const dx = perspective.position.x - end.x
+      const dy = perspective.position.y - end.y
+      const dz = perspective.position.z - end.z
+      if (dx * dx + dy * dy + dz * dz < 1.2 * 1.2) markLocated(end.deskId, end.started)
+    }
+
+    const rig = controls as CameraControlsImpl | null
+    if (!rig || !active) return
+    const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
+    const deskId = focused && focused.floorId === active ? focused.deskId : null
+    const key = `${active}:${deskId ?? 'slab'}:${focusSeq}`
+    if (framedKey.current === key) return
+    if (deskId) {
+      const interior = scene.getObjectByName('FloorInterior')
+      if (!interior) return
+      flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, focusSeq > 0 && presented.current)
+      framedKey.current = key
+      return
+    }
+    const plate = scene.getObjectByName('FloorPlate')
+    if (!plate) return
+    frameSlab(rig, camera as PerspectiveCamera, plate, active)
+    framedKey.current = key
   })
 
   useLayoutEffect(() => {
@@ -182,6 +201,7 @@ export function FloorStageCamera() {
           return
         }
         flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide)
+        framedKey.current = `${active}:${deskId}:${focusSeq}`
         return
       }
       const plate = scene.getObjectByName('FloorPlate')
@@ -193,6 +213,7 @@ export function FloorStageCamera() {
         return
       }
       frameSlab(rig, camera as PerspectiveCamera, plate, active)
+      framedKey.current = `${active}:slab:${focusSeq}`
     }
     tick()
     return () => {

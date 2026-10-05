@@ -207,9 +207,9 @@ async function flyToDesk(page, floorId, deskId) {
     deskId,
   )
   await page
-    .waitForFunction((id) => window.__twinLocate?.deskId === id || window.__twinFlyEnd?.deskId === id, { timeout: 20_000 }, deskId)
+    .waitForFunction((id) => window.__twinLocate?.deskId === id, { timeout: 20_000 }, deskId)
     .catch(() => {})
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)))
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 700)))
 }
 
 async function pageImage(page) {
@@ -240,10 +240,31 @@ async function lookAt(page, eye, target) {
   )
 }
 
-async function open(browser, search, viewport = { width: 1366, height: 768 }) {
-  const page = await browser.newPage()
+function launchBrowser() {
+  return puppeteer.launch({
+    executablePath: chromePath(),
+    headless: true,
+    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
+  })
+}
+
+const session = { browser: null, opened: 0 }
+
+async function recycleBrowser() {
+  session.opened += 1
+  if (!session.browser || session.opened % 3 === 0) {
+    if (session.browser) await session.browser.close().catch(() => {})
+    session.browser = await launchBrowser()
+  }
+}
+
+async function open(_browserOrSearch, searchOrViewport, maybeViewport) {
+  const search = typeof _browserOrSearch === 'string' ? _browserOrSearch : searchOrViewport
+  const viewport = typeof _browserOrSearch === 'string' ? searchOrViewport : maybeViewport
+  await recycleBrowser()
+  const page = await session.browser.newPage()
   page.setDefaultTimeout(90_000)
-  await page.setViewport({ ...viewport, deviceScaleFactor: 1 })
+  await page.setViewport({ ...(viewport ?? { width: 1366, height: 768 }), deviceScaleFactor: 1 })
   const consoles = []
   const requests = []
   page.on('console', (msg) => {
@@ -259,11 +280,8 @@ async function open(browser, search, viewport = { width: 1366, height: 768 }) {
 async function main() {
   await mkdir(outDir, { recursive: true })
   await mkdir(evidenceDir, { recursive: true })
-  let browser = await puppeteer.launch({
-    executablePath: chromePath(),
-    headless: true,
-    args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
-  })
+  session.browser = await launchBrowser()
+  session.opened = 0
   const report = { views: {}, switches: [], badges: {}, alarms: {}, highlight: {}, stone: {}, network: {} }
 
   try {
@@ -292,12 +310,9 @@ async function main() {
       await page.close()
     }
 
-    await browser.close()
-    browser = await puppeteer.launch({
-      executablePath: chromePath(),
-      headless: true,
-      args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
-    })
+    await session.browser.close().catch(() => {})
+    session.browser = await launchBrowser()
+    session.opened = 0
 
     for (const quality of ['perf', 'balanced']) {
       for (const viewport of [
@@ -316,7 +331,12 @@ async function main() {
           if (fold) await fold.click()
           await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)))
           await page.waitForFunction(
-            (id) => window.__twinMonitorBoxes?.floorId === id && window.__twinMonitorBoxes.alarm && window.__twinMonitorBoxes.online,
+            (id) =>
+              window.__twinInterior?.floorId === id &&
+              (window.__twinInterior?.renderedDesks ?? 0) >= 80 &&
+              window.__twinMonitorBoxes?.floorId === id &&
+              window.__twinMonitorBoxes.alarm &&
+              window.__twinMonitorBoxes.online,
             { timeout: 90_000 },
             floorId,
           )
@@ -574,7 +594,7 @@ async function main() {
     report.switchConsoles = consoles
     await page.close()
   } finally {
-    await browser.close()
+    await session.browser.close().catch(() => {})
   }
 
   await writeFile(resolve(outDir, '../phase2-measure.json'), JSON.stringify(report, null, 2))

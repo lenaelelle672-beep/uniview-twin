@@ -73,6 +73,10 @@ function boxFromCorners(
   return { x, y, w, h }
 }
 
+function onCanvas(box: { x: number; y: number; w: number; h: number }, width: number, height: number) {
+  return box.x > 4 && box.y > 4 && box.x + box.w < width - 4 && box.y + box.h < height - 4
+}
+
 function pickDesk(
   candidates: Array<{
     deskId: string
@@ -82,12 +86,13 @@ function pickDesk(
   width: number,
   height: number,
 ) {
-  const inner = candidates.filter((item) => {
+  const visible = candidates.filter((item) => onCanvas(item.box, width, height))
+  const inner = visible.filter((item) => {
     const cx = item.box.x + item.box.w / 2
     const cy = item.box.y + item.box.h / 2
     return cx > width * 0.18 && cx < width * 0.82 && cy > height * 0.22 && cy < height * 0.62
   })
-  const pool = inner.length > 0 ? inner : candidates
+  const pool = inner.length > 0 ? inner : visible.length > 0 ? visible : candidates
   return (
     [...pool].sort((a, b) => {
       const patchScore = b.patches.length - a.patches.length
