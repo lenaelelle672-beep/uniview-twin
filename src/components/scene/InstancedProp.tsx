@@ -2,6 +2,7 @@ import { useLoader, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { InstancedMesh, Mesh, MeshStandardMaterial, Object3D, Quaternion, Scene, Vector3, type Camera, type Light, type WebGLShadowMap } from 'three'
+import { propNightEmissive } from '../../scene/props/emissive'
 import type { Placement } from '../../scene/siteGeometry'
 import { installMeshopt } from '../../scene/meshopt'
 
@@ -29,25 +30,9 @@ function materialName(mesh: Mesh): string {
 }
 
 function tunePropMaterial(material: MeshStandardMaterial, night: boolean) {
-  const name = material.name
-  if (!night) {
-    material.emissive.set('#000000')
-    material.emissiveIntensity = 0
-    return
-  }
-  if (name === 'lamp_light') {
-    material.emissive.set('#fff4dc')
-    material.emissiveIntensity = 2.4
-  } else if (name === 'sign_face') {
-    material.emissive.set('#f4f7ff')
-    material.emissiveIntensity = 1.6
-  } else if (name === 'sign_face_cn') {
-    material.emissive.set('#2f6bff')
-    material.emissiveIntensity = 1.8
-  } else {
-    material.emissive.set('#000000')
-    material.emissiveIntensity = 0
-  }
+  const tune = propNightEmissive(material.name, night)
+  material.emissive.set(tune.color)
+  material.emissiveIntensity = tune.intensity
 }
 
 function applyPlacements(instanced: InstancedMesh, placements: Placement[], y: number) {

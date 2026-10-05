@@ -1,6 +1,6 @@
 # 宇视总部大楼数字孪生
 
-网页 3D 数字孪生 DEMO。T001 提供工程脚手架、可替换数据层和中文界面外壳。T002 在此之上生成场地和楼体壳体（塔楼、裙房、东楼、B1）。室内、剖切、楼层标牌、搜索结果和告警抽屉仍在后续任务中接入。
+网页 3D 数字孪生 DEMO。T001 提供工程脚手架、可替换数据层和中文界面外壳。T002 生成场地和楼体壳体。T003 加上总览楼层徽标、单击高亮、固定机位和白模对比。室内、剖切、搜索结果和告警抽屉仍在后续任务中接入。
 
 ## 启动
 
@@ -22,7 +22,7 @@ npm test
 - 顶栏：总览 / 单层 / 蓝图、白天 / 夜间、性能 / 均衡 / 高画质，以及搜索框（搜索结果在后续任务实现，输入会记在筛选状态里）。
 - 左侧楼层栏：可折叠。默认数据列出 B1、F1～F22 共 23 层，每层显示告警数和离线数。
 - 右侧详情：占位，显示当前楼层的工位、设备和告警/离线数量。
-- 中间画布：总平面场地（规划路、月明路、公园、人行道、斑马线、实例化行道树和路灯）以及程序生成的楼体壳体。塔楼 22 层，每层一块楼板外壳；裙房为弧形玻璃廊和椭圆下沉庭院；东楼上部悬挑。
+- 中间画布：总平面场地以及程序生成的楼体壳体。总览时每层旁边有告警数（红）和离线数（灰）徽标，数字与左侧栏一致。单击楼层外壳会高亮该层并选中左侧栏；单击地面或空白处取消。双击楼层只记下飞入请求，镜头飞入在后续任务。固定机位不会播放飞行动画。相机不能转到地面以下，缩放有最近和最远限制。
 
 ## 地址栏参数
 
@@ -33,7 +33,7 @@ npm test
 | `view` | `building` 总览、`floor` 单层、`blueprint` 蓝图。默认总览，不写进地址栏 | `?view=floor` |
 | `floor` | `B1` 或 `F1`～`F22` | `?floor=F12` |
 | `pos` | 工位号，如 `F12-66`、`B1-8` | `?pos=F12-66` |
-| `cam` | 固定机位：`photo1`、`p2f000`、`p2f001`、`p2f002`、`p2f003` | `?cam=p2f000` |
+| `cam` | 固定机位：`photo1`、`p2f000`、`p2f001`、`p2f002`、`p2f003`。打开后直接落到姿态，不飞。数值按 D028 对照 `docs/ref`，对准 integration 之后的塔楼、弧形裙楼、下沉广场和 8F | `?cam=p2f000` |
 | `data` | 站内 JSON，必须以 `/` 开头 | `?data=/sample.json` |
 | `q` | 画质档 `perf`、`balanced`、`high`。只有打开页面时地址栏里已有 `q` 才锁定该档并关闭自动降档。界面里改画质只在本次会话生效 | `?q=perf` |
 | `style` | `model` 时用白模（黑底、灰线分格），便于和体块模型对照。缺省为白天或夜间的玻璃幕墙 | `?style=model` |
@@ -59,4 +59,12 @@ npm test
 
 ## 运行时不访问外网
 
-字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自 three 自带的 `RoomEnvironment`（本地生成），没有使用 drei 的 Environment 预设。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。
+字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自仓库里的室外天空 HDR，用 three 的 `HDRLoader` 在加载时预滤波一次，不使用 drei 的 Environment，也不把贴图设成背景。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。楼顶标识是 v2（蓝色 UNV，材质槽 `sign_face` / `sign_face_cn` / `sign_body`）。
+
+室外天空贴图：
+
+| 文件 | 来源 | 许可证 |
+| --- | --- | --- |
+| `public/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky)，Poly Haven 1k 等距柱状 HDR（1024×512）。作者 Greg Zaal（原片）、Jarod Guest（天空编辑）。原始 1,435,119 字节，gzip 954,159 字节。性能档和均衡档共用这一张，只做反射 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+
+单层视图的房间标签使用本地字体 `public/fonts/NotoSansSC-Regular-subset.otf`（Noto Sans CJK SC Regular 子集：GB2312 汉字、ASCII 和常用标点，OFL）。许可全文在 `public/fonts/NotoSansCJK-copyright.txt`。走廊人物在 `public/models/people/`，只在均衡档和高画质的单层视图里加载，性能档不请求这些 GLB。模型是 Poly Pizza 上的 CC0（Quaternius）：[Man in Suit](https://poly.pizza/m/mQnGoME1ez)、[Woman Casual](https://poly.pizza/m/jpKRgGDxhk)、[Animated Human](https://poly.pizza/m/c3Ibh9I3udk)。仓库私有，这些 GLB 不单独对外分发。

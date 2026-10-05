@@ -1,5 +1,6 @@
 import { useTwinStore } from '../store/store'
 import type { QualityTier, ViewMode } from '../types'
+import { SearchBox } from './SearchBox'
 
 interface TopBarProps {
   floorListOpen: boolean
@@ -24,11 +25,9 @@ export function TopBar({ floorListOpen, onToggleFloorList, alarmOpen, onToggleAl
   const view = useTwinStore((state) => state.view)
   const dayNight = useTwinStore((state) => state.dayNight)
   const quality = useTwinStore((state) => state.quality)
-  const searchQuery = useTwinStore((state) => state.searchQuery)
   const setView = useTwinStore((state) => state.setView)
   const setDayNight = useTwinStore((state) => state.setDayNight)
   const setQuality = useTwinStore((state) => state.setQuality)
-  const setSearchQuery = useTwinStore((state) => state.setSearchQuery)
 
   return (
     <header className="topbar">
@@ -113,16 +112,7 @@ export function TopBar({ floorListOpen, onToggleFloorList, alarmOpen, onToggleAl
         告警
       </button>
 
-      <input
-        className="search"
-        type="text"
-        role="searchbox"
-        placeholder="搜索工位、设备或人员"
-        aria-label="搜索工位、设备或人员"
-        autoComplete="off"
-        value={searchQuery}
-        onChange={(event) => setSearchQuery(event.target.value)}
-      />
+      <SearchBox />
     </header>
   )
 }

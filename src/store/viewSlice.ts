@@ -22,6 +22,10 @@ export interface ViewSlice {
   /** 告警抽屉点中的设备。T005 飞镜头仍只看 floor / deskId / focusSeq。 */
   focusedDeviceId: string | null
   cam: CameraId | null
+  /** 双击楼层时递增。T004 用它触发飞入；本任务不改视图。 */
+  floorFlyRequest: { floorId: string; nonce: number } | null
+  /** 无效的 ?pos=。中文提示，不抛错、不白屏。 */
+  posNotice: string | null
   setView: (view: ViewMode) => void
   setExploded: (exploded: boolean) => void
   setDayNight: (dayNight: DayNight) => void
@@ -30,7 +34,11 @@ export interface ViewSlice {
   setSelectedFloor: (floorId: string | null) => void
   setHoveredFloor: (floorId: string | null) => void
   setFocusedDeskId: (deskId: string | null) => void
+  /** 蓝图点选工位：记下工位和该工位电脑，不改变当前视图。 */
+  selectDesk: (deskId: string) => void
   setCam: (cam: CameraId | null) => void
+  /** 双击楼层时递增。飞入本身由 enterFloor 进入单层。 */
+  emitFloorFly: (floorId: string) => void
   enterFloor: (floorId: string) => void
   exitFloor: () => void
   /** 每次 focusDevice 加一。T005 订阅该序号后再做镜头飞行。 */
@@ -52,6 +60,8 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   focusedDeskId: null,
   focusedDeviceId: null,
   cam: null,
+  floorFlyRequest: null,
+  posNotice: null,
   focusSeq: 0,
   setView: (view) => set({ view }),
   setExploded: (exploded) => set({ exploded }),
@@ -67,7 +77,25 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   setSelectedFloor: (selectedFloor) => set({ selectedFloor }),
   setHoveredFloor: (hoveredFloor) => set({ hoveredFloor }),
   setFocusedDeskId: (focusedDeskId) => set({ focusedDeskId }),
+  selectDesk: (deskId) => {
+    const splitAt = deskId.lastIndexOf('-')
+    const floorId = splitAt > 0 ? deskId.slice(0, splitAt) : ''
+    if (!isFloorId(floorId)) return
+    const pc = get().devices.find((device) => device.deskId === deskId && device.type === 'pc')
+    set({
+      selectedFloor: floorId,
+      focusedDeskId: deskId,
+      focusedDeviceId: pc?.id ?? null,
+    })
+  },
   setCam: (cam) => set({ cam }),
+  emitFloorFly: (floorId) =>
+    set({
+      floorFlyRequest: {
+        floorId,
+        nonce: (get().floorFlyRequest?.nonce ?? 0) + 1,
+      },
+    }),
   enterFloor: (floorId) => {
     if (!isFloorId(floorId)) return
     const { view, selectedFloor } = get()
@@ -84,6 +112,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
       focusedDeskId: deskId,
       focusedDeviceId: deviceId,
       view: 'floor',
+      posNotice: null,
       focusSeq: state.focusSeq + 1,
     })),
 })

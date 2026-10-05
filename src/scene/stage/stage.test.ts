@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { Box3, type BufferGeometry } from 'three'
 import { floorIdList } from '../../data/floors'
 import { DESKS_PER_FLOOR, createMockData } from '../../data/mockData'
 import { resetTwinStore, useTwinStore } from '../../store/store'
@@ -7,28 +8,36 @@ import {
   activeFloorId,
   cutElevation,
   hiddenFloorIds,
+  isBasementSlabHidden,
+  isBasementZonesHidden,
   isFloorCurtainOpen,
   isFloorShellHidden,
   isRoofHidden,
   SLAB_M,
 } from './cut'
+import { columnGeometry, deskGeometry } from './geometry'
 import {
   B1_CORE,
   B1_ROOMS,
+  COLUMN_EDGE_CLEAR_M,
   CORE,
   FAN,
   KITCHEN,
   MEETINGS,
   PANTRY,
   RECEPTION,
+  b1Columns,
   canteenTables,
+  columnEdgeDistance,
+  deskHitsColumn,
   fanSeatSlots,
   inFan,
   layoutWorkstations,
   towerColumns,
 } from './layout'
-import { floorCameraPose } from './poses'
+import { obliqueOverviewSeed } from './poses'
 import { pcStatusOf } from './status'
+import { WORKSTATIONS_PER_FLOOR, workstationPosition } from './workstationPosition'
 
 function inside(x: number, z: number, box: { x0: number; x1: number; z0: number; z1: number }, pad = 0) {
   return x > box.x0 - pad && x < box.x1 + pad && z > box.z0 - pad && z < box.z1 + pad
@@ -53,6 +62,24 @@ describe('单层剖切', () => {
     expect(isFloorCurtainOpen('floor', 'F12', 'F11')).toBe(false)
     expect(isRoofHidden('floor', 'F3')).toBe(true)
     expect(isRoofHidden('building', 'F3')).toBe(false)
+  })
+
+  it('地上单层隐藏 B1 楼板和色块，总览和 B1 不隐藏', () => {
+    const samples: Array<[Parameters<typeof isBasementSlabHidden>[0], string | null]> = [
+      ['building', null],
+      ['building', 'F12'],
+      ['blueprint', 'F12'],
+      ['floor', 'B1'],
+      ['floor', null],
+    ]
+    for (const [view, floor] of samples) {
+      expect(isBasementSlabHidden(view, floor)).toBe(false)
+      expect(isBasementZonesHidden(view, floor)).toBe(false)
+    }
+    for (let level = 1; level <= 22; level += 1) {
+      expect(isBasementSlabHidden('floor', `F${level}`)).toBe(true)
+      expect(isBasementZonesHidden('floor', `F${level}`)).toBe(isBasementSlabHidden('floor', `F${level}`))
+    }
   })
 })
 
@@ -143,20 +170,54 @@ describe('enterFloor / exitFloor', () => {
     expect(useTwinStore.getState().selectedFloor).toBeNull()
   })
 
-  it('F12 机位压到该层附近，B1 机位看向地下室', () => {
-    const f12 = floorCameraPose('F12')
-    expect(f12.position[1]).toBeGreaterThan(48)
-    expect(f12.position[1]).toBeLessThan(64)
-    expect(f12.target[1]).toBeGreaterThan(48)
-    expect(f12.target[1]).toBeLessThan(50)
-    const distance = Math.hypot(f12.position[0] - f12.target[0], f12.position[2] - f12.target[2])
-    expect(distance).toBeLessThan(40)
-    const b1 = floorCameraPose('B1')
-    expect(b1.target[1]).toBeLessThan(-4)
-    expect(b1.position[1]).toBeLessThan(64)
-    expect(b1.position[1]).toBeGreaterThan(8)
+  it('单层俯视种子在楼板斜上方', () => {
+    const seed = obliqueOverviewSeed({ x: 0, y: 48.16, z: 0 }, { x: 66.3, z: 26.3 })
+    expect(seed.target).toEqual([0, 48.16, 0])
+    expect(seed.position[1]).toBeGreaterThan(seed.target[1] + 8)
+    const horizontal = Math.hypot(seed.position[0] - seed.target[0], seed.position[2] - seed.target[2])
+    const rise = seed.position[1] - seed.target[1]
+    expect(horizontal).toBeGreaterThan(rise)
+    expect(rise / horizontal).toBeGreaterThan(0.4)
+    expect(Math.abs(seed.position[2])).toBeGreaterThan(Math.abs(seed.position[0]))
   })
 })
+
+describe('工位避柱', () => {
+  it('塔楼桌心到柱边至少 1.10 m，桌子和柱子包围盒不相交', () => {
+    const desk = geometryBounds(deskGeometry)
+    const column = geometryBounds(columnGeometry)
+    const deskHalfX = (desk.max.x - desk.min.x) / 2
+    const deskHalfZ = (desk.max.z - desk.min.z) / 2
+    const columnHalfX = (column.max.x - column.min.x) / 2
+    const columnHalfZ = (column.max.z - column.min.z) / 2
+    expect(deskHalfX + columnHalfX).toBeCloseTo(1.01, 5)
+    expect(COLUMN_EDGE_CLEAR_M).toBe(1.1)
+
+    for (const floorId of floorIdList()) {
+      const columns = floorId === 'B1' ? b1Columns() : towerColumns()
+      for (let index = 1; index <= WORKSTATIONS_PER_FLOOR; index += 1) {
+        const place = workstationPosition(floorId, `${floorId}-${index}`)
+        const slot = { x: place.x, z: place.z, rot: 0 }
+        for (const columnPoint of columns) {
+          const dx = Math.abs(place.x - columnPoint.x)
+          const dz = Math.abs(place.z - columnPoint.z)
+          const overlaps = dx < deskHalfX + columnHalfX - 1e-6 && dz < deskHalfZ + columnHalfZ - 1e-6
+          expect(overlaps).toBe(false)
+          expect(deskHitsColumn(slot, columnPoint)).toBe(false)
+          if (floorId !== 'B1') {
+            expect(columnEdgeDistance(place.x, place.z, columnPoint)).toBeGreaterThanOrEqual(COLUMN_EDGE_CLEAR_M - 1e-9)
+          }
+        }
+      }
+    }
+  })
+})
+
+function geometryBounds(geometry: BufferGeometry): Box3 {
+  geometry.computeBoundingBox()
+  if (!geometry.boundingBox) throw new Error('几何没有包围盒')
+  return geometry.boundingBox
+}
 
 function minSpacing(slots: Array<{ x: number; z: number }>): number {
   let nearest = Infinity

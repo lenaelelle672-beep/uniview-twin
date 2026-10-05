@@ -1,6 +1,9 @@
 import { useMemo } from 'react'
 import { buildFocusDetail } from '../alarms/focusDetail'
+import { deviceTypeLabel, statusLabel } from '../alarms/labels'
+import { resolveWorkstationRef, workstationIps } from '../locate/ref'
 import { useTwinStore } from '../store/store'
+import type { Device } from '../types'
 import './focusedAlarmDetail.css'
 
 export function FocusedAlarmDetail() {
@@ -19,6 +22,8 @@ export function FocusedAlarmDetail() {
   if (!detail || (!detail.desk && !detail.device)) return null
 
   const statusClass = detail.device?.status === 'alarm' ? 'cell-alarm' : 'cell-offline'
+  const deskDevices = detail.desk ? devices.filter((device) => device.deskId === detail.desk?.id) : []
+  const selectedIp = ipOf(devices.find((device) => device.id === detail.device?.id) ?? null)
 
   return (
     <section
@@ -59,6 +64,12 @@ export function FocusedAlarmDetail() {
             <dt>状态</dt>
             <dd className={statusClass}>{detail.device.statusLabel}</dd>
           </div>
+          {selectedIp && (
+            <div>
+              <dt>IP</dt>
+              <dd>{selectedIp}</dd>
+            </div>
+          )}
           <div>
             <dt>时间</dt>
             <dd>{detail.device.time}</dd>
@@ -69,8 +80,34 @@ export function FocusedAlarmDetail() {
           </div>
         </dl>
       ) : (
-        <p className="panel-hint">未选中具体设备。</p>
+        <DeskDeviceList devices={deskDevices} />
       )}
     </section>
   )
+}
+
+function DeskDeviceList({ devices }: { devices: Device[] }) {
+  if (devices.length === 0) return <p className="panel-hint">当前数据里没有这个工位的设备。</p>
+  return (
+    <ul className="desk-devices">
+      {devices.map((device) => (
+        <li key={device.id}>
+          <span>
+            {deviceTypeLabel(device.type)} · {device.id}
+          </span>
+          <span>{statusLabel(device.status)}</span>
+          <span>{ipOf(device) ?? '—'}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+function ipOf(device: Device | null): string | null {
+  if (!device?.deskId) return null
+  if (device.type !== 'pc' && device.type !== 'phone') return null
+  const ref = resolveWorkstationRef(device.deskId)
+  if (!ref || ref.floorId !== device.floorId) return null
+  const ips = workstationIps(device.floorId, device.deskId)
+  return device.type === 'pc' ? ips.pc : ips.phone
 }

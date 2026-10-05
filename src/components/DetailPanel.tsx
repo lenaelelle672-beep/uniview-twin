@@ -1,3 +1,4 @@
+import { formatWorkstationPlace, resolveWorkstationRef } from '../locate/ref'
 import { useTwinStore } from '../store/store'
 import { FocusedAlarmDetail } from './FocusedAlarmDetail'
 
@@ -14,6 +15,7 @@ export function DetailPanel() {
   const floor = floors.find((item) => item.id === selectedFloor)
   const deskCount = selectedFloor ? desks.filter((desk) => desk.floorId === selectedFloor).length : 0
   const deviceCount = selectedFloor ? devices.filter((device) => device.floorId === selectedFloor).length : 0
+  const deskRef = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
 
   return (
     <aside className="detail-panel" aria-label="详情">
@@ -53,10 +55,16 @@ export function DetailPanel() {
             </div>
           </dl>
         )}
-        {/* TODO(D027): 工位详情里的位置要调用 workstationPosition，不要读 desk.x/y/z。 */}
-        {focusedDeskId && <p className="panel-hint">定位工位 {focusedDeskId}</p>}
+        {deskRef && (
+          <dl className="detail-list">
+            <div>
+              <dt>位置</dt>
+              <dd>{formatWorkstationPlace(deskRef.floorId, deskRef.deskId)}</dd>
+            </div>
+          </dl>
+        )}
         {cam && <p className="panel-hint">固定机位 {cam}</p>}
-        {!focusedDeskId && !focusedDeviceId && <p className="panel-note">设备与人员详情将在后续任务中展示。</p>}
+        {!focusedDeskId && !focusedDeviceId && <p className="panel-note">选择工位后，这里显示人员和设备。</p>}
       </div>
     </aside>
   )

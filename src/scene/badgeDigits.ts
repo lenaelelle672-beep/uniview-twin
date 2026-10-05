@@ -1,0 +1,424 @@
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { BufferAttribute, BufferGeometry, Color, PlaneGeometry, Vector3 } from 'three'
+import atlas from '../../assets/ready/textures/badge-digits-bold.json'
+import {
+  BADGE_ALARM_X,
+  BADGE_CHIP_H,
+  BADGE_CHIP_W,
+  BADGE_COLUMN_X,
+  BADGE_COLUMN_Z,
+  BADGE_HEIGHT,
+  BADGE_ID_X,
+  BADGE_MIN_SCREEN_PX,
+  BADGE_OFFLINE_X,
+  BADGE_STAGGER_PAD,
+  BADGE_WIDTH,
+  badgeAnchor,
+} from './badges'
+
+/** 四边形高度对应图集格子去掉内边后的 56 px。两位数字要落进色块里。 */
+export const BADGE_GLYPH_HEIGHT = 1.16
+const DIGIT_Z = 0.1
+const SPAN_PX = atlas.cell - atlas.padding
+
+interface AtlasGlyph {
+  uv: [number, number, number, number]
+  advanceRatio: number
+}
+
+const glyphs = atlas.glyphs as unknown as Record<string, AtlasGlyph>
+
+export interface BadgeDigitSource {
+  id: string
+  alarmCount: number
+  offlineCount: number
+  elevation: number
+  height: number
+}
+
+export interface BadgeDigitLayout {
+  geometry: BufferGeometry
+  local: Float32Array
+  anchorIndex: Uint16Array
+}
+
+export function glyphFrame(
+  char: string,
+  height = BADGE_GLYPH_HEIGHT,
+): { width: number; uv: [number, number, number, number] } {
+  const glyph = glyphs[char]
+  if (!glyph) throw new Error(`徽标图集没有字符 ${char}`)
+  const advancePx = glyph.advanceRatio * atlas.fontSizePx
+  const keep = advancePx / SPAN_PX
+  const [u0, v0, u1, v1] = glyph.uv
+  const uMid = (u0 + u1) / 2
+  const uHalf = ((u1 - u0) * keep) / 2
+  return {
+    width: height * keep,
+    uv: [uMid - uHalf, v0, uMid + uHalf, v1],
+  }
+}
+
+function quad(width: number, height: number, uv: [number, number, number, number], x: number, y: number, z: number) {
+  const geometry = new PlaneGeometry(width, height)
+  const attribute = geometry.attributes.uv
+  const [u0, v0, u1, v1] = uv
+  attribute.setXY(0, u0, v1)
+  attribute.setXY(1, u1, v1)
+  attribute.setXY(2, u0, v0)
+  attribute.setXY(3, u1, v0)
+  geometry.translate(x, y, z)
+  return geometry
+}
+
+function appendString(
+  parts: PlaneGeometry[],
+  anchorIds: number[],
+  anchorId: number,
+  text: string,
+  centerX: number,
+) {
+  const frames = [...text].map((char) => glyphFrame(char))
+  const total = frames.reduce((sum, frame) => sum + frame.width, 0)
+  let cursor = centerX - total / 2
+  for (const frame of frames) {
+    parts.push(quad(frame.width, BADGE_GLYPH_HEIGHT, frame.uv, cursor + frame.width / 2, 0, DIGIT_Z))
+    anchorIds.push(anchorId, anchorId, anchorId, anchorId)
+    cursor += frame.width
+  }
+}
+
+export function buildBadgeDigitGeometry(
+  floors: BadgeDigitSource[],
+  options?: { alarmDigits?: boolean },
+): BadgeDigitLayout {
+  const alarmDigits = options?.alarmDigits !== false
+  const parts: PlaneGeometry[] = []
+  const anchorIds: number[] = []
+  floors.forEach((floor, index) => {
+    appendString(parts, anchorIds, index, floor.id, BADGE_ID_X)
+    if (alarmDigits) appendString(parts, anchorIds, index, String(floor.alarmCount), BADGE_ALARM_X)
+    appendString(parts, anchorIds, index, String(floor.offlineCount), BADGE_OFFLINE_X)
+  })
+  const geometry = mergeGeometries(parts, false)
+  parts.forEach((part) => part.dispose())
+  if (!geometry) throw new Error('徽标数字网格合并失败')
+  const position = geometry.attributes.position.array as Float32Array
+  const centers = new Float32Array(anchorIds.length * 3)
+  for (let index = 0; index < anchorIds.length; index += 1) {
+    const anchor = badgeAnchor(floors[anchorIds[index]])
+    centers[index * 3] = anchor.x
+    centers[index * 3 + 1] = anchor.y
+    centers[index * 3 + 2] = anchor.z
+  }
+  geometry.setAttribute('badgeCenter', new BufferAttribute(centers, 3))
+  geometry.computeBoundingSphere()
+  return {
+    geometry,
+    local: position.slice(),
+    anchorIndex: Uint16Array.from(anchorIds),
+  }
+}
+
+/** 世界高度在视图深度处的 CSS 像素高。viewportHeight 不乘 devicePixelRatio。 */
+export function badgeProjectedPixels(
+  worldHeight: number,
+  viewDepth: number,
+  viewportHeight: number,
+  projection11: number,
+): number {
+  return (worldHeight * projection11 * 0.5 * viewportHeight) / Math.max(viewDepth, 1e-3)
+}
+
+/** 低于最小屏幕高度时放大，已超过时保持 1。 */
+export function badgeScreenScale(pixelHeight: number, minimum = BADGE_MIN_SCREEN_PX): number {
+  return Math.max(minimum / Math.max(pixelHeight, 1e-3), 1)
+}
+
+export interface BadgePlacement {
+  id: string
+  x: number
+  y: number
+  z: number
+}
+
+function columnPoint(floor: { id: string; elevation: number; height: number }, target: Vector3) {
+  target.set(BADGE_COLUMN_X, floor.id === 'B1' ? 1.5 : floor.elevation + floor.height / 2, BADGE_COLUMN_Z)
+  return target
+}
+
+/** 底板离画布边缘的空隙。侧栏贴着画布，留出这点空隙就不会压到侧栏。 */
+const SCREEN_MARGIN_PX = 4
+
+function containBadgeRow(
+  positionOf: Map<string, Vector3>,
+  right: Vector3,
+  viewDir: Vector3,
+  eye: Vector3,
+  proj11: number,
+  viewportHeight: number,
+  viewportWidth: number,
+  scaleAt: (point: Vector3) => number,
+) {
+  if (viewportWidth <= 0 || viewportHeight <= 0) return
+  const proj00 = (proj11 * viewportHeight) / viewportWidth
+  const rel = new Vector3()
+  for (let iter = 0; iter < 4; iter += 1) {
+    let minLeft = Number.POSITIVE_INFINITY
+    let maxRight = Number.NEGATIVE_INFINITY
+    let leftDepth = 1
+    let rightDepth = 1
+    for (const pos of positionOf.values()) {
+      rel.copy(pos).sub(eye)
+      const depth = Math.max(rel.dot(viewDir), 1e-3)
+      const pxPerMeter = (proj00 * viewportWidth * 0.5) / depth
+      const centerPx = viewportWidth * 0.5 + rel.dot(right) * pxPerMeter
+      const halfPx = scaleAt(pos) * BADGE_WIDTH * 0.5 * pxPerMeter
+      const leftPx = centerPx - halfPx
+      const rightPx = centerPx + halfPx
+      if (leftPx < minLeft) {
+        minLeft = leftPx
+        leftDepth = depth
+      }
+      if (rightPx > maxRight) {
+        maxRight = rightPx
+        rightDepth = depth
+      }
+    }
+    const leftOverflow = SCREEN_MARGIN_PX - minLeft
+    const rightOverflow = maxRight - (viewportWidth - SCREEN_MARGIN_PX)
+    if (leftOverflow <= 0.5 && rightOverflow <= 0.5) return
+    const shiftPx =
+      leftOverflow > 0 && rightOverflow > 0 ? (leftOverflow - rightOverflow) / 2 : leftOverflow > 0 ? leftOverflow : -rightOverflow
+    const depth = shiftPx >= 0 ? leftDepth : rightDepth
+    const pxPerMeter = (proj00 * viewportWidth * 0.5) / Math.max(depth, 1e-3)
+    const world = shiftPx / Math.max(pxPerMeter, 1e-3)
+    for (const pos of positionOf.values()) pos.addScaledVector(right, world)
+  }
+}
+
+/**
+ * 整块徽标的屏幕中心。奇数层在相机左侧，偶数层在右侧，两侧再各分一列，
+ * 使同一列至少隔四层。列距不小于放大后的整块徽标宽。
+ * B1 在 F1 的外侧，并且整块落在 F1 下方，不与 F1 并排。
+ * 画布比窗口窄时，整列沿相机右方向平移，列距不变，底板留在画面内。
+ */
+export function layoutBadgeCenters(
+  floors: Array<{ id: string; elevation: number; height: number }>,
+  right: Vector3,
+  viewDir: Vector3,
+  eye: Vector3,
+  proj11: number,
+  viewportHeight: number,
+  viewportWidth: number,
+): BadgePlacement[] {
+  const depthScratch = new Vector3()
+  const scaleAt = (point: Vector3) => {
+    const depth = Math.max(depthScratch.copy(point).sub(eye).dot(viewDir), 1e-3)
+    return badgeScreenScale(badgeProjectedPixels(BADGE_HEIGHT, depth, viewportHeight, proj11))
+  }
+  const slot = (k: number) => k * (BADGE_WIDTH + BADGE_STAGGER_PAD)
+  const positionOf = new Map<string, Vector3>()
+  for (const floor of floors) {
+    if (floor.id === 'B1') continue
+    const level = Number(floor.id.slice(1))
+    const pair = Math.floor((level - 1) / 2) % 2
+    const column = level % 2 === 1 ? (pair === 0 ? 0 : 1) : pair === 0 ? 2 : 3
+    const base = columnPoint(floor, new Vector3())
+    const k = scaleAt(base)
+    positionOf.set(floor.id, base.addScaledVector(right, (column - 1.5) * slot(k)))
+  }
+  const basement = floors.find((floor) => floor.id === 'B1')
+  const first = positionOf.get('F1')
+  if (basement && first) {
+    const k = scaleAt(first)
+    const screenUp = new Vector3().crossVectors(right, viewDir)
+    const pos = first.clone()
+    pos.addScaledVector(right, -slot(k))
+    pos.addScaledVector(screenUp, -k * (BADGE_HEIGHT + BADGE_STAGGER_PAD))
+    positionOf.set(basement.id, pos)
+  }
+  containBadgeRow(positionOf, right, viewDir, eye, proj11, viewportHeight, viewportWidth, scaleAt)
+  return floors.map((floor) => {
+    const pos = positionOf.get(floor.id) ?? columnPoint(floor, new Vector3())
+    return { id: floor.id, x: pos.x, y: pos.y, z: pos.z }
+  })
+}
+
+const BADGE_UNIFORMS = `uniform float badgeViewportHeight;
+uniform float badgeWorldHeight;
+uniform float badgeMinPixelHeight;
+`
+const BADGE_SCALE = `float px = badgeWorldHeight * projectionMatrix[1][1] * 0.5 * badgeViewportHeight / max(-mvC.z, 1e-3);
+float k = max(1.0, badgeMinPixelHeight / max(px, 1e-3));
+`
+
+function assignBadgeScaleUniforms(
+  shader: { uniforms: Record<string, { value: unknown }> },
+  viewportHeight: number,
+) {
+  shader.uniforms.badgeViewportHeight = { value: viewportHeight }
+  shader.uniforms.badgeWorldHeight = { value: BADGE_HEIGHT }
+  shader.uniforms.badgeMinPixelHeight = { value: BADGE_MIN_SCREEN_PX }
+}
+
+const alarmColor = new Color('#b42318')
+
+function tagMarkerPart(geometry: PlaneGeometry, kind: number) {
+  const count = geometry.getAttribute('position').count
+  const values = new Float32Array(count)
+  values.fill(kind)
+  geometry.setAttribute('markerPart', new BufferAttribute(values, 1))
+}
+
+/**
+ * 告警标记：先写红底色块，再写告警数字。同一次绘制里后写的三角形盖住先写的，
+ * 所以数字留在色块上面，整块的 renderOrder 仍高于楼层号。
+ */
+export function buildAlarmMarkerGeometry(floors: BadgeDigitSource[]): BadgeDigitLayout {
+  const parts: PlaneGeometry[] = []
+  const anchorIds: number[] = []
+  floors.forEach((floor, index) => {
+    const chip = new PlaneGeometry(BADGE_CHIP_W, BADGE_CHIP_H)
+    chip.translate(BADGE_ALARM_X, 0, 0.05)
+    tagMarkerPart(chip, 0)
+    parts.push(chip)
+    anchorIds.push(index, index, index, index)
+    const before = parts.length
+    appendString(parts, anchorIds, index, String(floor.alarmCount), BADGE_ALARM_X)
+    for (let part = before; part < parts.length; part += 1) tagMarkerPart(parts[part], 1)
+  })
+  const geometry = mergeGeometries(parts, false)
+  parts.forEach((part) => part.dispose())
+  if (!geometry) throw new Error('告警标记网格合并失败')
+  const position = geometry.attributes.position.array as Float32Array
+  const centers = new Float32Array(anchorIds.length * 3)
+  for (let index = 0; index < anchorIds.length; index += 1) {
+    const anchor = badgeAnchor(floors[anchorIds[index]])
+    centers[index * 3] = anchor.x
+    centers[index * 3 + 1] = anchor.y
+    centers[index * 3 + 2] = anchor.z
+  }
+  geometry.setAttribute('badgeCenter', new BufferAttribute(centers, 3))
+  geometry.computeBoundingSphere()
+  return {
+    geometry,
+    local: position.slice(),
+    anchorIndex: Uint16Array.from(anchorIds),
+  }
+}
+
+export function patchAlarmMarkerShader(
+  shader: { vertexShader: string; fragmentShader: string; uniforms: Record<string, { value: unknown }> },
+  viewportHeight: number,
+) {
+  assignBadgeScaleUniforms(shader, viewportHeight)
+  shader.uniforms.alarmColor = { value: alarmColor }
+  const vertex = shader.vertexShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+attribute vec3 badgeCenter;
+attribute float markerPart;
+varying float vMarkerPart;
+${BADGE_UNIFORMS}`,
+    )
+    .replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+vMarkerPart = markerPart;
+vec4 mvC = modelViewMatrix * vec4(badgeCenter, 1.0);
+${BADGE_SCALE}transformed = badgeCenter + (transformed - badgeCenter) * k;
+`,
+    )
+  if (!vertex.includes('vMarkerPart = markerPart')) throw new Error('告警标记顶点着色器没有接上')
+  shader.vertexShader = vertex
+  const fragment = shader.fragmentShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+varying float vMarkerPart;
+uniform vec3 alarmColor;
+`,
+    )
+    .replace(
+      '#include <map_fragment>',
+      `#include <map_fragment>
+if (vMarkerPart < 0.5) diffuseColor = vec4(alarmColor, 1.0);
+`,
+    )
+  if (!fragment.includes('vMarkerPart < 0.5')) throw new Error('告警标记片元着色器没有接上')
+  shader.fragmentShader = fragment
+}
+
+export function patchBadgeDigitVertexShader(
+  shader: { vertexShader: string; uniforms: Record<string, { value: unknown }> },
+  viewportHeight: number,
+) {
+  assignBadgeScaleUniforms(shader, viewportHeight)
+  const vertex = shader.vertexShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+attribute vec3 badgeCenter;
+${BADGE_UNIFORMS}`,
+    )
+    .replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+vec4 mvC = modelViewMatrix * vec4(badgeCenter, 1.0);
+${BADGE_SCALE}transformed = badgeCenter + (transformed - badgeCenter) * k;
+`,
+    )
+  if (!vertex.includes('float k =')) throw new Error('徽标数字顶点着色器没有接上屏幕尺寸')
+  shader.vertexShader = vertex
+}
+
+/** 底板和色块共用。实例原点就是徽标中心，three 在 begin_vertex 之后才乘 instanceMatrix。 */
+export function patchBadgePlateVertexShader(
+  shader: { vertexShader: string; uniforms: Record<string, { value: unknown }> },
+  viewportHeight: number,
+) {
+  assignBadgeScaleUniforms(shader, viewportHeight)
+  const vertex = shader.vertexShader
+    .replace(
+      '#include <common>',
+      `#include <common>
+attribute vec3 badgeShift;
+${BADGE_UNIFORMS}`,
+    )
+    .replace(
+      '#include <begin_vertex>',
+      `#include <begin_vertex>
+#ifdef USE_INSTANCING
+transformed += badgeShift;
+vec4 mvC = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+${BADGE_SCALE}transformed *= k;
+#endif
+`,
+    )
+  if (!vertex.includes('transformed *= k')) throw new Error('徽标底板顶点着色器没有接上屏幕尺寸')
+  shader.vertexShader = vertex
+}
+
+const scratch = new Vector3()
+
+export function writeBadgeDigitPositions(
+  positions: Float32Array,
+  local: Float32Array,
+  anchorIndex: Uint16Array,
+  anchors: Array<{ x: number; y: number; z: number }>,
+  right: Vector3,
+  up: Vector3,
+  forward: Vector3,
+) {
+  const count = anchorIndex.length
+  for (let index = 0; index < count; index += 1) {
+    const anchor = anchors[anchorIndex[index]]
+    const offset = index * 3
+    scratch.set(local[offset], local[offset + 1], local[offset + 2])
+    positions[offset] = anchor.x + right.x * scratch.x + up.x * scratch.y + forward.x * scratch.z
+    positions[offset + 1] = anchor.y + right.y * scratch.x + up.y * scratch.y + forward.y * scratch.z
+    positions[offset + 2] = anchor.z + right.z * scratch.x + up.z * scratch.y + forward.z * scratch.z
+  }
+}

@@ -44,7 +44,7 @@ function slotIndex(floorId: string, workstationId: string): number {
  * 编号形如 `F12-66`、`B1-8`，末段是 1～100 的序号，对应本层固定的 100 个落点。
  *
  * 平面来自当前塔楼 / 地下室楼板轮廓。塔楼板仍是 67×27 m。
- * D025 把裙楼楼板南移后，B1 的 100 个落点跟着 FOOTPRINT 走，并且都在楼板以内。
+ * B1 的 100 个落点落在 B1.pdf 外墙楼板内，并且只从这里读取。
  */
 export function workstationPosition(floorId: string, workstationId: string): WorkstationPosition {
   const slot = canonicalSlots(floorId)[slotIndex(floorId, workstationId)]
