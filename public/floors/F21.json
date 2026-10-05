@@ -24639,21 +24639,47 @@
     6.23,
     9.58
    ]
+  ],
+  [
+   [
+    -13.41,
+    -5.62
+   ],
+   [
+    -13.41,
+    -13.2
+   ],
+   [
+    -16.09,
+    -13.2
+   ],
+   [
+    -16.11,
+    -3.42
+   ],
+   [
+    -13.41,
+    -3.42
+   ],
+   [
+    -13.41,
+    -5.62
+   ]
   ]
  ],
  "walkMeta": {
   "components": [
    {
     "name": "main",
-    "area_m2": 462.0,
-    "paths": 11,
+    "area_m2": 501.3,
+    "paths": 12,
     "pathIndex": [
      0,
-     11
+     12
     ]
    }
   ],
-  "pathCount": 11,
+  "pathCount": 12,
   "walkableFile": "assets/work/floors/F21.walkable.json"
  }
 }

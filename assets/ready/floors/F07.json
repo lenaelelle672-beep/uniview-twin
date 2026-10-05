@@ -87607,7 +87607,7 @@
   "components": [
    {
     "name": "eastBlock",
-    "area_m2": 2064.5,
+    "area_m2": 2158.9,
     "paths": 8,
     "pathIndex": [
      0,
@@ -87616,7 +87616,7 @@
    },
    {
     "name": "tower",
-    "area_m2": 1200.4,
+    "area_m2": 1247.8,
     "paths": 4,
     "pathIndex": [
      8,
