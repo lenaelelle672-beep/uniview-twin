@@ -1,6 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useEffect, useLayoutEffect, useMemo } from 'react'
-import { InstancedMesh } from 'three'
+import { InstancedMesh, Mesh } from 'three'
+import { PICK_VOLUME_LAYER } from '../pickLayers'
 import { floorSpec } from '../../data/floors'
 import { loadFloorPlan } from '../../floors/loadFloor'
 import { extrudeUp } from '../extrude'
@@ -74,6 +75,9 @@ function BasementPick() {
   if (inside) return null
   return (
     <mesh
+      ref={(mesh: Mesh | null) => {
+        mesh?.layers.set(PICK_VOLUME_LAYER)
+      }}
       name="B1Pick"
       geometry={geometry}
       onDoubleClick={(event) => {

@@ -1,3 +1,4 @@
+import { startTransition } from 'react'
 import type { StateCreator } from 'zustand'
 import { isFloorId } from '../data/floors'
 import type { CameraId, DayNight, QualityTier, ViewMode } from '../types'
@@ -63,10 +64,10 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   floorFlyRequest: null,
   posNotice: null,
   focusSeq: 0,
-  setView: (view) => set({ view }),
+  setView: (view) => startTransition(() => set({ view })),
   setExploded: (exploded) => set({ exploded }),
-  setDayNight: (dayNight) => set({ dayNight }),
-  setQuality: (quality) => set({ quality, downgradeSuppressed: true }),
+  setDayNight: (dayNight) => startTransition(() => set({ dayNight })),
+  setQuality: (quality) => startTransition(() => set({ quality, downgradeSuppressed: true })),
   declineQuality: () => {
     const { qualityPinned, downgradeSuppressed, quality } = get()
     if (qualityPinned || downgradeSuppressed) return
@@ -88,7 +89,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
       focusedDeviceId: pc?.id ?? null,
     })
   },
-  setCam: (cam) => set({ cam }),
+  setCam: (cam) => startTransition(() => set({ cam })),
   emitFloorFly: (floorId) =>
     set({
       floorFlyRequest: {
@@ -100,11 +101,11 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
     if (!isFloorId(floorId)) return
     const { view, selectedFloor } = get()
     if (view === 'floor' && selectedFloor === floorId) return
-    set({ view: 'floor', selectedFloor: floorId })
+    startTransition(() => set({ view: 'floor', selectedFloor: floorId }))
   },
   exitFloor: () => {
     if (get().view !== 'floor') return
-    set({ view: 'building' })
+    startTransition(() => set({ view: 'building' }))
   },
   focusDevice: ({ floor, deskId, deviceId = null }) =>
     set((state) => ({

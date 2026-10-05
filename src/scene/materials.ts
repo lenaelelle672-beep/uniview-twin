@@ -87,9 +87,12 @@ export function createGrilleMaterial(): MeshStandardMaterial {
 }
 
 export const curtainMaterial = createCurtainMaterial()
+curtainMaterial.name = '幕墙'
 export const grilleMaterial = createGrilleMaterial()
+grilleMaterial.name = '格栅'
 export const solidMaterial = new MeshStandardMaterial({ color: '#f4f5f7', roughness: 0.62, metalness: 0.05 })
 export const jointMaterial = new MeshStandardMaterial({ color: '#fbfcfd', roughness: 0.5, metalness: 0.04 })
+jointMaterial.name = '接缝'
 export const revealMaterial = new MeshStandardMaterial({ color: '#5c6772', roughness: 0.72, metalness: 0.08 })
 /** 选中层。728309f 在 ACES 下读数是 #f7eedd。不参与色调映射，AgX 不再改这个颜色。 */
 export const highlightCurtainMaterial = new MeshBasicMaterial({
@@ -101,6 +104,7 @@ export const highlightJointMaterial = new MeshBasicMaterial({
   toneMapped: false,
 })
 export const finMaterial = new MeshStandardMaterial({
+  name: '铝翅',
   color: '#c5cad3',
   roughness: 0.42,
   metalness: 0.48,
@@ -108,6 +112,7 @@ export const finMaterial = new MeshStandardMaterial({
 })
 /** 弧形檐口铝板带。只赋给裙房那条带，避免把实体墙一起刷白。 */
 export const eaveMaterial = new MeshStandardMaterial({
+  name: '檐口',
   color: '#e7eef1',
   roughness: 0.46,
   metalness: 0.28,
@@ -118,7 +123,6 @@ export const baseMaterial = new MeshStandardMaterial({
   color: '#8f8c89',
   roughness: 0.86,
   metalness: 0.02,
-  envMapIntensity: 0.2,
 })
 export const stoneMaterial = new MeshStandardMaterial({ color: '#d7d2c8', roughness: 0.86, metalness: 0 })
 export const courtWallMaterial = new MeshStandardMaterial({
@@ -127,8 +131,21 @@ export const courtWallMaterial = new MeshStandardMaterial({
   metalness: 0,
   side: DoubleSide,
 })
-export const grassMaterial = new MeshStandardMaterial({ color: '#5d6b38', roughness: 0.96, metalness: 0 })
-export const pavingMaterial = new MeshStandardMaterial({ color: '#c5d0d8', roughness: 0.88, metalness: 0 })
+export const grassMaterial = new MeshStandardMaterial({
+  name: '草地',
+  color: '#5d6b38',
+  roughness: 0.96,
+  metalness: 0,
+})
+export const pavingMaterial = new MeshStandardMaterial({
+  name: '铺装',
+  color: '#c5d0d8',
+  roughness: 0.88,
+  metalness: 0,
+  polygonOffset: true,
+  polygonOffsetFactor: -2,
+  polygonOffsetUnits: -2,
+})
 export const deckMaterial = new MeshStandardMaterial({ color: '#d9d5cc', roughness: 0.88, metalness: 0 })
 export const roadMaterial = new MeshStandardMaterial({ color: '#2c2e3c', roughness: 0.94, metalness: 0.02 })
 export const sidewalkMaterial = new MeshStandardMaterial({ color: '#b7c6d0', roughness: 0.88, metalness: 0 })
@@ -168,7 +185,6 @@ export function applySurfaceMode(mode: SurfaceMode) {
     baseMaterial.color.set('#e4e4e4')
     baseMaterial.metalness = 0
     baseMaterial.roughness = 0.8
-    baseMaterial.envMapIntensity = 0.08
     stoneMaterial.color.set('#e6e6e6')
     courtWallMaterial.color.set('#e6e6e6')
     deckMaterial.color.set('#dedede')
@@ -199,7 +215,6 @@ export function applySurfaceMode(mode: SurfaceMode) {
     baseMaterial.color.set('#6a6764')
     baseMaterial.metalness = 0.02
     baseMaterial.roughness = 0.88
-    baseMaterial.envMapIntensity = 0.1
     stoneMaterial.color.set('#8a867e')
     courtWallMaterial.color.set('#8a867e')
     deckMaterial.color.set('#6e6a64')
@@ -239,7 +254,6 @@ export function applySurfaceMode(mode: SurfaceMode) {
     baseMaterial.color.set('#7f7b77')
     baseMaterial.metalness = 0.02
     baseMaterial.roughness = 0.88
-    baseMaterial.envMapIntensity = 0.15
     stoneMaterial.color.set('#b0ada8')
     courtWallMaterial.color.set('#9a9692')
     deckMaterial.color.set('#d9d5cc')

@@ -18,6 +18,7 @@ import { useBalancedWarmup } from './scene/useBalancedWarmup'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
+import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
 
 const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
@@ -79,6 +80,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   return (
     <>
       <color attach="background" args={[background]} />
+      <EnablePickVolumeRaycast />
       <DayExposure mode={mode} />
       <LocalEnvironment enabled={!model} night={night} />
       <hemisphereLight
@@ -105,13 +107,14 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         shadow-camera-bottom={-220}
       />
       <CameraRig fitRef={fitRef} fitGeneration={fitGeneration} />
+      {/* D124 / D126：EastGrille 与 RenderProbe 同边界；__twinReady 等格栅 chunk+lo GLB，以及 Suspense 外 HDR 解码和 PMREM。 */}
       <Suspense fallback={null}>
         <group ref={fitRef} name="Buildings">
           <Tower night={night} />
           <group name="AboveGradeContext" visible={!openBasement}>
             {!model && <ParcelMesh />}
             <Podium model={model} />
-            <EastBlock model={model} />
+            <EastBlock model={model} quality={quality} />
             <B1 model={model} />
           </group>
           <FitBump onReady={bumpFit} />

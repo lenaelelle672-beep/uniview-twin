@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Box3, type BufferGeometry } from 'three'
 import { floorDeskCount } from '../../floors/deskCounts'
 import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
-import { floorIdList } from '../../data/floors'
+import { floorIdList, floorSpec } from '../../data/floors'
 import { DESKS_PER_FLOOR, createMockData } from '../../data/mockData'
 import { resetTwinStore, useTwinStore } from '../../store/store'
 import { TOWER } from '../siteGeometry'
@@ -53,11 +53,11 @@ describe('单层剖切', () => {
   })
 
   it('切面在选中层楼板顶面，本层幕墙打开，屋面隐藏', () => {
-    expect(cutElevation('floor', 'F12')).toBeCloseTo(48 + SLAB_M, 5)
+    expect(cutElevation('floor', 'F12')).toBeCloseTo(floorSpec('F12').elevation + SLAB_M, 5)
     expect(cutElevation('floor', 'B1')).toBeCloseTo(-5.5 + SLAB_M, 5)
     expect(cutElevation('building', 'F12')).toBeNull()
-    expect(isFloorShellHidden('floor', 'F12', 52.2)).toBe(true)
-    expect(isFloorShellHidden('floor', 'F12', 48)).toBe(false)
+    expect(isFloorShellHidden('floor', 'F12', floorSpec('F13').elevation)).toBe(true)
+    expect(isFloorShellHidden('floor', 'F12', floorSpec('F12').elevation)).toBe(false)
     expect(isFloorCurtainOpen('floor', 'F12', 'F12')).toBe(true)
     expect(isFloorCurtainOpen('floor', 'F12', 'F11')).toBe(false)
     expect(isRoofHidden('floor', 'F3')).toBe(true)

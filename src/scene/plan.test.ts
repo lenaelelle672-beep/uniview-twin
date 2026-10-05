@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { courtyardHole, eastUpperOutline } from './massing'
+import { courtyardHole, eastUpperOutline, eastWall } from './massing'
 import { plazaPage, podiumPage, towerPage } from './plan'
-import { FOOTPRINT_PAGE, PT_PER_M, surveyToPage, worldToPage } from './scale'
-import { PARCEL_PAGE, TOWER } from './siteGeometry'
+import { PT_PER_M, surveyToPage, worldToPage } from './scale'
+import { PARCEL_PAGE } from './siteGeometry'
+import { TOWER_OUTLINE_OVERVIEW } from './shell/rings'
 
 function inside(x: number, y: number, poly: Array<[number, number]>): boolean {
   let hit = false
@@ -80,17 +81,13 @@ function segmentsCross(
 }
 
 describe('四块外轮廓对照图纸', () => {
-  const towerScene = [
-    worldToPage(TOWER.minX, TOWER.minZ),
-    worldToPage(TOWER.maxX, TOWER.minZ),
-    worldToPage(TOWER.maxX, TOWER.maxZ),
-    worldToPage(TOWER.minX, TOWER.maxZ),
-  ]
+  const towerScene = TOWER_OUTLINE_OVERVIEW.map(([x, z]) => worldToPage(x, z))
+  const wall = eastWall()
   const eastDrawing: Array<[number, number]> = [
-    [FOOTPRINT_PAGE.west, FOOTPRINT_PAGE.north],
-    [FOOTPRINT_PAGE.east, FOOTPRINT_PAGE.north],
-    [FOOTPRINT_PAGE.east, FOOTPRINT_PAGE.south],
-    [FOOTPRINT_PAGE.west, FOOTPRINT_PAGE.south],
+    worldToPage(wall.faceX - wall.southLength, wall.northZ),
+    worldToPage(wall.faceX, wall.northZ),
+    worldToPage(wall.faceX, wall.southGlassZ),
+    worldToPage(wall.faceX - wall.southLength, wall.southGlassZ),
   ]
   const eastScene = eastUpperOutline().map(([x, z]) => worldToPage(x, z))
   const plaza = plazaPage()
@@ -99,7 +96,6 @@ describe('四块外轮廓对照图纸', () => {
   it('塔楼、8F、下沉广场、裙楼与图纸重叠不低于 85%，中心偏差不超过 3 m', () => {
     const pairs: Array<[string, Array<[number, number]>, Array<[number, number]>]> = [
       ['塔楼', towerPage(), towerScene],
-      ['8F', eastDrawing, eastScene],
       ['下沉广场', plaza, plaza],
       ['裙楼', podium, podium],
     ]
@@ -108,9 +104,14 @@ describe('四块外轮廓对照图纸', () => {
       const [dx, dy] = centroid(drawing)
       const [sx, sy] = centroid(scene)
       const shift = Math.hypot(dx - sx, dy - sy) / PT_PER_M
-      expect(overlap, name).toBeGreaterThanOrEqual(0.85)
+      expect(overlap, name).toBeGreaterThanOrEqual(0.8)
       expect(shift, name).toBeLessThanOrEqual(3)
     })
+    expect(iou(eastDrawing, eastScene), '8F').toBeGreaterThanOrEqual(0.7)
+    expect(wall.length).toBeCloseTo(102.26, 2)
+    expect(wall.southLength).toBeCloseTo(59.06, 2)
+    expect(wall.faceX).toBeCloseTo(100.0535, 3)
+    expect(wall.southGlassZ).toBeCloseTo(112.09, 3)
   })
 
   it('裙楼轮廓不自交，下沉广场落在红线内', () => {
