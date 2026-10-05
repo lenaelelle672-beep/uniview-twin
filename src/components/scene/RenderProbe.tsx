@@ -1,6 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 import { Box3, Raycaster, Vector2, Vector3 } from 'three'
+import { markSuspenseReady, resetOverviewReadyMarks } from '../../scene/overviewReady'
 import { useTwinStore } from '../../store/store'
 
 const projected = new Vector3()
@@ -18,8 +19,7 @@ export function RenderProbe() {
   const scene = useThree((state) => state.scene)
 
   useEffect(() => {
-    window.__twinReady = true
-    window.__twinReadyAt = performance.now()
+    markSuspenseReady()
     window.__twinProject = (x, y, z) => {
       const rect = gl.domElement.getBoundingClientRect()
       projected.set(x, y, z).project(camera)
@@ -81,16 +81,13 @@ export function RenderProbe() {
     window.__twinView = useTwinStore.getState().view
     window.__twinSelected = useTwinStore.getState().selectedFloor
     return () => {
-      window.__twinReady = false
-      delete window.__twinReadyAt
-      delete window.__twinFirstFrameAt
-      delete window.__twinFirstFrameUnixMs
+      resetOverviewReadyMarks()
       unsubscribe()
     }
   }, [camera, gl, scene])
 
   useFrame(() => {
-    if (window.__twinFirstFrameAt == null) {
+    if (window.__twinReady && window.__twinFirstFrameAt == null) {
       window.__twinFirstFrameAt = performance.now()
       window.__twinFirstFrameUnixMs = Date.now()
     }

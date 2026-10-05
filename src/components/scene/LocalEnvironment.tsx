@@ -9,6 +9,7 @@ import {
   type WebGLRenderTarget,
 } from 'three'
 import { HDRLoader } from 'three/examples/jsm/loaders/HDRLoader.js'
+import { markHdrLoaded, markHdrNotRequired, markHdrPmremReady } from '../../scene/overviewReady'
 import { curtainMaterial, eaveMaterial, finMaterial, grilleMaterial, jointMaterial } from '../../scene/materials'
 
 /**
@@ -84,6 +85,7 @@ function acquireEnvironment(gl: WebGLRenderer): EnvEntry {
     const entry: EnvEntry = {
       users: 0,
       promise: new HDRLoader().loadAsync(OUTDOOR_HDR_URL).then((texture) => {
+        markHdrLoaded()
         if (entry.users === 0) {
           texture.dispose()
           throw new Error('环境贴图在预滤波前已卸载')
@@ -133,10 +135,20 @@ export function LocalEnvironment({ enabled, night }: { enabled: boolean; night: 
     scene.environment = env
     scene.environmentIntensity = night ? 0.16 : 0.22
     assignEnvMap(env)
+    if (!enabled) {
+      markHdrNotRequired()
+      return
+    }
+    if (env) {
+      markHdrPmremReady()
+    }
   }, [enabled, envMap, night, scene])
 
   useEffect(() => {
-    if (!enabled) return
+    if (!enabled) {
+      markHdrNotRequired()
+      return
+    }
     const entry = acquireEnvironment(gl)
     let cancelled = false
     let target: WebGLRenderTarget | null = null
@@ -146,7 +158,9 @@ export function LocalEnvironment({ enabled, night }: { enabled: boolean; night: 
         target = next
         setEnvMap(next.texture)
       },
-      () => {},
+      () => {
+        if (!cancelled) markHdrNotRequired()
+      },
     )
     return () => {
       cancelled = true

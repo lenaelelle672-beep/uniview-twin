@@ -65,7 +65,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         shadow-camera-bottom={-220}
       />
       <CameraRig fitRef={fitRef} fitGeneration={fitGeneration} />
-      {/* D124：EastGrille（lazy）和 RenderProbe 同在此边界。去掉 EastBlock 内层 Suspense 后，__twinReady 会等格栅 chunk 和 lo GLB。 */}
+      {/* D124 / D126：EastGrille 与 RenderProbe 同边界；__twinReady 等格栅 chunk+lo GLB，以及 Suspense 外 HDR 解码和 PMREM。 */}
       <Suspense fallback={null}>
         <group ref={fitRef} name="Buildings">
           <Tower night={night} />

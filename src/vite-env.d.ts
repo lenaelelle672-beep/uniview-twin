@@ -69,6 +69,12 @@ interface TwinEnvMaterial {
 interface Window {
   __twinReady?: boolean
   __twinReadyAt?: number
+  __twinSuspenseReady?: boolean
+  __twinHdrRequired?: boolean
+  __twinHdrLoadedAt?: number
+  __twinHdrLoadedUnixMs?: number
+  __twinHdrReadyAt?: number
+  __twinHdrReadyUnixMs?: number
   __twinFirstFrameAt?: number
   __twinFirstFrameUnixMs?: number
   __twinPrefetchAt?: number
