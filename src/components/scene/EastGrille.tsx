@@ -33,10 +33,19 @@ function tuneEastGrille(root: Object3D | null) {
         material.envMap = grilleMaterial.envMap
         material.needsUpdate = true
       }
-      if (material.clippingPlanes !== grilleMaterial.clippingPlanes) {
-        material.clippingPlanes = grilleMaterial.clippingPlanes
-        material.clipShadows = grilleMaterial.clipShadows
+      // hi/lo 两套都跟外壳切面走。只设 clippingPlanes 阴影 pass 不裁，必须 clipShadows。
+      const planes = grilleMaterial.clippingPlanes
+      const clipShadows = Boolean(planes && planes.length > 0)
+      if (material.clippingPlanes !== planes || material.clipShadows !== clipShadows) {
+        material.clippingPlanes = planes
+        material.clipShadows = clipShadows
         material.needsUpdate = true
+      }
+      const depth = mesh.customDepthMaterial
+      if (depth) {
+        depth.clippingPlanes = planes
+        depth.clipShadows = clipShadows
+        depth.needsUpdate = true
       }
     }
   })
@@ -49,7 +58,20 @@ function GrilleModel({ url }: { url: string }) {
     tuneEastGrille(scene)
   }, [scene])
   useFrame(() => {
-    if (scene.userData.twinGrilleEnv === grilleMaterial.envMap) return
+    const envChanged = scene.userData.twinGrilleEnv !== grilleMaterial.envMap
+    let clipStale = false
+    scene.traverse((child) => {
+      const mesh = child as Mesh
+      if (!mesh.isMesh) return
+      const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+      for (const material of materials) {
+        if (!(material instanceof MeshStandardMaterial) || material.name !== 'east_grille') continue
+        const planes = grilleMaterial.clippingPlanes
+        const clipShadows = Boolean(planes && planes.length > 0)
+        if (material.clippingPlanes !== planes || material.clipShadows !== clipShadows) clipStale = true
+      }
+    })
+    if (!envChanged && !clipStale) return
     tuneEastGrille(scene)
     scene.userData.twinGrilleEnv = grilleMaterial.envMap
   })

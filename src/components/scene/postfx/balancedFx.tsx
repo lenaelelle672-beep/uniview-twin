@@ -187,13 +187,11 @@ function ComposerBudget({ active }: { active: boolean }) {
   const gl = useThree((state) => state.gl)
   const { composer } = use(EffectComposerContext)
   useLayoutEffect(() => {
-    if (active) {
-      gl.getDrawingBufferSize(drawingSize)
+    gl.getDrawingBufferSize(drawingSize)
+    if (drawingSize.x > 1 && drawingSize.y > 1) {
       composer.setSize(drawingSize.x, drawingSize.y)
-      return
     }
-    composer.setSize(1, 1)
-    releaseMonitorTarget()
+    if (!active) releaseMonitorTarget()
   }, [active, composer, gl])
   return null
 }
