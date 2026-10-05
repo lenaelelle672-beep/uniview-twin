@@ -7,7 +7,7 @@ import { floorSpec } from '../data/floors'
 import { boxesOverlap, facadeGlassCorners, neighborFloorId } from './stage/facadeBoxes'
 import { MONITOR_DISPLAY_SRGB, monitorMaterial } from './stage/materials'
 import { monitorPlateCorners, monitorScreenCorners, monitorScreenPatchCorners } from './stage/geometry'
-import { blitDepth, overlayDepthBudget } from './monitorDepth'
+import { blitColor, blitDepth, overlayDepthBudget } from './monitorDepth'
 import { CONTACT_SHADOW_RESOLUTION, SHELL_VERSION } from './shellVersion'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -77,12 +77,16 @@ describe('T012 第二阶段约束', () => {
     const pass = readFileSync(join(here, '../components/scene/MonitorPass.tsx'), 'utf8')
     const fx = readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8')
     expect(pass).not.toMatch(/blitDepth\s*\(/)
+    expect(pass).not.toMatch(/blitColor\s*\(/)
     expect(pass).not.toMatch(/blitFramebuffer/)
-    expect(fx).toMatch(/blitDepth\(renderer, source, inputBuffer\)/)
+    expect(fx).toMatch(/blitDepth\(renderer, inputBuffer, dest\)/)
+    expect(fx).toMatch(/blitColor\(renderer, inputBuffer, dest\)/)
     expect(fx).not.toMatch(/blitDepth\([^)]*null/)
+    expect(fx).not.toMatch(/blitColor\([^)]*null/)
     expect(depth).toMatch(/dest == null/)
     expect(depth).toMatch(/blitFramebuffer/)
     expect(() => blitDepth({} as never, {} as never, null as never)).toThrow(/default framebuffer/)
+    expect(() => blitColor({} as never, {} as never, null as never)).toThrow(/default framebuffer/)
   })
 
   it('选中高亮仍是 #f7eedd，不参与色调映射', () => {
@@ -107,8 +111,12 @@ describe('T012 第二阶段约束', () => {
     ).toBe(false)
   })
 
-  it('告警屏通道不再另开全屏渲染目标', () => {
+  it('未分配时告警屏离屏目标为 0，D119 需要时才开一张单采样缓冲', () => {
     expect(overlayDepthBudget()).toEqual({ extraTargets: 0, extraBytes: 0 })
+    const fx = readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8')
+    expect(fx).toMatch(/ensureMonitorTarget/)
+    expect(fx).toMatch(/MonitorAfterTone/)
+    expect(fx).not.toMatch(/MonitorInComposer restore/)
   })
 
   it('预编译先查 KHR_parallel_shader_compile，没有就走同步 compile', () => {

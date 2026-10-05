@@ -7,6 +7,7 @@ import {
   Color,
   Group,
   Mesh,
+  MeshBasicMaterial,
   MeshDepthMaterial,
   NoToneMapping,
   OrthographicCamera,
@@ -19,7 +20,7 @@ import {
   type WebGLRenderer,
 } from 'three'
 import { HorizontalBlurShader, VerticalBlurShader } from 'three-stdlib'
-import { blitDepth } from '../../../scene/monitorDepth'
+import { blitColor, blitDepth, ensureMonitorTarget, releaseMonitorTarget } from '../../../scene/monitorDepth'
 import { MONITOR_LAYER } from '../../../scene/overlayOrder'
 import {
   CONTACT_SHADOW_FAR,
@@ -28,26 +29,36 @@ import {
   CONTACT_SHADOW_SCALE,
 } from '../../../scene/shellVersion'
 
-const composerSceneDepth: { current: WebGLRenderTarget | null } = { current: null }
 const drawingSize = new Vector2()
+const copyCamera = new OrthographicCamera(-1, 1, 1, -1, 0, 1)
+const copyMesh = new Mesh(
+  new PlaneGeometry(2, 2),
+  new MeshBasicMaterial({ depthTest: false, depthWrite: false, toneMapped: false }),
+)
 
-class MonitorDrawPass extends Pass {
-  restore: boolean
-
-  constructor(scene: Scene, camera: Camera, restore = false) {
-    super(restore ? 'MonitorRestorePass' : 'MonitorDrawPass', scene, camera)
+class CaptureSceneDepthPass extends Pass {
+  constructor() {
+    super('CaptureSceneDepthPass')
     this.needsSwap = false
-    this.restore = restore
   }
 
   render(renderer: WebGLRenderer, inputBuffer: WebGLRenderTarget) {
-    if (!this.restore) {
-      composerSceneDepth.current = inputBuffer
-    } else {
-      const source = composerSceneDepth.current
-      if (source && source !== inputBuffer) blitDepth(renderer, source, inputBuffer)
-    }
+    const dest = ensureMonitorTarget(inputBuffer.width, inputBuffer.height)
+    blitDepth(renderer, inputBuffer, dest)
+  }
+}
+
+class MonitorAfterTonePass extends Pass {
+  constructor(scene: Scene, camera: Camera) {
+    super('MonitorAfterTonePass', scene, camera)
+    this.needsSwap = false
+  }
+
+  render(renderer: WebGLRenderer, inputBuffer: WebGLRenderTarget) {
     if (!this.scene.getObjectByName('WorkstationMonitors')) return
+    const dest = ensureMonitorTarget(inputBuffer.width, inputBuffer.height)
+    blitColor(renderer, inputBuffer, dest)
+
     const prevTone = renderer.toneMapping
     const prevExposure = renderer.toneMappingExposure
     const prevAutoClear = renderer.autoClear
@@ -59,21 +70,32 @@ class MonitorDrawPass extends Pass {
     renderer.toneMappingExposure = 1
     this.camera.layers.set(MONITOR_LAYER)
     this.scene.background = null
-    renderer.setRenderTarget(inputBuffer)
+    renderer.setRenderTarget(dest)
     renderer.render(this.scene, this.camera)
     this.scene.background = prevBackground
     this.camera.layers.mask = prevMask
     renderer.toneMapping = prevTone
     renderer.toneMappingExposure = prevExposure
+
+    const material = copyMesh.material as MeshBasicMaterial
+    material.map = dest.texture
+    renderer.autoClear = true
+    renderer.setRenderTarget(inputBuffer)
+    renderer.render(copyMesh, copyCamera)
     renderer.autoClear = prevAutoClear
     renderer.setRenderTarget(prevTarget)
   }
 }
 
-function MonitorInComposer({ restore = false }: { restore?: boolean }) {
+function CaptureSceneDepth() {
+  const pass = useMemo(() => new CaptureSceneDepthPass(), [])
+  return <primitive object={pass} />
+}
+
+function MonitorAfterTone() {
   const scene = useThree((state) => state.scene)
   const camera = useThree((state) => state.camera)
-  const pass = useMemo(() => new MonitorDrawPass(scene, camera, restore), [camera, restore, scene])
+  const pass = useMemo(() => new MonitorAfterTonePass(scene, camera), [camera, scene])
   return <primitive object={pass} />
 }
 
@@ -133,6 +155,7 @@ function ComposerBudget({ active }: { active: boolean }) {
       return
     }
     composer.setSize(1, 1)
+    releaseMonitorTarget()
   }, [active, composer, gl])
   return null
 }
@@ -267,7 +290,8 @@ export function ContactGround({ active = true }: { active?: boolean }) {
 /**
  * 只在第一次切到均衡档之后保持挂载。切回性能档时 enabled=false 并收缩渲染目标，
  * shader 程序复用，不再每切一次重新编译。
- * 告警屏先写进合成器带深度的缓冲（色调映射前），AgX 之后再按同一份深度还原显示色，保住红色。
+ * D119：告警屏在 AgX 之后画进单采样、带场景深度的离屏 FBO，再用全屏四边形写回合成器。
+ * 深度用 blitDepth 从合成器 FBO 拷到这张离屏目标，绝不 blit 到默认帧缓冲。
  */
 export function PostFX({ onLive, active = true }: { onLive?: () => void; active?: boolean }) {
   return (
@@ -275,10 +299,10 @@ export function PostFX({ onLive, active = true }: { onLive?: () => void; active?
       <ToneMappingBridge active={active} />
       <EffectComposer enabled={active} multisampling={2} enableNormalPass={false} stencilBuffer={false} renderPriority={1}>
         <ComposerBudget active={active} />
-        <MonitorInComposer />
+        <CaptureSceneDepth />
         <BalancedAO />
         <ToneMapping mode={ToneMappingMode.AGX} />
-        <MonitorInComposer restore />
+        <MonitorAfterTone />
       </EffectComposer>
       <MarkComposerLive onLive={onLive} active={active} />
     </>

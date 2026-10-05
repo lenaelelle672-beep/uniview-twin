@@ -32,7 +32,7 @@ function renderMonitors(gl: WebGLRenderer, scene: Scene, camera: Camera) {
 
 /**
  * 性能档：主场景深度已在默认帧缓冲（直接画进去，不是 blit）。
- * 均衡档：告警屏改在合成器自带深度的缓冲里画，这里只报 SAMPLES / getError，不再往默认 FBO 画。
+ * 均衡档：告警屏在色调映射之后画进单采样离屏 FBO，这里只报 SAMPLES / getError，不 blit。
  */
 export function MonitorPass({
   renderPriority,
@@ -48,7 +48,7 @@ export function MonitorPass({
   useFrame(() => {
     gl.getDrawingBufferSize(drawingSize)
     window.__twinOverlayBudget = {
-      ...overlayDepthBudget(),
+      ...overlayDepthBudget(drawingSize.x, drawingSize.y),
       drawingBuffer: { width: drawingSize.x, height: drawingSize.y },
     }
     window.__twinTargetInventory = balancedTargetInventory(drawingSize.x, drawingSize.y)
