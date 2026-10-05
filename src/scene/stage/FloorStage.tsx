@@ -13,6 +13,7 @@ import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
 import { STATUS_COLOR } from './status'
 import { workstationPosition } from './workstationPosition'
+import { MonitorSamples } from './MonitorSamples'
 import { TowerInterior } from './TowerInterior'
 
 function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDesks: number }) {
@@ -118,6 +119,14 @@ export function FloorStage() {
         />
       )}
       {spec && spec.level < 0 && <B1Interior slots={slots} colors={colors} devices={floorDevices} />}
+      {spec && spec.level > 0 && (
+        <MonitorSamples
+          floorId={spec.id}
+          slots={slots}
+          colors={colors}
+          deskIds={floorDesks.map((desk) => desk.id)}
+        />
+      )}
       <InteriorProbe floorId={active} dataDesks={floorDesks.length} />
     </>
   )

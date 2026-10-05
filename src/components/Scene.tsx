@@ -9,6 +9,8 @@ import { EastBlock } from './scene/EastBlock'
 import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
+import { FacadeSamples } from '../scene/stage/MonitorSamples'
+import { MonitorPass } from './scene/MonitorPass'
 import { RenderProbe } from './scene/RenderProbe'
 import { ParcelMesh, Site } from './scene/Site'
 import { ExplodedLayout } from './scene/ExplodedLayout'
@@ -93,12 +95,14 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <ExplodedLayout />
         <FloorStage />
       </Suspense>
+      <MonitorPass renderPriority={extrasReady ? 2 : 1} />
       <Suspense fallback={null}>
-        <Hud renderPriority={extrasReady ? 2 : 1}>
+        <Hud renderPriority={extrasReady ? 3 : 2}>
           <FloorBadges />
         </Hud>
       </Suspense>
       <RenderProbe />
+      <FacadeSamples />
       {extrasReady && (
         <Suspense fallback={null}>
           <PostFX />

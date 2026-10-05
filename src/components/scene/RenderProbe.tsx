@@ -24,6 +24,7 @@ export function RenderProbe() {
     window.__twinView = useTwinStore.getState().view
     window.__twinDevices = useTwinStore.getState().devices
     window.__twinFocusDevice = (target) => useTwinStore.getState().focusDevice(target)
+    window.__twinSelectFloor = (floorId) => useTwinStore.getState().setSelectedFloor(floorId)
     const unsubscribe = useTwinStore.subscribe((state) => {
       window.__twinFly = state.floorFlyRequest
       window.__twinSelected = state.selectedFloor

@@ -50,12 +50,35 @@ interface TwinExplodeStats {
   floors: TwinExplodeFloor[]
 }
 
+interface TwinSampleBox {
+  x: number
+  y: number
+  w: number
+  h: number
+}
+
+interface TwinMonitorBoxes {
+  floorId: string
+  canvas: { width: number; height: number }
+  alarm: { deskId: string; box: TwinSampleBox } | null
+  online: { deskId: string; box: TwinSampleBox } | null
+}
+
+interface TwinFacadeBoxes {
+  selectedFloor: string
+  neighborFloor: string
+  canvas: { width: number; height: number }
+  selected: TwinSampleBox
+  neighbor: TwinSampleBox
+}
+
 interface Window {
   __twinReady?: boolean
   __twinSelected?: string | null
   __twinView?: string
   __twinDevices?: Array<{ id: string; deskId?: string; floorId: string; type: string; status: string }>
   __twinFocusDevice?: (target: { floor: string; deskId: string | null; deviceId?: string | null }) => void
+  __twinSelectFloor?: (floorId: string | null) => void
   __twinStats?: TwinRenderStats
   __twinBadges?: number
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>
@@ -94,6 +117,8 @@ interface Window {
   __twinHighlight?: string
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
+  __twinMonitorBoxes?: TwinMonitorBoxes
+  __twinFacadeBoxes?: TwinFacadeBoxes
   __twinWarmup?: {
     compileMs: number
     totalMs: number

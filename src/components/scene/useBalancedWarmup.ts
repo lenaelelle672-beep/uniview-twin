@@ -135,12 +135,13 @@ export function useBalancedWarmup(quality: QualityTier): boolean {
       if (cancelled) return
 
       enableBalancedShadows(gl, scene)
+      const prevMask = camera.layers.mask
+      camera.layers.enableAll()
       const compileStarted = performance.now()
       await compileScene(gl, scene, camera)
       const compileMs = performance.now() - compileStarted
-      if (cancelled) return
-
       renderShadowWarmup(gl, scene, camera)
+      camera.layers.mask = prevMask
       if (cancelled) return
 
       setReady(true)
@@ -148,8 +149,10 @@ export function useBalancedWarmup(quality: QualityTier): boolean {
       if (cancelled) return
 
       enableBalancedShadows(gl, scene)
+      camera.layers.enableAll()
       await compileScene(gl, scene, camera)
       renderShadowWarmup(gl, scene, camera)
+      camera.layers.mask = prevMask
       if (cancelled) return
 
       await waitFrames(2)

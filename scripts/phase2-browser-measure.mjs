@@ -79,6 +79,38 @@ async function screenshotCanvas(page, name) {
   return file
 }
 
+async function annotateBoxes(page, name, boxes) {
+  const dataUrl = await page.evaluate((rects) => {
+    const source = document.querySelector('canvas')
+    const copy = document.createElement('canvas')
+    copy.width = source.width
+    copy.height = source.height
+    const ctx = copy.getContext('2d')
+    ctx.drawImage(source, 0, 0)
+    for (const rect of rects) {
+      if (!rect?.box) continue
+      ctx.save()
+      ctx.strokeStyle = rect.color
+      ctx.lineWidth = 3
+      ctx.strokeRect(rect.box.x, rect.box.y, rect.box.w, rect.box.h)
+      ctx.fillStyle = rect.color
+      ctx.font = '16px sans-serif'
+      ctx.fillText(rect.label, rect.box.x, Math.max(14, rect.box.y - 6))
+      ctx.restore()
+    }
+    return copy.toDataURL('image/png')
+  }, boxes)
+  const file = resolve(outDir, `${name}.png`)
+  const bytes = Buffer.from(dataUrl.split(',')[1], 'base64')
+  await writeFile(file, bytes)
+  return file
+}
+
+function ratioFrom(alarm, normal) {
+  if (!alarm || !normal || !(normal.L > 0)) return null
+  return alarm.L / normal.L
+}
+
 async function pageImage(page) {
   return page.evaluate(() => {
     const canvas = document.querySelector('canvas')
@@ -115,7 +147,7 @@ async function main() {
     headless: true,
     args: ['--use-gl=angle', '--use-angle=swiftshader', '--ignore-gpu-blocklist', '--no-sandbox', '--window-size=1366,768'],
   })
-  const report = { views: {}, switches: [], badges: {}, alarms: {}, stone: {}, network: {} }
+  const report = { views: {}, switches: [], badges: {}, alarms: {}, highlight: {}, stone: {}, network: {} }
 
   try {
     for (const [name, search] of [
@@ -127,8 +159,6 @@ async function main() {
       ['p2f003-balanced', '?q=balanced&cam=p2f003'],
       ['f12-perf', '?q=perf&view=floor&floor=F12'],
       ['f12-balanced', '?q=balanced&view=floor&floor=F12'],
-      ['f3-balanced', '?q=balanced&view=floor&floor=F3'],
-      ['f18-balanced', '?q=balanced&view=floor&floor=F18'],
     ]) {
       const { page, consoles, requests } = await open(browser, search)
       await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)))
@@ -140,95 +170,78 @@ async function main() {
       if (name === 'east-balanced') {
         const image = await pageImage(page)
         const data = Uint8ClampedArray.from(image.data)
-        // 研发块下部石材大约在画面中下部
         report.stone = sampleBox(data, image.width, image.height, { x: image.width * 0.38, y: image.height * 0.62, w: image.width * 0.18, h: image.height * 0.1 })
-      }
-      if (name.startsWith('f12-')) {
-        const image = await pageImage(page)
-        const data = Uint8ClampedArray.from(image.data)
-        const w = image.width
-        const h = image.height
-        const reds = []
-        const normals = []
-        for (let y = Math.floor(h * 0.25); y < Math.floor(h * 0.8); y += 3) {
-          for (let x = Math.floor(w * 0.15); x < Math.floor(w * 0.85); x += 3) {
-            const offset = (y * w + x) * 4
-            const r = data[offset]
-            const g = data[offset + 1]
-            const b = data[offset + 2]
-            const L = relativeLuminance(r, g, b)
-            if (r > 140 && r > g * 1.35 && r > b * 1.35) reds.push({ r, g, b, L })
-            else if (g > 90 && g > r * 1.1 && g > b) normals.push({ r, g, b, L })
-            else if (b > 90 && b > r && b > g) normals.push({ r, g, b, L })
-          }
-        }
-        const med = (list) => {
-          if (list.length === 0) return null
-          const sorted = [...list].sort((a, b) => a.L - b.L)
-          return sorted[Math.floor(sorted.length / 2)]
-        }
-        const alarm = med(reds)
-        const normal = med(normals)
-        report.alarms[name] = {
-          alarmCount: reds.length,
-          normalCount: normals.length,
-          alarm,
-          normal,
-          ratio: alarm && normal && normal.L > 0 ? alarm.L / normal.L : null,
-          hueStillRed: alarm ? alarm.r > alarm.g && alarm.r > alarm.b : false,
-        }
       }
       await page.close()
     }
 
-    for (const floorId of ['F12', 'F3', 'F18']) {
-      const { page } = await open(browser, `?q=balanced&view=floor&floor=${floorId}`)
-      await page.waitForFunction(() => (window.__twinDevices ?? []).length > 0, { timeout: 30_000 })
-      const desk = await page.evaluate((id) => {
-        const devices = window.__twinDevices ?? []
-        const alarm = devices.find((device) => device.floorId === id && device.type === 'pc' && device.status === 'alarm')
-        const online = devices.find((device) => device.floorId === id && device.type === 'pc' && device.status === 'online')
-        if (alarm) window.__twinFocusDevice?.({ floor: id, deskId: alarm.deskId, deviceId: alarm.id })
-        return { alarm: alarm?.deskId ?? null, online: online?.deskId ?? null }
-      }, floorId)
-      await page.waitForFunction(() => window.__twinLocate || window.__twinFlyEnd, { timeout: 20_000 }).catch(() => {})
-      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1200)))
-      const closeName = `${floorId.toLowerCase()}-alarm-close-balanced`
-      await screenshotCanvas(page, closeName)
+    for (const quality of ['perf', 'balanced']) {
+      for (const floorId of ['F3', 'F12', 'F18']) {
+        const name = `${floorId.toLowerCase()}-${quality}`
+        const { page, consoles, requests } = await open(browser, `?q=${quality}&view=floor&floor=${floorId}`)
+        await page.waitForFunction(() => window.__twinMonitorBoxes?.floorId === floorId && window.__twinMonitorBoxes.alarm && window.__twinMonitorBoxes.online, {
+          timeout: 45_000,
+        })
+        await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 600)))
+        const boxes = await page.evaluate(() => window.__twinMonitorBoxes)
+        const image = await pageImage(page)
+        const data = Uint8ClampedArray.from(image.data)
+        const alarm = boxes.alarm ? sampleBox(data, image.width, image.height, boxes.alarm.box) : null
+        const online = boxes.online ? sampleBox(data, image.width, image.height, boxes.online.box) : null
+        const shot = await annotateBoxes(page, `${name}-alarm-boxes`, [
+          { ...boxes.alarm, color: '#ff3355', label: `alarm ${boxes.alarm?.deskId ?? ''}` },
+          { ...boxes.online, color: '#22cc66', label: `online ${boxes.online?.deskId ?? ''}` },
+        ])
+        await screenshotCanvas(page, name)
+        const external = requests.filter((url) => !url.startsWith(baseUrl) && !url.startsWith('data:') && !url.startsWith('blob:'))
+        report.alarms[name] = {
+          floorId,
+          quality,
+          boxes,
+          alarm,
+          online,
+          ratio: ratioFrom(alarm, online),
+          hueStillRed: alarm ? alarm.r > alarm.g && alarm.r > alarm.b : false,
+          shot,
+          consoles,
+          external,
+          ...(await stats(page)),
+        }
+        await page.close()
+      }
+    }
+
+    for (const quality of ['perf', 'balanced']) {
+      const { page } = await open(browser, `?q=${quality}`)
+      await page.waitForFunction(() => (window.__twinBadgeCenters ?? []).length >= 12, { timeout: 30_000 })
+      const hit = await page.evaluate(() => {
+        const center = (window.__twinBadgeCenters ?? []).find((item) => item.id === 'F12')
+        if (!center || !window.__twinProject) return null
+        return { id: center.id, ...window.__twinProject(center.x, center.y, center.z) }
+      })
+      if (hit && !hit.behind) {
+        await page.mouse.click(hit.x, hit.y)
+      }
+      await page.evaluate(() => window.__twinSelectFloor?.('F12'))
+      await page.waitForFunction(() => window.__twinSelected === 'F12' && window.__twinView === 'building' && window.__twinFacadeBoxes?.selectedFloor === 'F12', {
+        timeout: 20_000,
+      })
+      await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 500)))
+      const boxes = await page.evaluate(() => window.__twinFacadeBoxes)
       const image = await pageImage(page)
       const data = Uint8ClampedArray.from(image.data)
-      const w = image.width
-      const h = image.height
-      const reds = []
-      const greens = []
-      for (let y = Math.floor(h * 0.2); y < Math.floor(h * 0.85); y += 2) {
-        for (let x = Math.floor(w * 0.15); x < Math.floor(w * 0.85); x += 2) {
-          const offset = (y * w + x) * 4
-          const r = data[offset]
-          const g = data[offset + 1]
-          const b = data[offset + 2]
-          const L = relativeLuminance(r, g, b)
-          if (r > 160 && r > g + 40 && r > b + 40) reds.push({ r, g, b, L })
-          else if (g > 120 && g > r + 20 && g > b) greens.push({ r, g, b, L })
-        }
-      }
-      const med = (list) => {
-        if (list.length === 0) return null
-        const sorted = [...list].sort((a, b) => a.L - b.L)
-        return sorted[Math.floor(sorted.length / 2)]
-      }
-      const alarm = med(reds)
-      const normal = med(greens)
-      report.alarms[`${floorId}-close`] = {
-        desk,
-        alarmCount: reds.length,
-        normalCount: greens.length,
-        alarm,
-        normal,
-        ratio: alarm && normal && Math.min(alarm.L, normal.L) > 0 ? Math.max(alarm.L, normal.L) / Math.min(alarm.L, normal.L) : null,
-        brightnessRatio: alarm && normal && normal.L > 0 ? alarm.L / normal.L : null,
-        hueStillRed: alarm ? alarm.r > alarm.g && alarm.r > alarm.b : false,
-        shot: resolve(outDir, `${closeName}.png`),
+      const selected = boxes ? sampleBox(data, image.width, image.height, boxes.selected) : null
+      const neighbor = boxes ? sampleBox(data, image.width, image.height, boxes.neighbor) : null
+      const shot = await annotateBoxes(page, `highlight-${quality}`, [
+        { box: boxes?.selected, color: '#ffcc33', label: `selected ${boxes?.selectedFloor ?? ''}` },
+        { box: boxes?.neighbor, color: '#66aaff', label: `adjacent ${boxes?.neighborFloor ?? ''}` },
+      ])
+      report.highlight[quality] = {
+        boxes,
+        selected,
+        neighbor,
+        ratio: ratioFrom(selected, neighbor),
+        shot,
       }
       await page.close()
     }

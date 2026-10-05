@@ -223,6 +223,31 @@ export function createDeskGeometry(): BufferGeometry {
   ])
 }
 
+/** 工位局部坐标：屏幕中心、底座顶面中心。取样框按底座投影，躲开悬浮徽标。 */
+export const MONITOR_SCREEN_LOCAL = { x: 0, y: 1.02, z: -0.22 }
+export const MONITOR_PLATE_LOCAL = { x: 0, y: 0.804, z: 0.02 }
+export const MONITOR_PLATE_SIZE = { w: 0.72, h: 0.028, d: 0.46 }
+
+export function monitorPlateCorners(slot: { x: number; z: number; rot?: number }, elevation: number, slab = 0.16) {
+  const halfW = MONITOR_PLATE_SIZE.w / 2
+  const halfD = MONITOR_PLATE_SIZE.d / 2
+  const y = elevation + slab + MONITOR_PLATE_LOCAL.y
+  const cos = Math.cos(slot.rot ?? 0)
+  const sin = Math.sin(slot.rot ?? 0)
+  return (
+    [
+      [-halfW, -halfD],
+      [halfW, -halfD],
+      [halfW, halfD],
+      [-halfW, halfD],
+    ] as const
+  ).map(([lx, lz]) => ({
+    x: slot.x + MONITOR_PLATE_LOCAL.x + lx * cos - lz * sin,
+    y,
+    z: slot.z + MONITOR_PLATE_LOCAL.z + lx * sin + lz * cos,
+  }))
+}
+
 export function createMonitorGeometry(): BufferGeometry {
   const screen = new BoxGeometry(0.52, 0.32, 0.028)
   screen.rotateX(-0.42)
