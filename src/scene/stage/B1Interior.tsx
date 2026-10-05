@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Color } from 'three'
 import type { Device } from '../../types'
 import { extrudeUp } from '../extrude'
@@ -51,8 +51,7 @@ import {
   woodMaterial,
 } from './materials'
 import { DeskFlash } from './DeskFlash'
-import { DeviceBadges } from './DeviceBadges'
-import { RoomLabels } from './RoomLabels'
+import { FloorDecor } from './lazyFloorDecor'
 import { basementRoomLabels } from './roomLabels'
 import { InstancedSlots, Workstations } from './Workstations'
 
@@ -115,10 +114,7 @@ export function B1Interior({ slots, colors, devices }: { slots: Slot[]; colors: 
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
       <DeskFlash floorId="B1" />
-      <DeviceBadges floorId="B1" devices={devices} />
-      <Suspense fallback={null}>
-        <RoomLabels labels={basementRoomLabels()} />
-      </Suspense>
+      <FloorDecor floorId="B1" devices={devices} labels={basementRoomLabels()} />
       <Ceiling
         width={B1_CEILING.x1 - B1_CEILING.x0}
         depth={B1_CEILING.z1 - B1_CEILING.z0}

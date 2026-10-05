@@ -5,16 +5,16 @@ import { InstancedMesh, Mesh, MeshStandardMaterial, Object3D, Quaternion, Scene,
 import { propNightEmissive } from '../../scene/props/emissive'
 import type { Placement } from '../../scene/siteGeometry'
 import { installMeshopt } from '../../scene/meshopt'
+import { markTreeLoReady } from '../../scene/overviewReady'
 
 const TREE_HI = '/models/street-tree-hi.glb'
 const TREE_LO = '/models/street-tree-lo.glb'
 const LAMP = '/models/street-lamp.glb'
-const SIGN = '/models/roof-sign.glb'
 const LEAF_MATERIAL = 'tree_leaves'
 
-// 只预加载每档都会用到的模型。精细树不能在这里预加载，否则性能档也会请求它。
+// 灯和树 lo 三档都用（主树或阴影）。精细树不预加载，避免性能档也去拉。
 useLoader.preload(GLTFLoader, LAMP, installMeshopt)
-useLoader.preload(GLTFLoader, SIGN, installMeshopt)
+useLoader.preload(GLTFLoader, TREE_LO, installMeshopt)
 
 function collectMeshes(root: Object3D): Mesh[] {
   const meshes: Mesh[] = []
@@ -66,6 +66,7 @@ export function InstancedProp({
   leafCastShadow?: boolean
 }) {
   const gltf = useLoader(GLTFLoader, url, installMeshopt)
+  if (url === TREE_LO) markTreeLoReady()
   const meshes = useMemo(() => collectMeshes(gltf.scene), [gltf])
   const refs = useRef<Array<InstancedMesh | null>>([])
 
@@ -131,6 +132,7 @@ export function FoliageShadow({
 }) {
   const gl = useThree((state) => state.gl)
   const gltf = useLoader(GLTFLoader, url, installMeshopt)
+  markTreeLoReady()
   const leaf = useMemo(
     () => collectMeshes(gltf.scene).find((mesh) => materialName(mesh) === LEAF_MATERIAL) ?? null,
     [gltf],
@@ -158,17 +160,4 @@ export function FoliageShadow({
   )
 }
 
-export function RoofSign({ night, position }: { night: boolean; position: [number, number, number] }) {
-  const gltf = useLoader(GLTFLoader, SIGN, installMeshopt)
-  const sign = useMemo(() => gltf.scene.clone(true), [gltf])
-  useLayoutEffect(() => {
-    sign.traverse((child) => {
-      const mesh = child as Mesh
-      if (!mesh.isMesh) return
-      tunePropMaterial(mesh.material as MeshStandardMaterial, night)
-    })
-  }, [night, sign])
-  return <primitive object={sign} position={position} />
-}
-
-export const PROP_URL = { TREE_HI, TREE_LO, LAMP, SIGN }
+export const PROP_URL = { TREE_HI, TREE_LO, LAMP }

@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { BlueprintView } from '../blueprint/BlueprintView'
+import { useEffect, useState, type ComponentType } from 'react'
+import { schedulePrefetchAfterFirstFrame } from '../scene/stage/prefetchLazyChunks'
 import { useTwinStore } from '../store/store'
 import { SceneCanvas } from './Scene'
 
@@ -12,6 +12,7 @@ export function Stage() {
   const posNotice = useTwinStore((state) => state.posNotice)
   const exitFloor = useTwinStore((state) => state.exitFloor)
   const setExploded = useTwinStore((state) => state.setExploded)
+  const [BlueprintView, setBlueprintView] = useState<ComponentType | null>(null)
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -23,6 +24,24 @@ export function Stage() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  useEffect(() => {
+    if (view !== 'blueprint' || BlueprintView) return
+    let cancelled = false
+    void import('../blueprint/BlueprintView').then((mod) => {
+      if (!cancelled) setBlueprintView(() => mod.BlueprintView)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [BlueprintView, view])
+
+  useEffect(() => {
+    if (view !== 'building') return
+    return schedulePrefetchAfterFirstFrame()
+  }, [view])
+
+  const showBlueprint = view === 'blueprint' && BlueprintView !== null
 
   return (
     <main className="stage" aria-label="场景" data-exploded={exploded ? 'true' : 'false'}>
@@ -41,7 +60,12 @@ export function Stage() {
           {posNotice}
         </p>
       )}
-      {view === 'blueprint' ? <BlueprintView /> : <SceneCanvas />}
+      {view === 'blueprint' && !showBlueprint && (
+        <p className="banner" role="status">
+          正在打开蓝图…
+        </p>
+      )}
+      {showBlueprint && BlueprintView ? <BlueprintView /> : <SceneCanvas />}
       {view === 'floor' && (
         <button type="button" className="back-button" title="Esc 返回总览" onClick={() => exitFloor()}>
           返回总览

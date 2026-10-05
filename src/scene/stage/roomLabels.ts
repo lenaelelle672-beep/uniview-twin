@@ -6,7 +6,7 @@ export interface RoomLabel {
   label: [number, number, number]
 }
 
-export const ROOM_LABEL_FONT = '/fonts/NotoSansSC-Regular-subset.otf'
+export const ROOM_LABEL_FONT = '/fonts/NotoSansSC-Regular-subset.woff'
 
 /** drei Text 的 characters，用来只预排这些字，避免回退字体。 */
 export function roomLabelCharacters(labels: RoomLabel[]): string {
