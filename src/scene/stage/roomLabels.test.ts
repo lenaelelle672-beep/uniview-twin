@@ -2,11 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { getFloorPlan } from '../../floors/cache'
 import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { roomLabelsFromPlan } from '../../floors/labels'
-import { basementRoomLabels, roomLabelCharacters } from './roomLabels'
+import { basementRoomLabels, ROOM_LABEL_FONT, roomLabelCharacters } from './roomLabels'
 
 hydrateAllAboveGrade()
 
 describe('房间引线标签', () => {
+  it('单层标签用本地 woff 子集，不指向 otf 或外网', () => {
+    expect(ROOM_LABEL_FONT).toBe('/fonts/NotoSansSC-Regular-subset.woff')
+    expect(ROOM_LABEL_FONT).not.toMatch(/\.otf|jsdelivr|cdn/i)
+  })
+
   it('图纸层标签放在 label 点上，地下室仍用原方案，总数不超过 30', () => {
     const labels = roomLabelsFromPlan(getFloorPlan('F12')!)
     const basement = basementRoomLabels()

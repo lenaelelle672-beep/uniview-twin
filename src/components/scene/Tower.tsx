@@ -14,7 +14,7 @@ import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scen
 import { TOWER } from '../../scene/siteGeometry'
 import { createTowerGlass } from '../../scene/towerGlass'
 import { useTwinStore } from '../../store/store'
-import { RoofSign } from './InstancedProp'
+import { RoofSign } from './RoofSign'
 import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
 import { useFloorActions } from './floorPick'
 

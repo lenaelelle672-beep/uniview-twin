@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { BoxGeometry, Color, type BufferGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { FloorSpec } from '../data/floors'
@@ -10,21 +10,11 @@ import type { Slot } from '../scene/stage/layout'
 import { columnMaterial, coreWallMaterial, meetingGlassMaterial, slabMaterial } from '../scene/stage/materials'
 import { Ceiling } from '../scene/stage/Ceiling'
 import { DeskFlash } from '../scene/stage/DeskFlash'
-import { DeviceBadges } from '../scene/stage/DeviceBadges'
+import { FloorDecor } from '../scene/stage/lazyFloorDecor'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
 import { loadFloorPlan } from './loadFloor'
 import { roomLabelsFromPlan } from './labels'
 import type { FloorPlan, FloorWall } from './types'
-
-const RoomLabels = lazy(async () => {
-  const mod = await import('../scene/stage/RoomLabels')
-  return { default: mod.RoomLabels }
-})
-
-const CorridorPeople = lazy(async () => {
-  const mod = await import('../scene/stage/CorridorPeople')
-  return { default: mod.CorridorPeople }
-})
 
 const WALL_H = 2.55
 const wallBoxGeometry = new BoxGeometry(1, WALL_H, 1)
@@ -165,11 +155,7 @@ function JsonFloorReady({
       />
       <Workstations slots={slots} colors={colors} />
       <DeskFlash floorId={spec.id} />
-      <DeviceBadges floorId={spec.id} devices={devices} />
-      <Suspense fallback={null}>
-        <RoomLabels labels={labels} />
-        <CorridorPeople enabled={showPeople} paths={peoplePaths} />
-      </Suspense>
+      <FloorDecor floorId={spec.id} devices={devices} labels={labels} showPeople={showPeople} paths={peoplePaths} />
       <Ceiling
         width={Math.max(bounds.w, 8)}
         depth={Math.max(bounds.d, 8)}

@@ -1,4 +1,5 @@
-import { Detailed, useAnimations } from '@react-three/drei'
+import { Detailed } from '@react-three/drei/core/Detailed'
+import { useAnimations } from '@react-three/drei/core/useAnimations'
 import { useFrame, useLoader } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Group, MeshStandardMaterial, SkinnedMesh } from 'three'

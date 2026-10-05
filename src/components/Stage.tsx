@@ -1,7 +1,11 @@
-import { useEffect } from 'react'
-import { BlueprintView } from '../blueprint/BlueprintView'
+import { lazy, Suspense, useEffect } from 'react'
 import { useTwinStore } from '../store/store'
 import { SceneCanvas } from './Scene'
+
+const BlueprintView = lazy(async () => {
+  const mod = await import('../blueprint/BlueprintView')
+  return { default: mod.BlueprintView }
+})
 
 export function Stage() {
   const view = useTwinStore((state) => state.view)
@@ -41,7 +45,13 @@ export function Stage() {
           {posNotice}
         </p>
       )}
-      {view === 'blueprint' ? <BlueprintView /> : <SceneCanvas />}
+      {view === 'blueprint' ? (
+        <Suspense fallback={null}>
+          <BlueprintView />
+        </Suspense>
+      ) : (
+        <SceneCanvas />
+      )}
       {view === 'floor' && (
         <button type="button" className="back-button" title="Esc 返回总览" onClick={() => exitFloor()}>
           返回总览
