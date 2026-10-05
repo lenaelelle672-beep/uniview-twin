@@ -58,7 +58,18 @@ async function waitFloor(page, floorId) {
       wantDesks,
     )
     .catch(() => {})
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 2800)))
+  await page
+    .waitForFunction(
+      () =>
+        Boolean(
+          window.__twinScene?.getObjectByName?.('RoomLabels') ||
+            window.__perf?.scenes?.[0]?.getObjectByName('RoomLabels') ||
+            window.__twinSlab,
+        ),
+      { timeout: 30_000 },
+    )
+    .catch(() => {})
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 3200)))
 }
 
 async function shot(page, name) {
@@ -75,16 +86,36 @@ async function shot(page, name) {
 async function readPose(page) {
   return page.evaluate(() => {
     const rig = window.__twinRig
-    if (!rig) return null
-    const position = { x: 0, y: 0, z: 0 }
+    const cam = rig?.camera
+    if (!cam) return null
+    const position = { x: cam.position.x, y: cam.position.y, z: cam.position.z }
     const target = { x: 0, y: 0, z: 0 }
-    if (typeof rig.getPosition === 'function') rig.getPosition(position)
-    else if (rig.camera) Object.assign(position, rig.camera.position)
-    if (typeof rig.getTarget === 'function') rig.getTarget(target)
+    if (typeof rig.getTarget === 'function') {
+      const out = {
+        x: 0,
+        y: 0,
+        z: 0,
+        set(x, y, z) {
+          this.x = x
+          this.y = y
+          this.z = z
+          return this
+        },
+      }
+      const got = rig.getTarget(out)
+      target.x = got?.x ?? out.x
+      target.y = got?.y ?? out.y
+      target.z = got?.z ?? out.z
+    } else {
+      const e = cam.matrixWorld.elements
+      target.x = position.x - e[8] * 48
+      target.y = position.y - e[9] * 48
+      target.z = position.z - e[10] * 48
+    }
     return {
       position: [position.x, position.y, position.z],
       target: [target.x, target.y, target.z],
-      fov: rig.camera?.fov ?? null,
+      fov: cam.fov ?? null,
     }
   })
 }
@@ -241,20 +272,20 @@ async function main() {
   for (const quality of QUALITIES) {
     for (const floorId of FLOORS) {
       const key = `${floorId.toLowerCase()}-${quality}`
+      const baseline = await openFloor(browser, aUrl, quality, floorId)
+      const aPose = await readPose(baseline)
+      const aShot = await shot(baseline, `d153-a-compare-${key}-a`)
+      const aDesks = await baseline.evaluate(() => window.__twinInterior?.renderedDesks ?? 0)
+      await baseline.close()
+
       const current = await openFloor(browser, currentUrl, quality, floorId)
+      await applyPose(current, aPose)
       const pose = await readPose(current)
       const cBoxes = await collectCBoxes(current)
       const currentShot = await shot(current, `d153-a-compare-${key}-current`)
       const cut = await current.evaluate(() => window.__twinCut ?? null)
       const desks = await current.evaluate(() => window.__twinInterior?.renderedDesks ?? 0)
       await current.close()
-
-      const baseline = await openFloor(browser, aUrl, quality, floorId)
-      await applyPose(baseline, pose)
-      const aShot = await shot(baseline, `d153-a-compare-${key}-a`)
-      const aPose = await readPose(baseline)
-      const aDesks = await baseline.evaluate(() => window.__twinInterior?.renderedDesks ?? 0)
-      await baseline.close()
 
       const vis = resolve(shotDir, `d153-a-compare-${key}-diff.png`)
       const diff = pixelDiff(currentShot, aShot, vis, cBoxes)
