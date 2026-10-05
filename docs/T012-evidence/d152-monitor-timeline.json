@@ -1,0 +1,70 @@
+{
+  "baseUrl": "http://127.0.0.1:5190",
+  "normal": {
+    "network": "normal",
+    "wallMs": 12479,
+    "firstFrameAt": 2962.800000000745,
+    "readyAt": 2133.39999999851,
+    "prefetchAt": 8904.39999999851,
+    "monitorSamples": [
+      {
+        "name": "/assets/MonitorSamples-Cg0VQCOh.js",
+        "start": 9176.800000000745,
+        "duration": 3.899999998509884
+      }
+    ],
+    "prefetchChunks": [
+      {
+        "name": "/assets/floorDecor-CBIsjrW_.js",
+        "start": 8904.699999999255,
+        "duration": 6.900000002235174
+      },
+      {
+        "name": "/assets/BlueprintView-BLm6g8Mc.js",
+        "start": 8904.800000000745,
+        "duration": 10.5
+      },
+      {
+        "name": "/assets/textRuntime-Bmu8fZ07.js",
+        "start": 8904.800000000745,
+        "duration": 11.699999999254942
+      }
+    ],
+    "ok": true,
+    "betweenFirstAndPrefetch": false
+  },
+  "fast3g": {
+    "network": "fast3g",
+    "wallMs": 20334,
+    "firstFrameAt": 11531.89999999851,
+    "readyAt": 10014.199999999255,
+    "prefetchAt": 16516.39999999851,
+    "monitorSamples": [
+      {
+        "name": "/assets/MonitorSamples-Cg0VQCOh.js",
+        "start": 16789,
+        "duration": 594.3999999985099
+      }
+    ],
+    "prefetchChunks": [
+      {
+        "name": "/assets/floorDecor-CBIsjrW_.js",
+        "start": 16517.10000000149,
+        "duration": 683.5
+      },
+      {
+        "name": "/assets/BlueprintView-BLm6g8Mc.js",
+        "start": 16517.300000000745,
+        "duration": 629.8999999985099
+      },
+      {
+        "name": "/assets/textRuntime-Bmu8fZ07.js",
+        "start": 16517.300000000745,
+        "duration": 888.8000000007451
+      }
+    ],
+    "ok": true,
+    "betweenFirstAndPrefetch": false
+  },
+  "ok": true
+}

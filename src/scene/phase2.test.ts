@@ -141,7 +141,7 @@ describe('T012 第二阶段约束', () => {
     expect(probe).not.toMatch(/__twinReady\s*=/)
     expect(probe).toMatch(/markSuspenseReady/)
     expect(ready).toMatch(/w\.__twinReady = true/)
-    expect(scene).toMatch(/__twinFirstFrameAt/)
+    expect(scene).toMatch(/__twinPrefetchAt/)
     expect(scene).toMatch(/lazy\(\(\) => import\('\.\/scene\/postfx\/balancedFx'\)/)
     const site = scene.indexOf('<Site ')
     const probeJsx = scene.indexOf('<RenderProbe')

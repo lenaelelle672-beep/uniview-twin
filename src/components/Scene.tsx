@@ -43,7 +43,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const shadowSize = quality === 'high' ? 2048 : 1024
   const [composerLive, setComposerLive] = useState(false)
   const [keepFx, setKeepFx] = useState(false)
-  const [afterFirstFrame, setAfterFirstFrame] = useState(false)
+  const [prefetchDone, setPrefetchDone] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
@@ -65,8 +65,8 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
     let cancelled = false
     const tick = () => {
       if (cancelled) return
-      if (window.__twinFirstFrameAt != null) {
-        setAfterFirstFrame(true)
+      if (window.__twinPrefetchAt != null) {
+        setPrefetchDone(true)
         return
       }
       requestAnimationFrame(tick)
@@ -139,7 +139,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
           <FloorBadges />
         </Hud>
       </Suspense>
-      {afterFirstFrame && (
+      {prefetchDone && (
         <Suspense fallback={null}>
           <FacadeSamples />
         </Suspense>
