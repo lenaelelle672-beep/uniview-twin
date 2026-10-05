@@ -126,6 +126,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         )}
         <ExplodedLayout />
         <FloorStage />
+        <RenderProbe />
       </Suspense>
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
       {!composerLive && <MainScenePass renderPriority={1} />}
@@ -135,7 +136,6 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
           <FloorBadges />
         </Hud>
       </Suspense>
-      <RenderProbe />
       {afterFirstFrame && (
         <Suspense fallback={null}>
           <FacadeSamples />

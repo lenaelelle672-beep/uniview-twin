@@ -142,6 +142,15 @@ describe('T012 第二阶段约束', () => {
     expect(ready).toMatch(/w\.__twinReady = true/)
     expect(scene).toMatch(/__twinFirstFrameAt/)
     expect(scene).toMatch(/lazy\(\(\) => import\('\.\/scene\/postfx\/balancedFx'\)/)
+    const site = scene.indexOf('<Site ')
+    const probeJsx = scene.indexOf('<RenderProbe')
+    const afterProbe = scene.slice(probeJsx)
+    expect(site).toBeGreaterThan(-1)
+    expect(probeJsx).toBeGreaterThan(site)
+    const beforeProbe = scene.slice(0, probeJsx)
+    const depth = (beforeProbe.match(/<Suspense/g) ?? []).length - (beforeProbe.match(/<\/Suspense>/g) ?? []).length
+    expect(depth).toBeGreaterThan(0)
+    expect(afterProbe.indexOf('</Suspense>')).toBeLessThan(afterProbe.indexOf('<FacadeSamples'))
   })
 
   it('D125 首屏量法用 Python gzip.compress(9)，且 blit 只进均衡档包', () => {
