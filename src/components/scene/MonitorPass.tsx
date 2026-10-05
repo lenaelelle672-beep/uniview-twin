@@ -1,12 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { NoToneMapping, Vector2, type Camera, type Scene, type WebGLRenderer } from 'three'
-import {
-  BLIT_SITES,
-  balancedTargetInventory,
-  defaultFramebufferSamples,
-  drainGlErrors,
-  overlayDepthBudget,
-} from '../../scene/monitorDepth'
+import { defaultFramebufferSamples, drainGlErrors } from '../../scene/glProbe'
+import { BLIT_SITES, balancedTargetInventory, overlayDepthBudgetUnallocated } from '../../scene/monitorBudget'
 import { MONITOR_LAYER } from '../../scene/overlayOrder'
 
 const drawingSize = new Vector2()
@@ -47,9 +42,11 @@ export function MonitorPass({
 
   useFrame(() => {
     gl.getDrawingBufferSize(drawingSize)
-    window.__twinOverlayBudget = {
-      ...overlayDepthBudget(drawingSize.x, drawingSize.y),
-      drawingBuffer: { width: drawingSize.x, height: drawingSize.y },
+    if (drawOverlay) {
+      window.__twinOverlayBudget = {
+        ...overlayDepthBudgetUnallocated(),
+        drawingBuffer: { width: drawingSize.x, height: drawingSize.y },
+      }
     }
     window.__twinTargetInventory = balancedTargetInventory(drawingSize.x, drawingSize.y)
     window.__twinBlitSites = BLIT_SITES

@@ -21,7 +21,8 @@ import {
   type WebGLRenderer,
 } from 'three'
 import { HorizontalBlurShader, VerticalBlurShader } from 'three-stdlib'
-import { blitDepth, ensureMonitorTarget, releaseMonitorTarget } from '../../../scene/monitorDepth'
+import { BLIT_SITES, balancedTargetInventory } from '../../../scene/monitorBudget'
+import { blitDepth, ensureMonitorTarget, overlayDepthBudget, releaseMonitorTarget } from '../../../scene/monitorDepth'
 import { MONITOR_LAYER } from '../../../scene/overlayOrder'
 import {
   CONTACT_SHADOW_FAR,
@@ -161,12 +162,20 @@ function BalancedAO() {
 }
 
 function MarkComposerLive({ onLive, active }: { onLive?: () => void; active: boolean }) {
+  const gl = useThree((state) => state.gl)
   const armed = useRef(false)
   useFrame(() => {
     if (!active) {
       armed.current = false
       return
     }
+    gl.getDrawingBufferSize(drawingSize)
+    window.__twinOverlayBudget = {
+      ...overlayDepthBudget(drawingSize.x, drawingSize.y),
+      drawingBuffer: { width: drawingSize.x, height: drawingSize.y },
+    }
+    window.__twinTargetInventory = balancedTargetInventory(drawingSize.x, drawingSize.y)
+    window.__twinBlitSites = BLIT_SITES
     if (armed.current) return
     armed.current = true
     window.__twinComposerLive = true

@@ -1,6 +1,6 @@
 import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
-import { lazy, Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
@@ -9,7 +9,6 @@ import { EastBlock } from './scene/EastBlock'
 import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
-import { FacadeSamples } from '../scene/stage/MonitorSamples'
 import { MainScenePass, MonitorPass } from './scene/MonitorPass'
 import { RenderProbe } from './scene/RenderProbe'
 import { ParcelMesh, Site } from './scene/Site'
@@ -23,6 +22,9 @@ import { useTwinStore } from '../store/store'
 
 const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
 const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.PostFX })))
+const FacadeSamples = lazy(() =>
+  import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
+)
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
@@ -40,6 +42,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const shadowSize = quality === 'high' ? 2048 : 1024
   const [composerLive, setComposerLive] = useState(false)
   const [keepFx, setKeepFx] = useState(false)
+  const [afterFirstFrame, setAfterFirstFrame] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
@@ -56,6 +59,13 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   useLayoutEffect(() => {
     if (extrasReady) setKeepFx(true)
   }, [extrasReady])
+
+  useEffect(() => {
+    let raf = requestAnimationFrame(() => {
+      raf = requestAnimationFrame(() => setAfterFirstFrame(true))
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [])
 
   return (
     <>
@@ -117,7 +127,11 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         </Hud>
       </Suspense>
       <RenderProbe />
-      <FacadeSamples />
+      {afterFirstFrame && (
+        <Suspense fallback={null}>
+          <FacadeSamples />
+        </Suspense>
+      )}
       {keepFx && (
         <Suspense fallback={null}>
           <PostFX active={quality !== 'perf'} onLive={() => setComposerLive(true)} />

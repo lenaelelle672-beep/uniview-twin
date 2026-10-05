@@ -1,7 +1,7 @@
 import { useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { DirectionalLight, WebGLRenderTarget, type Camera, type Object3D, type Scene, type WebGLRenderer } from 'three'
-import { supportsParallelShaderCompile } from '../../scene/monitorDepth'
+import { supportsParallelShaderCompile } from '../../scene/glProbe'
 import type { QualityTier } from '../../types'
 
 const FREEZE_ATTR = 'data-twin-freeze'

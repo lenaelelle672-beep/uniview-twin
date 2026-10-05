@@ -1,20 +1,21 @@
 import { useThree } from '@react-three/fiber'
-import { useLayoutEffect, useMemo } from 'react'
+import { lazy, Suspense, useLayoutEffect, useMemo } from 'react'
 import { InstancedMesh } from 'three'
 import { floorSpec } from '../../data/floors'
 import { extrudeUp } from '../extrude'
 import { basementPickOutline } from './b1Plan'
 import { useTwinStore } from '../../store/store'
 import type { DeviceStatus } from '../../types'
-import { B1Interior } from './B1Interior'
 import { showCorridorPeople } from './corridor'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
 import { MONITOR_DISPLAY_COLOR } from './materials'
 import { workstationPosition } from './workstationPosition'
-import { MonitorSamples } from './MonitorSamples'
-import { TowerInterior } from './TowerInterior'
+
+const B1Interior = lazy(() => import('./B1Interior').then((mod) => ({ default: mod.B1Interior })))
+const TowerInterior = lazy(() => import('./TowerInterior').then((mod) => ({ default: mod.TowerInterior })))
+const MonitorSamples = lazy(() => import('./MonitorSamples').then((mod) => ({ default: mod.MonitorSamples })))
 
 function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDesks: number }) {
   const scene = useThree((state) => state.scene)
@@ -109,24 +110,26 @@ export function FloorStage() {
       <FloorCut />
       <FloorStageCamera />
       <BasementPick />
-      {spec && spec.level > 0 && (
-        <TowerInterior
-          spec={spec}
-          slots={slots}
-          colors={colors}
-          devices={floorDevices}
-          showPeople={showCorridorPeople(quality)}
-        />
-      )}
-      {spec && spec.level < 0 && <B1Interior slots={slots} colors={colors} devices={floorDevices} />}
-      {spec && spec.level > 0 && (
-        <MonitorSamples
-          floorId={spec.id}
-          slots={slots}
-          colors={colors}
-          deskIds={floorDesks.map((desk) => desk.id)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {spec && spec.level > 0 && (
+          <TowerInterior
+            spec={spec}
+            slots={slots}
+            colors={colors}
+            devices={floorDevices}
+            showPeople={showCorridorPeople(quality)}
+          />
+        )}
+        {spec && spec.level < 0 && <B1Interior slots={slots} colors={colors} devices={floorDevices} />}
+        {spec && spec.level > 0 && (
+          <MonitorSamples
+            floorId={spec.id}
+            slots={slots}
+            colors={colors}
+            deskIds={floorDesks.map((desk) => desk.id)}
+          />
+        )}
+      </Suspense>
       <InteriorProbe floorId={active} dataDesks={floorDesks.length} />
     </>
   )

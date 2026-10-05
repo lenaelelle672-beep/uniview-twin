@@ -13,6 +13,10 @@ export default defineConfig({
     port: 5190,
     strictPort: true,
   },
+  build: {
+    // 性能档不得因为 HTML modulepreload 去请求 balancedFx / 楼层内装预取包。
+    modulePreload: false,
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],
