@@ -1,5 +1,5 @@
 import { useThree } from '@react-three/fiber'
-import { useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { DoubleSide, Group } from 'three'
 import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { BatchedText, Text, preloadFont } from 'troika-three-text'
@@ -30,6 +30,11 @@ export function BatchedRoomLabels({
   const groupRef = useRef<Group>(null)
   const batchRef = useRef<BatchedText | null>(null)
   const membersRef = useRef<Text[]>([])
+  const fontSizeRef = useRef(fontSize)
+  const outlineRef = useRef(outlineWidth)
+  fontSizeRef.current = fontSize
+  outlineRef.current = outlineWidth
+  const [packGen, setPackGen] = useState(0)
   const scene = useThree((state) => state.scene)
   const invalidate = useThree((state) => state.invalidate)
   const signature = labels.map((label) => `${label.id}|${label.text}|${label.label.join(',')}`).join(';')
@@ -40,7 +45,15 @@ export function BatchedRoomLabels({
     const shell = scene.getObjectByName(shellName)
     if (!host || !shell) return
     const parent = host.parent
-    const keepY = parent?.name === 'FloorInterior' ? parent.position.y : 0
+    let keepY = 0
+    let cursor = parent
+    while (cursor) {
+      if (cursor.name === 'FloorInterior') {
+        keepY = cursor.position.y
+        break
+      }
+      cursor = cursor.parent
+    }
     host.position.y = keepY
     shell.add(host)
     return () => {
@@ -76,9 +89,9 @@ export function BatchedRoomLabels({
           const text = new Text()
           text.text = label.text
           text.font = ROOM_LABEL_FONT
-          text.fontSize = fontSize
+          text.fontSize = fontSizeRef.current
           text.color = '#17324d'
-          text.outlineWidth = outlineWidth
+          text.outlineWidth = outlineRef.current
           text.outlineColor = '#f7f4ee'
           text.anchorX = 'center'
           text.anchorY = 'middle'
@@ -100,11 +113,17 @@ export function BatchedRoomLabels({
         for (const material of materials) {
           if (material) material.side = DoubleSide
         }
+        for (const text of members) {
+          text.fontSize = fontSizeRef.current
+          text.outlineWidth = outlineRef.current
+        }
+        if (cancelled || !batch) return
         batch.visible = true
         group.add(batch)
         batchRef.current = batch
         membersRef.current = members
         window.__twinLabelPackMs = performance.now() - started
+        setPackGen((value) => value + 1)
         invalidate()
       })
       .catch(() => {})
@@ -130,7 +149,7 @@ export function BatchedRoomLabels({
       text.outlineWidth = outlineWidth
     }
     batch.sync(() => invalidate())
-  }, [fontSize, invalidate, outlineWidth])
+  }, [fontSize, invalidate, outlineWidth, packGen])
 
   return <group ref={groupRef} name="RoomLabelBatch" />
 }
