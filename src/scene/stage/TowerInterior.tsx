@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { Color } from 'three'
 import type { FloorSpec } from '../../data/floors'
 import type { Device } from '../../types'
@@ -31,9 +30,7 @@ import {
   woodMaterial,
 } from './materials'
 import { DeskFlash } from './DeskFlash'
-import { CorridorPeople } from './CorridorPeople'
-import { DeviceBadges } from './DeviceBadges'
-import { RoomLabels } from './RoomLabels'
+import { FloorDecor } from './lazyFloorDecor'
 import { towerRoomLabels } from './roomLabels'
 import { InstancedSlots, Workstations } from './Workstations'
 
@@ -80,11 +77,7 @@ export function TowerInterior({
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
       <DeskFlash floorId={spec.id} />
-      <DeviceBadges floorId={spec.id} devices={devices} />
-      <Suspense fallback={null}>
-        <RoomLabels labels={towerRoomLabels()} />
-        <CorridorPeople enabled={showPeople} />
-      </Suspense>
+      <FloorDecor floorId={spec.id} devices={devices} labels={towerRoomLabels()} showPeople={showPeople} />
       <Ceiling width={width} depth={depth} y={spec.height - SLAB_M - 0.06} />
     </group>
   )

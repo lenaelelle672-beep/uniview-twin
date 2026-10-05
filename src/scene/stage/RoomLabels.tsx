@@ -1,5 +1,10 @@
-import { Billboard, Line, Text } from '@react-three/drei'
+import { Billboard } from '@react-three/drei/core/Billboard'
+import { Line } from '@react-three/drei/core/Line'
+import { Text } from '@react-three/drei/core/Text'
+import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { roomLabelCharacters, ROOM_LABEL_FONT, type RoomLabel } from './roomLabels'
+
+disableTroikaCdnFallback()
 
 export function RoomLabels({ labels }: { labels: RoomLabel[] }) {
   const characters = roomLabelCharacters(labels)

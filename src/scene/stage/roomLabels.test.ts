@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { basementRoomLabels, roomLabelCharacters, towerRoomLabels } from './roomLabels'
+import { basementRoomLabels, ROOM_LABEL_FONT, roomLabelCharacters, towerRoomLabels } from './roomLabels'
 
 describe('房间引线标签', () => {
+  it('单层标签用本地 woff 子集，不指向 otf 或外网', () => {
+    expect(ROOM_LABEL_FONT).toBe('/fonts/NotoSansSC-Regular-subset.woff')
+    expect(ROOM_LABEL_FONT).not.toMatch(/\.otf|jsdelivr|cdn/i)
+  })
+
   it('标准层包含会议室、茶水间、前台、电梯厅，总数不超过 30', () => {
     const labels = towerRoomLabels()
     const basement = basementRoomLabels()
