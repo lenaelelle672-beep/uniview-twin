@@ -1,3 +1,70 @@
+# D137：`__twinReady` 等树 lo（对标 D124 格栅）
+
+## 只读排查（动手前）
+
+`git fetch` 后对照：d=`82a50a3`，a 最新=`67725ee`（指定点 `2b16099` / QA `8f9649e`），b=`d76c562`，c=`5e890c6`。未改 a/b/c 分支。
+
+树的 loader 四条线都在同一对文件，没有被 lazy，也没有被 c 挪到首帧之后：
+
+| 分支 | 常量 / loader | 谁挂树 | 预加载 |
+| --- | --- | --- | --- |
+| d 82a50a3 | `InstancedProp.tsx` 9–10、66、131 `useLoader(GLTFLoader, url)` | `Site.tsx` 113–120：可见树 `TREE_HI`（均衡）或 `TREE_LO`（性能）；`FoliageShadow` 再拉 `TREE_LO` | 只 preload 灯（15 行），**不** preload 树 lo |
+| a 8f9649e / 2b16099 / 67725ee | 同上 9–10、66、131 | `Site.tsx` 112–120 同结构 | 只 preload 灯 |
+| b d76c562 | 同上 9–10、66、131 | `Site.tsx` 123–131 同结构 | 只 preload 灯 |
+| c 5e890c6 | 同上 9–10、68、133；另 preload 了 `roof-sign`（16–17 行） | `Site.tsx` 112–120 同结构 | 灯 + 招牌，**仍不** preload 树 lo |
+
+就绪门（谁和树在同一个 Suspense）：
+
+- **a 8f9649e `Scene.tsx` 68–86**：`Site`（80）与 `RenderProbe`（85）同边界。`RenderProbe.tsx` 15 行 `markSuspenseReady()`。QA 就绪后第一帧看得见树，是因为树的 `useLoader` 会挡住这层 Suspense。
+- **b d76c562 `Scene.tsx` 71–89**：仍是 `Site` + `RenderProbe` 同边界。D124 格栅：`EastBlock.tsx` 24–26、80 行 `lazy(import('./EastGrille'))` + `preloadEastGrilleForQuality()`（`eastGrilleAssets.ts` 18–20 预加载 lo GLB），和 Probe 同 Suspense，所以 `__twinReady` 等格栅 chunk + lo GLB。**b 没有把树移出就绪门。**
+- **c 5e890c6 `Scene.tsx` 99–120 / 129**：`Site` 仍在 111 行那层 Suspense 里。c 首帧后才挂的是 `FacadeSamples`（131–133，`afterFirstFrame`），楼层内装是 `FloorStage.tsx` 16–18、117 行的**内层** `Suspense`（进楼层才拉）。**树没有被延后。** 但 `RenderProbe` 被挪到外层 129 行，且 `RenderProbe.tsx` 直接 `window.__twinReady = true`。叠加时若采用 c 的 Scene 结构，树的 `useLoader` 不再挡住就绪门，预取可以抢在 `street-tree-lo.glb` 前面。
+- **d 82a50a3 `Scene.tsx` 68–86**：与 a 一样 Probe 在树的 Suspense 内；闸门只显式等 HDR/PMREM + `markSuspenseReady()`，**没有**像 D124 那样给树 lo 单独记账。单跑 d 时树仍会被 Suspense 挡住；叠上 c 的 Scene 后这层隐式等待会丢。
+
+**结论：只改 d 能让叠加后的就绪门等到树。** 缺树不是 b 把 loader 挪走，而是 c `Scene.tsx:129` 把 `RenderProbe` 移出树所在 Suspense。d 按 D124 给树 lo 做 `useLoader.preload` + 现有 `overviewReady` 记账，不依赖 Probe 是否还在那层 Suspense 里。不要改 a/b/c。本单 d 分支没有格栅（b 未合入），九轮里格栅列为无。
+
+## D137 改动
+
+未改 `prefetchLazyChunks.ts`、`LocalEnvironment.tsx`。`overviewReady.ts` 只加 `markTreeLoReady()` 和闸门条件。`InstancedProp.tsx` preload `TREE_LO`（三档都用）并在 lo `useLoader` 返回后记账。白模走已有 `markHdrNotRequired()`，不等树。
+
+## 九轮时序（禁缓存）
+
+页内 `performance.now()` ms。预取列为 CDP wall − 首帧 Unix ms。顺序均为 **树 lo 完成 → HDR/PMREM → ready → 首帧 → 预取**。格栅 chunk / 格栅 lo 本分支无请求。
+
+| 轮次 | 树 lo | HDR / PMREM | ready | 首帧 | 三预取相对首帧 |
+| --- | ---: | ---: | ---: | ---: | --- |
+| normal-1 | 678.9 | 799.9 / 824.2 | 948.7 | 1881.6 | +374.3 / +374.4 / +374.5 |
+| normal-2 | 659.5 | 755.2 / 775.8 | 935.9 | 1886.9 | +393.9 / +394.0 / +394.1 |
+| normal-3 | 677.8 | 800.5 / 820.9 | 960.0 | 1907.2 | +406.1 / +406.2 / +406.3 |
+| cpu-x8-1 | 1828.8 | 1664.1 / 1792.6 | 1945.9 | 3104.7 | +4229.5 / +4229.6 / +4229.7 |
+| cpu-x8-2 | 2033.0 | 1837.5 / 1972.0 | 2304.6 | 3298.1 | +3368.0 / +3377.3 / +3377.4 |
+| cpu-x8-3 | 2070.2 | 1830.8 / 2012.0 | 2267.3 | 3298.9 | +4504.3 / +4506.6 / +4506.7 |
+| fast3g-1 | 3878.5 | 8913.9 / 9096.8 | 9096.8 | 9097.1 | +1442.1 / +1442.2 / +1442.3 |
+| fast3g-2 | 3872.5 | 8916.3 / 9107.0 | 9107.0 | 9108.9 | +1482.7 / +1482.9 / +1483.0 |
+| fast3g-3 | 3905.9 | 8951.7 / 9221.1 | 9221.1 | 9221.4 | +1437.6 / +1437.7 / +1437.8 |
+
+就绪后第一帧截图：`docs/d137-first-frame-trees.png`（场地一圈有树）。
+
+## 首屏（仅本单，Python `gzip.compress(9)`）
+
+上限 **436,361 B**。不含 `.hdr`、favicon、预取。树 lo 计入。
+
+**428,568 B**（余量 7,793）。主包 `index-UP669uws.js` **395,899 B**，相对 D126 `index-DjFczZ3G.js` 395,838 B，增量 **+61 B**（≤100 B）。
+
+| 文件 | gzip9 |
+| --- | ---: |
+| `/index.html` | 342 |
+| `/assets/index-UP669uws.js` | 395,899 |
+| `/assets/index-CRsjujUE.css` | 3,320 |
+| `/assets/badge-digits-bold-C_MyspKJ.png` | 4,237 |
+| `/models/roof-sign.glb` | 5,061 |
+| `/models/street-lamp.glb` | 2,666 |
+| `/models/street-tree-lo.glb` | 3,466 |
+| `/models/street-tree-hi.glb` | 13,577 |
+
+tsc / vitest 109 / build 通过。九轮 console error/warning 0/0，外网 0。
+
+---
+
 # D120 / D126 预取晚于总览首帧，且首帧带环境光
 
 分支 `cursor/d-lazy-split-1005`。  
