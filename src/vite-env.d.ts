@@ -110,4 +110,9 @@ interface Window {
     y2: number,
     z2: number,
   ) => Array<{ name: string; parent: string; distance: number; point: number[] }>
+  __twinCanvasProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }
+  __twinPick?: (
+    cx: number,
+    cy: number,
+  ) => { name: string; parent: string; material: string; distance: number; point: [number, number, number] } | null
 }

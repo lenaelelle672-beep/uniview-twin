@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
-import { Box3, Raycaster, Vector3 } from 'three'
+import { Box3, Raycaster, Vector2, Vector3 } from 'three'
 import { useTwinStore } from '../../store/store'
 
 const projected = new Vector3()
@@ -9,6 +9,8 @@ const raycaster = new Raycaster()
 const rayOrigin = new Vector3()
 const rayTarget = new Vector3()
 const rayDir = new Vector3()
+const ndc = new Vector2()
+const pickHits: ReturnType<Raycaster['intersectObjects']> = []
 
 export function RenderProbe() {
   const camera = useThree((state) => state.camera)
@@ -39,6 +41,36 @@ export function RenderProbe() {
         distance: hit.distance,
         point: hit.point.toArray(),
       }))
+    }
+    window.__twinCanvasProject = (x, y, z) => {
+      const rect = gl.domElement.getBoundingClientRect()
+      projected.set(x, y, z).project(camera)
+      return {
+        x: (projected.x * 0.5 + 0.5) * rect.width,
+        y: (-projected.y * 0.5 + 0.5) * rect.height,
+        behind: projected.z > 1,
+      }
+    }
+    window.__twinPick = (cx, cy) => {
+      const rect = gl.domElement.getBoundingClientRect()
+      ndc.set((cx / rect.width) * 2 - 1, -(cy / rect.height) * 2 + 1)
+      raycaster.setFromCamera(ndc, camera)
+      raycaster.far = 4000
+      pickHits.length = 0
+      raycaster.intersectObjects(scene.children, true, pickHits)
+      const hit = pickHits[0]
+      if (!hit) return null
+      const mesh = hit.object as { material?: { name?: string } | Array<{ name?: string }> }
+      const matName = Array.isArray(mesh.material)
+        ? mesh.material.map((item) => item.name).join(',')
+        : (mesh.material?.name ?? '')
+      return {
+        name: hit.object.name,
+        parent: hit.object.parent?.name ?? '',
+        material: matName,
+        distance: hit.distance,
+        point: hit.point.toArray() as [number, number, number],
+      }
     }
     const unsubscribe = useTwinStore.subscribe((state) => {
       window.__twinFly = state.floorFlyRequest

@@ -8,7 +8,7 @@ import { eastGrilleMount } from '../../scene/massing'
 import { installMeshopt } from '../../scene/meshopt'
 import type { QualityTier } from '../../types'
 
-export const EAST_GRILLE_INTENSITY = 1.85
+export const EAST_GRILLE_INTENSITY = 2.00
 export const EAST_GRILLE_HI = '/models/east-grille-v4-hi.glb'
 export const EAST_GRILLE_LO = '/models/east-grille-v4-lo.glb'
 

@@ -132,14 +132,20 @@ export const courtWallMaterial = new MeshStandardMaterial({
   side: DoubleSide,
 })
 export const grassMaterial = new MeshStandardMaterial({
+  name: '草地',
   color: '#5d6b38',
   roughness: 0.96,
   metalness: 0,
-  polygonOffset: true,
-  polygonOffsetFactor: 1,
-  polygonOffsetUnits: 1,
 })
-export const pavingMaterial = new MeshStandardMaterial({ color: '#c5d0d8', roughness: 0.88, metalness: 0 })
+export const pavingMaterial = new MeshStandardMaterial({
+  name: '铺装',
+  color: '#c5d0d8',
+  roughness: 0.88,
+  metalness: 0,
+  polygonOffset: true,
+  polygonOffsetFactor: -2,
+  polygonOffsetUnits: -2,
+})
 export const deckMaterial = new MeshStandardMaterial({ color: '#d9d5cc', roughness: 0.88, metalness: 0 })
 export const roadMaterial = new MeshStandardMaterial({ color: '#2c2e3c', roughness: 0.94, metalness: 0.02 })
 export const sidewalkMaterial = new MeshStandardMaterial({ color: '#b7c6d0', roughness: 0.88, metalness: 0 })
