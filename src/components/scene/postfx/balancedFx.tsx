@@ -24,7 +24,7 @@ import {
 import { HorizontalBlurShader, VerticalBlurShader } from 'three-stdlib'
 import { BLIT_SITES, balancedTargetInventory } from '../../../scene/monitorBudget'
 import { ensureMonitorTarget, overlayDepthBudget, releaseMonitorTarget } from '../../../scene/monitorDepth'
-import { MONITOR_LAYER } from '../../../scene/overlayOrder'
+import { DEPTH_PROXY_LAYER, MONITOR_LAYER } from '../../../scene/overlayOrder'
 import {
   CONTACT_SHADOW_FAR,
   CONTACT_SHADOW_POSITION,
@@ -77,11 +77,11 @@ class MonitorAfterTonePass extends Pass {
     const gl = renderer.getContext()
     const hidden: Array<{ object: { visible: boolean }; visible: boolean }> = []
     const keep = new Set<object>()
-    for (const name of ['FloorInterior', 'FloorPlate']) {
+    for (const name of ['FloorInterior', 'FloorPlate', 'MonitorDepthProxies']) {
       const root = this.scene.getObjectByName(name)
       if (!root) continue
       root.traverse((child) => {
-        if (keepMonitorDepth(child)) keep.add(child)
+        if (name === 'MonitorDepthProxies' || keepMonitorDepth(child)) keep.add(child)
       })
       let parent = root.parent
       while (parent) {
@@ -90,12 +90,24 @@ class MonitorAfterTonePass extends Pass {
       }
     }
     this.scene.traverse((object) => {
+      if (object.layers.isEnabled(DEPTH_PROXY_LAYER)) {
+        keep.add(object)
+        let parent = object.parent
+        while (parent) {
+          keep.add(parent)
+          parent = parent.parent
+        }
+      }
+    })
+    this.scene.traverse((object) => {
       if (!(object instanceof Mesh) && !(object instanceof InstancedMesh)) return
+      if (object.layers.isEnabled(DEPTH_PROXY_LAYER)) return
       if (keep.has(object) || !object.visible) return
       hidden.push({ object, visible: true })
       object.visible = false
     })
-    this.camera.layers.enableAll()
+    this.camera.layers.set(0)
+    this.camera.layers.enable(DEPTH_PROXY_LAYER)
     this.camera.layers.disable(MONITOR_LAYER)
     gl.colorMask(false, false, false, false)
     renderer.clear(false, true, false)
