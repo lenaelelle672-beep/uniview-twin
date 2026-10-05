@@ -59,7 +59,7 @@ export const BLIT_SITES = [
   {
     file: 'src/components/scene/postfx/balancedFx.tsx',
     fn: 'MonitorAfterTonePass',
-    dest: 'single-sampled monitorAfterTone FBO, never null / default framebuffer',
+    dest: 'single-sampled monitorAfterTone FBO; copies color by draw, no depth blit',
   },
   {
     file: 'src/components/scene/MonitorPass.tsx',

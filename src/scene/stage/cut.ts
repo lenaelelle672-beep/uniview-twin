@@ -9,6 +9,18 @@ export function activeFloorId(view: ViewMode, selectedFloor: string | null): str
   return selectedFloor
 }
 
+/** 单层里室外裙房/东楼不必再进阴影 pass，总览保持原样。 */
+export function floorViewCastsExteriorShadow(view: ViewMode): boolean {
+  return view !== 'floor'
+}
+
+/** 单层里被本层楼板挡住的其他层外壳不投阴影。本层条带仍投。 */
+export function isFloorShellShadowDisabled(view: ViewMode, selectedFloor: string | null, elevation: number): boolean {
+  const active = activeFloorId(view, selectedFloor)
+  if (!active) return false
+  return Math.abs(elevation - floorSpec(active).elevation) > 0.001
+}
+
 /** 选中层以上的楼层外壳需要隐藏。总览时不隐藏。 */
 export function hiddenFloorIds(view: ViewMode, selectedFloor: string | null): string[] {
   const active = activeFloorId(view, selectedFloor)

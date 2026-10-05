@@ -4,6 +4,8 @@ import { COURT_DEPTH_M, COURT_SLOPE_M } from '../../scene/siteGeometry'
 import { extrudeUp } from '../../scene/extrude'
 import { courtyardHole, outset, podiumFrontArc, podiumFocus, podiumOutline, PODIUM_HEIGHT_M } from '../../scene/massing'
 import { courtWallMaterial, curtainMaterial, eaveMaterial, solidMaterial } from '../../scene/materials'
+import { floorViewCastsExteriorShadow } from '../../scene/stage/cut'
+import { useTwinStore } from '../../store/store'
 import { FinRow } from './Fins'
 
 function insetToward(points: Array<[number, number]>, amount: number): Array<[number, number]> {
@@ -49,6 +51,7 @@ function makeBasin() {
 }
 
 export function Podium({ model }: { model: boolean }) {
+  const exteriorShadow = useTwinStore((state) => floorViewCastsExteriorShadow(state.view))
   const outline = useMemo(() => podiumOutline(), [])
   const focus = useMemo(() => podiumFocus(), [])
   const shell = useMemo(() => extrudeUp(outline, PODIUM_HEIGHT_M), [outline])
@@ -59,10 +62,17 @@ export function Podium({ model }: { model: boolean }) {
 
   return (
     <group name="Podium">
-      <mesh geometry={shell} material={materials} castShadow receiveShadow />
-      <mesh geometry={band} material={model ? solidMaterial : eaveMaterial} position={[0, 5.75, 0]} castShadow receiveShadow />
+      <mesh geometry={shell} material={materials} castShadow={exteriorShadow} receiveShadow />
+      <mesh geometry={band} material={model ? solidMaterial : eaveMaterial} position={[0, 5.75, 0]} castShadow={exteriorShadow} receiveShadow />
       <mesh name="CourtyardWall" geometry={basin} material={courtWallMaterial} receiveShadow />
-      <FinRow points={arc} spacing={2.2} y={PODIUM_HEIGHT_M / 2} height={PODIUM_HEIGHT_M * 0.92} outwardFrom={focus} />
+      <FinRow
+        points={arc}
+        spacing={2.2}
+        y={PODIUM_HEIGHT_M / 2}
+        height={PODIUM_HEIGHT_M * 0.92}
+        outwardFrom={focus}
+        castShadow={exteriorShadow}
+      />
     </group>
   )
 }
