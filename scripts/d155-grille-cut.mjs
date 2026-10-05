@@ -50,9 +50,25 @@ async function waitFloor(page, floorId) {
   await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 2200)))
 }
 
+async function approachGrille(page) {
+  await page.evaluate(async () => {
+    const rig = window.__twinRig
+    if (!rig?.setLookAt) return
+    rig.smoothTime = 0
+    rig.minDistance = 8
+    rig.maxPolarAngle = Math.PI
+    await rig.setLookAt(125, 32.5, 60, 100.05, 32.5, 60, false)
+    rig.update?.(0)
+  })
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1500)))
+}
+
 async function inspectGrille(page) {
   return page.evaluate(() => {
     const scene = window.__twinScene ?? window.__perf?.scenes?.[0]
+    const cam = window.__twinRig?.camera
+    const mount = scene?.getObjectByName('EastGrille')
+    const dist = cam && mount ? cam.position.distanceTo(mount.getWorldPosition(mount.position.clone())) : null
     const rows = []
     scene?.getObjectByName('EastGrille')?.traverse((object) => {
       const list = object.material ? (Array.isArray(object.material) ? object.material : [object.material]) : []
@@ -74,6 +90,7 @@ async function inspectGrille(page) {
     return {
       view: window.__twinView ?? document.querySelector('.scene-root')?.dataset.view ?? null,
       selected: window.__twinSelected ?? null,
+      cameraDist: dist,
       rows,
     }
   })
@@ -150,10 +167,12 @@ async function main() {
   const report = { currentUrl, bUrl, floors: {}, overview: {}, failures: [] }
   for (const floorId of FLOORS) {
     const current = await openFloor(browser, currentUrl, floorId)
+    await approachGrille(current)
     const inspect = await inspectGrille(current)
     const currentShot = await shot(current, `d155-grille-${floorId.toLowerCase()}-current`)
     await current.close()
     const baseline = await openFloor(browser, bUrl, floorId)
+    await approachGrille(baseline)
     const bInspect = await inspectGrille(baseline)
     const bShot = await shot(baseline, `d155-grille-${floorId.toLowerCase()}-b`)
     await baseline.close()
