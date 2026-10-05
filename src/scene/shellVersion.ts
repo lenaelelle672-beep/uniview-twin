@@ -11,4 +11,4 @@ export const CONTACT_SHADOW_Y = 0.22
 export const CONTACT_SHADOW_POSITION: [number, number, number] = [45, CONTACT_SHADOW_Y, 35]
 export const CONTACT_SHADOW_SCALE = 280
 export const CONTACT_SHADOW_FAR = 24
-export const CONTACT_SHADOW_RESOLUTION = 1024
+export const CONTACT_SHADOW_RESOLUTION = 512

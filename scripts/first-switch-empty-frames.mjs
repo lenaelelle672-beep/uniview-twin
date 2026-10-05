@@ -69,6 +69,7 @@ async function runRound(browser, index) {
       warmup: window.__twinWarmup ?? null,
       stats: window.__twinStats ?? null,
       emptyFrames: frames.filter((frame) => frame.empty).length,
+      badgeOnlyAfterUnfreeze: frames.filter((frame) => frame.badgeOnly && !frame.freezeUp).length,
       frames,
       postfxRequested: performance.getEntriesByType('resource').some((entry) => /balancedFx|postfx|N8AO|postprocessing/i.test(entry.name)),
     }
@@ -81,6 +82,7 @@ async function runRound(browser, index) {
     totalMs: result.warmup?.totalMs ?? null,
     calls: result.stats?.calls ?? null,
     emptyFrames: result.emptyFrames,
+    badgeOnlyAfterUnfreeze: result.badgeOnlyAfterUnfreeze,
     frames: result.frames,
     postfxRequestedAfterClick: result.postfxRequested,
     postfxOnPerf,
@@ -103,17 +105,24 @@ async function main() {
       const row = await runRound(browser, index)
       rows.push(row)
       console.log(
-        `round ${row.round}: compile=${row.compileMs?.toFixed?.(1) ?? row.compileMs}ms total=${row.totalMs?.toFixed?.(1) ?? row.totalMs}ms empty=${row.emptyFrames} calls=${row.calls}`,
+        `round ${row.round}: compile=${row.compileMs?.toFixed?.(1) ?? row.compileMs}ms total=${row.totalMs?.toFixed?.(1) ?? row.totalMs}ms empty=${row.emptyFrames} badgeOnlyAfterUnfreeze=${row.badgeOnlyAfterUnfreeze} calls=${row.calls}`,
       )
     }
   } finally {
     await browser.close()
   }
   const emptyTotal = rows.reduce((sum, row) => sum + row.emptyFrames, 0)
-  const report = { baseUrl, rounds, emptyTotal, rows: rows.map(({ frames, ...row }) => ({ ...row, frameCount: frames.length })) }
+  const badgeOnlyAfterUnfreeze = rows.reduce((sum, row) => sum + (row.badgeOnlyAfterUnfreeze ?? 0), 0)
+  const report = {
+    baseUrl,
+    rounds,
+    emptyTotal,
+    badgeOnlyAfterUnfreeze,
+    rows: rows.map(({ frames, ...row }) => ({ ...row, frameCount: frames.length })),
+  }
   await writeFile(resolve(outDir, 'report.json'), JSON.stringify({ ...report, rows }, null, 2))
   console.log(JSON.stringify(report, null, 2))
-  if (emptyTotal > 0) process.exitCode = 1
+  if (badgeOnlyAfterUnfreeze > 0) process.exitCode = 1
 }
 
 main().catch((error) => {

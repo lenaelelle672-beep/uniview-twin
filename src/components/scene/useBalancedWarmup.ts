@@ -1,6 +1,7 @@
 import { useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { DirectionalLight, WebGLRenderTarget, type Camera, type Object3D, type Scene, type WebGLRenderer } from 'three'
+import { supportsParallelShaderCompile } from '../../scene/monitorDepth'
 import type { QualityTier } from '../../types'
 
 const FREEZE_ATTR = 'data-twin-freeze'
@@ -68,7 +69,7 @@ async function compileScene(gl: WebGLRenderer, scene: Scene, camera: Camera) {
   const renderer = gl as WebGLRenderer & {
     compileAsync?: (scene: Scene, camera: Camera) => Promise<void>
   }
-  if (typeof renderer.compileAsync === 'function') {
+  if (supportsParallelShaderCompile(gl) && typeof renderer.compileAsync === 'function') {
     await renderer.compileAsync(scene, camera)
     return
   }
@@ -93,7 +94,7 @@ function renderShadowWarmup(gl: WebGLRenderer, scene: Scene, camera: Camera) {
  * 性能档一次都不请求后处理分包。
  * 每次新开页面后第一次切到均衡档：先开阴影，再 compileAsync，再在屏外烘一帧阴影，最后才挂后处理。
  */
-export function useBalancedWarmup(quality: QualityTier): boolean {
+export function useBalancedWarmup(quality: QualityTier, composerLive = false): boolean {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const camera = useThree((state) => state.camera)
@@ -161,7 +162,6 @@ export function useBalancedWarmup(quality: QualityTier): boolean {
       const totalMs = performance.now() - started
       window.__twinWarmup = { compileMs, totalMs, firstSwitch: isFirst }
       firstSwitch.current = false
-      releaseFreeze(gl)
     }
 
     void warm()
@@ -169,6 +169,10 @@ export function useBalancedWarmup(quality: QualityTier): boolean {
       cancelled = true
     }
   }, [camera, gl, quality, scene])
+
+  useLayoutEffect(() => {
+    if (composerLive) releaseFreeze(gl)
+  }, [composerLive, gl])
 
   return quality !== 'perf' && ready
 }

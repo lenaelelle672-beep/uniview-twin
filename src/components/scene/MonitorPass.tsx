@@ -1,47 +1,57 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { NoToneMapping, Vector2 } from 'three'
-import { blitDepth, overlayDepthBudget, sceneDepthTarget } from '../../scene/monitorDepth'
+import { NoToneMapping, Vector2, type Camera, type Scene, type WebGLRenderer } from 'three'
+import { defaultFramebufferSamples, drainGlErrors, overlayDepthBudget } from '../../scene/monitorDepth'
 import { MONITOR_LAYER } from '../../scene/overlayOrder'
 
 const drawingSize = new Vector2()
 
+function renderMonitors(gl: WebGLRenderer, scene: Scene, camera: Camera) {
+  const prevTone = gl.toneMapping
+  const prevExposure = gl.toneMappingExposure
+  const prevAutoClear = gl.autoClear
+  const prevMask = camera.layers.mask
+  const prevBackground = scene.background
+  gl.autoClear = false
+  gl.toneMapping = NoToneMapping
+  gl.toneMappingExposure = 1
+  camera.layers.set(MONITOR_LAYER)
+  scene.background = null
+  gl.render(scene, camera)
+  scene.background = prevBackground
+  camera.layers.mask = prevMask
+  gl.toneMapping = prevTone
+  gl.toneMappingExposure = prevExposure
+  gl.autoClear = prevAutoClear
+}
+
 /**
- * 告警屏在合成器 / 主相机默认层之外。这里用 NoToneMapping 再画同一批实例，
- * 三层不再被 N8AO 和 AgX 按朝向、遮挡压成不一样的亮度。
- * 深度复用主场景：性能档吃 MainScenePass 写下的深度；均衡档先把合成器拷出的深度 blit 回来。
+ * 性能档：主场景深度已在默认帧缓冲（直接画进去，不是 blit）。
+ * 均衡档：告警屏改在合成器自带深度的缓冲里画，这里只报 SAMPLES / getError，不再往默认 FBO 画。
  */
-export function MonitorPass({ renderPriority }: { renderPriority: number }) {
+export function MonitorPass({
+  renderPriority,
+  drawOverlay,
+}: {
+  renderPriority: number
+  drawOverlay: boolean
+}) {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const camera = useThree((state) => state.camera)
 
   useFrame(() => {
-    const monitors = scene.getObjectByName('WorkstationMonitors')
-    const depth = sceneDepthTarget.current
     gl.getDrawingBufferSize(drawingSize)
     window.__twinOverlayBudget = {
-      ...overlayDepthBudget(depth?.width ?? drawingSize.x, depth?.height ?? drawingSize.y, Boolean(depth)),
+      ...overlayDepthBudget(),
       drawingBuffer: { width: drawingSize.x, height: drawingSize.y },
     }
-    if (!monitors) return
-
-    const prevTone = gl.toneMapping
-    const prevExposure = gl.toneMappingExposure
-    const prevAutoClear = gl.autoClear
-    const prevMask = camera.layers.mask
-    const prevBackground = scene.background
-    if (depth) blitDepth(gl, depth, null)
-    gl.autoClear = false
-    gl.toneMapping = NoToneMapping
-    gl.toneMappingExposure = 1
-    camera.layers.set(MONITOR_LAYER)
-    scene.background = null
-    gl.render(scene, camera)
-    scene.background = prevBackground
-    camera.layers.mask = prevMask
-    gl.toneMapping = prevTone
-    gl.toneMappingExposure = prevExposure
-    gl.autoClear = prevAutoClear
+    window.__twinGlProbe = {
+      samples: defaultFramebufferSamples(gl),
+      errors: drainGlErrors(gl),
+      samplesReliableOnSwiftShader: false,
+    }
+    if (!drawOverlay || !scene.getObjectByName('WorkstationMonitors')) return
+    renderMonitors(gl, scene, camera)
   }, renderPriority)
 
   return null

@@ -25,6 +25,20 @@ export function facadeBandCorners(elevation: number, z = facadeBandZ(), x = 0) {
   ]
 }
 
+/** 选中层整片幕墙都是 #f7eedd。取玻璃中带，比层间缝更宽，三种宽度都打得中。 */
+export function facadeGlassCorners(elevation: number, height: number, z = facadeBandZ(), x = 0) {
+  const glassHeight = Math.max(height - HIGHLIGHT_BAND_M, 1)
+  const y = elevation + HIGHLIGHT_BAND_M + glassHeight / 2
+  const halfW = 4.2
+  const halfH = glassHeight * 0.22
+  return [
+    { x: x - halfW, y: y - halfH, z },
+    { x: x + halfW, y: y - halfH, z },
+    { x: x - halfW, y: y + halfH, z },
+    { x: x + halfW, y: y + halfH, z },
+  ]
+}
+
 export function neighborFloorId(selectedId: string) {
   const spec = floorSpec(selectedId)
   if (spec.level <= 1) return 'F2'

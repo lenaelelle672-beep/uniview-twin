@@ -38,11 +38,19 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const night = mode === 'night'
   const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
-  const extrasReady = useBalancedWarmup(quality)
+  const [composerLive, setComposerLive] = useState(false)
+  const extrasReady = useBalancedWarmup(quality, composerLive)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
   const bumpFit = useCallback(() => setFitGeneration((value) => value + 1), [])
+
+  useLayoutEffect(() => {
+    if (quality === 'perf') {
+      setComposerLive(false)
+      window.__twinComposerLive = false
+    }
+  }, [quality])
 
   return (
     <>
@@ -95,9 +103,9 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <ExplodedLayout />
         <FloorStage />
       </Suspense>
-      {/* 性能档由 MainScenePass 代画主场景并留下深度。Hud 一律 3，只画徽标，避免先清深度再画告警屏。 */}
-      {!extrasReady && <MainScenePass renderPriority={1} />}
-      <MonitorPass renderPriority={2} />
+      {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
+      {!composerLive && <MainScenePass renderPriority={1} />}
+      <MonitorPass renderPriority={2} drawOverlay={!composerLive} />
       <Suspense fallback={null}>
         <Hud renderPriority={3}>
           <FloorBadges />
@@ -107,7 +115,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
       <FacadeSamples />
       {extrasReady && (
         <Suspense fallback={null}>
-          <PostFX />
+          <PostFX onLive={() => setComposerLive(true)} />
         </Suspense>
       )}
     </>

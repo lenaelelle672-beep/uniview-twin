@@ -125,6 +125,16 @@ interface Window {
     extraBytes: number
     drawingBuffer: { width: number; height: number }
   }
+  __twinGlProbe?: {
+    samples: number
+    errors: number[]
+    samplesReliableOnSwiftShader: boolean
+  }
+  __twinMemory?: {
+    textures: number
+    geometries: number
+  }
+  __twinComposerLive?: boolean
   __twinWarmup?: {
     compileMs: number
     totalMs: number
@@ -132,7 +142,17 @@ interface Window {
   }
   __twinFrameWatch?: {
     active: boolean
-    frames: Array<{ at: number; width: number; height: number; emptyRatio: number; darkRatio: number; empty: boolean }>
+    frames: Array<{
+      at: number
+      width: number
+      height: number
+      emptyRatio: number
+      darkRatio: number
+      buildingRatio?: number
+      badgeOnly?: boolean
+      freezeUp?: boolean
+      empty: boolean
+    }>
     scratch?: HTMLCanvasElement
     scratchCtx?: CanvasRenderingContext2D | null
   }

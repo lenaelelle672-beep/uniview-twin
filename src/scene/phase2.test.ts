@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { applySurfaceMode, baseMaterial, highlightCurtainMaterial, highlightJointMaterial } from './materials'
 import { floorSpec } from '../data/floors'
-import { boxesOverlap, facadeBandCorners, neighborFloorId } from './stage/facadeBoxes'
+import { boxesOverlap, facadeGlassCorners, neighborFloorId } from './stage/facadeBoxes'
 import { MONITOR_DISPLAY_SRGB, monitorMaterial } from './stage/materials'
 import { monitorPlateCorners } from './stage/geometry'
 import { overlayDepthBudget } from './monitorDepth'
@@ -48,8 +48,8 @@ describe('T012 第二阶段约束', () => {
     expect(baseMaterial.envMapIntensity).toBe(0.15)
   })
 
-  it('接触阴影分辨率不超过 1024，key 跟外壳版本挂钩', () => {
-    expect(CONTACT_SHADOW_RESOLUTION).toBeLessThanOrEqual(1024)
+  it('接触阴影分辨率不超过 512，key 跟外壳版本挂钩', () => {
+    expect(CONTACT_SHADOW_RESOLUTION).toBeLessThanOrEqual(512)
     expect(SHELL_VERSION.length).toBeGreaterThan(0)
   })
 
@@ -60,6 +60,16 @@ describe('T012 第二阶段约束', () => {
     expect(src).toMatch(/lazy\(\(\) => import\('\.\/scene\/postfx\/balancedFx'\)/)
     expect(src).toMatch(/MonitorPass/)
     expect(src).toMatch(/MainScenePass/)
+    expect(src).not.toMatch(/blitFramebuffer/)
+  })
+
+  it('源码不再往默认帧缓冲 blit 深度', () => {
+    const files = [
+      readFileSync(join(here, 'monitorDepth.ts'), 'utf8'),
+      readFileSync(join(here, '../components/scene/MonitorPass.tsx'), 'utf8'),
+      readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8'),
+    ]
+    expect(files.some((src) => src.includes('blitFramebuffer'))).toBe(false)
   })
 
   it('选中高亮仍是 #f7eedd，不参与色调映射', () => {
@@ -69,10 +79,10 @@ describe('T012 第二阶段约束', () => {
     expect(highlightJointMaterial.toneMapped).toBe(false)
   })
 
-  it('高亮取样落在 F12 / F11 层间带，世界盒不重叠', () => {
+  it('高亮取样落在 F12 / F11 幕墙中带，世界盒不重叠', () => {
     expect(neighborFloorId('F12')).toBe('F11')
-    const f12 = facadeBandCorners(floorSpec('F12').elevation)
-    const f11 = facadeBandCorners(floorSpec('F11').elevation)
+    const f12 = facadeGlassCorners(floorSpec('F12').elevation, floorSpec('F12').height)
+    const f11 = facadeGlassCorners(floorSpec('F11').elevation, floorSpec('F11').height)
     const f12MinY = Math.min(...f12.map((point) => point.y))
     const f11MaxY = Math.max(...f11.map((point) => point.y))
     expect(f12MinY).toBeGreaterThan(f11MaxY)
@@ -84,8 +94,13 @@ describe('T012 第二阶段约束', () => {
     ).toBe(false)
   })
 
-  it('告警屏通道只在分配深度目标时计 1 张 RT', () => {
-    expect(overlayDepthBudget(1366, 768, false)).toEqual({ extraTargets: 0, extraBytes: 0 })
-    expect(overlayDepthBudget(1366, 768, true)).toEqual({ extraTargets: 1, extraBytes: 1366 * 768 * 8 })
+  it('告警屏通道不再另开全屏渲染目标', () => {
+    expect(overlayDepthBudget()).toEqual({ extraTargets: 0, extraBytes: 0 })
+  })
+
+  it('预编译先查 KHR_parallel_shader_compile，没有就走同步 compile', () => {
+    const src = readFileSync(join(here, '../components/scene/useBalancedWarmup.ts'), 'utf8')
+    expect(src).toMatch(/supportsParallelShaderCompile/)
+    expect(src).toMatch(/gl\.compile\(scene, camera\)/)
   })
 })

@@ -1,66 +1,44 @@
-import { Vector2, WebGLRenderTarget, type WebGLRenderer, type WebGLRenderTarget as RenderTarget } from 'three'
+import type { WebGLRenderer } from 'three'
 
-const size = new Vector2()
+export function overlayDepthBudget() {
+  return { extraTargets: 0, extraBytes: 0 }
+}
 
-/** 均衡档合成器在 RenderPass 之后拷出的场景深度。性能档走默认帧缓冲，这里为空。 */
-export const sceneDepthTarget: { current: WebGLRenderTarget | null } = { current: null }
+export function defaultFramebufferSamples(gl: WebGLRenderer) {
+  const ctx = gl.getContext()
+  return Number(ctx.getParameter(ctx.SAMPLES) ?? 0)
+}
 
-export function overlayDepthBudget(width: number, height: number, allocated: boolean) {
-  if (!allocated) return { extraTargets: 0, extraBytes: 0 }
-  return {
-    extraTargets: 1,
-    extraBytes: width * height * 8,
+export function drainGlErrors(gl: WebGLRenderer) {
+  const ctx = gl.getContext()
+  const codes: number[] = []
+  for (let i = 0; i < 8; i += 1) {
+    const code = ctx.getError()
+    if (code === ctx.NO_ERROR) break
+    codes.push(code)
   }
+  return codes
 }
 
-export function ensureSceneDepthTarget(width: number, height: number) {
-  const current = sceneDepthTarget.current
-  if (current && current.width === width && current.height === height) return current
-  current?.dispose()
-  const next = new WebGLRenderTarget(width, height, {
-    depthBuffer: true,
-    stencilBuffer: false,
-  })
-  next.texture.name = 'MonitorPass.SceneDepth'
-  sceneDepthTarget.current = next
-  return next
+export function supportsParallelShaderCompile(gl: WebGLRenderer) {
+  const ctx = gl.getContext()
+  const names = ctx.getSupportedExtensions() ?? []
+  return names.includes('KHR_parallel_shader_compile')
 }
 
-export function releaseSceneDepthTarget() {
-  sceneDepthTarget.current?.dispose()
-  sceneDepthTarget.current = null
-}
-
-function sourceFramebuffer(renderer: WebGLRenderer, source: RenderTarget) {
-  const props = renderer.properties.get(source) as {
-    __webglFramebuffer?: WebGLFramebuffer
-    __webglMultisampledFramebuffer?: WebGLFramebuffer
-  }
-  return props.__webglMultisampledFramebuffer ?? props.__webglFramebuffer ?? null
-}
-
-/** 只拷深度，不动颜色。dest 为 null 时写入默认帧缓冲。 */
-export function blitDepth(renderer: WebGLRenderer, source: RenderTarget, dest: RenderTarget | null) {
-  const gl = renderer.getContext() as WebGL2RenderingContext
-  if (typeof gl.blitFramebuffer !== 'function') return false
-  const srcFbo = sourceFramebuffer(renderer, source)
-  if (!srcFbo) return false
-
-  let dstFbo: WebGLFramebuffer | null = null
-  if (dest) {
-    renderer.setRenderTarget(dest)
-    const destProps = renderer.properties.get(dest) as { __webglFramebuffer?: WebGLFramebuffer }
-    dstFbo = destProps.__webglFramebuffer ?? null
-    if (!dstFbo) return false
-  } else {
-    renderer.getDrawingBufferSize(size)
-  }
-
-  const dstW = dest ? dest.width : size.x
-  const dstH = dest ? dest.height : size.y
-  gl.bindFramebuffer(gl.READ_FRAMEBUFFER, srcFbo)
-  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, dstFbo)
-  gl.blitFramebuffer(0, 0, source.width, source.height, 0, 0, dstW, dstH, gl.DEPTH_BUFFER_BIT, gl.NEAREST)
-  renderer.setRenderTarget(null)
-  return true
+/** 1366×768 均衡档已知渲染目标清单。告警屏复用合成器缓冲，不另开全屏目标。 */
+export function balancedTargetInventory(width: number, height: number) {
+  const halfW = Math.max(1, Math.ceil(width / 2))
+  const halfH = Math.max(1, Math.ceil(height / 2))
+  const items = [
+    { name: 'composer.input', width, height, format: 'RGBA16F', samples: 2, bytes: width * height * 8 * 2 + width * height * 4 * 2 },
+    { name: 'composer.output', width, height, format: 'RGBA16F', samples: 2, bytes: width * height * 8 * 2 + width * height * 4 * 2 },
+    { name: 'n8ao.halfRes', width: halfW, height: halfH, format: 'RGBA16F', samples: 1, bytes: halfW * halfH * 8 },
+    { name: 'contactShadow', width: 512, height: 512, format: 'RGBA8', samples: 1, bytes: 512 * 512 * 4 },
+    { name: 'contactShadow.blur', width: 512, height: 512, format: 'RGBA8', samples: 1, bytes: 512 * 512 * 4 },
+    { name: 'shadowMap', width: 1024, height: 1024, format: 'Depth', samples: 1, bytes: 1024 * 1024 * 4 },
+    { name: 'monitorOverlay', width: 0, height: 0, format: 'none', samples: 0, bytes: 0 },
+  ]
+  const bytes = items.reduce((sum, item) => sum + item.bytes, 0)
+  return { width, height, items, bytes, mib: bytes / (1024 * 1024) }
 }

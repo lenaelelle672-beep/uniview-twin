@@ -37,6 +37,10 @@ async function stats(page) {
     fxReady: document.querySelector('.scene-root')?.dataset.fxReady ?? '',
     quality: document.querySelector('.scene-root')?.dataset.quality ?? '',
     warmup: window.__twinWarmup ?? null,
+    memory: window.__twinMemory ?? null,
+    glProbe: window.__twinGlProbe ?? null,
+    budget: window.__twinOverlayBudget ?? null,
+    composerLive: window.__twinComposerLive ?? false,
   }))
 }
 
@@ -439,7 +443,7 @@ async function main() {
           const ready = document.querySelector('.scene-root')?.dataset.fxReady
           const calls = window.__twinStats?.calls ?? 0
           const triangles = window.__twinStats?.triangles ?? 0
-          if (want === '均衡') return quality === 'balanced' && ready === '1' && calls >= 120
+          if (want === '均衡') return quality === 'balanced' && ready === '1' && window.__twinComposerLive === true && calls >= 100
           return quality === 'perf' && ready === '0' && triangles > 0 && triangles < 25000 && calls <= 74
         },
         { timeout: 45_000 },

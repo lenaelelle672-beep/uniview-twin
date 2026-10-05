@@ -1,7 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { Color, Vector3 } from 'three'
 import { floorSpec } from '../../data/floors'
-import { facadeBandCorners, neighborFloorId, tightenNonOverlapping } from './facadeBoxes'
+import { facadeGlassCorners, neighborFloorId, tightenNonOverlapping } from './facadeBoxes'
 import { monitorPlateCorners } from './geometry'
 import type { Slot } from './layout'
 import { MONITOR_DISPLAY_COLOR } from './materials'
@@ -140,10 +140,10 @@ export function FacadeSamples() {
     const neighbor = floorSpec(neighborId)
     const width = gl.domElement.width
     const height = gl.domElement.height
-    const selectedHits = facadeBandCorners(spec.elevation).map((point) =>
+    const selectedHits = facadeGlassCorners(spec.elevation, spec.height).map((point) =>
       projectCanvas(camera, width, height, point.x, point.y, point.z),
     )
-    const neighborHits = facadeBandCorners(neighbor.elevation).map((point) =>
+    const neighborHits = facadeGlassCorners(neighbor.elevation, neighbor.height).map((point) =>
       projectCanvas(camera, width, height, point.x, point.y, point.z),
     )
     const selectedBox = boxFromCorners(selectedHits, width, height)

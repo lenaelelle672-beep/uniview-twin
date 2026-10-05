@@ -51,6 +51,10 @@ export function RenderProbe() {
       calls: gl.info.render.calls,
       triangles: gl.info.render.triangles,
     }
+    window.__twinMemory = {
+      textures: gl.info.memory.textures,
+      geometries: gl.info.memory.geometries,
+    }
     const watch = window.__twinFrameWatch
     if (!watch?.active) return
     const source = gl.domElement
@@ -65,15 +69,18 @@ export function RenderProbe() {
     scratch.height = source.height
     ctx.drawImage(source, 0, 0)
     const image = ctx.getImageData(0, 0, scratch.width, scratch.height)
-    watch.frames.push(classifyFrame(image.data, image.width, image.height, performance.now()))
+    watch.frames.push(
+      classifyFrame(image.data, image.width, image.height, performance.now(), Boolean(gl.domElement.closest('.scene-root')?.querySelector('[data-twin-freeze]'))),
+    )
   }, 8)
 
   return null
 }
 
-function classifyFrame(data: Uint8ClampedArray, width: number, height: number, at: number) {
+function classifyFrame(data: Uint8ClampedArray, width: number, height: number, at: number, freezeUp: boolean) {
   let empty = 0
   let dark = 0
+  let building = 0
   const total = width * height
   const step = Math.max(1, Math.floor(total / 4000))
   let samples = 0
@@ -89,16 +96,23 @@ function classifyFrame(data: Uint8ClampedArray, width: number, height: number, a
     // 清屏色 #c5d7ea 或全黑，几乎没有建筑细节
     if (max < 8 || (Math.abs(r - 197) < 12 && Math.abs(g - 215) < 12 && Math.abs(b - 234) < 12 && max - min < 18)) {
       empty += 1
+    } else if (b > r + 8 && g > 80 && max - min > 20) {
+      building += 1
     }
   }
   const emptyRatio = empty / samples
   const darkRatio = dark / samples
+  const buildingRatio = building / samples
+  const badgeOnly = emptyRatio > 0.8 && buildingRatio < 0.04 && darkRatio > 0.005 && darkRatio < 0.25
   return {
     at,
     width,
     height,
     emptyRatio,
     darkRatio,
+    buildingRatio,
+    badgeOnly,
+    freezeUp,
     empty: emptyRatio > 0.97 || darkRatio > 0.92,
   }
 }
