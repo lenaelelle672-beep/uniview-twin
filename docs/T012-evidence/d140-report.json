@@ -1,5 +1,5 @@
 {
-  "head": "$(git rev-parse HEAD)",
+  "head": "24bca7598634fb203ec1173b1adef259166d2f62",
   "merge": "origin/cursor/d-lazy-split-1005 @ 63764e3e52da2d7dd4db195723200c99a4258b66",
   "gatesIdenticalToD": [
     "src/scene/overviewReady.ts",
