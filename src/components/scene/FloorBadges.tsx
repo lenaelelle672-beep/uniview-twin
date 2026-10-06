@@ -72,6 +72,7 @@ export function FloorBadges() {
     (state) =>
       state.view !== 'building' || state.exploded || state.presentation === 'model' || state.cam != null,
   )
+  const invalidate = useThree((state) => state.invalidate)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const emitFloorFly = useTwinStore((state) => state.emitFloorFly)
   const enterFloor = useTwinStore((state) => state.enterFloor)
@@ -178,6 +179,10 @@ export function FloorBadges() {
   }, [anchors, hidden])
 
   useEffect(() => {
+    invalidate()
+  }, [hidden, invalidate])
+
+  useEffect(() => {
     return () => {
       plateGeometry.dispose()
       plateMaterial.dispose()
@@ -203,7 +208,7 @@ export function FloorBadges() {
     const { exploded, view } = useTwinStore.getState()
     const motion = stepExplodeMotion(exploded, view, clock.elapsedTime)
     const conceal = hidden
-    if (groupRef.current) groupRef.current.visible = show && !motion.animating
+    if (groupRef.current) groupRef.current.visible = show
     if (conceal || anchors.length === 0 || !(frameCamera instanceof PerspectiveCamera)) {
       window.__twinBadgeCenters = []
       window.__twinBadges = 0
