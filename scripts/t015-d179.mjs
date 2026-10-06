@@ -97,6 +97,11 @@ async function pageCpuCores(page, browser, seconds) {
   } catch {
     cdp = null
   }
+  try {
+    await client.detach()
+  } catch {
+    // ignore
+  }
   const root = browser.process()?.pid
   const pids = root ? childPids(root) : []
   const a = cpuTicks(pids)
@@ -165,7 +170,8 @@ async function sampleIdle(page, browser, seconds, hide = false) {
 async function openScene(browser, path) {
   const page = await browser.newPage()
   await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
-  await page.goto(`${base}${path}`, { waitUntil: 'load', timeout: 90_000 })
+  await page.goto(`${base}${path}`, { waitUntil: 'domcontentloaded', timeout: 90_000 })
+  await waitReady(page)
   if (path.includes('view=floor')) {
     await page.waitForFunction(() => (window.__twinInterior?.renderedDesks ?? 0) > 0, { timeout: 45_000 }).catch(() => {})
   }
@@ -345,12 +351,14 @@ async function main() {
   for (let i = 0; i < 2; i += 1) {
     console.error(`idle ${i + 1}/2`)
     const browser = await launch()
-    const ov = await openScene(browser, '/')
-    const autoOverview = await sampleIdle(ov, browser, 8)
-    await ov.goto(`${base}/?q=balanced`, { waitUntil: 'load', timeout: 90_000 })
-    const balancedOverview = await sampleIdle(ov, browser, 8)
-    const hidden = await sampleIdle(ov, browser, 4, true)
-    await ov.close()
+    const autoOv = await openScene(browser, '/')
+    const autoOverview = await sampleIdle(autoOv, browser, 8)
+    const hidden = await sampleIdle(autoOv, browser, 4, true)
+    await autoOv.close()
+
+    const balOv = await openScene(browser, '/?q=balanced')
+    const balancedOverview = await sampleIdle(balOv, browser, 8)
+    await balOv.close()
 
     const autoFloor = await openScene(browser, '/?view=floor&floor=F12')
     const autoF12 = await sampleIdle(autoFloor, browser, 8)
