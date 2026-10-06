@@ -1,3 +1,5 @@
+import type { Camera, Vector3 } from 'three'
+
 /** 抽屉挡住画布时，用可见区中心算 camera-controls 的 focal offset。 */
 
 export const MIN_VISIBLE_WIDTH_PX = 320
@@ -117,4 +119,65 @@ export function readOverlayRects(doc: Document = document): { canvas: ViewRect; 
 
 export function notifyOverlayLayout(): void {
   window.dispatchEvent(new Event(OVERLAY_LAYOUT_EVENT))
+}
+
+type FocusRig = {
+  distance: number
+  setFocalOffset?: (x: number, y: number, z: number, enableTransition?: boolean) => unknown
+  update: (delta: number) => unknown
+}
+
+let lastFocus: { rig: FocusRig; camera: Camera & { fov: number }; canvas: HTMLCanvasElement; target?: Vector3 } | null =
+  null
+let overlayBound = false
+
+function bindOverlayOnce() {
+  if (overlayBound || typeof window === 'undefined') return
+  overlayBound = true
+  window.addEventListener(OVERLAY_LAYOUT_EVENT, () => {
+    if (!lastFocus) return
+    applyVisibleFocalOffset(lastFocus.rig, lastFocus.camera, lastFocus.canvas, true, lastFocus.target)
+  })
+}
+
+export function applyVisibleFocalOffset(
+  rig: FocusRig,
+  camera: Camera & { fov: number },
+  canvas: HTMLCanvasElement,
+  enableTransition: boolean,
+  targetWorld?: Vector3,
+) {
+  if (typeof rig.setFocalOffset !== 'function') return
+  const measured = readOverlayRects()
+  const box = canvas.getBoundingClientRect()
+  const canvasRect = measured?.canvas ?? { left: box.left, right: box.right, top: box.top, bottom: box.bottom }
+  const visible = visibleCanvasRegion(canvasRect, measured?.overlays ?? [])
+  const offset = focalOffsetToVisibleCenter(canvasRect, visible, rig.distance, camera.fov, box.height || 1)
+  void rig.setFocalOffset(offset.x, offset.y, offset.z, enableTransition)
+  if (!enableTransition) rig.update(0)
+  lastFocus = { rig, camera, canvas, target: targetWorld }
+  bindOverlayOnce()
+  let target: { x: number; y: number } | undefined
+  if (targetWorld) {
+    camera.updateMatrixWorld()
+    const projected = targetWorld.clone().project(camera)
+    target = {
+      x: box.left + (projected.x * 0.5 + 0.5) * box.width,
+      y: box.top + (-projected.y * 0.5 + 0.5) * box.height,
+    }
+  }
+  window.__twinVisibleFocus = {
+    canvas: canvasRect,
+    visible,
+    focal: offset,
+    distance: rig.distance,
+    target,
+  }
+}
+
+export function resetFocalOffset(rig: Pick<FocusRig, 'setFocalOffset'> | null) {
+  if (!rig || typeof rig.setFocalOffset !== 'function') return
+  void rig.setFocalOffset(0, 0, 0, false)
+  lastFocus = null
+  delete window.__twinVisibleFocus
 }

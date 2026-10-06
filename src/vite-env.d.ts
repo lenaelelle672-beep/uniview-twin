@@ -137,6 +137,7 @@ interface Window {
   __twinProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }
   __twinInterior?: TwinInteriorStats
   __twinLabelPx?: TwinLabelPx
+  __twinDismissEsc?: () => boolean
   __twinVisibleFocus?: {
     canvas: { left: number; right: number; top: number; bottom: number }
     visible: { left: number; right: number; top: number; bottom: number }

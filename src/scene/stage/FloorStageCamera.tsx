@@ -1,18 +1,22 @@
 import { type CameraControls as CameraControlsImpl } from '@react-three/drei/core/CameraControls'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import { Box3, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
 import { activeFloorId } from './cut'
 import { obliqueOverviewSeed } from './poses'
-import {
-  OVERLAY_LAYOUT_EVENT,
-  focalOffsetToVisibleCenter,
-  readOverlayRects,
-  visibleCanvasRegion,
-} from './visibleFocus'
 import { workstationPosition } from './workstationPosition'
+
+type VisibleFocusApi = typeof import('./visibleFocus')
+let visibleFocusApi: VisibleFocusApi | null = null
+
+function loadVisibleFocus() {
+  if (visibleFocusApi) return
+  void import('./visibleFocus').then((mod) => {
+    visibleFocusApi = mod
+  })
+}
 
 type FocusRig = CameraControlsImpl & {
   setFocalOffset?: (x: number, y: number, z: number, enableTransition?: boolean) => Promise<void>
@@ -24,7 +28,6 @@ const FLY_SECONDS = 0.42
 const POLAR_DIP = 1.05
 
 const corner = new Vector3()
-const targetScratch = new Vector3()
 
 function setFov(camera: PerspectiveCamera, fov: number) {
   if (!camera.isPerspectiveCamera || Math.abs(camera.fov - fov) <= 0.05) return
@@ -69,36 +72,24 @@ function applyVisibleFocalOffset(
   enableTransition: boolean,
   targetWorld?: Vector3,
 ) {
-  if (typeof rig.setFocalOffset !== 'function') return
-  const measured = readOverlayRects()
-  const box = canvas.getBoundingClientRect()
-  const canvasRect = measured?.canvas ?? { left: box.left, right: box.right, top: box.top, bottom: box.bottom }
-  const visible = visibleCanvasRegion(canvasRect, measured?.overlays ?? [])
-  const offset = focalOffsetToVisibleCenter(canvasRect, visible, rig.distance, camera.fov, box.height || 1)
-  void rig.setFocalOffset(offset.x, offset.y, offset.z, enableTransition)
-  if (!enableTransition) rig.update(0)
-  let target: { x: number; y: number } | undefined
-  if (targetWorld) {
-    camera.updateMatrixWorld()
-    targetScratch.copy(targetWorld).project(camera)
-    target = {
-      x: box.left + (targetScratch.x * 0.5 + 0.5) * box.width,
-      y: box.top + (-targetScratch.y * 0.5 + 0.5) * box.height,
-    }
+  loadVisibleFocus()
+  if (!visibleFocusApi) {
+    void import('./visibleFocus').then((mod) => {
+      visibleFocusApi = mod
+      mod.applyVisibleFocalOffset(rig, camera, canvas, enableTransition, targetWorld)
+    })
+    return
   }
-  window.__twinVisibleFocus = {
-    canvas: canvasRect,
-    visible,
-    focal: offset,
-    distance: rig.distance,
-    target,
-  }
+  visibleFocusApi.applyVisibleFocalOffset(rig, camera, canvas, enableTransition, targetWorld)
 }
 
 function resetFocalOffset(rig: FocusRig | null) {
+  if (visibleFocusApi) {
+    visibleFocusApi.resetFocalOffset(rig)
+    return
+  }
   if (!rig || typeof rig.setFocalOffset !== 'function') return
   void rig.setFocalOffset(0, 0, 0, false)
-  delete window.__twinVisibleFocus
 }
 
 function frameSlab(
@@ -201,33 +192,6 @@ export function FloorStageCamera() {
   const gl = useThree((state) => state.gl)
   const presented = useRef(false)
   const framedKey = useRef('')
-  const overlayGen = useRef(0)
-
-  useEffect(() => {
-    const bump = () => {
-      overlayGen.current += 1
-      const rig = controls as FocusRig | null
-      if (!rig || !active) {
-        resetFocalOffset(rig)
-        return
-      }
-      const perspective = camera as PerspectiveCamera
-      applyVisibleFocalOffset(rig, perspective, gl.domElement, true)
-      const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
-      const interior = scene.getObjectByName('FloorInterior')
-      if (!focused || focused.floorId !== active || !interior) return
-      try {
-        const local = workstationPosition(focused.floorId, focused.deskId)
-        const target = new Vector3(local.x, 0.55, local.z)
-        interior.localToWorld(target)
-        applyVisibleFocalOffset(rig, perspective, gl.domElement, true, target)
-      } catch {
-        // 图纸未就绪时只保留偏移，不写目标点。
-      }
-    }
-    window.addEventListener(OVERLAY_LAYOUT_EVENT, bump)
-    return () => window.removeEventListener(OVERLAY_LAYOUT_EVENT, bump)
-  }, [active, camera, controls, focusedDeskId, gl, scene])
 
   useFrame(() => {
     presented.current = true
@@ -267,6 +231,7 @@ export function FloorStageCamera() {
     // 以本次提交时是否已经出过帧为准。直达链接的楼板可能要等几帧才挂上，
     // 若等到那时再阻尼，首屏会被 SwiftShader 的长帧拖过 5 秒。
     const glide = focusSeq > 0 && presented.current
+    if (active) loadVisibleFocus()
     const tick = () => {
       if (cancelled) return
       const ready = rig && typeof rig.setLookAt === 'function' && typeof rig.fitToBox === 'function'
@@ -311,6 +276,7 @@ export function FloorStageCamera() {
     tick()
     return () => {
       cancelled = true
+      resetFocalOffset(rig)
     }
   }, [active, camera, controls, focusSeq, focusedDeskId, gl, scene, size.height, size.width])
 

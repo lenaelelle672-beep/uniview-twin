@@ -16,16 +16,12 @@ import { downloadTextFile } from '../alarms/downloadCsv'
 import { buildReportSearch } from '../alarms/reportQuery'
 import { isFloorId } from '../data/floors'
 import { navigateTo } from '../report/navigate'
-import {
-  notifyOverlayLayout,
-  readOverlayRects,
-  rectWidth,
-  shouldCollapseDrawer,
-  visibleCanvasRegion,
-} from '../scene/stage/visibleFocus'
 import { useTwinStore } from '../store/store'
-import { registerEscapeLayer } from '../ui/escapeLayers'
 import '../alarms/alarm.css'
+
+function notifyOverlayLayout() {
+  window.dispatchEvent(new Event('twin-overlay-layout'))
+}
 
 interface AlarmDrawerProps {
   open: boolean
@@ -56,6 +52,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
 
   useEffect(() => {
     if (!open) setCollapsed(false)
+    else void import('../scene/stage/visibleFocus')
   }, [open])
 
   useEffect(() => {
@@ -71,7 +68,11 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
     if (!dialog.open) dialog.show()
     if (!collapsed) dialog.focus()
     notifyOverlayLayout()
-    return registerEscapeLayer('alarm-drawer', () => onCloseRef.current())
+    let drop = () => {}
+    void import('../ui/escapeLayers').then((mod) => {
+      drop = mod.registerEscapeLayer('alarm-drawer', () => onCloseRef.current())
+    })
+    return () => drop()
   }, [collapsed, floorListOpen, open])
 
   function expandList() {
@@ -117,13 +118,15 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
 
   function pick(row: AlarmListRow) {
     setActiveId(row.deviceId)
-    const measured = readOverlayRects()
-    if (measured && shouldCollapseDrawer(rectWidth(visibleCanvasRegion(measured.canvas, measured.overlays)))) {
-      savedScroll.current = tableRef.current?.scrollTop ?? 0
-      flushSync(() => setCollapsed(true))
-      notifyOverlayLayout()
-    }
-    focusDevice({ floor: row.floorId, deskId: row.deskId, deviceId: row.deviceId })
+    void import('../scene/stage/visibleFocus').then((mod) => {
+      const measured = mod.readOverlayRects()
+      if (measured && mod.shouldCollapseDrawer(mod.rectWidth(mod.visibleCanvasRegion(measured.canvas, measured.overlays)))) {
+        savedScroll.current = tableRef.current?.scrollTop ?? 0
+        flushSync(() => setCollapsed(true))
+        notifyOverlayLayout()
+      }
+      focusDevice({ floor: row.floorId, deskId: row.deskId, deviceId: row.deviceId })
+    })
     setFocusNote(
       row.deskId ? `已选择工位 ${row.deskId}，楼层 ${row.floorId}` : `已选择楼层 ${row.floorId}，该设备没有工位`,
     )

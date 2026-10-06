@@ -29,3 +29,5 @@ export function escapeLayerCount(): number {
 export function resetEscapeLayers(): void {
   layers.length = 0
 }
+
+if (typeof window !== 'undefined') window.__twinDismissEsc = dismissTopEscapeLayer

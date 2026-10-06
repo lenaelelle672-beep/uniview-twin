@@ -1,7 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { searchWorkstations, type WorkstationHit } from '../locate/search'
 import { useTwinStore } from '../store/store'
-import { registerEscapeLayer } from '../ui/escapeLayers'
 
 export function SearchBox() {
   const desks = useTwinStore((state) => state.desks)
@@ -27,7 +26,10 @@ export function SearchBox() {
       if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
     }
     document.addEventListener('pointerdown', onPointer)
-    const drop = registerEscapeLayer('search', () => setOpen(false))
+    let drop = () => {}
+    void import('../ui/escapeLayers').then((mod) => {
+      drop = mod.registerEscapeLayer('search', () => setOpen(false))
+    })
     return () => {
       document.removeEventListener('pointerdown', onPointer)
       drop()
