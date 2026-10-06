@@ -231,6 +231,8 @@ for (const delay of [500, 1500, 3000]) {
     await page.evaluate((ms) => new Promise((r) => setTimeout(r, ms)), delay)
     const clickAt = await page.evaluate(() => {
       window.__twinCameraMoveAt = undefined
+      const cam = window.__twinRig?.camera?.position
+      window.__twinClickCam = cam ? { x: cam.x, y: cam.y, z: cam.z } : null
       return performance.now()
     })
     const marker = await page.$('[data-twin-floor-marker="F1"]')
@@ -239,10 +241,16 @@ for (const delay of [500, 1500, 3000]) {
     await page.waitForFunction(() => window.__twinView === 'floor' && window.__twinSelected === 'F1', { timeout: 45_000 })
     const moveMs = await page.evaluate((t0) => {
       const started = performance.now()
+      const origin = window.__twinClickCam
       return new Promise((resolve) => {
         const poll = () => {
           if (typeof window.__twinCameraMoveAt === 'number') {
             resolve(Math.round(window.__twinCameraMoveAt - t0))
+            return
+          }
+          const cam = window.__twinRig?.camera?.position
+          if (origin && cam && (Math.abs(cam.x - origin.x) > 1e-4 || Math.abs(cam.y - origin.y) > 1e-4 || Math.abs(cam.z - origin.z) > 1e-4)) {
+            resolve(Math.round(performance.now() - t0))
             return
           }
           if (performance.now() - started > 8000) {
