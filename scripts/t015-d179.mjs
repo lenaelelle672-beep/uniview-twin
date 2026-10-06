@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /**
- * T015 / D180 自测。
+ * T015 / D180 / D187 自测。
+ * 帧率一律用 window.__twinFrames（R3F 每提交一帧 +1），不用 renderer.info.render.frame。
+ * 后台：CDP Emulation.setFocusEmulationEnabled + Page.setWebLifecycleState hidden。
  * 空闲与 7 项出画：不调 __twinInvalidate、不额外动鼠标。
- * 调用数：每帧前 await __twinInvalidate()。
- * CPU 门禁只卡软件渲染、不带 ?q= 自动判档的总览/F12；?q=balanced 的 CPU 只写报告。
- * render.frame 每秒增量两档都报。
  */
 import { mkdir, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
@@ -52,10 +51,7 @@ async function waitReady(page) {
 }
 
 async function waitLoop(page) {
-  await page.waitForFunction(
-    () => window.__twinSchedule != null || window.__twinGlFrame != null || window.__twinFirstFrameAt != null,
-    { timeout: 20_000 },
-  ).catch(() => {})
+  await page.waitForFunction(() => typeof window.__twinFrames === 'number', { timeout: 20_000 }).catch(() => {})
   await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
 }
 
@@ -117,47 +113,54 @@ async function pageCpuCores(_page, browser, seconds) {
 
 async function snapshot(page) {
   return page.evaluate(() => ({
+    frames: window.__twinFrames ?? 0,
     gl: window.__twinGlFrame ?? window.__twinStats?.frame ?? 0,
-    count: window.__twinFrameCount ?? 0,
     at: performance.now(),
     schedule: window.__twinSchedule ?? null,
     gpu: window.__twinGpu ?? null,
+    hidden: document.hidden,
+    visibility: document.visibilityState,
   }))
+}
+
+async function forceHiddenCdp(page) {
+  const client = await page.createCDPSession()
+  await client.send('Emulation.setFocusEmulationEnabled', { enabled: true })
+  await client.send('Page.setWebLifecycleState', { state: 'hidden' })
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 250)))
+  return client
 }
 
 async function sampleIdle(page, browser, seconds, hide = false) {
   await waitLoop(page)
-  if (hide) {
-    await page.evaluate(() => {
-      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
-      Object.defineProperty(document, 'hidden', { configurable: true, get: () => true })
-      document.dispatchEvent(new Event('visibilitychange'))
-    })
-    await page.evaluate(() => new Promise((r) => setTimeout(r, 200)))
-  }
+  let cdp = null
+  if (hide) cdp = await forceHiddenCdp(page)
   const start = await snapshot(page)
   const cpu = await pageCpuCores(page, browser, seconds)
   const end = await page.evaluate((t0) => {
     const at = performance.now()
     const sec = (at - t0.at) / 1000
+    const frames = window.__twinFrames ?? 0
     const gl = window.__twinGlFrame ?? window.__twinStats?.frame ?? 0
-    const count = window.__twinFrameCount ?? 0
     return {
+      frames,
       gl,
-      count,
       sec,
+      fps: (frames - t0.frames) / sec,
       glFps: (gl - t0.gl) / sec,
-      useFrameFps: (count - t0.count) / sec,
+      frameDelta: frames - t0.frames,
       schedule: window.__twinSchedule ?? null,
       gpu: window.__twinGpu ?? null,
+      hidden: document.hidden,
+      visibility: document.visibilityState,
     }
   }, start)
+  if (cdp) await cdp.detach().catch(() => {})
   return {
     ...end,
-    expectedHz: start.schedule?.hz ?? end.schedule?.hz ?? null,
+    expectedHz: hide ? 0 : (start.schedule?.hz ?? end.schedule?.hz ?? null),
     cpu: cpu.cores,
     cpuDetail: cpu,
-    hidden: hide,
     url: page.url(),
   }
 }
@@ -373,41 +376,49 @@ async function main() {
     await writeFile(`${outDir}/d180-${label}-idle.json`, JSON.stringify({ idles }, null, 2))
   }
 
-  const browser = await launch()
-  const consoles = []
-  const page = await browser.newPage()
-  page.on('console', (m) => consoles.push(m.type()))
-  page.on('pageerror', () => consoles.push('pageerror'))
-  await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
-  const calls = {}
-  await page.goto(`${base}/?q=balanced`, { waitUntil: 'load', timeout: 90_000 })
-  await waitReady(page)
-  await waitLoop(page)
-  calls.overviewBalanced = await measureCalls(page)
-  await page.goto(`${base}/?q=perf`, { waitUntil: 'load', timeout: 90_000 })
-  await waitReady(page)
-  await waitLoop(page)
-  calls.overviewPerf = await measureCalls(page)
-  for (const [key, q, floor] of [
-    ['f12Balanced', 'balanced', 'F12'],
-    ['f12Perf', 'perf', 'F12'],
-    ['f22Balanced', 'balanced', 'F22'],
-    ['f22Perf', 'perf', 'F22'],
-  ]) {
-    await page.goto(`${base}/?q=${q}&view=floor&floor=${floor}`, { waitUntil: 'load', timeout: 90_000 })
-    await page.waitForFunction(() => (window.__twinInterior?.renderedDesks ?? 0) > 0, { timeout: 45_000 }).catch(() => {})
+  let calls = {}
+  let motion = {}
+  let demand = { error: 'skipped' }
+  let consoleCount = { errors: 0, warnings: 0 }
+  try {
+    const browser = await launch()
+    const consoles = []
+    const page = await browser.newPage()
+    page.on('console', (m) => consoles.push(m.type()))
+    page.on('pageerror', () => consoles.push('pageerror'))
+    await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
+    await page.goto(`${base}/?q=balanced`, { waitUntil: 'load', timeout: 90_000 })
+    await waitReady(page)
     await waitLoop(page)
-    calls[key] = await measureCalls(page)
+    calls.overviewBalanced = await measureCalls(page)
+    await page.goto(`${base}/?q=perf`, { waitUntil: 'load', timeout: 90_000 })
+    await waitReady(page)
+    await waitLoop(page)
+    calls.overviewPerf = await measureCalls(page)
+    for (const [key, q, floor] of [
+      ['f12Balanced', 'balanced', 'F12'],
+      ['f12Perf', 'perf', 'F12'],
+      ['f22Balanced', 'balanced', 'F22'],
+      ['f22Perf', 'perf', 'F22'],
+    ]) {
+      await page.goto(`${base}/?q=${q}&view=floor&floor=${floor}`, { waitUntil: 'load', timeout: 90_000 })
+      await page.waitForFunction(() => (window.__twinInterior?.renderedDesks ?? 0) > 0, { timeout: 45_000 }).catch(() => {})
+      await waitLoop(page)
+      calls[key] = await measureCalls(page)
+    }
+    consoleCount = {
+      errors: consoles.filter((t) => t === 'error' || t === 'pageerror').length,
+      warnings: consoles.filter((t) => t === 'warning').length,
+    }
+    await page.close()
+    motion = await sampleMotion(browser)
+    demand = await demandVisual(browser)
+    await shots(browser)
+    await browser.close()
+  } catch (error) {
+    console.error('post-idle FAIL', error.message)
+    demand = { error: error.message }
   }
-  const consoleCount = {
-    errors: consoles.filter((t) => t === 'error' || t === 'pageerror').length,
-    warnings: consoles.filter((t) => t === 'warning').length,
-  }
-  await page.close()
-  const motion = await sampleMotion(browser)
-  const demand = await demandVisual(browser)
-  await shots(browser)
-  await browser.close()
 
   const report = {
     label,
@@ -415,7 +426,8 @@ async function main() {
     chromeArgs,
     method: {
       visual: '0.5s screenshot, no __twinInvalidate, no extra mouse',
-      idle: 'gl.info.render.frame + useFrame count, no invalidate',
+      idle: '__twinFrames increment/sec (one R3F commit = +1); gl.render.frame is diagnostic only',
+      hidden: 'CDP Emulation.setFocusEmulationEnabled + Page.setWebLifecycleState hidden',
       cpu: 'software auto (no ?q=) /proc renderer+gpu ticks / wall; ?q=balanced report-only',
       calls: 'D148: wait 2s then 60x await __twinInvalidate',
     },
@@ -429,34 +441,38 @@ async function main() {
     },
     median: {
       autoGpu: idles[0]?.autoOverview.gpu ?? null,
-      autoOverviewGlFps: median(idles.map((x) => x.autoOverview.glFps)),
-      autoOverviewUseFps: median(idles.map((x) => x.autoOverview.useFrameFps)),
+      autoOverviewFps: median(idles.map((x) => x.autoOverview.fps)),
       autoOverviewExpected: median(idles.map((x) => x.autoOverview.expectedHz)),
       autoOverviewCpu: median(idles.map((x) => x.autoOverview.cpu)),
-      balancedOverviewGlFps: median(idles.map((x) => x.balancedOverview.glFps)),
-      balancedOverviewUseFps: median(idles.map((x) => x.balancedOverview.useFrameFps)),
+      balancedOverviewFps: median(idles.map((x) => x.balancedOverview.fps)),
       balancedOverviewExpected: median(idles.map((x) => x.balancedOverview.expectedHz)),
       balancedOverviewCpu: median(idles.map((x) => x.balancedOverview.cpu)),
-      hiddenGlFps: median(idles.map((x) => x.hidden.glFps)),
-      hiddenUseFps: median(idles.map((x) => x.hidden.useFrameFps)),
-      autoF12GlFps: median(idles.map((x) => x.autoF12.glFps)),
-      autoF12UseFps: median(idles.map((x) => x.autoF12.useFrameFps)),
+      hiddenFps: median(idles.map((x) => x.hidden.fps)),
+      hiddenFrameDelta: median(idles.map((x) => x.hidden.frameDelta)),
+      autoF12Fps: median(idles.map((x) => x.autoF12.fps)),
       autoF12Expected: median(idles.map((x) => x.autoF12.expectedHz)),
       autoF12Cpu: median(idles.map((x) => x.autoF12.cpu)),
-      balancedF12GlFps: median(idles.map((x) => x.balancedF12.glFps)),
-      balancedF12UseFps: median(idles.map((x) => x.balancedF12.useFrameFps)),
+      balancedF12Fps: median(idles.map((x) => x.balancedF12.fps)),
       balancedF12Expected: median(idles.map((x) => x.balancedF12.expectedHz)),
       balancedF12Cpu: median(idles.map((x) => x.balancedF12.cpu)),
-      perfF12GlFps: median(idles.map((x) => x.perfF12.glFps)),
-      perfF12UseFps: median(idles.map((x) => x.perfF12.useFrameFps)),
+      perfF12Fps: median(idles.map((x) => x.perfF12.fps)),
       perfF12Expected: median(idles.map((x) => x.perfF12.expectedHz)),
       perfF12Cpu: median(idles.map((x) => x.perfF12.cpu)),
     },
     motion: {
-      explodeBalanced: { glFps: motion.explodeBalanced?.glFps, useFrameFps: motion.explodeBalanced?.useFrameFps, expectedHz: motion.explodeBalanced?.expectedHz },
-      explodePerf: { glFps: motion.explodePerf?.glFps, useFrameFps: motion.explodePerf?.useFrameFps, expectedHz: motion.explodePerf?.expectedHz },
-      flyBalanced: { glFps: motion.flyBalanced?.glFps, useFrameFps: motion.flyBalanced?.useFrameFps, expectedHz: motion.flyBalanced?.expectedHz },
-      flyPerf: { glFps: motion.flyPerf?.glFps, useFrameFps: motion.flyPerf?.useFrameFps, expectedHz: motion.flyPerf?.expectedHz },
+      explodeBalanced: { fps: motion.explodeBalanced?.fps, expectedHz: motion.explodeBalanced?.expectedHz },
+      explodePerf: { fps: motion.explodePerf?.fps, expectedHz: motion.explodePerf?.expectedHz },
+      flyBalanced: { fps: motion.flyBalanced?.fps, expectedHz: motion.flyBalanced?.expectedHz },
+      flyPerf: { fps: motion.flyPerf?.fps, expectedHz: motion.flyPerf?.expectedHz },
+    },
+    glSync: {
+      samples: 'cached once in defaultFramebufferSamples',
+      getError: 'dev or window.__twinGlDebug only',
+      otherPerFrame: [
+        'MonitorPass/balancedFx: gl.getDrawingBufferSize (canvas w/h, not GPU getParameter)',
+        'RenderProbe: gl.info.reset() (CPU counter, not GPU sync)',
+        'Scene onCreated / gpuDetect: getParameter(UNMASKED_RENDERER) once',
+      ],
     },
     calls,
     demand,

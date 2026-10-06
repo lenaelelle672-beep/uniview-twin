@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
+  bumpTwinFrames,
   channelDue,
   discreteAlarmLit,
   emptyChannelClock,
@@ -90,6 +91,14 @@ describe('D180 续帧调度', () => {
     expect(discreteAlarmLit(0.49)).toBe(true)
     expect(discreteAlarmLit(0.5)).toBe(false)
     expect(discreteAlarmLit(1)).toBe(true)
+  })
+
+  it('bumpTwinFrames 每调用 +1', () => {
+    const w = globalThis as unknown as Window
+    w.__twinFrames = 0
+    bumpTwinFrames()
+    bumpTwinFrames()
+    expect(w.__twinFrames).toBe(2)
   })
 
   it('holdSnapshot / markDue', () => {

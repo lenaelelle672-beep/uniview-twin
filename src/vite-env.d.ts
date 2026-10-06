@@ -117,6 +117,8 @@ interface Window {
   __twinGpu?: { renderer: string; software: boolean; tier: 'performance' | 'balanced' | 'high' }
   __twinInvalidate?: () => Promise<void>
   __twinFrameCount?: number
+  __twinFrames?: number
+  __twinGlDebug?: boolean
   __twinLastFrameAt?: number
   __twinGlFrame?: number
   __twinSchedule?: {

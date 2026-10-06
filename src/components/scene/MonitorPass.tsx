@@ -27,7 +27,7 @@ function renderMonitors(gl: WebGLRenderer, scene: Scene, camera: Camera) {
 
 /**
  * 性能档：主场景深度已在默认帧缓冲（直接画进去，不是 blit）。
- * 均衡档：告警屏在色调映射之后画进单采样离屏 FBO，这里只报 SAMPLES / getError，不 blit。
+ * 均衡档：告警屏在色调映射之后画进单采样离屏 FBO。SAMPLES 只读一次；getError 仅 dev。
  */
 export function MonitorPass({
   renderPriority,

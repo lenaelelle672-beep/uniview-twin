@@ -98,6 +98,12 @@ export function markDueChannels(last: ChannelClock, quality: QualityTier, now: n
 }
 
 /** 2 Hz 离散亮灭：偶数半秒亮。 */
+/** D187：R3F 每真正提交一帧 +1，不是每次 gl.render。 */
+export function bumpTwinFrames(): void {
+  const w = globalThis as unknown as Window
+  w.__twinFrames = (w.__twinFrames ?? 0) + 1
+}
+
 export function discreteAlarmLit(elapsedSec: number): boolean {
   return Math.floor(elapsedSec * 2) % 2 === 0
 }

@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import { stepExplodeMotion } from '../../scene/explode'
 import {
+  bumpTwinFrames,
   emptyChannelClock,
   holdSnapshot,
   markDueChannels,
@@ -47,6 +48,7 @@ export function DemandLoop() {
 
   useLayoutEffect(() => {
     bindTwinInvalidate(() => rawRef.current())
+    if (window.__twinFrames == null) window.__twinFrames = 0
     gl.shadowMap.autoUpdate = false
     if (quality !== 'perf') gl.shadowMap.needsUpdate = true
   }, [gl, quality])
@@ -58,9 +60,9 @@ export function DemandLoop() {
 
   useEffect(() => {
     const rig = controls as { addEventListener?: (type: string, fn: () => void) => void; removeEventListener?: (type: string, fn: () => void) => void } | null
-    const on = rig?.addEventListener
-    const off = rig?.removeEventListener
-    if (!on || !off) return undefined
+    if (!rig?.addEventListener || !rig.removeEventListener) return undefined
+    const add = rig.addEventListener.bind(rig)
+    const remove = rig.removeEventListener.bind(rig)
     let release: (() => void) | null = null
     const hold = () => {
       if (!release) release = retainFrameChannel('motion')
@@ -69,17 +71,20 @@ export function DemandLoop() {
       release?.()
       release = null
     }
-    on('wake', hold)
-    on('sleep', drop)
+    add('wake', hold)
+    add('sleep', drop)
     return () => {
-      off('wake', hold)
-      off('sleep', drop)
+      remove('wake', hold)
+      remove('sleep', drop)
       drop()
     }
   }, [controls])
 
   useEffect(() => {
-    const unsubAfter = addAfterEffect(() => flushTwinInvalidate())
+    const unsubAfter = addAfterEffect(() => {
+      bumpTwinFrames()
+      flushTwinInvalidate()
+    })
     const unsubStore = useTwinStore.subscribe(() => {
       if (document.visibilityState === 'hidden') return
       gatedInvalidate()
@@ -116,7 +121,7 @@ export function DemandLoop() {
     }
     const hidden = document.visibilityState === 'hidden'
     const hz = scheduledHz(liveQuality, liveView, hidden)
-    window.__twinFrameCount = (window.__twinFrameCount ?? 0) + 1
+    window.__twinFrameCount = window.__twinFrames ?? 0
     window.__twinLastFrameAt = performance.now()
     window.__twinGlFrame = gl.info.render.frame
     window.__twinSchedule = { hz, view: liveView, quality: liveQuality, hidden, holds: holdSnapshot() }
