@@ -194,6 +194,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
 export function SceneCanvas() {
   const dayNight = useTwinStore((state) => state.dayNight)
   const quality = useTwinStore((state) => state.quality)
+  const userPicked = useTwinStore((state) => state.qualityPinned || state.downgradeSuppressed)
   const presentation = useTwinStore((state) => state.presentation)
   const cam = useTwinStore((state) => state.cam)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
@@ -206,6 +207,10 @@ export function SceneCanvas() {
   useLayoutEffect(() => {
     applySurfaceMode(mode)
   }, [mode])
+
+  useLayoutEffect(() => {
+    if (softwareAuto && userPicked) setSoftwareAuto(false)
+  }, [softwareAuto, userPicked])
 
   return (
     <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={softwareAuto ? 'perf' : quality}>
