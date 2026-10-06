@@ -9,6 +9,7 @@ interface FloorListProps {
 
 export function FloorList({ open }: FloorListProps) {
   const floors = useTwinStore((state) => state.floors)
+  const view = useTwinStore((state) => state.view)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
   const hoveredFloor = useTwinStore((state) => state.hoveredFloor)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
@@ -17,9 +18,8 @@ export function FloorList({ open }: FloorListProps) {
   const setHoveredFloor = useTwinStore((state) => state.setHoveredFloor)
   const listRef = useRef<HTMLDivElement>(null)
   const strip = !open
-  // 进层也保持 compact 宽。总览 96px、单层 232px 会挤 .stage，R3F 在进层长帧里
-  // renderer.setSize（D271）。fb2 进层不改栏宽。
-  const compact = open
+  // 总览 compact / 单层全宽只改 overlay，不占 flex 宽，进层和 Esc 都不会 setSize（D272）。
+  const compact = view === 'building' && open
   const rows = useMemo(() => overviewFloorRows(floors), [floors])
   const shown = strip ? stripFloorRows(rows) : rows
 

@@ -1,6 +1,6 @@
 import { Line } from '@react-three/drei/core/Line'
 import { useFrame, useThree } from '@react-three/fiber'
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { PerspectiveCamera, Vector3, type Camera, type Object3D } from 'three'
 import { searchWorkstations } from '../../locate/search'
 import { resolveWorkstationRef } from '../../locate/ref'
@@ -261,7 +261,11 @@ function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, num
 }
 
 export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
-  const { camera, scene, size, gl, invalidate } = useThree()
+  const camera = useThree((state) => state.camera)
+  const scene = useThree((state) => state.scene)
+  const size = useThree((state) => state.size)
+  const gl = useThree((state) => state.gl)
+  const invalidate = useThree((state) => state.invalidate)
   const [fontSize, setFontSize] = useState(0)
   const sizedRef = useRef(false)
   const pxRef = useRef(0)
@@ -334,7 +338,12 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     fadeRafRef.current = requestAnimationFrame(step)
   }
   const characters = roomLabelCharacters(labels)
-  const points = labels.flatMap((label) => [label.anchor, label.label])
+  const pointsKey = labels.map((label) => `${label.id}:${label.anchor.join(',')}:${label.label.join(',')}`).join('|')
+  const points = useMemo(
+    () => labels.flatMap((label) => [label.anchor, label.label]),
+    // 只跟几何走。每次 render 新数组会让 drei Line 把 LineMaterial dispose 再编一次（D272）。
+    [pointsKey],
+  )
   cameraRef.current = camera
   sizeRef.current = size
 

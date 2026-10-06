@@ -438,6 +438,12 @@ interface Window {
     view?: string
     floor?: string | null
   }>
+  __twinSetPixelRatio?: Array<{
+    at: number
+    value: number
+    view?: string
+    floor?: string | null
+  }>
   __twinWarmup?: {
     compileMs: number
     totalMs: number

@@ -126,6 +126,11 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/askFrame/)
     expect(source).toMatch(/startFadeLoop/)
     expect(source).toMatch(/requestAnimationFrame/)
+    expect(source).toMatch(/useMemo/)
+    expect(source).toMatch(/pointsKey/)
+    expect(source).toMatch(/useThree\(\(state\) => state\.camera\)/)
+    expect(source).toMatch(/useThree\(\(state\) => state\.size\)/)
+    expect(source).not.toMatch(/useThree\(\)/)
     expect(source).not.toMatch(/if \(stripRef\.current && !dragging/)
   })
 

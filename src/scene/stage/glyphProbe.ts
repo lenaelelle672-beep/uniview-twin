@@ -386,7 +386,8 @@ export function installSetSizeHook(renderer?: WebGLRenderer | null) {
   const tagged = gl as WebGLRenderer & { __twinSetSizeHook?: boolean }
   if (tagged.__twinSetSizeHook) return
   tagged.__twinSetSizeHook = true
-  const orig = gl.setSize.bind(gl)
+  const origSize = gl.setSize.bind(gl)
+  const origDpr = gl.setPixelRatio.bind(gl)
   gl.setSize = ((width: number, height: number, updateStyle?: boolean) => {
     const rows = (window.__twinSetSize ??= [])
     rows.push({
@@ -398,8 +399,19 @@ export function installSetSizeHook(renderer?: WebGLRenderer | null) {
       floor: window.__twinSelected ?? null,
     })
     if (rows.length > 40) rows.splice(0, rows.length - 40)
-    return orig(width, height, updateStyle)
+    return origSize(width, height, updateStyle)
   }) as typeof gl.setSize
+  gl.setPixelRatio = ((value: number) => {
+    const rows = (window.__twinSetPixelRatio ??= [])
+    rows.push({
+      at: performance.now(),
+      value,
+      view: window.__twinView,
+      floor: window.__twinSelected ?? null,
+    })
+    if (rows.length > 40) rows.splice(0, rows.length - 40)
+    return origDpr(value)
+  }) as typeof gl.setPixelRatio
 }
 
 export function installTexImage2DHook(renderer?: WebGLRenderer | null) {

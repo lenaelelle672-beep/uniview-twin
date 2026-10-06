@@ -194,6 +194,7 @@ button {
 }
 
 .workspace {
+  position: relative;
   flex: 1;
   min-height: 0;
   min-width: 0;
@@ -211,9 +212,15 @@ button {
 }
 
 .floor-panel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 4;
   width: 232px;
   flex: none;
   border-width: 0 1px 0 0;
+  transform: translateZ(0);
 }
 
 .floor-panel.is-collapsed {

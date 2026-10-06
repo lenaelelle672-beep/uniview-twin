@@ -266,6 +266,20 @@ function setSizeSince(page, t0, t1) {
   )
 }
 
+function setPixelRatioSince(page, t0, t1) {
+  return page.evaluate(
+    (since, until) => {
+      const rows = (window.__twinSetPixelRatio ?? []).filter((row) => row.at >= since && (until == null || row.at <= until))
+      return {
+        count: rows.length,
+        rows: rows.map((row) => ({ at: Math.round(row.at), value: row.value, view: row.view, floor: row.floor })),
+      }
+    },
+    t0,
+    t1 ?? null,
+  )
+}
+
 function shadersSince(page, t0, t1) {
   return page.evaluate(
     (since, until) => {
@@ -485,6 +499,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     row.shaders = await shadersSince(page, clickAt, until)
     row.newPrograms = row.shaders.linkProgram
     row.setSize = await setSizeSince(page, clickAt, until)
+    row.setPixelRatio = await setPixelRatioSince(page, clickAt, until)
     const afterPrograms = await programSnap(page)
     row.programDiff = diffCache(beforePrograms, afterPrograms)
     row.tex = await snapshotTex(page)
@@ -516,8 +531,35 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     maxCompile: maxOf(runs.map((row) => row.shaders?.compileShader)),
     maxLink: maxOf(runs.map((row) => row.shaders?.linkProgram)),
     medianSetSize: median(runs.map((row) => row.setSize?.count)),
+    medianSetPixelRatio: median(runs.map((row) => row.setPixelRatio?.count)),
     programDiff: runs[0]?.programDiff ?? [],
   }
+}
+
+{
+  const page = await open()
+  await waitGlyph(page)
+  await page.evaluate(() => {
+    if (Array.isArray(window.__twinSetSize)) window.__twinSetSize.length = 0
+    if (Array.isArray(window.__twinSetPixelRatio)) window.__twinSetPixelRatio.length = 0
+  })
+  const clickAt = await enterFloor(page, 'F2')
+  await page.waitForFunction(() => window.__twinView === 'floor' && window.__twinCameraRested === true, { timeout: 20_000 })
+  const afterEntry = {
+    setSize: await setSizeSince(page, clickAt),
+    setPixelRatio: await setPixelRatioSince(page, clickAt),
+  }
+  const escAt = await page.evaluate(() => performance.now())
+  await page.keyboard.press('Escape')
+  await page.waitForFunction(() => window.__twinView === 'building', { timeout: 15_000 })
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
+  out.esc = {
+    afterEntry,
+    setSize: await setSizeSince(page, escAt),
+    setPixelRatio: await setPixelRatioSince(page, escAt),
+    panel: await page.evaluate(() => document.querySelector('.floor-panel')?.className ?? ''),
+  }
+  await page.close()
 }
 
 {
