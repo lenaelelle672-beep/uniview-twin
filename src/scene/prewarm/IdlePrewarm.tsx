@@ -1,7 +1,15 @@
 import { useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
+import { loadFloorPlan } from '../../floors/loadFloor'
 import { useTwinStore } from '../../store/store'
-import { collectPrewarmCharacterChunks, collectPrewarmCharacters } from './characters'
+import {
+  collectDemoLabelCharacters,
+  collectPrewarmCharacterChunks,
+  collectPrewarmCharacters,
+  DEMO_PREWARM_FLOORS,
+  demoPrewarmPlansReady,
+  uniqueCharacters,
+} from './characters'
 import { compilePeopleGroup, compileTroikaSample, peopleModelUrls } from './extraPrewarm'
 import { preloadLabelFont, textRuntimePrefetchDone, waitTextRuntimePrefetch } from './fontPrewarm'
 import { createYieldController, waitIdle } from './idleYield'
@@ -82,10 +90,22 @@ export function IdlePrewarm() {
       if (cancelled) return
       const fontStarted = performance.now()
       let fontMs = 0
+      let glyphsPrewarmed = 0
+      let glyphsRequired = 0
+      let glyphsComplete = false
       try {
         const textReady = textRuntimePrefetchDone() || (await waitTextRuntimePrefetch())
+        if (textReady && !cancelled) {
+          for (const floorId of DEMO_PREWARM_FLOORS) {
+            await waitTurn()
+            if (cancelled) return
+            await loadFloorPlan(floorId)
+          }
+        }
         const characters = collectPrewarmCharacters()
         const chunks = collectPrewarmCharacterChunks()
+        glyphsPrewarmed = uniqueCharacters(chunks.join('')).length
+        glyphsRequired = collectDemoLabelCharacters().length
         if (textReady && !cancelled) {
           for (const chunk of chunks) {
             await waitTurn()
@@ -99,11 +119,18 @@ export function IdlePrewarm() {
             compiled.push(`troika-text:+${programCount(gl) - before}`)
           }
         }
+        glyphsComplete =
+          demoPrewarmPlansReady() &&
+          glyphsRequired > 0 &&
+          glyphsPrewarmed >= glyphsRequired &&
+          [...collectDemoLabelCharacters()].every((glyph) => characters.includes(glyph))
         fontMs = performance.now() - fontStarted
       } catch {
         fontMs = performance.now() - fontStarted
+        glyphsComplete = false
       }
       if (cancelled) return
+      if (!glyphsComplete) return
 
       if (SHADER_PREWARM_ENABLED) {
         for (const url of peopleModelUrls(quality !== 'perf')) {
@@ -135,27 +162,13 @@ export function IdlePrewarm() {
         programsAfter: programCount(gl),
         textRuntimeFirst: textRuntimePrefetchDone(),
         shaderEnabled: SHADER_PREWARM_ENABLED,
+        glyphsRequired,
+        glyphsPrewarmed,
       })
     }
 
     void run().catch(() => {
-      if (cancelled) return
-      invalidate()
-      markDone({
-        startedAt: window.__twinPrewarmStartedAt ?? performance.now(),
-        doneAt: performance.now(),
-        totalMs: 0,
-        shaderMs: 0,
-        fontMs: 0,
-        groups: compiled,
-        yielded,
-        quality: useTwinStore.getState().quality,
-        parallelShaderCompile: false,
-        programsBefore: programCount(gl),
-        programsAfter: programCount(gl),
-        textRuntimeFirst: textRuntimePrefetchDone(),
-        shaderEnabled: SHADER_PREWARM_ENABLED,
-      })
+      // 字形没跑完就不置 __twinPrewarmed，避免 QA 在半成品 SDF 上进 F1。
     })
 
     return () => {

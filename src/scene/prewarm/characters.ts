@@ -3,7 +3,7 @@ import { listFloorSpecs } from '../../data/floors'
 import { roomLabelsFromPlan } from '../../floors/labels'
 import { peekFloorPlan } from '../../floors/loadFloor'
 import { useTwinStore } from '../../store/store'
-import { basementRoomLabels, roomLabelCharacters, towerRoomLabels } from '../stage/roomLabels'
+import { basementRoomLabels, roomLabelCharacters, towerRoomLabels, type RoomLabel } from '../stage/roomLabels'
 
 /** 演示主线进层顺序。预热按这个顺序覆盖这些层用到的字形和材质。 */
 export const DEMO_PREWARM_FLOORS = ['F12', 'F22', 'F18', 'F3', 'F1'] as const
@@ -115,6 +115,23 @@ export function collectPrewarmCharacterChunks(chunkSize = GLYPH_PREWARM_CHUNK): 
   push(DEMO_ROOM_LABEL_TEXTS.join(''))
   push(collectPrewarmCharacters())
   return chunkCharacters(ordered.join(''), chunkSize)
+}
+
+function demoFloorLabels(): RoomLabel[] {
+  return DEMO_PREWARM_FLOORS.flatMap((floorId) => {
+    const plan = peekFloorPlan(floorId)
+    return plan ? roomLabelsFromPlan(plan) : []
+  })
+}
+
+/** 演示主线（F12/F22/F18/F3/F1）房间标签的全量字形。图纸未到时为空。 */
+export function collectDemoLabelCharacters(): string {
+  const labels = demoFloorLabels()
+  return labels.length === 0 ? '' : uniqueCharacters(roomLabelCharacters(labels))
+}
+
+export function demoPrewarmPlansReady(): boolean {
+  return DEMO_PREWARM_FLOORS.every((floorId) => Boolean(peekFloorPlan(floorId)))
 }
 
 /** 房间名 + 楼层名 + 告警文案。字体参数与 RoomLabels 相同，多出来的字只增加空闲时 SDF。 */

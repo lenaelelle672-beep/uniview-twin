@@ -271,6 +271,8 @@ interface Window {
     programsAfter: number
     textRuntimeFirst: boolean
     shaderEnabled: boolean
+    glyphsRequired?: number
+    glyphsPrewarmed?: number
   }
   __twinWarmup?: {
     compileMs: number
