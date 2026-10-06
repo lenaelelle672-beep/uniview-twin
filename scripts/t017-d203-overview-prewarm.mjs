@@ -210,6 +210,7 @@ async function main() {
     report.extraModelsReadyToFlag.length === 0 &&
     report.sdfAfterF1.length === 0 &&
     (report.glyphsPrewarmed ?? 0) >= (report.glyphsRequired ?? 1) &&
+    report.f1JsonAfterEntry.requestsAfterEntry === report.f1JsonAfterEntry.requestsAtFlag &&
     errors.length === 0
 
   await mkdir(outDir, { recursive: true })
