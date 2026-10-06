@@ -5,7 +5,12 @@ import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
 const baseUrl = (process.argv[2] ?? 'http://127.0.0.1:5190').replace(/\/$/, '')
 const label = process.argv[3] ?? 'head'
+const fast = process.argv.includes('fast')
 const puppeteer = require('puppeteer-core')
+
+function log(...args) {
+  console.log(...args)
+}
 
 function chromePath() {
   return (
@@ -190,6 +195,9 @@ async function waitReady(page, started) {
           stable = 0
         }
       }
+      if (window.__twinGlyphPreload == null && !find() && performance.now() - begin > 2_500) {
+        return { ms: Math.round(performance.now() - t0), vis: 0, syncs: window.__twinLabelSyncs ?? 0, batch: false }
+      }
       await new Promise((r) => requestAnimationFrame(r))
     }
     return { ms: null, vis: last, syncs: window.__twinLabelSyncs ?? 0, batch: Boolean(find()) }
@@ -313,7 +321,7 @@ function shadersSince(page, t0, t1) {
 
 async function waitGlyph(page) {
   const appeared = await page
-    .waitForFunction(() => window.__twinGlyphPreload != null, { timeout: 20_000 })
+    .waitForFunction(() => window.__twinGlyphPreload != null, { timeout: 8_000 })
     .then(() => true)
     .catch(() => false)
   if (!appeared) return false
@@ -339,6 +347,38 @@ async function enterFloor(page, floor) {
   else await page.evaluate((id) => window.__twinFocusDevice?.({ floor: id, deskId: null }), floor)
   await page.waitForFunction((id) => window.__twinView === 'floor' && window.__twinSelected === id, { timeout: 45_000 }, floor)
   return clickAt
+}
+
+async function waitRest(page, clickAt) {
+  return page.evaluate((t0) => {
+    return new Promise((resolve) => {
+      const begin = performance.now()
+      const poll = () => {
+        const viewFloor = window.__twinView === 'floor'
+        const hasProbe = typeof window.__twinCameraRested === 'boolean'
+        const elapsed = performance.now() - begin
+        const rested = hasProbe ? window.__twinCameraRested === true : elapsed >= 6_000
+        if (viewFloor && rested) {
+          resolve({
+            clickToRest: Math.round(performance.now() - t0),
+            restAt: performance.now(),
+            synthetic: !hasProbe,
+          })
+          return
+        }
+        if (elapsed > 12_000) {
+          resolve({
+            clickToRest: viewFloor ? Math.round(performance.now() - t0) : null,
+            restAt: viewFloor ? performance.now() : null,
+            synthetic: !hasProbe,
+          })
+          return
+        }
+        requestAnimationFrame(poll)
+      }
+      poll()
+    })
+  }, clickAt)
 }
 
 const out = {
@@ -400,7 +440,7 @@ const out = {
   await page.close()
 }
 
-for (const delay of [500, 1500, 3000]) {
+if (!fast) for (const delay of [500, 1500, 3000]) {
   const runs = []
   for (let i = 0; i < 3; i += 1) {
     const page = await open()
@@ -462,25 +502,11 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       if (Array.isArray(window.__twinSetSize)) window.__twinSetSize.length = 0
     })
     const clickAt = await enterFloor(page, floor)
-    const rest = await page.evaluate((t0) => {
-      return new Promise((resolve) => {
-        const begin = performance.now()
-        const poll = () => {
-          if (window.__twinCameraRested === true && window.__twinView === 'floor') {
-            resolve({ clickToRest: Math.round(performance.now() - t0), restAt: performance.now() })
-            return
-          }
-          if (performance.now() - begin > 20_000) {
-            resolve({ clickToRest: null, restAt: null })
-            return
-          }
-          requestAnimationFrame(poll)
-        }
-        poll()
-      })
-    }, clickAt)
+    const rest = await waitRest(page, clickAt)
     if (rest.restAt != null) await page.evaluate(() => new Promise((r) => setTimeout(r, 2000)))
-    const row = await waitReady(page, clickAt)
+    const row = fast
+      ? { ms: rest.clickToRest, vis: null, syncs: 0, batch: false, fadeMs: null }
+      : await waitReady(page, clickAt)
     const until = rest.restAt == null ? null : rest.restAt + 2000
     row.maxFrameClickToRest =
       rest.restAt == null
@@ -511,6 +537,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     row.entryLong = await page.evaluate((t0) =>
       (window.__twinEntryFrames ?? []).filter((item) => item.at >= t0 && item.dt >= 48).slice(-16),
     resetAt)
+    log(`${label} ${floor}#${i} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink} setSize=${row.setSize?.count} dpr=${row.setPixelRatio?.count} maxFrame=${row.maxFrameClickToRest}`)
     runs.push(row)
     await page.close()
   }
@@ -539,30 +566,53 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
 {
   const page = await open()
   await waitGlyph(page)
+  const layoutOf = () =>
+    page.evaluate(() => {
+      const stage = document.querySelector('.stage')?.getBoundingClientRect()
+      const canvas = document.querySelector('canvas')?.getBoundingClientRect()
+      const panel = document.querySelector('.floor-panel')
+      const detail = document.querySelector('.detail-panel')?.getBoundingClientRect()
+      return {
+        view: window.__twinView,
+        panel: panel?.className ?? '',
+        panelWidth: panel ? Math.round(panel.getBoundingClientRect().width) : null,
+        stage: stage ? { w: Math.round(stage.width), h: Math.round(stage.height) } : null,
+        canvas: canvas ? { w: Math.round(canvas.width), h: Math.round(canvas.height) } : null,
+        detail: detail ? { w: Math.round(detail.width), h: Math.round(detail.height) } : null,
+      }
+    })
+  const before = await layoutOf()
   await page.evaluate(() => {
     if (Array.isArray(window.__twinSetSize)) window.__twinSetSize.length = 0
     if (Array.isArray(window.__twinSetPixelRatio)) window.__twinSetPixelRatio.length = 0
   })
   const clickAt = await enterFloor(page, 'F2')
-  await page.waitForFunction(() => window.__twinView === 'floor' && window.__twinCameraRested === true, { timeout: 20_000 })
+  await page.waitForFunction(() => window.__twinView === 'floor', { timeout: 20_000 })
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
   const afterEntry = {
     setSize: await setSizeSince(page, clickAt),
     setPixelRatio: await setPixelRatioSince(page, clickAt),
+    layout: await layoutOf(),
   }
   const escAt = await page.evaluate(() => performance.now())
   await page.keyboard.press('Escape')
   await page.waitForFunction(() => window.__twinView === 'building', { timeout: 15_000 })
   await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
   out.esc = {
+    before,
     afterEntry,
     setSize: await setSizeSince(page, escAt),
     setPixelRatio: await setPixelRatioSince(page, escAt),
     panel: await page.evaluate(() => document.querySelector('.floor-panel')?.className ?? ''),
+    afterEsc: await layoutOf(),
   }
+  log(
+    `${label} esc entry setSize=${afterEntry.setSize.count} dpr=${afterEntry.setPixelRatio.count} stage ${before.stage?.w}x${before.stage?.h} -> ${afterEntry.layout.stage?.w}x${afterEntry.layout.stage?.h}; esc setSize=${out.esc.setSize.count} dpr=${out.esc.setPixelRatio.count}`,
+  )
   await page.close()
 }
 
-{
+if (!fast) {
   const page = await open()
   await waitGlyph(page)
   const client = await page.createCDPSession()
@@ -582,24 +632,10 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     return performance.now()
   })
   const clickAt = await enterFloor(page, 'F2')
-  const rest = await page.evaluate((t0) => {
-    return new Promise((resolve) => {
-      const begin = performance.now()
-      const poll = () => {
-        if (window.__twinCameraRested === true && window.__twinView === 'floor') {
-          resolve({ clickToRest: Math.round(performance.now() - t0), restAt: performance.now() })
-          return
-        }
-        if (performance.now() - begin > 20_000) {
-          resolve({ clickToRest: null, restAt: null })
-          return
-        }
-        requestAnimationFrame(poll)
-      }
-      poll()
-    })
-  }, clickAt)
-  const row = await waitReady(page, clickAt)
+  const rest = await waitRest(page, clickAt)
+  const row = fast
+    ? { ms: rest.clickToRest, vis: null, syncs: 0, batch: false, fadeMs: null }
+    : await waitReady(page, clickAt)
   await client.send('Tracing.end')
   await new Promise((resolve) => client.once('Tracing.tracingComplete', resolve))
   out.f2Trace = {
@@ -643,24 +679,11 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       return now
     })
     const clickAt = await enterFloor(page, floor)
-    const rest = await page.evaluate((t0) => {
-      return new Promise((resolve) => {
-        const begin = performance.now()
-        const poll = () => {
-          if (window.__twinCameraRested === true && window.__twinView === 'floor') {
-            resolve({ clickToRest: Math.round(performance.now() - t0), restAt: performance.now() })
-            return
-          }
-          if (performance.now() - begin > 20_000) {
-            resolve({ clickToRest: null, restAt: null })
-            return
-          }
-          requestAnimationFrame(poll)
-        }
-        poll()
-      })
-    }, clickAt)
-    const row = await waitReady(page, clickAt)
+    const rest = await waitRest(page, clickAt)
+    if (rest.restAt != null) await page.evaluate(() => new Promise((r) => setTimeout(r, 2000)))
+    const row = fast
+      ? { ms: rest.clickToRest, vis: null, syncs: 0, batch: false, fadeMs: null }
+      : await waitReady(page, clickAt)
     row.floor = floor
     row.clickToRest = rest.clickToRest
     row.maxFrame = await page.evaluate((t0) => {
@@ -669,12 +692,13 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       if (!slice.length) return null
       return Math.round(Math.max(...slice.map((item) => item.dt)))
     }, resetAt)
-    row.shaders = await shadersSince(page, clickAt, rest.restAt)
+    row.shaders = await shadersSince(page, clickAt, rest.restAt == null ? null : rest.restAt + 2000)
     row.spaceDuringEntry = await page.evaluate((t0) => {
       const space = window.__twinGlyphPreload?.spaceCall
       if (!space) return null
       return space.at >= t0 ? space : null
     }, resetAt)
+    log(`${label} consec ${floor} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink}`)
     out.consecutive.push(row)
   }
   await page.close()
