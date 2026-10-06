@@ -18,6 +18,7 @@ import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
+import BadgeHud from './scene/BadgeHud'
 
 const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
 const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.PostFX })))
@@ -25,7 +26,6 @@ const FacadeSamples = lazy(() =>
   import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
 )
 const DemandLoop = lazy(() => import('./scene/DemandLoop'))
-const BadgeHud = lazy(() => import('./scene/BadgeHud'))
 
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render driver/i
 
@@ -176,16 +176,12 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         )}
         <ExplodedLayout />
         <FloorStage />
+        {view === 'building' && <BadgeHud />}
         <RenderProbe />
       </Suspense>
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
       {!composerLive && <MainScenePass renderPriority={1} />}
       <MonitorPass renderPriority={2} drawOverlay={!composerLive} />
-      {loopOn && view === 'building' && (
-        <Suspense fallback={null}>
-          <BadgeHud />
-        </Suspense>
-      )}
       {prefetchDone && (
         <Suspense fallback={null}>
           <FacadeSamples />
