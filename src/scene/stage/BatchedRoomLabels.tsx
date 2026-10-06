@@ -48,6 +48,12 @@ function applyMemberFades(members: Text[], fades: number[] | undefined) {
   }
 }
 
+function nextFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+}
+
 function applyWrap(text: Text, fontSize: number) {
   text.maxWidth = fontSize * LABEL_MAX_EMS
   text.overflowWrap = 'break-word'
@@ -191,9 +197,11 @@ export function BatchedRoomLabels({
     window.__twinLabelSyncStartedAt = started
     window.__twinLabelReadyAt = undefined
 
-    void new Promise<void>((resolve) => {
-      preloadFont({ font: ROOM_LABEL_FONT, characters }, () => resolve())
-    })
+    void (window.__twinGlyphPreload?.done
+      ? Promise.resolve()
+      : new Promise<void>((resolve) => {
+          preloadFont({ font: ROOM_LABEL_FONT, characters }, () => resolve())
+        }))
       .then(async () => {
         if (cancelled) return
         batch = new BatchedText()
@@ -205,7 +213,9 @@ export function BatchedRoomLabels({
         batch.renderOrder = 3
         batch.visible = false
         batch.frustumCulled = false
-        for (const label of labels) {
+        for (let i = 0; i < labels.length; i += 1) {
+          const label = labels[i]
+          if (!label) continue
           const text = new Text()
           text.text = label.text
           text.font = ROOM_LABEL_FONT
@@ -224,6 +234,10 @@ export function BatchedRoomLabels({
           text.frustumCulled = false
           batch.addText(text)
           members.push(text)
+          if (i > 0 && i % 10 === 0) {
+            await nextFrame()
+            if (cancelled) return
+          }
         }
         for (const cluster of clusters) {
           const text = new Text()
@@ -246,6 +260,8 @@ export function BatchedRoomLabels({
           batch.addText(text)
           clusterMembers.push(text)
         }
+        await nextFrame()
+        if (cancelled) return
         await new Promise<void>((resolve) => {
           batch?.sync(() => {
             bumpSync()

@@ -6,6 +6,10 @@ declare module 'troika-three-text' {
     unicodeFontsURL?: string | null
     useWorker?: boolean
   }): void
+  export function preloadFont(
+    options: { font?: string; characters?: string },
+    callback: (info?: { sdfTexture?: import('three').Texture }) => void,
+  ): void
   export function getTextRenderInfo(
     args: { font?: string; text?: string; sdfGlyphSize?: number; lang?: string },
     callback: (info: { sdfTexture?: { image?: { width?: number; height?: number } } }) => void,
@@ -183,6 +187,36 @@ interface Window {
   __twinFirstFrameUnixMs?: number
   __twinPrefetchAt?: number
   __twinPrefetchUnixMs?: number
+  __twinTextRuntimeAt?: number
+  __twinRenderer?: import('three').WebGLRenderer
+  __twinCamera?: import('three').Camera
+  __twinTexImage2D?: {
+    calls: Array<{
+      at: number
+      ms: number
+      w?: number
+      h?: number
+      atlas: boolean
+      view?: string
+      floor?: string | null
+      src?: string
+    }>
+    uploadMs: number
+  }
+  __twinEntryFrames?: Array<{
+    at: number
+    dt: number
+    view?: string
+    floor?: string | null
+    rested?: boolean | null
+    packStep?: string
+    texMs: number
+    texCalls: number
+    atlasTex: number
+    programs?: number | null
+    packMs?: number | null
+    labelReady?: number | null
+  }>
   __twinScene?: import('three').Scene
   __twinSelected?: string | null
   __twinView?: string
@@ -245,6 +279,18 @@ interface Window {
     atlasWidth?: number | null
     paused?: boolean
     warmup?: Array<{ kind: string; ms: number; maxFrame: number; atlasHeight?: number | null }>
+    startedAt?: number
+    gate?: {
+      firstAt: number | null
+      textAt: number | null
+      warmup: boolean
+      ready: boolean
+    }
+    uploaded?: boolean
+    sdfReady?: boolean
+    spaceCall?: { at: number; ms: number; frameMs: number }
+    upload?: { at: number; ms: number; frameMs: number }
+    compile?: { at: number; ms: number; frameMs: number }
   }
   __twinLabelBatchPresent?: boolean
   __twinLabelOverlap?: {

@@ -29,7 +29,7 @@ declare module 'troika-three-text' {
 
   export function preloadFont(
     options: { font?: string; characters?: string },
-    callback: () => void,
+    callback: (info?: { sdfTexture?: import('three').Texture }) => void,
   ): void
 
   export function getTextRenderInfo(

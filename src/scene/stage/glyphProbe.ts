@@ -1,3 +1,4 @@
+import { DoubleSide, Scene, type Texture, type WebGLRenderer } from 'three'
 import { ROOM_LABEL_FONT } from './roomLabels'
 
 /** 首批小，字体解析已拆到 warmup。 */
@@ -10,19 +11,23 @@ export const GLYPH_MS_PER = 0.2
 export const GLYPH_WARMUP_SPACE = ' '
 /** 第二段 warmup：一个 ASCII，单独付 webgl-sdf-generator 首次自检。 */
 export const GLYPH_WARMUP_GLYPH = 'x'
+/** D266.1：第一次 preloadFont 不早于首帧 + 5s。 */
+export const GLYPH_PRELOAD_AFTER_FIRST_MS = 5000
+/** 总览空闲豁免：空格回调所在帧。 */
+export const GLYPH_SPACE_FRAME_MAX_MS = 60
+/** 总览空闲豁免：initTexture 所在帧。 */
+export const GLYPH_UPLOAD_FRAME_MAX_MS = 100
 
 const seen = new Set<string>()
 const newOnEntry: Record<string, number> = {}
 let hookInstalled = false
 let pauseHooked = false
 let pointerDown = false
-let preloadFontFn: ((options: { font?: string; characters?: string }, cb: () => void) => void) | null = null
-let getTextRenderInfoFn:
-  | ((
-      args: { font?: string; text?: string },
-      cb: (info: { sdfTexture?: { image?: { width?: number; height?: number } } }) => void,
-    ) => void)
-  | null = null
+type SdfTexture = Texture
+type PreloadCb = (info?: { sdfTexture?: Texture }) => void
+let preloadFontFn: ((options: { font?: string; characters?: string }, cb: PreloadCb) => void) | null = null
+let sdfTexture: Texture | null = null
+let texHooked = false
 
 export function chunkGlyphs(characters: string, first = GLYPH_FIRST_BATCH, next = GLYPH_BATCH): string[] {
   const unique = Array.from(new Set(Array.from(characters)))
@@ -80,7 +85,47 @@ export function resetGlyphProbe() {
   for (const key of Object.keys(newOnEntry)) delete newOnEntry[key]
   hookInstalled = false
   pointerDown = false
+  sdfTexture = null
   writeProbe()
+}
+
+export function postfxCompiled(): boolean {
+  if (typeof window === 'undefined') return false
+  if (window.__twinGpu?.tier === 'performance') return true
+  return window.__twinWarmup != null
+}
+
+export function glyphPreloadStartReady(): boolean {
+  if (typeof window === 'undefined') return false
+  const first = window.__twinFirstFrameAt
+  if (first == null || performance.now() < first + GLYPH_PRELOAD_AFTER_FIRST_MS) return false
+  if (window.__twinTextRuntimeAt == null) return false
+  return postfxCompiled()
+}
+
+export function overviewIdleBlocked(): boolean {
+  if (pointerDown) return true
+  if (typeof window === 'undefined') return false
+  if (window.__twinView !== 'building') return true
+  if (window.__twinSchedule?.holds?.motion) return true
+  const moved = window.__twinCameraMoveAt
+  if (typeof moved === 'number' && performance.now() - moved < 240) return true
+  return false
+}
+
+export function getSdfTexture(): SdfTexture | null {
+  return sdfTexture
+}
+
+function noteSdfTexture(tex: Texture | undefined) {
+  if (!tex) return
+  sdfTexture = tex
+  const img = (tex.image ?? tex.source?.data) as { width?: number; height?: number } | undefined
+  if (window.__twinGlyphPreload) {
+    if (typeof img?.height === 'number') window.__twinGlyphPreload.atlasHeight = img.height
+    if (typeof img?.width === 'number') window.__twinGlyphPreload.atlasWidth = img.width
+    window.__twinGlyphPreload.sdfReady = true
+  }
 }
 
 export function installSdfAtlasHook() {
@@ -158,20 +203,93 @@ function writeProbe() {
     unique: seen.size,
     newOnEntry: { ...newOnEntry },
     paused: glyphPreloadBlocked(),
+    sdfReady: Boolean(sdfTexture),
+    gate: {
+      firstAt: window.__twinFirstFrameAt ?? null,
+      textAt: window.__twinTextRuntimeAt ?? null,
+      warmup: postfxCompiled(),
+      ready: glyphPreloadStartReady(),
+    },
   }
 }
 
 async function loadTroika() {
-  if (preloadFontFn && getTextRenderInfoFn) return
+  if (preloadFontFn) return
   const { disableTroikaCdnFallback } = await import('./disableTroikaCdn')
   disableTroikaCdnFallback()
   const mod = await import('troika-three-text')
   preloadFontFn = mod.preloadFont
-  getTextRenderInfoFn = (
-    mod as unknown as {
-      getTextRenderInfo: typeof getTextRenderInfoFn
+}
+
+export function installTexImage2DHook(renderer?: WebGLRenderer | null) {
+  const gl = renderer ?? window.__twinRenderer
+  if (!gl || texHooked) return
+  const ctx = gl.getContext() as WebGLRenderingContext & { __twinTexHook?: boolean; texImage2D: (...args: unknown[]) => void }
+  if (!ctx || ctx.__twinTexHook) return
+  ctx.__twinTexHook = true
+  texHooked = true
+  const orig = ctx.texImage2D.bind(ctx)
+  ctx.texImage2D = function (...args: unknown[]) {
+    const source = args.find((item) => item && typeof item === 'object' && 'width' in item && 'height' in item) as
+      | { width?: number; height?: number }
+      | undefined
+    const started = performance.now()
+    const result = orig(...args)
+    const ms = performance.now() - started
+    const width = source?.width
+    const height = source?.height
+    const atlas = width === 2048 && (height === 128 || height === 256 || height === 512)
+    const probe = (window.__twinTexImage2D ??= { calls: [], uploadMs: 0 })
+    probe.calls.push({
+      at: started,
+      ms,
+      w: width,
+      h: height,
+      atlas,
+      view: window.__twinView,
+      floor: window.__twinSelected ?? null,
+    })
+    if (atlas) probe.uploadMs += ms
+    return result
+  }
+}
+
+export function startEntryFrameWatch() {
+  if (typeof window === 'undefined') return
+  const doc = document as Document & { __twinEntryWatch?: boolean }
+  if (doc.__twinEntryWatch) return
+  doc.__twinEntryWatch = true
+  let last = performance.now()
+  let lastTex = 0
+  const tick = () => {
+    const now = performance.now()
+    const dt = now - last
+    last = now
+    const calls = window.__twinTexImage2D?.calls ?? []
+    const fresh = calls.slice(lastTex)
+    lastTex = calls.length
+    const texMs = fresh.reduce((sum, row) => sum + row.ms, 0)
+    if (dt >= 48 || texMs > 2) {
+      const frames = (window.__twinEntryFrames ??= [])
+      frames.push({
+        at: now,
+        dt: Math.round(dt),
+        view: window.__twinView,
+        floor: window.__twinSelected ?? null,
+        rested: window.__twinCameraRested ?? null,
+        packStep: window.__twinLabelPhases?.packStep,
+        texMs: Math.round(texMs),
+        texCalls: fresh.length,
+        atlasTex: fresh.filter((row) => row.atlas).length,
+        programs: window.__twinMemory?.programs ?? null,
+        packMs: window.__twinLabelPackMs ?? null,
+        labelReady: window.__twinLabelReadyAt ?? null,
+      })
+      if (frames.length > 120) frames.splice(0, frames.length - 120)
     }
-  ).getTextRenderInfo
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
 }
 
 export async function warmupFontParse(): Promise<{ ms: number; atlasHeight: number | null; glyphs: number }> {
@@ -180,27 +298,96 @@ export async function warmupFontParse(): Promise<{ ms: number; atlasHeight: numb
   await loadTroika()
   const started = performance.now()
   await new Promise<void>((resolve) => {
-    getTextRenderInfoFn?.(
-      { font: ROOM_LABEL_FONT, text: GLYPH_WARMUP_SPACE },
-      (info) => {
-        const tex = info.sdfTexture as { image?: { width?: number; height?: number }; source?: { data?: { width?: number; height?: number } } } | undefined
-        const img = tex?.image ?? tex?.source?.data
-        const height = img?.height
-        const width = img?.width
-        if (window.__twinGlyphPreload) {
-          if (typeof height === 'number') window.__twinGlyphPreload.atlasHeight = height
-          if (typeof width === 'number') window.__twinGlyphPreload.atlasWidth = width
-        }
-        resolve()
-      },
-    )
+    preloadFontFn?.({ font: ROOM_LABEL_FONT, characters: GLYPH_WARMUP_SPACE }, (info) => {
+      noteSdfTexture(info?.sdfTexture)
+      resolve()
+    })
   })
   noteGlyphChars('warmup:space', GLYPH_WARMUP_SPACE)
+  if (window.__twinGlyphPreload) {
+    window.__twinGlyphPreload.spaceCall = {
+      ...(window.__twinGlyphPreload.spaceCall ?? { at: started, ms: 0, frameMs: 0 }),
+      at: started,
+      ms: Math.round(performance.now() - started),
+    }
+  }
   return {
     ms: performance.now() - started,
     atlasHeight: window.__twinGlyphPreload?.atlasHeight ?? null,
     glyphs: 1,
   }
+}
+
+export async function uploadSdfTexture(): Promise<{ ms: number; frameMs: number } | null> {
+  const renderer = window.__twinRenderer
+  const tex = sdfTexture
+  if (!renderer || !tex || window.__twinGlyphPreload?.uploaded) return null
+  installTexImage2DHook(renderer)
+  const started = performance.now()
+  let frameMs = 0
+  let last = performance.now()
+  let alive = true
+  const tick = () => {
+    if (!alive) return
+    const now = performance.now()
+    frameMs = Math.max(frameMs, now - last)
+    last = now
+    requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+  renderer.initTexture(tex)
+  alive = false
+  const ms = performance.now() - started
+  if (window.__twinGlyphPreload) {
+    window.__twinGlyphPreload.uploaded = true
+    window.__twinGlyphPreload.upload = { at: started, ms: Math.round(ms), frameMs: Math.round(frameMs || ms) }
+  }
+  return { ms, frameMs: frameMs || ms }
+}
+
+export async function compileDummyLabelMaterial(): Promise<{ ms: number; frameMs: number } | null> {
+  const renderer = window.__twinRenderer
+  const camera = window.__twinCamera
+  if (!renderer || !camera || window.__twinGlyphPreload?.compile) return window.__twinGlyphPreload?.compile ?? null
+  const { Text, BatchedText } = await import('troika-three-text')
+  const started = performance.now()
+  const text = new Text()
+  text.font = ROOM_LABEL_FONT
+  text.text = '字'
+  text.fontSize = 1
+  text.outlineWidth = 0.04
+  text.anchorX = 'center'
+  text.anchorY = 'middle'
+  try {
+    await new Promise<void>((resolve) => {
+      text.sync(() => resolve())
+    })
+    const batch = new BatchedText()
+    batch.font = ROOM_LABEL_FONT
+    batch.addText(text)
+    await new Promise<void>((resolve) => {
+      batch.sync(() => resolve())
+    })
+    const materials = Array.isArray(batch.material) ? batch.material : [batch.material]
+    for (const material of materials) {
+      if (!material) continue
+      material.side = DoubleSide
+      material.toneMapped = false
+    }
+    const scene = new Scene()
+    scene.add(batch)
+    renderer.compile(scene, camera)
+    scene.remove(batch)
+    batch.dispose()
+    text.dispose()
+  } catch {
+    text.dispose()
+    return null
+  }
+  const ms = performance.now() - started
+  const row = { at: started, ms: Math.round(ms), frameMs: Math.round(ms) }
+  if (window.__twinGlyphPreload) window.__twinGlyphPreload.compile = row
+  return row
 }
 
 export async function warmupTextMesh(): Promise<number> {

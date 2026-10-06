@@ -162,25 +162,65 @@ function d263Frames(page) {
   return page.evaluate(() => {
     const first = window.__twinFirstFrameAt
     const stamps = window.__twinRafStamps ?? []
+    const space = window.__twinGlyphPreload?.spaceCall
+    const upload = window.__twinGlyphPreload?.upload
+    const exempt = (row) => {
+      if (space && Math.abs(row.at - space.at) <= (space.frameMs || 60) + 16) return true
+      if (upload && Math.abs(row.at - upload.at) <= (upload.frameMs || 100) + 16) return true
+      return false
+    }
     const after = first == null ? [] : stamps.filter((row) => row.at >= first + 2000 && row.at !== first)
-    const list = after.map((row) => Math.round(row.dt))
+    const counted = after.filter((row) => !exempt(row))
+    const list = counted.map((row) => Math.round(row.dt))
     return {
       firstFrameAt: first ?? null,
       count: list.length,
       max: list.length ? Math.max(...list) : null,
       frames: list,
+      spaceCall: space ?? null,
+      upload: upload ?? null,
+      compile: window.__twinGlyphPreload?.compile ?? null,
     }
   })
 }
 
 async function waitGlyph(page) {
   const appeared = await page
-    .waitForFunction(() => window.__twinGlyphPreload != null, { timeout: 4000 })
+    .waitForFunction(() => window.__twinGlyphPreload != null, { timeout: 20_000 })
     .then(() => true)
     .catch(() => false)
   if (!appeared) return false
-  await page.waitForFunction(() => window.__twinGlyphPreload?.done === true, { timeout: 45_000 }).catch(() => {})
+  await page
+    .waitForFunction(() => window.__twinGlyphPreload?.done === true && window.__twinGlyphPreload?.uploaded === true, {
+      timeout: 90_000,
+    })
+    .catch(() => {})
   return true
+}
+
+function snapshotTex(page) {
+  return page.evaluate(() => {
+    const tex = window.__twinTexImage2D
+    const atlas = (tex?.calls ?? []).filter((row) => row.atlas)
+    return {
+      calls: tex?.calls?.length ?? 0,
+      uploadMs: tex?.uploadMs ?? 0,
+      atlas: atlas.map((row) => ({
+        at: row.at,
+        ms: Math.round(row.ms),
+        w: row.w,
+        h: row.h,
+        view: row.view,
+        floor: row.floor,
+      })),
+      spaceCall: window.__twinGlyphPreload?.spaceCall ?? null,
+      upload: window.__twinGlyphPreload?.upload ?? null,
+      compile: window.__twinGlyphPreload?.compile ?? null,
+      uploaded: window.__twinGlyphPreload?.uploaded ?? false,
+      atlasHeight: window.__twinGlyphPreload?.atlasHeight ?? null,
+      atlasWidth: window.__twinGlyphPreload?.atlasWidth ?? null,
+    }
+  })
 }
 
 async function enterFloor(page, floor) {
@@ -229,6 +269,8 @@ const out = {
   idle.consoleAtlas = page.__atlas
   idle.d263 = await d263Frames(page)
   idle.maxFrame = idle.d263.max
+  idle.tex = await snapshotTex(page)
+  idle.entryLong = await page.evaluate(() => (window.__twinEntryFrames ?? []).filter((row) => row.dt >= 48))
   out.idle = idle
   await page.close()
 }
@@ -291,16 +333,52 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       return now
     })
     const clickAt = await enterFloor(page, floor)
+    const rest = await page.evaluate((t0) => {
+      return new Promise((resolve) => {
+        const begin = performance.now()
+        const poll = () => {
+          if (window.__twinCameraRested === true && window.__twinView === 'floor') {
+            resolve({ clickToRest: Math.round(performance.now() - t0), restAt: performance.now() })
+            return
+          }
+          if (performance.now() - begin > 20_000) {
+            resolve({ clickToRest: null, restAt: null })
+            return
+          }
+          requestAnimationFrame(poll)
+        }
+        poll()
+      })
+    }, clickAt)
     const row = await waitReady(page, clickAt)
     row.maxFrame = await maxRafSince(page, resetAt)
+    row.maxFrameClickToRest =
+      rest.restAt == null
+        ? null
+        : await page.evaluate(
+            (t0, t1) => {
+              const stamps = window.__twinRafStamps ?? []
+              const slice = stamps.filter((row) => row.at >= t0 && row.at <= t1)
+              if (!slice.length) return null
+              return Math.round(Math.max(...slice.map((item) => item.dt)))
+            },
+            resetAt,
+            rest.restAt,
+          )
+    row.clickToRest = rest.clickToRest
     row.clickToMove = await page.evaluate((t0) =>
       window.__twinCameraMoveAt != null ? Math.round(window.__twinCameraMoveAt - t0) : null,
     clickAt)
+    row.tex = await snapshotTex(page)
+    row.entryLong = await page.evaluate((t0) =>
+      (window.__twinEntryFrames ?? []).filter((row) => row.at >= t0 && row.dt >= 48).slice(-24),
+    resetAt)
     runs.push(row)
     await page.close()
   }
   const complete = runs.map((row) => row.ms)
   const frames = runs.map((row) => row.maxFrame)
+  const restFrames = runs.map((row) => row.maxFrameClickToRest)
   const fades = runs.map((row) => row.fadeMs)
   out.floors[floor] = {
     runs,
@@ -308,6 +386,8 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     maxMs: maxOf(complete),
     medianMaxFrame: median(frames),
     maxMaxFrame: maxOf(frames),
+    medianMaxFrameClickToRest: median(restFrames),
+    maxMaxFrameClickToRest: maxOf(restFrames),
     medianFadeMs: median(fades),
   }
 }
@@ -331,6 +411,10 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       qa: window.__qaAtlasGrows ?? [],
       height: window.__twinGlyphPreload?.atlasHeight ?? null,
     }))
+    row.tex = await snapshotTex(page)
+    row.entryLong = await page.evaluate((t0) =>
+      (window.__twinEntryFrames ?? []).filter((item) => item.at >= t0 && item.dt >= 48).slice(-16),
+    resetAt)
     row.floor = floor
     out.consecutive.push(row)
   }

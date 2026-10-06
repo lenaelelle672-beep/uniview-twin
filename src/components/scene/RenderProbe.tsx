@@ -24,6 +24,8 @@ export function RenderProbe() {
     invalidate()
     markSuspenseReady()
     window.__twinScene = scene
+    window.__twinRenderer = gl
+    window.__twinCamera = camera
     window.__twinProject = (x, y, z) => {
       const rect = gl.domElement.getBoundingClientRect()
       projected.set(x, y, z).project(camera)

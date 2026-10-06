@@ -8,14 +8,20 @@ import {
   GLYPH_FIRST_BATCH,
   GLYPH_WARMUP_GLYPH,
   cancelIdleWork,
+  compileDummyLabelMaterial,
   glyphPreloadBlocked,
+  glyphPreloadStartReady,
   installAtlasCanvasHook,
   installGlyphPauseHooks,
   installSdfAtlasHook,
+  installTexImage2DHook,
+  overviewIdleBlocked,
   preloadLabelChars,
   scheduleIdleWork,
+  startEntryFrameWatch,
   takeGlyphBudget,
   unseenGlyphs,
+  uploadSdfTexture,
   warmupFontParse,
   warmupTextMesh,
 } from './glyphProbe'
@@ -82,8 +88,8 @@ async function prefetchFontBytes() {
 }
 
 /**
- * 首帧之后才跑。字体解析 / GL 自检拆成两段 idle，之后按 timeRemaining 切片。
- * 指针按下或进层相机在动时暂停，rest 后再续。
+ * D266.1：第一次 preloadFont 只传 ' '，起点 = max(首帧+5s, 均衡后处理已编译 且 textRuntime 已预取)。
+ * D266.2：字形齐后总览空闲 initTexture(sdfTexture)，指针按下或相机在动则推迟。
  */
 export function scheduleGlyphPreload(): () => void {
   if (typeof window === 'undefined') return () => {}
@@ -91,18 +97,35 @@ export function scheduleGlyphPreload(): () => void {
   installSdfAtlasHook()
   installAtlasCanvasHook()
   installGlyphPauseHooks()
+  installTexImage2DHook()
+  startEntryFrameWatch()
+  if (window.__twinGlyphPreload == null) {
+    window.__twinGlyphPreload = {
+      batchSize: GLYPH_BATCH,
+      firstBatchSize: GLYPH_FIRST_BATCH,
+      batches: [],
+      done: false,
+      atlasGrows: [],
+      unique: 0,
+      newOnEntry: {},
+      paused: true,
+    }
+  }
+  void prefetchFontBytes()
   let cancelled = false
   let idleId = 0
   let remaining = ''
-  let loaded = false
+  let charsQueued = false
   let warmedFont = false
   let warmedGl = false
   let warmedMesh = false
   let firstMain = true
+  let uploaded = false
 
   const tick = (deadline: { timeRemaining: () => number }) => {
     if (cancelled) return
-    if (window.__twinFirstFrameAt == null) {
+    if (window.__twinFirstFrameAt == null || !glyphPreloadStartReady()) {
+      if (window.__twinGlyphPreload) window.__twinGlyphPreload.paused = true
       idleId = scheduleIdleWork(tick)
       return
     }
@@ -112,45 +135,50 @@ export function scheduleGlyphPreload(): () => void {
       return
     }
     if (window.__twinGlyphPreload) window.__twinGlyphPreload.paused = false
-    if (!loaded) {
-      void prefetchFontBytes().then(() =>
-        queueFloorGlyphChars().then((next) => {
-          if (cancelled) return
-          remaining = unseenGlyphs(next)
-          loaded = true
-          idleId = scheduleIdleWork(tick)
-        }),
-      )
-      return
-    }
     if (!warmedFont) {
       if (deadline.timeRemaining() < 0.2) {
         idleId = scheduleIdleWork(tick)
         return
       }
+      if (window.__twinGlyphPreload) window.__twinGlyphPreload.startedAt = performance.now()
       const started = performance.now()
       void watchMaxFrame(() =>
         warmupFontParse().then((row) => {
           if (cancelled) return
+          const frameMs = Math.round(performance.now() - started)
           recordBatch({
             i: -2,
             chars: 1,
             ms: Math.round(row.ms),
-            maxFrame: Math.round(row.ms),
+            maxFrame: frameMs,
             seen: window.__twinGlyphPreload?.unique ?? 0,
             kind: 'warmup:space',
           })
           if (window.__twinGlyphPreload) {
             window.__twinGlyphPreload.warmup = [
               ...(window.__twinGlyphPreload.warmup ?? []),
-              { kind: 'space', ms: Math.round(row.ms), maxFrame: Math.round(performance.now() - started), atlasHeight: row.atlasHeight },
+              { kind: 'space', ms: Math.round(row.ms), maxFrame: frameMs, atlasHeight: row.atlasHeight },
             ]
             window.__twinGlyphPreload.atlasHeight = row.atlasHeight ?? window.__twinGlyphPreload.atlasHeight
+            window.__twinGlyphPreload.spaceCall = {
+              at: started,
+              ms: Math.round(row.ms),
+              frameMs,
+            }
           }
           warmedFont = true
           idleId = scheduleIdleWork(tick)
         }),
       )
+      return
+    }
+    if (!charsQueued) {
+      charsQueued = true
+      void queueFloorGlyphChars().then((next) => {
+        if (cancelled) return
+        remaining = unseenGlyphs(next)
+        idleId = scheduleIdleWork(tick)
+      })
       return
     }
     if (!warmedGl) {
@@ -213,6 +241,35 @@ export function scheduleGlyphPreload(): () => void {
     }
     if (!remaining) {
       if (window.__twinGlyphPreload) window.__twinGlyphPreload.done = true
+      if (uploaded) return
+      if (overviewIdleBlocked() || !window.__twinRenderer) {
+        idleId = scheduleIdleWork(tick)
+        return
+      }
+      uploaded = true
+      void watchMaxFrame(async () => {
+        try {
+          const row = await uploadSdfTexture()
+          if (cancelled) return
+          if (window.__twinGlyphPreload && row) {
+            window.__twinGlyphPreload.upload = {
+              at: performance.now() - row.ms,
+              ms: Math.round(row.ms),
+              frameMs: Math.round(row.frameMs),
+            }
+          }
+          await compileDummyLabelMaterial()
+        } catch {
+          uploaded = false
+        }
+      }).then(() => {
+        if (cancelled) return
+        if (!window.__twinGlyphPreload?.uploaded) {
+          uploaded = false
+          idleId = scheduleIdleWork(tick)
+          return
+        }
+      })
       return
     }
     if (deadline.timeRemaining() < 0.2) {
