@@ -1,4 +1,3 @@
-import { AdaptiveDpr } from '@react-three/drei/core/AdaptiveDpr'
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
@@ -26,7 +25,6 @@ function markInv(src: string) {
 /**
  * D180 续帧：总览 0/2、单层性能 ≤10 / 均衡 ≤30（告警并入）、运动性能 30、后台 0。
  * 晚于场景 useFrame 读 hold，并把 invalidate 按当前 Hz 限幅（相机飞行/拖动走同一套）。
- * AdaptiveDpr 只在性能档。
  */
 export function DemandLoop() {
   const rawInvalidate = useThree((state) => state.invalidate)
@@ -157,7 +155,7 @@ export function DemandLoop() {
     }, wait)
   }, 100)
 
-  return quality === 'perf' && useTwinStore.getState().qualityPinned ? <AdaptiveDpr /> : null
+  return null
 }
 
 export default DemandLoop
