@@ -126,6 +126,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
         notifyOverlayLayout()
       }
       focusDevice({ floor: row.floorId, deskId: row.deskId, deviceId: row.deviceId })
+      void window.__twinInvalidate?.()
     })
     setFocusNote(
       row.deskId ? `已选择工位 ${row.deskId}，楼层 ${row.floorId}` : `已选择楼层 ${row.floorId}，该设备没有工位`,

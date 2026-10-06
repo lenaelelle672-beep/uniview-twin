@@ -4,6 +4,7 @@ import { lazy, Suspense, useRef, useState } from 'react'
 import { PerspectiveCamera, Vector3 } from 'three'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
+import { waitFirstPrefetch } from './prefetchLazyChunks'
 import {
   LABEL_MAX_PX,
   LABEL_MIN_PX,
@@ -15,8 +16,9 @@ import {
 import { workstationPosition } from './workstationPosition'
 
 const BatchedRoomLabels = lazy(async () => {
-  const mod = await import('./textRuntime')
-  return { default: mod.BatchedRoomLabels }
+  await waitFirstPrefetch()
+  const { ProgressiveRoomLabels } = await import('../labels/ProgressiveRoomLabels')
+  return { default: ProgressiveRoomLabels }
 })
 
 const sample = new Vector3()

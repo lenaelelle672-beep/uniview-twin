@@ -184,6 +184,7 @@ function markLocated(deskId: string, started: number) {
 export function FloorStageCamera() {
   const active = useTwinStore((state) => activeFloorId(state.view, state.selectedFloor))
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
+  const invalidate = useThree((state) => state.invalidate)
   const focusSeq = useTwinStore((state) => state.focusSeq)
   const controls = useThree((state) => state.controls)
   const camera = useThree((state) => state.camera)
@@ -216,12 +217,14 @@ export function FloorStageCamera() {
       interior.updateMatrixWorld(true)
       flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, false, gl.domElement)
       framedKey.current = key
+      invalidate()
       return
     }
     const plate = scene.getObjectByName('FloorPlate')
     if (!plate) return
     frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
     framedKey.current = key
+    invalidate()
   })
 
   useLayoutEffect(() => {
@@ -260,6 +263,7 @@ export function FloorStageCamera() {
         }
         flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide, gl.domElement)
         framedKey.current = `${active}:${deskId}:${focusSeq}`
+        invalidate()
         return
       }
       const plate = scene.getObjectByName('FloorPlate')
@@ -272,13 +276,14 @@ export function FloorStageCamera() {
       }
       frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
       framedKey.current = `${active}:slab:${focusSeq}`
+      invalidate()
     }
     tick()
     return () => {
       cancelled = true
       resetFocalOffset(rig)
     }
-  }, [active, camera, controls, focusSeq, focusedDeskId, gl, scene, size.height, size.width])
+  }, [active, camera, controls, focusSeq, focusedDeskId, gl, invalidate, scene, size.height, size.width])
 
   return null
 }
