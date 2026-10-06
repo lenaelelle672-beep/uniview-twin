@@ -289,6 +289,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const stripLiveOverlaps = (perspective: PerspectiveCamera, viewport: { width: number; height: number }, keepTier2: boolean) => {
     const api = measureRef.current
     if (!api?.ready || !packedRef.current) return false
+    api.applyPack(packRef.current)
     const live = api.measureVisible(perspective, viewport)
     if (live.length === 0) return false
     const tierOf = (id: string) => {
@@ -309,7 +310,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     const stripped = stripStrongOverlaps(live, packRef.current, tierOf, keepTier2)
     layoutRef.current = stripped.pack
     packRef.current = stripped.pack
-    stripRef.current = countOverlapKinds(stripped.remaining.map((row) => row.box)).strong > 0
+    api.applyPack(stripped.pack)
+    const after = api.measureVisible(perspective, viewport)
+    stripRef.current = countOverlapKinds(after.map((row) => row.box)).strong > 0
     return true
   }
 
@@ -572,7 +575,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       packRef.current = { byId, clusters }
       viewKeyRef.current = viewKey
       clusterSyncedRef.current = 'once'
-      stripRef.current = true
       hoverIdRef.current = null
       window.__twinLabelPx = {
         fontSize,
@@ -581,11 +583,12 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         maxPx: LABEL_MAX_PX,
         distance: nearest,
       }
+      stripRef.current = !stripLiveOverlaps(perspective, size, keepTier2)
       invalidate()
       const view = { width: size.width, height: size.height }
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
-          stripLiveOverlaps(perspective, view, keepTier2)
+          if (stripRef.current) stripLiveOverlaps(perspective, view, keepTier2)
           invalidate()
         })
       })

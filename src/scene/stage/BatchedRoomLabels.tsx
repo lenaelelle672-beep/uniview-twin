@@ -20,6 +20,7 @@ export interface LabelBatchApi {
   ) => Map<string, { x: number; y: number; w: number; h: number }>
   applyClusterTexts: (next: Record<string, string>) => Promise<boolean>
   orientToCamera: (camera: Camera) => number
+  applyPack: (pack: LabelPackState) => void
 }
 
 function bumpSync(): void {
@@ -107,6 +108,49 @@ export function BatchedRoomLabels({
   const signature = labels.map((label) => `${label.id}|${label.text}|${label.label.join(',')}`).join(';')
   const clusters = clusterTemplates(labels)
   const appliedPackRef = useRef('')
+
+  const writePack = (pack: LabelPackState) => {
+    const members = membersRef.current
+    if (members.length === 0) return
+    applyMemberFades(members, fadesRef.current)
+    const fades = fadesRef.current
+    for (let i = 0; i < members.length; i += 1) {
+      const label = labels[i]
+      const text = members[i]
+      if (!label || !text) continue
+      applyPlacement(text, label.label, pack.byId[label.id], fades[i] ?? 1, true)
+    }
+    for (let i = 0; i < clustersRef.current.length; i += 1) {
+      const cluster = clusters[i]
+      const text = clustersRef.current[i]
+      if (!cluster || !text) continue
+      const state = pack.clusters[cluster.key]
+      const show = Boolean(state?.visible)
+      const base = state?.local ?? state?.world ?? cluster.label
+      applyPlacement(
+        text,
+        base,
+        {
+          visible: show,
+          cluster: cluster.key,
+          offsetX: state?.offsetX ?? 0,
+          offsetY: state?.offsetY ?? 0,
+          local: state?.local ?? state?.world,
+        },
+        1,
+        show,
+      )
+    }
+    let sig = ''
+    for (const [id, row] of Object.entries(pack.byId)) {
+      if (row.visible) sig += `${id}:${row.local?.join(',') ?? ''};`
+    }
+    for (const [key, row] of Object.entries(pack.clusters)) {
+      if (row.visible) sig += `c${key}:${row.local?.join(',') ?? ''};`
+    }
+    appliedPackRef.current = sig
+    batchRef.current?.updateMatrixWorld(true)
+  }
 
   useLayoutEffect(() => {
     const host = groupRef.current
@@ -343,6 +387,9 @@ export function BatchedRoomLabels({
         }
         return (Math.abs(yaw) * 180) / Math.PI
       },
+      applyPack(pack) {
+        writePack(pack)
+      },
     }
     return () => {
       measureRef.current = null
@@ -350,8 +397,6 @@ export function BatchedRoomLabels({
   }, [invalidate, labels, measureRef, packGen])
 
   useFrame(() => {
-    const members = membersRef.current
-    if (members.length === 0) return
     const pack = packRef.current
     let sig = ''
     for (const [id, row] of Object.entries(pack.byId)) {
@@ -361,36 +406,7 @@ export function BatchedRoomLabels({
       if (row.visible) sig += `c${key}:${row.local?.join(',') ?? ''};`
     }
     if (sig === appliedPackRef.current) return
-    appliedPackRef.current = sig
-    applyMemberFades(members, fadesRef.current)
-    const fades = fadesRef.current
-    for (let i = 0; i < members.length; i += 1) {
-      const label = labels[i]
-      const text = members[i]
-      if (!label || !text) continue
-      applyPlacement(text, label.label, pack.byId[label.id], fades[i] ?? 1, true)
-    }
-    for (let i = 0; i < clustersRef.current.length; i += 1) {
-      const cluster = clusters[i]
-      const text = clustersRef.current[i]
-      if (!cluster || !text) continue
-      const state = pack.clusters[cluster.key]
-      const show = Boolean(state?.visible)
-      const base = state?.local ?? state?.world ?? cluster.label
-      applyPlacement(
-        text,
-        base,
-        {
-          visible: show,
-          cluster: cluster.key,
-          offsetX: state?.offsetX ?? 0,
-          offsetY: state?.offsetY ?? 0,
-          local: state?.local ?? state?.world,
-        },
-        1,
-        show,
-      )
-    }
+    writePack(pack)
     invalidate()
   })
 
