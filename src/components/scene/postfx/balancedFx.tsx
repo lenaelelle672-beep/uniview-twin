@@ -203,7 +203,12 @@ function ComposerBudget({ active }: { active: boolean }) {
     if (drawingSize.x > 1 && drawingSize.y > 1) {
       composer.setSize(drawingSize.x, drawingSize.y)
     }
+    const input = composer.inputBuffer as unknown as WebGLRenderTarget | undefined
+    window.__twinComposerInput = active ? input : undefined
     if (!active) releaseMonitorTarget()
+    return () => {
+      if (window.__twinComposerInput === input) delete window.__twinComposerInput
+    }
   }, [active, composer, gl])
   return null
 }
