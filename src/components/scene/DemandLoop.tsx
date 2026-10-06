@@ -46,10 +46,10 @@ export function DemandLoop() {
   }).current
 
   useLayoutEffect(() => {
-    bindTwinInvalidate(gatedInvalidate)
+    bindTwinInvalidate(() => rawRef.current())
     gl.shadowMap.autoUpdate = false
     if (quality !== 'perf') gl.shadowMap.needsUpdate = true
-  }, [gatedInvalidate, gl, quality])
+  }, [gl, quality])
 
   useLayoutEffect(() => {
     if (quality === 'perf') return

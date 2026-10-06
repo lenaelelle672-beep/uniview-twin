@@ -37,7 +37,12 @@ function median(xs) {
 }
 
 async function launch() {
-  return puppeteer.launch({ executablePath: chromePath(), headless: true, args: chromeArgs })
+  return puppeteer.launch({
+    executablePath: chromePath(),
+    headless: true,
+    args: chromeArgs,
+    protocolTimeout: 180_000,
+  })
 }
 
 async function waitReady(page) {
@@ -274,7 +279,10 @@ async function measureCalls(page) {
     await new Promise((r) => setTimeout(r, 2000))
     const values = []
     for (let i = 0; i < 60; i += 1) {
-      await window.__twinInvalidate()
+      await Promise.race([
+        window.__twinInvalidate(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('invalidate timeout')), 8000)),
+      ]).catch(() => {})
       values.push(window.__twinStats?.calls ?? null)
     }
     const nums = values.filter((v) => typeof v === 'number').sort((a, b) => a - b)
@@ -362,6 +370,7 @@ async function main() {
 
     await browser.close()
     idles.push({ autoOverview, balancedOverview, hidden, autoF12, balancedF12, perfF12 })
+    await writeFile(`${outDir}/d180-${label}-idle.json`, JSON.stringify({ idles }, null, 2))
   }
 
   const browser = await launch()
