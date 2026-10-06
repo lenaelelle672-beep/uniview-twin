@@ -17,6 +17,7 @@ import { Tower } from './scene/Tower'
 import { useBalancedWarmup } from './scene/useBalancedWarmup'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
+import { gpuTierLabel, preserveDrawingBufferFor, probeSoftwareGpu } from '../scene/gpuDetect'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
@@ -48,7 +49,9 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const [prefetchDone, setPrefetchDone] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const [loopOn, setLoopOn] = useState(false)
-  const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
+  const view = useTwinStore((state) => state.view)
+  const selectedFloor = useTwinStore((state) => state.selectedFloor)
+  const openBasement = view === 'floor' && selectedFloor === 'B1'
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
   const bumpFit = useCallback(() => setFitGeneration((value) => value + 1), [])
@@ -155,11 +158,13 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
       {!composerLive && <MainScenePass renderPriority={1} />}
       <MonitorPass renderPriority={2} drawOverlay={!composerLive} />
-      <Suspense fallback={null}>
-        <Hud renderPriority={3}>
-          <FloorBadges />
-        </Hud>
-      </Suspense>
+      {view === 'building' && (
+        <Suspense fallback={null}>
+          <Hud renderPriority={3}>
+            <FloorBadges />
+          </Hud>
+        </Suspense>
+      )}
       {prefetchDone && (
         <Suspense fallback={null}>
           <FacadeSamples />
@@ -177,10 +182,14 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
 export function SceneCanvas() {
   const dayNight = useTwinStore((state) => state.dayNight)
   const quality = useTwinStore((state) => state.quality)
+  const qualityPinned = useTwinStore((state) => state.qualityPinned)
   const presentation = useTwinStore((state) => state.presentation)
   const cam = useTwinStore((state) => state.cam)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const [gpuReady, setGpuReady] = useState(false)
+  const probe = probeSoftwareGpu()
+  const softwareAuto = probe.software && !qualityPinned
+  const keepBuffer = preserveDrawingBufferFor(probe.software)
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
   const pose = cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview
   applySurfaceMode(mode)
@@ -194,22 +203,21 @@ export function SceneCanvas() {
       {/* 不按性能档重建画布。换档会新建 WebGLRenderer，three 按渲染器缓存的 PMREM 会再生成一次。dpr 和阴影在同一个画布上更新。 */}
       <Canvas
         frameloop="demand"
-        dpr={qualityDprRange(quality)}
+        dpr={qualityDprRange(quality, softwareAuto)}
         shadows={gpuReady && quality !== 'perf' ? 'percentage' : false}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
-        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, toneMapping: AgXToneMapping }}
+        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: keepBuffer, toneMapping: AgXToneMapping }}
         onCreated={({ gl }) => {
-          const ctx = gl.getContext()
-          let renderer = ''
-          let software = false
-          try {
-            const ext = ctx.getExtension('WEBGL_debug_renderer_info')
-            renderer = String(ctx.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : ctx.RENDERER) ?? '')
-            software = /swiftshader|llvmpipe|softpipe|software|basic render driver/i.test(renderer)
-          } catch {}
-          if (software && !useTwinStore.getState().qualityPinned) useTwinStore.setState({ quality: 'perf' })
           const q = useTwinStore.getState().quality
-          window.__twinGpu = { renderer, software, tier: q === 'perf' ? 'performance' : q }
+          window.__twinGpu = {
+            renderer: probe.renderer,
+            software: probe.software,
+            tier: gpuTierLabel(q),
+            softwareAuto,
+            preserveDrawingBuffer: keepBuffer,
+            dpr: softwareAuto ? 0.75 : undefined,
+            probeMs: probe.probeMs,
+          }
           gl.shadowMap.autoUpdate = false
           setGpuReady(true)
         }}

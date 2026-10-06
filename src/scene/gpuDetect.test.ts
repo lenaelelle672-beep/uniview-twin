@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectSoftwareRenderer, gpuTierLabel } from './gpuDetect'
+import { detectSoftwareRenderer, gpuTierLabel, keepDrawingBufferRequested, preserveDrawingBufferFor } from './gpuDetect'
 
 type Ext = { UNMASKED_RENDERER_WEBGL: number } | null
 
@@ -52,10 +52,12 @@ describe('detectSoftwareRenderer', () => {
     expect(detectSoftwareRenderer(fakeGl('SwiftShader', null))).toEqual({
       renderer: 'WebKit WebGL',
       software: false,
+      probeMs: 0,
     })
     expect(detectSoftwareRenderer(fakeGl('SwiftShader', 'throw'))).toEqual({
       renderer: '',
       software: false,
+      probeMs: 0,
     })
   })
 
@@ -63,5 +65,15 @@ describe('detectSoftwareRenderer', () => {
     expect(gpuTierLabel('perf')).toBe('performance')
     expect(gpuTierLabel('balanced')).toBe('balanced')
     expect(gpuTierLabel('high')).toBe('high')
+  })
+
+  it('只认 ?keepDrawingBuffer=1，不看 ?q= / ?cam=', () => {
+    expect(keepDrawingBufferRequested('?keepDrawingBuffer=1')).toBe(true)
+    expect(keepDrawingBufferRequested('?q=perf&cam=east')).toBe(false)
+    expect(keepDrawingBufferRequested('')).toBe(false)
+    expect(preserveDrawingBufferFor(true, '?keepDrawingBuffer=1')).toBe(true)
+    expect(preserveDrawingBufferFor(true, '?q=perf')).toBe(false)
+    expect(preserveDrawingBufferFor(true, '')).toBe(false)
+    expect(preserveDrawingBufferFor(false, '')).toBe(true)
   })
 })

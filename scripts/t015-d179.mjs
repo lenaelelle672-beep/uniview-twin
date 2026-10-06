@@ -208,16 +208,23 @@ function pixChanged(a, b) {
 }
 
 async function canvasPix(page) {
-  return page.evaluate(() => {
-    const c = document.querySelector('canvas')
-    if (!c) return null
+  const canvas = await page.$('canvas')
+  if (!canvas) return null
+  const png = await canvas.screenshot({ encoding: 'base64' })
+  return page.evaluate(async (b64) => {
+    const img = new Image()
+    await new Promise((resolve, reject) => {
+      img.onload = resolve
+      img.onerror = reject
+      img.src = `data:image/png;base64,${b64}`
+    })
     const o = document.createElement('canvas')
-    o.width = c.width
-    o.height = c.height
+    o.width = img.width
+    o.height = img.height
     const g = o.getContext('2d')
-    g.drawImage(c, 0, 0)
-    return { w: c.width, h: c.height, d: Array.from(g.getImageData(0, 0, c.width, c.height).data) }
-  })
+    g.drawImage(img, 0, 0)
+    return { w: o.width, h: o.height, d: Array.from(g.getImageData(0, 0, o.width, o.height).data) }
+  }, png)
 }
 
 async function demandVisual(browser) {

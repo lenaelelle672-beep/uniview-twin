@@ -114,7 +114,15 @@ interface TwinEnvMaterial {
 interface Window {
   __twinReady?: boolean
   __twinReadyAt?: number
-  __twinGpu?: { renderer: string; software: boolean; tier: 'performance' | 'balanced' | 'high' }
+  __twinGpu?: {
+    renderer: string
+    software: boolean
+    tier: 'performance' | 'balanced' | 'high'
+    softwareAuto?: boolean
+    preserveDrawingBuffer?: boolean
+    dpr?: number
+    probeMs?: number
+  }
   __twinInvalidate?: () => Promise<void>
   __twinFrameCount?: number
   __twinFrames?: number

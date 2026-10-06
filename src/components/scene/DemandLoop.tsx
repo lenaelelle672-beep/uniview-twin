@@ -114,7 +114,7 @@ export function DemandLoop() {
     const { animating } = stepExplodeMotion(boom, liveView, clock.elapsedTime)
     if (animating) {
       if (!explodeHold.current) explodeHold.current = retainFrameChannel('motion')
-      window.__twinBadges = 0
+      if (boom) window.__twinBadges = 0
     } else if (explodeHold.current) {
       explodeHold.current()
       explodeHold.current = null
@@ -143,7 +143,8 @@ export function DemandLoop() {
     }, wait)
   }, 100)
 
-  return quality === 'perf' ? <AdaptiveDpr /> : null
+  const softwareAuto = window.__twinGpu?.softwareAuto === true
+  return quality === 'perf' && !softwareAuto ? <AdaptiveDpr /> : null
 }
 
 export default DemandLoop

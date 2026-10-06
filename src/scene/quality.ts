@@ -11,7 +11,11 @@ export const QUALITY_DPR_CAP: Record<QualityTier, number> = {
   high: 2,
 }
 
-export function qualityDprRange(quality: QualityTier): [number, number] {
+/** D189：仅软件渲染自动判进性能档（无 ?q=）的 AdaptiveDpr / 初始 dpr 上限。 */
+export const SOFTWARE_AUTO_DPR = 0.75
+
+export function qualityDprRange(quality: QualityTier, softwareAuto = false): [number, number] {
+  if (softwareAuto) return [SOFTWARE_AUTO_DPR, SOFTWARE_AUTO_DPR]
   return [1, QUALITY_DPR_CAP[quality]]
 }
 
