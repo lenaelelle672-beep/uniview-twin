@@ -14,10 +14,11 @@ import { FloorDecor } from '../scene/stage/lazyFloorDecor'
 import { MonitorDepthProxies } from '../scene/stage/MonitorDepthProxies'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
 import { loadFloorPlan, peekFloorPlan } from './loadFloor'
+import { INTERIOR_WALL_H } from './interiorWall'
 import { roomLabelsFromPlan } from './labels'
 import type { FloorPlan, FloorWall } from './types'
 
-const WALL_H = 2.55
+const WALL_H = INTERIOR_WALL_H
 const wallBoxGeometry = new BoxGeometry(1, WALL_H, 1)
 wallBoxGeometry.translate(0, WALL_H / 2, 0)
 

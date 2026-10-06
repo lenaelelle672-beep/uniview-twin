@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { getFloorPlan } from './cache'
 import { hydrateAllAboveGrade } from './hydrateForTests'
-import { displayName, isRoomName, roomLabelsFromPlan } from './labels'
+import { displayName, isRoomName, roomLabelsFromPlan, TIER2_REF_COUNTS, tier2RoomsFromPlan } from './labels'
 import { readWoffCmapChars } from './fontCmap'
 import { basementRoomLabels, roomLabelCharacters, ROOM_LABEL_PACK_EXTRA } from '../scene/stage/roomLabels'
 import { clusterTemplates } from '../scene/stage/labelAvoidance'
@@ -23,6 +23,53 @@ const CAD_NOTES = [
   '饮水机',
   '直立式饮水机',
   '茶水柜',
+  'XSIZE',
+  'YSIZE',
+  '(4KW）',
+  '(12KW)',
+  '3KW',
+  '6kw',
+  'HALT箱',
+] as const
+
+const CAD_FURNITURE_NOTES = [
+  '测试桌',
+  '测试整改桌',
+  '温箱',
+  '4插座2网口',
+  '2插座1网口',
+  '8插座4网口',
+  '10插座5网口',
+  '20插座10网口',
+  '三相插座*2',
+  '3个3插',
+  '1个2插',
+  '1个大网',
+  '2个地漏',
+  '预留电视机电源',
+  '振动台',
+  '仪器台面',
+  '金相台面',
+  '跌落台',
+  '组网架',
+  '货架',
+  '货架1',
+  '货架及',
+  '泡棉货架',
+  '通风柜通风柜',
+  '主机',
+  '显示屏',
+  '双门冰箱',
+  '微波炉*4',
+  '微波炉*2',
+  '吹风机',
+  '三脚架',
+  '观察台',
+  '操作台',
+  '会议桌',
+  '机柜',
+  '投影仪',
+  '锅炉烟囱',
 ] as const
 
 const EQUIPMENT_NOTES = ['饮水机', '一体机选型', '直立式饮水机', '茶水柜'] as const
@@ -56,18 +103,109 @@ const KEEP_ROOMS = [
   '丙类仓库(30㎡）',
   '茶水间',
   '茶水',
+  'UPS',
+  'ITS',
+  '1#楼梯',
+  '核心筒（楼梯；XSIZE、YSIZE）',
+  'OAA实验车间',
+  'EMC实验车间',
+  'X-RAY室',
+  '待发PC区',
+  '研发B区',
+  'chart测试区',
+  '打印',
+  '茶水台',
+  '会议室',
+  '货架区',
 ] as const
+
+/** 纯 ASCII 拿不准，D258 清单未列，先不滤。 */
+const UNSURE_ASCII = ['-2~8', '1-5', '7(14)'] as const
 
 const FONT_PATH = join(process.cwd(), 'public/fonts/NotoSansSC-Regular-subset.woff')
 
 describe('D237 / D238 标签文本', () => {
-  it('12 种 CAD/设备注记被过滤，茶水间不受「茶水柜」误伤', () => {
-    expect(CAD_NOTES).toHaveLength(12)
+  it('既有 CAD/设备/ASCII 注记被过滤，茶水间和 UPS 名字不受误伤', () => {
+    expect(CAD_NOTES).toHaveLength(19)
     for (const name of CAD_NOTES) expect(isRoomName(name), name).toBe(false)
+    for (const name of CAD_FURNITURE_NOTES) expect(isRoomName(name), name).toBe(false)
     for (const name of KEEP_ROOMS) expect(isRoomName(name), name).toBe(true)
     for (const name of HEADCOUNT_NAMES) expect(isRoomName(name), name).toBe(true)
     expect(isRoomName('茶水间')).toBe(true)
     expect(isRoomName('茶水')).toBe(true)
+    expect(isRoomName('会议室A1')).toBe(true)
+    for (const name of UNSURE_ASCII) expect(isRoomName(name), name).toBe(true)
+  })
+
+  it('D258 A 类 23 条：XSIZE/YSIZE/功率/HALT，UPS 只滤 F2 无多边形', () => {
+    let ascii = 0
+    for (let level = 1; level <= 8; level += 1) {
+      const plan = getFloorPlan(`F${level}`)!
+      for (const room of plan.rooms) {
+        const dropped = !isRoomName(room.name, room)
+        const size = room.name === 'XSIZE' || room.name === 'YSIZE'
+        const power = /^[（(]?\d+\s*kw\s*[）)]?$/i.test(room.name)
+        const halt = room.name.includes('HALT箱')
+        const upsBare = room.name === 'UPS' && (!room.polygon || room.polygon.length < 3)
+        if ((size || power || halt || upsBare) && dropped) ascii += 1
+      }
+    }
+    expect(ascii).toBe(23)
+    const f2 = getFloorPlan('F2')!
+    const f3 = getFloorPlan('F3')!
+    expect(f2.rooms.some((room) => room.name === 'UPS' && isRoomName(room.name, room))).toBe(false)
+    expect(f3.rooms.some((room) => room.name === 'UPS' && isRoomName(room.name, room))).toBe(true)
+    expect(isRoomName('UPS')).toBe(true)
+    expect(isRoomName('核心筒（楼梯；XSIZE、YSIZE）')).toBe(true)
+    expect(roomLabelsFromPlan(f2).some((label) => /^[XY]SIZE$/i.test(label.text))).toBe(false)
+    const keep = [
+      ['F1', 'OAA实验车间'],
+      ['F1', 'EMC实验车间'],
+      ['F1', 'X-RAY室'],
+      ['F3', 'UPS'],
+      ['F4', '待发PC区'],
+      ['F4', '研发B区'],
+      ['F5', 'ITS'],
+      ['F6', 'chart测试区'],
+    ] as const
+    for (const [floorId, name] of keep) {
+      const plan = getFloorPlan(floorId)!
+      expect(
+        plan.rooms.some((room) => room.name === name && isRoomName(room.name, room)),
+        `${floorId} ${name}`,
+      ).toBe(true)
+    }
+  })
+
+  it('D258 B 类 128 条设备/家具被过滤，茶水台、打印间、会议室留下', () => {
+    const furniture = new Set(CAD_FURNITURE_NOTES)
+    let count = 0
+    for (let level = 1; level <= 8; level += 1) {
+      const plan = getFloorPlan(`F${level}`)!
+      for (const room of plan.rooms) {
+        if (isRoomName(room.name, room)) continue
+        if (CAD_NOTES.includes(room.name as (typeof CAD_NOTES)[number])) continue
+        if (
+          furniture.has(room.name as (typeof CAD_FURNITURE_NOTES)[number]) ||
+          /测试桌|测试整改桌|温箱|插座|网口|\d个\d插|1个大网|地漏|电视机电源|振动台|台面|跌落台|组网架|^货架\d*$|货架及|泡棉货架|通风柜|^主机$|^显示屏$|冰箱|微波炉|吹风机|三脚架|观察台|操作台|^会议桌$|^机柜$|投影仪|锅炉烟囱/.test(
+            room.name,
+          )
+        ) {
+          count += 1
+        }
+      }
+    }
+    expect(count).toBe(128)
+    expect(isRoomName('茶水台')).toBe(true)
+    expect(isRoomName('打印')).toBe(true)
+    expect(isRoomName('会议室')).toBe(true)
+    expect(isRoomName('货架区')).toBe(true)
+    const f6 = getFloorPlan('F6')!
+    expect(f6.rooms.some((room) => room.name === '茶水台' && isRoomName(room.name, room))).toBe(true)
+    expect(f6.rooms.some((room) => room.name === '打印' && isRoomName(room.name, room))).toBe(true)
+    expect(f6.rooms.some((room) => room.name === '会议桌' && isRoomName(room.name, room))).toBe(false)
+    expect(tier2RoomsFromPlan(f6)).toHaveLength(TIER2_REF_COUNTS.F6!)
+    expect(TIER2_REF_COUNTS.F6).toBe(16)
   })
 
   it('F2–F8 设备标注 49 条：饮水机 20、一体机选型 15、直立式饮水机 10、茶水柜 4', () => {

@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { getFloorPlan } from '../../floors/cache'
 import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
+import { INTERIOR_WALL_H, labelLiftY } from '../../floors/interiorWall'
 import { roomLabelsFromPlan } from '../../floors/labels'
 import { TROIKA_TEXT_CONFIG } from './disableTroikaCdn'
 import {
@@ -43,6 +44,10 @@ describe('房间引线标签', () => {
       expect(label.anchor).toHaveLength(3)
       expect(label.label).toHaveLength(3)
       expect(label.label[1]).toBeGreaterThan(label.anchor[1])
+    }
+    for (const label of labels) {
+      expect(label.label[1]).toBeGreaterThan(INTERIOR_WALL_H)
+      expect(label.label[1]).toBeCloseTo(labelLiftY(0.78))
     }
     const characters = roomLabelCharacters(labels)
     expect(characters.length).toBeGreaterThan(0)
@@ -102,6 +107,16 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/shouldPack && api\?\.ready/)
     expect(source).not.toMatch(/applyClusterTexts/)
     expect(source).toMatch(/defineProperty\(window, '__twinLabelOverlap'/)
+    expect(source).toMatch(/SETTLE_FRAMES/)
+    expect(source).toMatch(/pointerMovedRef/)
+    expect(source).toMatch(/pointerOnCanvasRef/)
+    expect(source).toMatch(/addEventListener\('pointermove'/)
+    expect(source).toMatch(/addEventListener\('pointerleave'/)
+    expect(source).toMatch(/hiddenLayout/)
+    expect(source).toMatch(/__twinSlab/)
+    expect(source).toMatch(/__twinLabelFading/)
+    expect(source).toMatch(/FADE_IN_MS = 80/)
+    expect(source).not.toMatch(/if \(stripRef\.current && !dragging/)
   })
 
   it('换行用 maxWidth + break-word，不用 clipRect', () => {

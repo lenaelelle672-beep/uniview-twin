@@ -196,6 +196,7 @@ interface Window {
   __twinLabelSyncs?: number
   __twinLabelSyncStartedAt?: number
   __twinLabelReadyAt?: number
+  __twinLabelFading?: boolean
   __twinLabelOverlap?: {
     merged: number
     hidden: number

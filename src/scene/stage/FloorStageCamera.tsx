@@ -190,8 +190,16 @@ export function FloorStageCamera() {
   const scene = useThree((state) => state.scene)
   const size = useThree((state) => state.size)
   const gl = useThree((state) => state.gl)
+  const invalidate = useThree((state) => state.invalidate)
   const presented = useRef(false)
   const framedKey = useRef('')
+  const settlePulse = useRef(0)
+
+  const pulseSettleFrames = () => {
+    settlePulse.current += 1
+    invalidate()
+    if (settlePulse.current < 8) requestAnimationFrame(pulseSettleFrames)
+  }
 
   useFrame(() => {
     presented.current = true
@@ -216,12 +224,16 @@ export function FloorStageCamera() {
       interior.updateMatrixWorld(true)
       flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, false, gl.domElement)
       framedKey.current = key
+      settlePulse.current = 0
+      requestAnimationFrame(pulseSettleFrames)
       return
     }
     const plate = scene.getObjectByName('FloorPlate')
     if (!plate) return
     frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
     framedKey.current = key
+    settlePulse.current = 0
+    requestAnimationFrame(pulseSettleFrames)
   })
 
   useLayoutEffect(() => {
@@ -260,6 +272,8 @@ export function FloorStageCamera() {
         }
         flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide, gl.domElement)
         framedKey.current = `${active}:${deskId}:${focusSeq}`
+        settlePulse.current = 0
+        requestAnimationFrame(pulseSettleFrames)
         return
       }
       const plate = scene.getObjectByName('FloorPlate')
@@ -272,6 +286,8 @@ export function FloorStageCamera() {
       }
       frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
       framedKey.current = `${active}:slab:${focusSeq}`
+      settlePulse.current = 0
+      requestAnimationFrame(pulseSettleFrames)
     }
     tick()
     return () => {

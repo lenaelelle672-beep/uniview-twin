@@ -1,4 +1,5 @@
 import type { RoomLabel } from '../scene/stage/roomLabels'
+import { labelLiftY } from './interiorWall'
 import { listTier2Rooms, roomAreaM2 } from './labelTier'
 import type { FloorPlan, FloorRoom } from './types'
 
@@ -28,7 +29,7 @@ const ANNOTATION =
 const SKIP_ELEVATOR = /^\d+#电梯/
 const MARKER = /^(女|男|P|N|W|p)$/
 const NUMERIC = /^[\d.#＋+\s]+$/
-/** CAD 注记，只匹配图纸编号/型钢柱/拼接屏/插座预留/IPX/老化箱，不伤普通房间名。 */
+/** CAD 注记：图纸编号/型钢柱/拼接屏/插座预留/IPX/老化箱/D258 A 类 ASCII。 */
 const CAD_NOTE = [
   /详建施[A-Za-z]?-\d+-\d+/,
   /\d+\*\d+不锈钢/,
@@ -37,6 +38,35 @@ const CAD_NOTE = [
   /IPX\d/,
   /干燥箱|紫外老化箱/,
   /一体机|饮水机|茶水柜/,
+  /^[XY]SIZE$/,
+  /^[（(]?\d+\s*kw\s*[）)]?$/i,
+  /HALT箱/,
+]
+/**
+ * D258 B 类设备/家具。会议桌精确匹配；不过滤 茶水台、打印、会议室。
+ * 货架不写裸 /货架/，避免误伤「货架区」。
+ */
+const CAD_FURNITURE = [
+  /测试桌|测试整改桌/,
+  /温箱/,
+  /插座|网口|\d个\d插|1个大网/,
+  /^2个地漏$/,
+  /预留电视机电源/,
+  /振动台/,
+  /仪器台面|金相台面|跌落台/,
+  /泡棉货架|^货架\d*$|^货架及$/,
+  /组网架/,
+  /通风柜/,
+  /^主机$/,
+  /^显示屏$/,
+  /冰箱/,
+  /微波炉/,
+  /吹风机/,
+  /三脚架|观察台|操作台/,
+  /^会议桌$/,
+  /^机柜$/,
+  /投影仪/,
+  /锅炉烟囱/,
 ]
 /** 部门名后的人数算式，只在 displayName 去掉。 */
 const HEADCOUNT = /[（(][\d＋+\s=]*\d[\d＋+\s=]*人[）)]/g
@@ -47,7 +77,7 @@ export function keepAreaBracketTogether(text: string): string {
   return text.replace(AREA_BRACKET, '\n$1')
 }
 
-export function isRoomName(name: string): boolean {
+export function isRoomName(name: string, room?: Pick<FloorRoom, 'polygon'> | null): boolean {
   const text = name.trim()
   if (text.length === 0) return false
   if (MARKER.test(text)) return false
@@ -56,6 +86,8 @@ export function isRoomName(name: string): boolean {
   if (/[（(]常开[）)]/.test(text) && text.replace(/[（()）常开\s]/g, '').length === 0) return false
   if (ANNOTATION.test(text)) return false
   if (CAD_NOTE.some((pattern) => pattern.test(text))) return false
+  if (CAD_FURNITURE.some((pattern) => pattern.test(text))) return false
+  if (text === 'UPS' && room && (!room.polygon || room.polygon.length < 3)) return false
   return true
 }
 
@@ -93,13 +125,13 @@ export interface RoomLabelFilterStats {
 
 export function roomNamesFromPlan(plan: FloorPlan): FloorRoom[] {
   return plan.rooms
-    .filter((room) => isRoomName(room.name))
+    .filter((room) => isRoomName(room.name, room))
     .slice()
     .sort((left, right) => scoreRoom(left) - scoreRoom(right) || left.name.localeCompare(right.name, 'zh'))
 }
 
 export function roomLabelFilterStats(plan: FloorPlan): RoomLabelFilterStats {
-  const dropped = plan.rooms.filter((room) => !isRoomName(room.name)).map((room) => room.name)
+  const dropped = plan.rooms.filter((room) => !isRoomName(room.name, room)).map((room) => room.name)
   const labels = roomLabelsFromPlan(plan)
   return {
     floorId: plan.floorId,
@@ -125,7 +157,7 @@ export const TIER2_REF_COUNTS: Record<string, number> = {
   F3: 29,
   F4: 24,
   F5: 20,
-  F6: 17,
+  F6: 16,
   F7: 14,
   F8: 4,
 }
@@ -143,7 +175,7 @@ export function roomLabelsFromPlan(plan: FloorPlan): RoomLabel[] {
       text: displayName(room.name),
       sourceName: room.name,
       anchor: [x, 2.05, z] as [number, number, number],
-      label: [x, 3.2, z] as [number, number, number],
+      label: [x, labelLiftY(0.78), z] as [number, number, number],
       area: roomAreaM2(room.name, ringArea(room.polygon), room.labelArea_m2),
       polygon: room.polygon,
     }

@@ -7,6 +7,7 @@ import { clusterTemplates, LABEL_MAX_EMS, type LabelPackState, type LabelPlaceme
 import { cameraLookYaw, isDrawnText, measureTextBox, type MeasuredLabelBox } from './labelScreenMeasure'
 import { useTwinStore } from '../../store/store'
 import { ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_OPACITY, roomLabelColors, type RoomLabel } from './roomLabels'
+import { labelLiftY } from '../../floors/interiorWall'
 
 disableTroikaCdnFallback()
 
@@ -59,13 +60,15 @@ function applyPlacement(
   placement: LabelPlacementState | undefined,
   fade: number,
   show: boolean,
+  fontSize: number,
 ) {
   const visible = show && placement?.visible === true
   text.fillOpacity = visible ? fade : 0
   text.outlineOpacity = visible ? fade * ROOM_LABEL_OUTLINE_OPACITY : 0
   text.scale.setScalar(visible ? 1 : 0.001)
   const local = placement?.local ?? base
-  text.position.set(local[0], local[1], local[2])
+  const y = Math.max(local[1], labelLiftY(fontSize))
+  text.position.set(local[0], y, local[2])
   text.updateMatrix()
 }
 
@@ -118,7 +121,7 @@ export function BatchedRoomLabels({
       const label = labels[i]
       const text = members[i]
       if (!label || !text) continue
-      applyPlacement(text, label.label, pack.byId[label.id], fades[i] ?? 1, true)
+      applyPlacement(text, label.label, pack.byId[label.id], fades[i] ?? 1, true, fontSizeRef.current)
     }
     for (let i = 0; i < clustersRef.current.length; i += 1) {
       const cluster = clusters[i]
@@ -139,6 +142,7 @@ export function BatchedRoomLabels({
         },
         1,
         show,
+        fontSizeRef.current,
       )
     }
     let sig = ''
