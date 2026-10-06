@@ -129,16 +129,18 @@ export function DemandLoop() {
     const now = performance.now()
     const delay = soonestWakeMs(last.current, liveQuality, now, false, liveView)
     if (!Number.isFinite(delay)) return
-    if (delay === 0) {
+    if (delay === 0 && hz === Number.POSITIVE_INFINITY) {
       markDueChannels(last.current, liveQuality, now, liveView)
       rawRef.current()
       return
     }
-    if (wake.current) return
+    if (wake.current || hz <= 0) return
+    const wait = delay > 0 ? delay : 1000 / hz
     wake.current = window.setTimeout(() => {
       wake.current = 0
+      markDueChannels(last.current, liveQuality, performance.now(), liveView)
       if (document.visibilityState !== 'hidden') rawRef.current()
-    }, delay)
+    }, wait)
   }, 100)
 
   return quality === 'perf' ? <AdaptiveDpr /> : null
