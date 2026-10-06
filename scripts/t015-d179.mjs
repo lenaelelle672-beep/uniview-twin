@@ -49,36 +49,63 @@ async function waitLoop(page) {
   await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
 }
 
-async function pageCpuCores(page, seconds) {
-  const client = await page.createCDPSession()
-  let before
-  try {
-    before = await client.send('SystemInfo.getProcessInfo')
-  } catch {
-    return { cores: null, reason: 'no SystemInfo.getProcessInfo' }
+function childPids(root) {
+  const { spawnSync } = require('node:child_process')
+  const seen = new Set()
+  const stack = [root]
+  while (stack.length) {
+    const pid = stack.pop()
+    if (!pid || seen.has(pid)) continue
+    seen.add(pid)
+    const out = spawnSync('ps', ['-o', 'pid=', '--ppid', String(pid)], { encoding: 'utf8' })
+    if (out.status === 0) {
+      for (const line of out.stdout.split('\n')) {
+        const n = Number(line.trim())
+        if (n) stack.push(n)
+      }
+    }
   }
-  await new Promise((r) => setTimeout(r, seconds * 1000))
-  const after = await client.send('SystemInfo.getProcessInfo')
-  const pick = (info) => {
-    const rows = info.processInfo ?? info
-    const list = Array.isArray(rows) ? rows : []
-    const gpu = list.filter((p) => /gpu/i.test(p.type ?? ''))
-    const renderer = list.filter((p) => /renderer|tab/i.test(p.type ?? ''))
-    return [...gpu, ...renderer]
-  }
-  const mapTime = (list) => {
-    const m = new Map()
-    for (const p of list) m.set(p.id ?? p.pid, p.cpuTime ?? 0)
-    return m
-  }
-  const a = pick(after)
-  const b = mapTime(pick(before))
-  let delta = 0
-  for (const p of a) delta += (p.cpuTime ?? 0) - (b.get(p.id ?? p.pid) ?? 0)
-  return { cores: delta / seconds, processes: a.map((p) => ({ type: p.type, id: p.id, cpuTime: p.cpuTime })) }
+  return [...seen]
 }
 
-async function sampleIdle(page, seconds, hide = false) {
+function cpuTicks(pids) {
+  let t = 0
+  for (const pid of pids) {
+    try {
+      const stat = require('node:fs').readFileSync(`/proc/${pid}/stat`, 'utf8')
+      const parts = stat.slice(stat.lastIndexOf(')') + 2).split(' ')
+      t += Number(parts[11] ?? 0) + Number(parts[12] ?? 0)
+    } catch {
+      // gone
+    }
+  }
+  return t
+}
+
+const CLK = Number(require('node:child_process').spawnSync('getconf', ['CLK_TCK'], { encoding: 'utf8' }).stdout.trim()) || 100
+
+async function pageCpuCores(page, browser, seconds) {
+  const client = await page.createCDPSession()
+  let cdp = null
+  try {
+    cdp = await client.send('SystemInfo.getProcessInfo')
+  } catch {
+    cdp = null
+  }
+  const root = browser.process()?.pid
+  const pids = root ? childPids(root) : []
+  const t0 = cpuTicks(pids)
+  const wall0 = Date.now()
+  await new Promise((r) => setTimeout(r, seconds * 1000))
+  const t1 = cpuTicks(root ? childPids(root) : pids)
+  const wall = (Date.now() - wall0) / 1000
+  const procCores = wall > 0 ? (t1 - t0) / CLK / wall : null
+  if (!cdp) return { cores: procCores, via: 'proc-browser-tree', pids: pids.length }
+  const rows = Array.isArray(cdp.processInfo) ? cdp.processInfo : []
+  return { cores: procCores, via: 'proc-browser-tree', pids: pids.length, cdpTypes: rows.map((p) => p.type) }
+}
+
+async function sampleIdle(page, browser, seconds, hide = false) {
   await waitReady(page)
   await waitLoop(page)
   if (hide) {
@@ -96,7 +123,7 @@ async function sampleIdle(page, seconds, hide = false) {
     schedule: window.__twinSchedule ?? null,
     gpu: window.__twinGpu ?? null,
   }))
-  const cpu = await pageCpuCores(page, seconds)
+  const cpu = await pageCpuCores(page, browser, seconds)
   const end = await page.evaluate((t0) => {
     const at = performance.now()
     const sec = (at - t0.at) / 1000
@@ -182,10 +209,11 @@ async function demandVisual(browser) {
   const x1 = await canvasPix(page)
 
   await page.evaluate(() => window.__twinSetExploded?.(true))
-  await page.evaluate(() => new Promise((r) => setTimeout(r, 900)))
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
   const hid = await page.evaluate(() => window.__twinBadges === 0)
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 600)))
   await page.evaluate(() => window.__twinSetExploded?.(false))
-  await page.evaluate(() => new Promise((r) => setTimeout(r, 900)))
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
   const shown = await page.evaluate(() => (window.__twinBadges ?? 0) > 0)
 
   const q0 = await canvasPix(page)
@@ -265,16 +293,16 @@ async function main() {
     const overview = await browser.newPage()
     await overview.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
     await overview.goto(`${base}/`, { waitUntil: 'load', timeout: 90_000 })
-    const auto = await sampleIdle(overview, 8)
+    const auto = await sampleIdle(overview, browser, 8)
     await overview.goto(`${base}/?q=balanced`, { waitUntil: 'load', timeout: 90_000 })
-    const balanced = await sampleIdle(overview, 8)
-    const hidden = await sampleIdle(overview, 4, true)
+    const balanced = await sampleIdle(overview, browser, 8)
+    const hidden = await sampleIdle(overview, browser, 4, true)
     await overview.close()
     const floor = await browser.newPage()
     await floor.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
     await floor.goto(`${base}/?q=perf&view=floor&floor=F12`, { waitUntil: 'load', timeout: 90_000 })
     await floor.waitForFunction(() => (window.__twinInterior?.renderedDesks ?? 0) > 0, { timeout: 45_000 }).catch(() => {})
-    const f12 = await sampleIdle(floor, 8)
+    const f12 = await sampleIdle(floor, browser, 8)
     await floor.close()
     await browser.close()
     idles.push({ auto, balanced, hidden, f12 })
