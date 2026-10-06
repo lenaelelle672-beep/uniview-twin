@@ -137,10 +137,9 @@ interface Window {
     at: number
   }
   __twinLabelOverlap?: {
-    overlapPairs: number
+    merged: number
     hidden: number
-    visible: number
-    clusters: number
+    hiddenAfterZoom: number
   }
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>
   __twinFly?: { floorId: string; nonce: number } | null

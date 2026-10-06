@@ -204,9 +204,10 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     if (hoverId) {
       const row = avoided.placements.find((item) => item.id === hoverId)
       if (row && !row.visible) {
+        if (row.cluster) avoided.merged = Math.max(0, avoided.merged - 1)
+        else avoided.hidden = Math.max(0, avoided.hidden - 1)
         row.visible = true
         row.cluster = null
-        avoided.hidden = Math.max(0, avoided.hidden - 1)
       }
     }
     const byId: LabelPackState['byId'] = {}
@@ -218,10 +219,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     for (const cluster of avoided.clusters) clusters[cluster.key] = true
     packRef.current = { byId, clusters }
     window.__twinLabelOverlap = {
-      overlapPairs: avoided.overlapPairs,
+      merged: avoided.merged,
       hidden: avoided.hidden,
-      visible: avoided.placements.filter((row) => row.visible).length + avoided.clusters.length,
-      clusters: avoided.clusters.length,
+      hiddenAfterZoom: avoided.hiddenAfterZoom,
     }
     window.__twinLabelPx = {
       fontSize: next,

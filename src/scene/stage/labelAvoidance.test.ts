@@ -2,21 +2,52 @@ import { describe, expect, it } from 'vitest'
 import { getFloorPlan } from '../../floors/cache'
 import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { displayName, roomLabelsFromPlan } from '../../floors/labels'
-import { avoidLabels, clusterTemplates, labelScreenBox } from './labelAvoidance'
+import {
+  avoidLabels,
+  clusterLabelText,
+  clusterTemplates,
+  labelScreenBox,
+  zoomAvoidItems,
+} from './labelAvoidance'
 
 hydrateAllAboveGrade()
 
+function planItems(floorId: string, width = 1366, height = 768) {
+  const labels = roomLabelsFromPlan(getFloorPlan(floorId)!)
+  const xs = labels.map((label) => label.label[0])
+  const zs = labels.map((label) => label.label[2])
+  const minX = Math.min(...xs)
+  const maxX = Math.max(...xs)
+  const minZ = Math.min(...zs)
+  const maxZ = Math.max(...zs)
+  const pad = 48
+  return labels.map((label) => {
+    const box = labelScreenBox(label.text, 14)
+    return {
+      id: label.id,
+      text: label.text,
+      x: pad + ((label.label[0] - minX) / (maxX - minX || 1)) * (width - pad * 2),
+      y: pad + ((label.label[2] - minZ) / (maxZ - minZ || 1)) * (height - pad * 2),
+      w: box.w,
+      h: box.h,
+      priority: 3,
+      locked: false,
+      area: label.area ?? 0,
+    }
+  })
+}
+
 describe('房间标签避让', () => {
   it('不截断房间名，中文用 break-word 估算两行盒', () => {
-    expect(displayName('采购部（88+1人）')).toBe('采购部（88+1人）')
+    expect(displayName('采购部（88+1人）')).toBe('采购部')
     expect(displayName('一级主管办公室')).toBe('一级主管办公室')
     expect(displayName('会议室A1')).toBe('会议室A1')
-    const box = labelScreenBox('采购部（88+1人）', 13)
+    const box = labelScreenBox('丙类公共事务部礼品房', 13)
     expect(box.h).toBeGreaterThan(13)
     expect(box.h).toBeLessThanOrEqual(13 * 1.2 * 2 + 8)
   })
 
-  it('同名碰撞合并，拉开后拆回', () => {
+  it('同名先合并，拉开后拆回，合组用 ASCII x', () => {
     const stacked = [
       { id: 'a', text: '洽谈室', x: 100, y: 100, w: 72, h: 28, priority: 3, locked: false, area: 10 },
       { id: 'b', text: '洽谈室', x: 102, y: 101, w: 72, h: 28, priority: 3, locked: false, area: 10 },
@@ -25,32 +56,55 @@ describe('房间标签避让', () => {
     ]
     const merged = avoidLabels(stacked)
     expect(merged.clusters).toHaveLength(1)
-    expect(merged.clusters[0]?.text).toBe('洽谈室 ×4')
+    expect(merged.clusters[0]?.text).toBe('洽谈室 x4')
+    expect(clusterLabelText('洽谈室', 4)).toBe('洽谈室 x4')
     expect(merged.placements.every((row) => row.cluster === '洽谈室')).toBe(true)
-    expect(merged.overlapPairs).toBe(0)
+    expect(merged.merged).toBe(4)
+    expect(merged.hiddenAfterZoom).toBe(0)
 
     const spread = stacked.map((item, index) => ({ ...item, x: 80 + index * 80 }))
     const split = avoidLabels(spread)
     expect(split.clusters).toHaveLength(0)
     expect(split.placements.every((row) => row.visible)).toBe(true)
-    expect(split.overlapPairs).toBe(0)
+    expect(split.hidden).toBe(0)
+    expect(split.hiddenAfterZoom).toBe(0)
   })
 
-  it('告警/选中永不隐藏，其余可偏移或隐藏', () => {
+  it('告警/选中永不隐藏，挤满后其余才隐藏', () => {
+    const crowd = Array.from({ length: 48 }, (_, index) => ({
+      id: `n${index}`,
+      text: `房间${index}`,
+      x: 200,
+      y: 200,
+      w: 80,
+      h: 32,
+      priority: 3,
+      locked: false,
+      area: 8,
+    }))
     const items = [
-      { id: 'alarm', text: '打印', x: 200, y: 200, w: 72, h: 28, priority: 0, locked: true, area: 8 },
-      { id: 'other', text: '文档室', x: 202, y: 201, w: 72, h: 28, priority: 3, locked: false, area: 8 },
+      { id: 'alarm', text: '打印', x: 200, y: 200, w: 80, h: 32, priority: 0, locked: true, area: 8 },
+      ...crowd,
     ]
     const result = avoidLabels(items)
     expect(result.placements.find((row) => row.id === 'alarm')?.visible).toBe(true)
-    expect(result.placements.find((row) => row.id === 'other')?.visible).toBe(false)
+    expect(result.hidden).toBeGreaterThan(0)
+    expect(result.hiddenAfterZoom).toBe(0)
+    expect(zoomAvoidItems(items)).toHaveLength(items.length)
   })
 
   it('F12 图纸层会预生成洽谈室/会议室组标签', () => {
     const labels = roomLabelsFromPlan(getFloorPlan('F12')!)
-    expect(labels.some((label) => label.text === '采购部（88+1人）')).toBe(true)
+    expect(labels.some((label) => label.text === '采购部')).toBe(true)
     const clusters = clusterTemplates(labels)
-    expect(clusters.some((item) => item.text.startsWith('洽谈室 ×'))).toBe(true)
-    expect(clusters.some((item) => item.text.startsWith('会议室 ×'))).toBe(true)
+    expect(clusters.some((item) => item.text.startsWith('洽谈室 x'))).toBe(true)
+    expect(clusters.some((item) => item.text.startsWith('会议室 x'))).toBe(true)
+  })
+
+  it('F1–F8 / F12 / F22 拉近后 hiddenAfterZoom 为 0', () => {
+    for (const floorId of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F12', 'F22']) {
+      const result = avoidLabels(planItems(floorId))
+      expect(result.hiddenAfterZoom, floorId).toBe(0)
+    }
   })
 })

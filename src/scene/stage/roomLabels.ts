@@ -39,9 +39,12 @@ export function labelFadeForTarget(
   return Math.hypot(label.x - target.x, label.y - target.y) < reach ? 0.22 : 1
 }
 
-/** drei Text 的 characters，用来只预排这些字，避免回退字体。洽/丙始终编进子集。 */
+/** 预排补集：洽/丙 + 合组用的 ASCII x 和数字。不追加 ×/嗆，避免子集外占位方块。 */
+export const ROOM_LABEL_PACK_EXTRA = '洽丙x0123456789'
+
+/** drei Text 的 characters，用来只预排这些字。 */
 export function roomLabelCharacters(labels: RoomLabel[]): string {
-  return Array.from(new Set(`${labels.map((label) => label.text).join('')}洽丙嗆×0123456789`)).join('')
+  return Array.from(new Set(`${labels.map((label) => label.text).join('')}${ROOM_LABEL_PACK_EXTRA}`)).join('')
 }
 
 /** 标准层：三间会议室、茶水间、前台、电梯厅。引线终点在房间上方。 */

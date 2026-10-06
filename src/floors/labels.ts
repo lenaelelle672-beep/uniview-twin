@@ -27,6 +27,17 @@ const ANNOTATION =
 const SKIP_ELEVATOR = /^\d+#电梯/
 const MARKER = /^(女|男|P|N|W|p)$/
 const NUMERIC = /^[\d.#＋+\s]+$/
+/** CAD 注记，只匹配图纸编号/型钢柱/拼接屏/插座预留/IPX/老化箱，不伤普通房间名。 */
+const CAD_NOTE = [
+  /详建施[A-Za-z]?-\d+-\d+/,
+  /\d+\*\d+不锈钢/,
+  /\d+\*\d+拼接屏/,
+  /测试桌.*(?:插座|网口)/,
+  /IPX\d/,
+  /干燥箱|紫外老化箱/,
+]
+/** 部门名后的人数算式，只在 displayName 去掉。 */
+const HEADCOUNT = /[（(][\d＋+\s=]*\d[\d＋+\s=]*人[）)]/g
 
 export function isRoomName(name: string): boolean {
   const text = name.trim()
@@ -36,6 +47,7 @@ export function isRoomName(name: string): boolean {
   if (SKIP_ELEVATOR.test(text)) return false
   if (/[（(]常开[）)]/.test(text) && text.replace(/[（()）常开\s]/g, '').length === 0) return false
   if (ANNOTATION.test(text)) return false
+  if (CAD_NOTE.some((pattern) => pattern.test(text))) return false
   return true
 }
 
@@ -45,12 +57,13 @@ function scoreRoom(room: FloorRoom): number {
 }
 
 export function displayName(name: string): string {
-  if (/核心筒|电梯厅|合用前室/.test(name)) return '电梯厅'
-  if (/茶水/.test(name)) return '茶水间'
-  if (/前台/.test(name)) return '前台'
-  if (/洽谈/.test(name)) return '洽谈室'
-  if (/会议/.test(name)) return name.startsWith('会议') ? name : '会议室'
-  return name
+  const text = name.replace(HEADCOUNT, '').trim()
+  if (/核心筒|电梯厅|合用前室/.test(text)) return '电梯厅'
+  if (/茶水/.test(text)) return '茶水间'
+  if (/前台/.test(text)) return '前台'
+  if (/洽谈/.test(text)) return '洽谈室'
+  if (/会议/.test(text)) return text.startsWith('会议') ? text : '会议室'
+  return text
 }
 
 function ringArea(ring: Array<[number, number]> | null | undefined): number {
