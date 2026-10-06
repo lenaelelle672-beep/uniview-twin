@@ -169,7 +169,7 @@ function JsonFloorReady({
       />
       <Workstations slots={slots} colors={colors} />
       <InstancedSlots name="OfficeDesks" geometry={officeDeskGeometry} material={woodMaterial} slots={officeSlots} />
-      <MonitorDepthProxies />
+      {showPeople ? <MonitorDepthProxies /> : null}
       <DeskFlash floorId={spec.id} />
       <FloorDecor floorId={spec.id} devices={devices} labels={labels} showPeople={showPeople} paths={peoplePaths} />
       <Ceiling

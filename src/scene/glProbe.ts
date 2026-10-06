@@ -1,8 +1,16 @@
 import type { WebGLRenderer } from 'three'
 
+let samples: number | undefined
+
+export function resetGlProbeCache(): void {
+  samples = undefined
+}
+
 export function defaultFramebufferSamples(gl: WebGLRenderer) {
+  if (samples != null) return samples
   const ctx = gl.getContext()
-  return Number(ctx.getParameter(ctx.SAMPLES) ?? 0)
+  samples = Number(ctx.getParameter(ctx.SAMPLES) ?? 0)
+  return samples
 }
 
 export function drainGlErrors(gl: WebGLRenderer) {

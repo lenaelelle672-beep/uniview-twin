@@ -119,6 +119,15 @@ describe('URL 解析与回写', () => {
     expect(missing.posNotice).toContain('F12-66')
   })
 
+  it('keepDrawingBuffer=1 往返保留，不看 q/cam', () => {
+    expect(parseSearch('?q=balanced&keepDrawingBuffer=1')).toEqual({ q: 'balanced', keepDrawingBuffer: true })
+    expect(parseSearch('?q=perf&cam=east')).toEqual({ q: 'perf', cam: 'east' })
+    applySearchToStore('?q=balanced&keepDrawingBuffer=1')
+    expect(storeToSearch()).toBe('?q=balanced&keepDrawingBuffer=1')
+    applySearchToStore('?q=perf')
+    expect(storeToSearch()).toBe('?q=perf')
+  })
+
   it('外站 data 地址不作为可加载路径，但仍保留在地址栏', () => {
     applySearchToStore('?data=https://example.com/a.json')
     expect(useTwinStore.getState().error).toContain('站内路径')

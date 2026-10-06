@@ -3,6 +3,8 @@ import { useAnimations } from '@react-three/drei/core/useAnimations'
 import { useFrame, useLoader } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Group, MeshStandardMaterial, SkinnedMesh } from 'three'
+import { channelDue, channelIntervalMs, retainFrameChannel } from '../frameSchedule'
+import { useTwinStore } from '../../store/store'
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { installMeshopt } from '../meshopt'
@@ -36,6 +38,7 @@ function prepareFigure(gltf: GLTF) {
     mesh.frustumCulled = false
     mesh.castShadow = false
     mesh.receiveShadow = false
+    // 性能档人物不投影（本组件仅在非性能档挂载；即使挂上也保持不投影）。
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
     for (const material of materials) {
       const standard = material as MeshStandardMaterial
@@ -71,6 +74,9 @@ function CorridorPeopleModels({ paths }: { paths: Point[][] }) {
   const roster = useMemo(() => corridorRoster(CORRIDOR_PEOPLE_COUNT), [])
   const lengths = useMemo(() => paths.map((path) => pathLength(path)), [paths])
   const refs = useRef<Array<Group | null>>([])
+  const lastPlace = useRef(0)
+
+  useEffect(() => retainFrameChannel('people'), [])
 
   const place = (time: number) => {
     roster.forEach((person, index) => {
@@ -89,6 +95,11 @@ function CorridorPeopleModels({ paths }: { paths: Point[][] }) {
   }, [lengths, paths, roster])
 
   useFrame(({ clock }) => {
+    const now = performance.now()
+    const quality = useTwinStore.getState().quality
+    const interval = channelIntervalMs('people', quality)
+    if (!channelDue(lastPlace.current, now, interval)) return
+    lastPlace.current = now
     place(clock.elapsedTime)
   })
 
