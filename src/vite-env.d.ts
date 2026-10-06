@@ -142,6 +142,9 @@ interface Window {
     probeMs?: number
   }
   __twinInvalidate?: () => Promise<void>
+  __twinInvalidateNext?: string
+  __twinInvalidateLog?: Array<{ t: number; src: string }>
+  __twinInvalidateCounts?: Record<string, number>
   __twinFrameCount?: number
   __twinFrames?: number
   __twinGlDebug?: boolean
