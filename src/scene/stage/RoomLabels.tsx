@@ -30,6 +30,7 @@ import type { LabelBatchApi } from './BatchedRoomLabels'
 import {
   LABEL_MAX_PX,
   LABEL_MIN_PX,
+  ROOM_LABEL_FONT,
   labelFadeForTarget,
   roomLabelCharacters,
   roomLabelOutlineWidth,
@@ -355,7 +356,10 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     itemsRef.current = []
     packRef.current = hiddenLayout(labels)
     layoutRef.current = packRef.current
-  }, [floorId, labels])
+    void import('troika-three-text').then((mod) => {
+      mod.preloadFont({ font: ROOM_LABEL_FONT, characters }, () => {})
+    }).catch(() => {})
+  }, [floorId, labels, characters])
 
   useEffect(() => {
     const read = () => {
@@ -420,8 +424,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         hiddenAt: itemsRef.current
           .map((item) => {
             const row = packed.placements.find((place) => place.id === item.id)
-            if (!row || row.visible || row.cluster) return null
-            return { id: item.id, text: item.text, sx: item.x, sy: item.y, w: item.w, h: item.h }
+            if (!row || row.visible) return null
+            return { id: item.id, text: item.text, sx: item.x, sy: item.y, w: item.w, h: item.h, cluster: row.cluster }
           })
           .filter((row): row is NonNullable<typeof row> => Boolean(row)),
       }
@@ -493,7 +497,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       viewKeyRef.current = viewKey
     }
     if (dragging) idleRef.current = -1
-    if (!settled) {
+    if (!cameraReady) {
       window.__twinLabelFading = false
       return
     }
@@ -506,6 +510,10 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         sizedRef.current = true
       }
       invalidate()
+      return
+    }
+    if (!settled) {
+      if (!api?.ready) invalidate()
       return
     }
     let shouldPack = false
