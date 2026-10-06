@@ -23,6 +23,7 @@ export function IdlePrewarm() {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const camera = useThree((state) => state.camera)
+  const invalidate = useThree((state) => state.invalidate)
 
   useEffect(() => {
     let cancelled = false
@@ -119,6 +120,7 @@ export function IdlePrewarm() {
       }
 
       snapshotPrograms(gl, 'prewarmed')
+      invalidate()
       markDone({
         startedAt,
         doneAt: performance.now(),
@@ -138,6 +140,7 @@ export function IdlePrewarm() {
 
     void run().catch(() => {
       if (cancelled) return
+      invalidate()
       markDone({
         startedAt: window.__twinPrewarmStartedAt ?? performance.now(),
         doneAt: performance.now(),
@@ -159,7 +162,7 @@ export function IdlePrewarm() {
       cancelled = true
       yieldCtl.dispose()
     }
-  }, [camera, gl, scene])
+  }, [camera, gl, invalidate, scene])
 
   return null
 }
