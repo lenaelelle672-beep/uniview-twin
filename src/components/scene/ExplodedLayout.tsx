@@ -15,13 +15,20 @@ export function ExplodedLayout() {
   const scene = useThree((state) => state.scene)
   const invalidate = useThree((state) => state.invalidate)
   const cache = useRef(new Map<string, Object3D>())
+  const wasAnimating = useRef(false)
 
   useFrame(({ clock }) => {
     const { exploded, view } = useTwinStore.getState()
     const target = exploded && view === 'building' ? 1 : 0
     // 与徽标共用 stepExplodeMotion。同一帧再调一次，进度不变。
     const { progress, animating } = stepExplodeMotion(exploded, view, clock.elapsedTime)
-    if (animating) invalidate()
+    if (animating) {
+      invalidate()
+    } else if (wasAnimating.current) {
+      // 动画结束再出 1 帧，徽标才在新高度上画出来。
+      invalidate()
+    }
+    wasAnimating.current = animating
     const floors: NonNullable<Window['__twinExplode']>['floors'] = []
 
     specs.forEach((spec, index) => {
