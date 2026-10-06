@@ -295,6 +295,7 @@ button {
 .detail-list div {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   padding: 6px 0;
   border-bottom: 1px solid #e6edf5;
@@ -302,11 +303,17 @@ button {
 
 .detail-list dt {
   color: #667085;
+  flex: none;
+  white-space: nowrap;
 }
 
 .detail-list dd {
   margin: 0;
+  min-width: 0;
   font-weight: 650;
+  text-align: right;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .stage {
