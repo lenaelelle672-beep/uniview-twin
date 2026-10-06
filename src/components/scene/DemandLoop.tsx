@@ -131,13 +131,13 @@ export function DemandLoop() {
     if (!Number.isFinite(delay)) return
     if (delay === 0) {
       markDueChannels(last.current, liveQuality, now, liveView)
-      gatedInvalidate()
+      rawRef.current()
       return
     }
     if (wake.current) return
     wake.current = window.setTimeout(() => {
       wake.current = 0
-      if (document.visibilityState !== 'hidden') gatedInvalidate()
+      if (document.visibilityState !== 'hidden') rawRef.current()
     }, delay)
   }, 100)
 

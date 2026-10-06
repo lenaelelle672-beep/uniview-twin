@@ -125,16 +125,35 @@ async function snapshot(page) {
 
 async function forceHiddenCdp(page) {
   const client = await page.createCDPSession()
-  await client.send('Emulation.setFocusEmulationEnabled', { enabled: true })
-  await client.send('Page.setWebLifecycleState', { state: 'hidden' })
+  await client.send('Emulation.setFocusEmulationEnabled', { enabled: true }).catch(() => {})
+  let lifecycle = null
+  for (const state of ['hidden', 'frozen']) {
+    try {
+      await client.send('Page.setWebLifecycleState', { state })
+      lifecycle = state
+      break
+    } catch {
+      // 本 Chrome 可能只认 frozen/active
+    }
+  }
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
+    Object.defineProperty(document, 'hidden', { configurable: true, get: () => true })
+    document.dispatchEvent(new Event('visibilitychange'))
+  })
   await page.evaluate(() => new Promise((r) => setTimeout(r, 250)))
+  client._twinLifecycle = lifecycle
   return client
 }
 
 async function sampleIdle(page, browser, seconds, hide = false) {
   await waitLoop(page)
   let cdp = null
-  if (hide) cdp = await forceHiddenCdp(page)
+  let lifecycle = null
+  if (hide) {
+    cdp = await forceHiddenCdp(page)
+    lifecycle = cdp._twinLifecycle ?? null
+  }
   const start = await snapshot(page)
   const cpu = await pageCpuCores(page, browser, seconds)
   const end = await page.evaluate((t0) => {
@@ -162,6 +181,7 @@ async function sampleIdle(page, browser, seconds, hide = false) {
     cpu: cpu.cores,
     cpuDetail: cpu,
     url: page.url(),
+    lifecycle,
   }
 }
 
