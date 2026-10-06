@@ -37,6 +37,40 @@
   width: min(560px, calc(100vw - 248px - 12px));
 }
 
+.alarm-drawer.is-strip,
+.alarm-drawer.is-strip.is-floor-collapsed {
+  width: 48px;
+  min-width: 48px;
+  padding: 10px 4px 12px;
+}
+
+.alarm-full {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.alarm-full[hidden] {
+  display: none;
+}
+
+.alarm-drawer.is-strip {
+  overflow: hidden;
+}
+
+.alarm-return {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  width: 100%;
+  min-height: 148px;
+  border: 1px solid #d5deea;
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px 6px;
+  letter-spacing: 0.12em;
+}
+
 .alarm-head {
   flex: none;
   display: flex;
@@ -238,5 +272,11 @@
     left: 0;
     inset-inline-start: 0;
     width: min(520px, calc(100vw - 220px - 12px));
+  }
+
+  .alarm-drawer.is-strip,
+  .alarm-drawer.is-strip.is-floor-collapsed {
+    width: 48px;
+    min-width: 48px;
   }
 }
