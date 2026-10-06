@@ -72,7 +72,6 @@ export function FloorBadges() {
     (state) =>
       state.view !== 'building' || state.exploded || state.presentation === 'model' || state.cam != null,
   )
-  const invalidate = useThree((state) => state.invalidate)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const emitFloorFly = useTwinStore((state) => state.emitFloorFly)
   const enterFloor = useTwinStore((state) => state.enterFloor)
@@ -177,10 +176,6 @@ export function FloorBadges() {
     })
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
   }, [anchors, hidden])
-
-  useEffect(() => {
-    invalidate()
-  }, [hidden, invalidate])
 
   useEffect(() => {
     return () => {

@@ -143,8 +143,7 @@ export function DemandLoop() {
     }, wait)
   }, 100)
 
-  const softwareAuto = window.__twinGpu?.softwareAuto === true
-  return quality === 'perf' && !softwareAuto ? <AdaptiveDpr /> : null
+  return quality === 'perf' && useTwinStore.getState().qualityPinned ? <AdaptiveDpr /> : null
 }
 
 export default DemandLoop

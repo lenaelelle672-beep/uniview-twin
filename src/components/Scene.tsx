@@ -1,4 +1,3 @@
-import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
@@ -6,7 +5,6 @@ import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
 import { EastBlock } from './scene/EastBlock'
-import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
 import { MainScenePass, MonitorPass } from './scene/MonitorPass'
@@ -17,7 +15,6 @@ import { Tower } from './scene/Tower'
 import { useBalancedWarmup } from './scene/useBalancedWarmup'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
-import { gpuTierLabel, preserveDrawingBufferFor, probeSoftwareGpu } from '../scene/gpuDetect'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
@@ -28,6 +25,26 @@ const FacadeSamples = lazy(() =>
   import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
 )
 const DemandLoop = lazy(() => import('./scene/DemandLoop'))
+const BadgeHud = lazy(() => import('./scene/BadgeHud'))
+
+const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render driver/i
+let gpuProbe: { renderer: string; software: boolean; probeMs: number } | undefined
+
+function probeGpu() {
+  if (gpuProbe) return gpuProbe
+  const t0 = performance.now()
+  const gl = document.createElement('canvas').getContext('webgl2')
+  let renderer = ''
+  let software = false
+  if (gl) {
+    const ext = gl.getExtension('WEBGL_debug_renderer_info')
+    renderer = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '')
+    software = SOFTWARE.test(renderer)
+    gl.getExtension('WEBGL_lose_context')?.loseContext()
+  }
+  gpuProbe = { renderer, software, probeMs: performance.now() - t0 }
+  return gpuProbe
+}
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
@@ -50,8 +67,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const [loopOn, setLoopOn] = useState(false)
   const view = useTwinStore((state) => state.view)
-  const selectedFloor = useTwinStore((state) => state.selectedFloor)
-  const openBasement = view === 'floor' && selectedFloor === 'B1'
+  const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
   const bumpFit = useCallback(() => setFitGeneration((value) => value + 1), [])
@@ -158,11 +174,9 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
       {!composerLive && <MainScenePass renderPriority={1} />}
       <MonitorPass renderPriority={2} drawOverlay={!composerLive} />
-      {view === 'building' && (
+      {loopOn && view === 'building' && (
         <Suspense fallback={null}>
-          <Hud renderPriority={3}>
-            <FloorBadges />
-          </Hud>
+          <BadgeHud />
         </Suspense>
       )}
       {prefetchDone && (
@@ -182,14 +196,14 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
 export function SceneCanvas() {
   const dayNight = useTwinStore((state) => state.dayNight)
   const quality = useTwinStore((state) => state.quality)
-  const qualityPinned = useTwinStore((state) => state.qualityPinned)
   const presentation = useTwinStore((state) => state.presentation)
   const cam = useTwinStore((state) => state.cam)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const [gpuReady, setGpuReady] = useState(false)
-  const probe = probeSoftwareGpu()
-  const softwareAuto = probe.software && !qualityPinned
-  const keepBuffer = preserveDrawingBufferFor(probe.software)
+  const probe = probeGpu()
+  const softwareAuto = probe.software && !useTwinStore.getState().qualityPinned
+  if (softwareAuto && quality !== 'perf') useTwinStore.setState({ quality: 'perf' })
+  const keepBuffer = location.search.includes('keepDrawingBuffer=1') || !probe.software
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
   const pose = cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview
   applySurfaceMode(mode)
@@ -199,23 +213,19 @@ export function SceneCanvas() {
   }, [mode])
 
   return (
-    <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={quality}>
+    <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={softwareAuto ? 'perf' : quality}>
       {/* 不按性能档重建画布。换档会新建 WebGLRenderer，three 按渲染器缓存的 PMREM 会再生成一次。dpr 和阴影在同一个画布上更新。 */}
       <Canvas
         frameloop="demand"
-        dpr={qualityDprRange(quality, softwareAuto)}
-        shadows={gpuReady && quality !== 'perf' ? 'percentage' : false}
+        dpr={softwareAuto ? [0.75, 0.75] : qualityDprRange(quality)}
+        shadows={gpuReady && !softwareAuto && quality !== 'perf' ? 'percentage' : false}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
         gl={{ antialias: true, alpha: false, preserveDrawingBuffer: keepBuffer, toneMapping: AgXToneMapping }}
         onCreated={({ gl }) => {
-          const q = useTwinStore.getState().quality
           window.__twinGpu = {
             renderer: probe.renderer,
             software: probe.software,
-            tier: gpuTierLabel(q),
-            softwareAuto,
-            preserveDrawingBuffer: keepBuffer,
-            dpr: softwareAuto ? 0.75 : undefined,
+            tier: softwareAuto || quality === 'perf' ? 'performance' : quality,
             probeMs: probe.probeMs,
           }
           gl.shadowMap.autoUpdate = false

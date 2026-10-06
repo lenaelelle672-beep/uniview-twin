@@ -1,5 +1,3 @@
-/** 软件渲染识别。挂 R3F Canvas 之前用 1×1 临时 context 判档，再 loseContext。 */
-
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render driver/i
 
 export type GpuDetectResult = {
@@ -9,8 +7,7 @@ export type GpuDetectResult = {
 }
 
 export function keepDrawingBufferRequested(search = typeof location === 'undefined' ? '' : location.search): boolean {
-  const raw = search.startsWith('?') ? search.slice(1) : search
-  return new URLSearchParams(raw).get('keepDrawingBuffer') === '1'
+  return new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('keepDrawingBuffer') === '1'
 }
 
 let cachedProbe: GpuDetectResult | undefined
@@ -25,10 +22,6 @@ type GlLike = {
   RENDERER: number
 }
 
-/**
- * 只认 WEBGL_debug_renderer_info。拿不到扩展就保持现档（software=false）。
- * 正则不单写 warp，以免误伤正常显卡名。
- */
 export function detectSoftwareRenderer(gl: GlLike): GpuDetectResult {
   let renderer = ''
   try {
@@ -44,13 +37,10 @@ export function detectSoftwareRenderer(gl: GlLike): GpuDetectResult {
   }
 }
 
-/**
- * 在创建 R3F Canvas / WebGLRenderer 之前判档。
- * preserveDrawingBuffer 只能在 context 创建时定死，onCreated 已经晚了。
- */
+/** 挂 Canvas 前 1×1 探测；onCreated 已晚，定不了 preserveDrawingBuffer。 */
 export function probeSoftwareGpu(): GpuDetectResult {
   if (cachedProbe) return cachedProbe
-  const started = typeof performance !== 'undefined' ? performance.now() : 0
+  const started = performance.now()
   if (typeof document === 'undefined') {
     cachedProbe = { renderer: '', software: false, probeMs: 0 }
     return cachedProbe
@@ -60,26 +50,18 @@ export function probeSoftwareGpu(): GpuDetectResult {
   canvas.height = 1
   let gl: WebGLRenderingContext | WebGL2RenderingContext | null = null
   try {
-    gl =
-      canvas.getContext('webgl2', { failIfMajorPerformanceCaveat: false }) ??
-      canvas.getContext('webgl', { failIfMajorPerformanceCaveat: false })
+    gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl')
   } catch {
     gl = null
   }
-  const detected = gl
-    ? detectSoftwareRenderer(gl)
-    : { renderer: '', software: false, probeMs: 0 }
+  const detected = gl ? detectSoftwareRenderer(gl) : { renderer: '', software: false, probeMs: 0 }
   try {
     gl?.getExtension('WEBGL_lose_context')?.loseContext()
-  } catch {
-    // SwiftShader 上丢掉探测 context，避免占着第二个 GL
-  }
-  const probeMs = typeof performance !== 'undefined' ? performance.now() - started : 0
-  cachedProbe = { renderer: detected.renderer, software: detected.software, probeMs }
+  } catch {}
+  cachedProbe = { renderer: detected.renderer, software: detected.software, probeMs: performance.now() - started }
   return cachedProbe
 }
 
-/** 软件 GPU 且未带 ?keepDrawingBuffer=1 时关掉。不看 ?q= / ?cam= / 钩子。 */
 export function preserveDrawingBufferFor(software: boolean, search?: string): boolean {
   return keepDrawingBufferRequested(search) || !software
 }

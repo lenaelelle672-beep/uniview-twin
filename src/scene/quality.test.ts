@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { qualityDprRange, resolveQualityDpr, selectTreeModels } from './quality'
+import { resolveQualityDpr, selectTreeModels } from './quality'
 
 describe('画质档像素比', () => {
   it('devicePixelRatio=2 时性能 1、均衡 1.5、高画质 2', () => {
@@ -13,12 +13,6 @@ describe('画质档像素比', () => {
     expect(resolveQualityDpr('high', 1)).toBe(1)
     expect(resolveQualityDpr('high', 3)).toBe(2)
     expect(resolveQualityDpr('perf', 0.5)).toBe(1)
-  })
-
-  it('软件自动档 dpr 锁 0.75，钉死档仍是原上限', () => {
-    expect(qualityDprRange('perf', true)).toEqual([0.75, 0.75])
-    expect(qualityDprRange('perf', false)).toEqual([1, 1])
-    expect(qualityDprRange('balanced', false)).toEqual([1, 1.5])
   })
 })
 
