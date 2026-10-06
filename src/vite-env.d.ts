@@ -420,6 +420,8 @@ interface Window {
     ms: number
     view?: string
     floor?: string | null
+    label: boolean
+    batched?: boolean
   }>
   __twinProgramLog?: Array<{
     at: number

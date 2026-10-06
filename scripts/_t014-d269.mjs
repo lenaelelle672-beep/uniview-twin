@@ -62,29 +62,61 @@ async function open(search = '?q=balanced') {
     const wrap = (proto) => {
       if (!proto || proto.__qaShaderHook) return
       proto.__qaShaderHook = true
+      const sources = new WeakMap()
+      const attached = new WeakMap()
+      const classify = (source) => {
+        if (typeof source !== 'string') return { label: false, batched: false }
+        const label = source.includes('uTroikaSDFTexture')
+        return { label, batched: label && source.includes('uTroikaMatricesTexture') }
+      }
+      const origS = proto.shaderSource
+      const origA = proto.attachShader
       const origC = proto.compileShader
       const origL = proto.linkProgram
+      proto.shaderSource = function (shader, source) {
+        sources.set(shader, source)
+        return origS.call(this, shader, source)
+      }
+      proto.attachShader = function (program, shader) {
+        const list = attached.get(program) ?? []
+        list.push(shader)
+        attached.set(program, list)
+        return origA.call(this, program, shader)
+      }
       proto.compileShader = function (shader) {
         const at = performance.now()
         const result = origC.call(this, shader)
+        const kind = classify(sources.get(shader))
         ;(window.__qaShaders ??= []).push({
           kind: 'compileShader',
           at,
           ms: performance.now() - at,
           view: window.__twinView,
           floor: window.__twinSelected ?? null,
+          label: kind.label,
+          batched: kind.batched,
         })
         return result
       }
       proto.linkProgram = function (program) {
         const at = performance.now()
         const result = origL.call(this, program)
+        const shaders = attached.get(program) ?? []
+        let label = false
+        let batched = false
+        for (const shader of shaders) {
+          const kind = classify(sources.get(shader))
+          if (kind.label) label = true
+          if (kind.batched) batched = true
+        }
         ;(window.__qaShaders ??= []).push({
           kind: 'linkProgram',
           at,
           ms: performance.now() - at,
           view: window.__twinView,
           floor: window.__twinSelected ?? null,
+          label,
+          batched,
         })
         return result
       }
@@ -192,28 +224,35 @@ function snapshotTex(page) {
   })
 }
 
-function snapshotPrograms(page) {
-  return page.evaluate(() => ({
-    programs: window.__twinMemory?.programs ?? window.__twinRenderer?.info.programs?.length ?? null,
-    log: window.__twinProgramLog ?? [],
-  }))
-}
-
-function shadersSince(page, t0) {
-  return page.evaluate((since) => {
-    const rows = (window.__qaShaders ?? []).filter((row) => row.at >= since)
-    return {
-      compileShader: rows.filter((row) => row.kind === 'compileShader').length,
-      linkProgram: rows.filter((row) => row.kind === 'linkProgram').length,
-      rows: rows.slice(0, 24).map((row) => ({
-        kind: row.kind,
-        at: Math.round(row.at),
-        ms: Math.round(row.ms),
-        view: row.view,
-        floor: row.floor,
-      })),
-    }
-  }, t0)
+function shadersSince(page, t0, t1) {
+  return page.evaluate(
+    (since, until) => {
+      const rows = (window.__qaShaders ?? []).filter((row) => row.at >= since && (until == null || row.at <= until))
+      const compile = rows.filter((row) => row.kind === 'compileShader')
+      const link = rows.filter((row) => row.kind === 'linkProgram')
+      const labelCompile = compile.filter((row) => row.label)
+      const labelLink = link.filter((row) => row.label)
+      return {
+        compileShader: compile.length,
+        linkProgram: link.length,
+        labelCompile: labelCompile.length,
+        labelLink: labelLink.length,
+        batchedCompile: compile.filter((row) => row.batched).length,
+        batchedLink: link.filter((row) => row.label && row.batched).length,
+        rows: rows.slice(0, 32).map((row) => ({
+          kind: row.kind,
+          at: Math.round(row.at),
+          ms: Math.round(row.ms),
+          view: row.view,
+          floor: row.floor,
+          label: row.label,
+          batched: row.batched,
+        })),
+      }
+    },
+    t0,
+    t1 ?? null,
+  )
 }
 
 async function waitGlyph(page) {
@@ -280,6 +319,28 @@ const out = {
     }
   }, idleStart)
   out.idle.tex = await snapshotTex(page)
+  out.idle.d263 = await page.evaluate(() => {
+    const first = window.__twinFirstFrameAt
+    const stamps = window.__twinRafStamps ?? []
+    const space = window.__twinGlyphPreload?.spaceCall
+    const upload = window.__twinGlyphPreload?.upload
+    const exempt = (row) => {
+      if (space && Math.abs(row.at - space.at) <= (space.frameMs || 60) + 16) return true
+      if (upload && Math.abs(row.at - upload.at) <= (upload.frameMs || 100) + 16) return true
+      return false
+    }
+    const after = first == null ? [] : stamps.filter((row) => row.at >= first + 2000 && row.at !== first)
+    const counted = after.filter((row) => !exempt(row))
+    const list = counted.map((row) => Math.round(row.dt))
+    return {
+      firstFrameAt: first ?? null,
+      count: list.length,
+      max: list.length ? Math.max(...list) : null,
+      ceilingMs: 33,
+      spaceCall: space ?? null,
+      upload: window.__twinGlyphPreload?.upload ?? null,
+    }
+  })
   await page.close()
 }
 
@@ -340,7 +401,6 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       window.__twinCameraMoveAt = undefined
       return now
     })
-    const before = await snapshotPrograms(page)
     const clickAt = await enterFloor(page, floor)
     const rest = await page.evaluate((t0) => {
       return new Promise((resolve) => {
@@ -360,7 +420,6 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       })
     }, clickAt)
     const row = await waitReady(page, clickAt)
-    const after = await snapshotPrograms(page)
     row.maxFrameClickToRest =
       rest.restAt == null
         ? null
@@ -375,10 +434,8 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
             rest.restAt,
           )
     row.clickToRest = rest.clickToRest
-    row.programsBefore = before.programs
-    row.programsAfter = after.programs
-    row.programsDelta = before.programs == null || after.programs == null ? null : after.programs - before.programs
-    row.shaders = await shadersSince(page, resetAt)
+    row.shaders = await shadersSince(page, clickAt, rest.restAt)
+    row.newPrograms = row.shaders.linkProgram
     row.tex = await snapshotTex(page)
     row.spaceDuringEntry = await page.evaluate((t0) => {
       const space = window.__twinGlyphPreload?.spaceCall
@@ -401,7 +458,12 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     medianMaxFrameClickToRest: median(restFrames),
     maxMaxFrameClickToRest: maxOf(restFrames),
     medianFadeMs: median(fades),
-    medianProgramsDelta: median(runs.map((row) => row.programsDelta)),
+    medianLabelCompile: median(runs.map((row) => row.shaders?.labelCompile)),
+    medianLabelLink: median(runs.map((row) => row.shaders?.labelLink)),
+    medianCompile: median(runs.map((row) => row.shaders?.compileShader)),
+    medianLink: median(runs.map((row) => row.shaders?.linkProgram)),
+    maxCompile: maxOf(runs.map((row) => row.shaders?.compileShader)),
+    maxLink: maxOf(runs.map((row) => row.shaders?.linkProgram)),
   }
 }
 
@@ -446,7 +508,6 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
   const row = await waitReady(page, clickAt)
   await client.send('Tracing.end')
   await new Promise((resolve) => client.once('Tracing.tracingComplete', resolve))
-  const after = await snapshotPrograms(page)
   out.f2Trace = {
     clickToRest: rest.clickToRest,
     maxFrameClickToRest:
@@ -464,10 +525,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
           ),
     completeMs: row.ms,
     fadeMs: row.fadeMs,
-    programsBefore: before.programs,
-    programsAfter: after.programs,
-    programsDelta: before.programs == null || after.programs == null ? null : after.programs - before.programs,
-    shaders: await shadersSince(page, resetAt),
+    shaders: await shadersSince(page, clickAt, rest.restAt),
     tex: await snapshotTex(page),
     spaceDuringEntry: await page.evaluate((t0) => {
       const space = window.__twinGlyphPreload?.spaceCall
@@ -490,21 +548,34 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       window.__twinCameraMoveAt = undefined
       return now
     })
-    const before = await snapshotPrograms(page)
     const clickAt = await enterFloor(page, floor)
+    const rest = await page.evaluate((t0) => {
+      return new Promise((resolve) => {
+        const begin = performance.now()
+        const poll = () => {
+          if (window.__twinCameraRested === true && window.__twinView === 'floor') {
+            resolve({ clickToRest: Math.round(performance.now() - t0), restAt: performance.now() })
+            return
+          }
+          if (performance.now() - begin > 20_000) {
+            resolve({ clickToRest: null, restAt: null })
+            return
+          }
+          requestAnimationFrame(poll)
+        }
+        poll()
+      })
+    }, clickAt)
     const row = await waitReady(page, clickAt)
-    const after = await snapshotPrograms(page)
     row.floor = floor
+    row.clickToRest = rest.clickToRest
     row.maxFrame = await page.evaluate((t0) => {
       const stamps = window.__twinRafStamps ?? []
       const slice = stamps.filter((item) => item.at >= t0)
       if (!slice.length) return null
       return Math.round(Math.max(...slice.map((item) => item.dt)))
     }, resetAt)
-    row.programsBefore = before.programs
-    row.programsAfter = after.programs
-    row.programsDelta = before.programs == null || after.programs == null ? null : after.programs - before.programs
-    row.shaders = await shadersSince(page, resetAt)
+    row.shaders = await shadersSince(page, clickAt, rest.restAt)
     row.spaceDuringEntry = await page.evaluate((t0) => {
       const space = window.__twinGlyphPreload?.spaceCall
       if (!space) return null

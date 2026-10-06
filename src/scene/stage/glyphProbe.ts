@@ -276,21 +276,44 @@ async function compileWithScene(
   return useComposer ? 'composer' : 'canvas'
 }
 
+function classifyTroikaSource(source: string | undefined): { label: boolean; batched: boolean } {
+  if (!source) return { label: false, batched: false }
+  const label = source.includes('uTroikaSDFTexture')
+  return { label, batched: label && source.includes('uTroikaMatricesTexture') }
+}
+
 export function installShaderCompileHook(renderer?: WebGLRenderer | null) {
   const gl = renderer ?? window.__twinRenderer
   if (!gl) return
   const ctx = gl.getContext() as WebGLRenderingContext & {
     __twinShaderHook?: boolean
+    shaderSource: (shader: WebGLShader, source: string) => void
+    attachShader: (program: WebGLProgram, shader: WebGLShader) => void
     compileShader: (shader: WebGLShader) => void
     linkProgram: (program: WebGLProgram) => void
   }
   if (!ctx || ctx.__twinShaderHook) return
   ctx.__twinShaderHook = true
+  const sources = new WeakMap<WebGLShader, string>()
+  const attached = new WeakMap<WebGLProgram, WebGLShader[]>()
+  const origSource = ctx.shaderSource.bind(ctx)
+  const origAttach = ctx.attachShader.bind(ctx)
   const origCompile = ctx.compileShader.bind(ctx)
   const origLink = ctx.linkProgram.bind(ctx)
+  ctx.shaderSource = function (shader: WebGLShader, source: string) {
+    sources.set(shader, source)
+    origSource(shader, source)
+  }
+  ctx.attachShader = function (program: WebGLProgram, shader: WebGLShader) {
+    const list = attached.get(program) ?? []
+    list.push(shader)
+    attached.set(program, list)
+    origAttach(program, shader)
+  }
   ctx.compileShader = function (shader: WebGLShader) {
     const started = performance.now()
     origCompile(shader)
+    const kind = classifyTroikaSource(sources.get(shader))
     const rows = (window.__twinShaderCompiles ??= [])
     rows.push({
       kind: 'compileShader',
@@ -298,12 +321,22 @@ export function installShaderCompileHook(renderer?: WebGLRenderer | null) {
       ms: performance.now() - started,
       view: window.__twinView,
       floor: window.__twinSelected ?? null,
+      label: kind.label,
+      batched: kind.batched,
     })
-    if (rows.length > 200) rows.splice(0, rows.length - 200)
+    if (rows.length > 400) rows.splice(0, rows.length - 400)
   }
   ctx.linkProgram = function (program: WebGLProgram) {
     const started = performance.now()
     origLink(program)
+    const shaders = attached.get(program) ?? []
+    let label = false
+    let batched = false
+    for (const shader of shaders) {
+      const kind = classifyTroikaSource(sources.get(shader))
+      if (kind.label) label = true
+      if (kind.batched) batched = true
+    }
     const rows = (window.__twinShaderCompiles ??= [])
     rows.push({
       kind: 'linkProgram',
@@ -311,8 +344,10 @@ export function installShaderCompileHook(renderer?: WebGLRenderer | null) {
       ms: performance.now() - started,
       view: window.__twinView,
       floor: window.__twinSelected ?? null,
+      label,
+      batched,
     })
-    if (rows.length > 200) rows.splice(0, rows.length - 200)
+    if (rows.length > 400) rows.splice(0, rows.length - 400)
   }
 }
 
