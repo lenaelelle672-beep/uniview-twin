@@ -1,0 +1,46 @@
+{
+  "floors": [
+    {
+      "id": "F1",
+      "name": "一层",
+      "level": 1,
+      "elevation": 0,
+      "height": 6,
+      "alarmCount": 0,
+      "offlineCount": 0
+    },
+    {
+      "id": "F2",
+      "name": "2 层",
+      "level": 2,
+      "elevation": 6,
+      "height": 4.2,
+      "alarmCount": 0,
+      "offlineCount": 0
+    }
+  ],
+  "desks": [
+    { "id": "F1-1", "floorId": "F1", "index": 1, "zone": "tower" },
+    { "id": "F1-2", "floorId": "F1", "index": 2, "zone": "podium" },
+    { "id": "F2-1", "floorId": "F2", "index": 1, "zone": "east" }
+  ],
+  "devices": [
+    { "id": "F1-1-PC", "floorId": "F1", "deskId": "F1-1", "type": "pc", "status": "online", "zone": "tower" },
+    { "id": "F1-1-PH", "floorId": "F1", "deskId": "F1-1", "type": "phone", "status": "idle", "zone": "tower" },
+    { "id": "F1-2-PC", "floorId": "F1", "deskId": "F1-2", "type": "pc", "status": "alarm", "zone": "podium" },
+    { "id": "F1-2-PH", "floorId": "F1", "deskId": "F1-2", "type": "phone", "status": "offline", "zone": "podium" },
+    { "id": "F1-PR1", "floorId": "F1", "type": "printer", "status": "online", "zone": "tower" },
+    { "id": "F1-CAM1", "floorId": "F1", "type": "camera", "status": "idle", "zone": "tower" },
+    { "id": "F2-1-PC", "floorId": "F2", "deskId": "F2-1", "type": "pc", "status": "online", "zone": "east" },
+    { "id": "F2-CAM1", "floorId": "F2", "type": "camera", "status": "alarm", "zone": "east" }
+  ],
+  "people": [
+    { "id": "F1-1-P", "deskId": "F1-1", "floorId": "F1", "name": "嗆" },
+    { "id": "F1-2-P", "deskId": "F1-2", "floorId": "F1", "name": "李娜" },
+    { "id": "F2-1-P", "deskId": "F2-1", "floorId": "F2", "name": "王芳" }
+  ],
+  "alarms": [
+    { "id": "F1-2-PC-AL", "deviceId": "F1-2-PC", "floorId": "F1", "message": "F1-2-PC 告警" },
+    { "id": "F2-CAM1-AL", "deviceId": "F2-CAM1", "floorId": "F2", "message": "F2-CAM1 告警" }
+  ]
+}

@@ -1,6 +1,7 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 import { Vector3 } from 'three'
+import { markSuspenseReady, resetOverviewReadyMarks } from '../../scene/overviewReady'
 import { useTwinStore } from '../../store/store'
 
 const projected = new Vector3()
@@ -10,7 +11,7 @@ export function RenderProbe() {
   const gl = useThree((state) => state.gl)
 
   useEffect(() => {
-    window.__twinReady = true
+    markSuspenseReady()
     window.__twinProject = (x, y, z) => {
       const rect = gl.domElement.getBoundingClientRect()
       projected.set(x, y, z).project(camera)
@@ -24,12 +25,16 @@ export function RenderProbe() {
       window.__twinFly = state.floorFlyRequest
     })
     return () => {
-      window.__twinReady = false
+      resetOverviewReadyMarks()
       unsubscribe()
     }
   }, [camera, gl])
 
   useFrame(() => {
+    if (window.__twinReady && window.__twinFirstFrameAt == null) {
+      window.__twinFirstFrameAt = performance.now()
+      window.__twinFirstFrameUnixMs = Date.now()
+    }
     window.__twinStats = {
       calls: gl.info.render.calls,
       triangles: gl.info.render.triangles,
