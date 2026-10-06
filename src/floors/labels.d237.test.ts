@@ -18,6 +18,7 @@ const CAD_NOTES = [
   '测试桌地上预留5个插座+1个大网口',
   'IPX7/IPX8水桶',
   '干燥箱、紫外老化箱',
+  '大干燥箱',
 ] as const
 
 const HEADCOUNT_NAMES = [
@@ -52,7 +53,8 @@ const KEEP_ROOMS = [
 const FONT_PATH = join(process.cwd(), 'public/fonts/NotoSansSC-Regular-subset.woff')
 
 describe('D237 / D238 标签文本', () => {
-  it('7 种 CAD 注记被过滤，普通房间名不受影响', () => {
+  it('8 种 CAD/设备注记被过滤，普通房间名不受影响', () => {
+    expect(CAD_NOTES).toHaveLength(8)
     for (const name of CAD_NOTES) expect(isRoomName(name), name).toBe(false)
     for (const name of KEEP_ROOMS) expect(isRoomName(name), name).toBe(true)
     for (const name of HEADCOUNT_NAMES) expect(isRoomName(name), name).toBe(true)

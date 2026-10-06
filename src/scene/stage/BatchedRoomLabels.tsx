@@ -141,13 +141,12 @@ export function BatchedRoomLabels({
         batch.name = 'RoomLabelBatchedText'
         batch.font = ROOM_LABEL_FONT
         batch.color = ROOM_LABEL_COLOR
-        batch.outlineColor = ROOM_LABEL_OUTLINE_COLOR
-        batch.outlineWidth = outlineRef.current
         batch.anchorX = 'center'
         batch.anchorY = 'middle'
         batch.renderOrder = 3
         batch.visible = false
         batch.frustumCulled = false
+        // troika 0.53 从每个成员读描边；只设 BatchedText 无效，成员默认描边色是黑。
         for (const label of labels) {
           const text = new Text()
           text.text = label.text
@@ -199,8 +198,6 @@ export function BatchedRoomLabels({
           text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
           applyWrap(text, fontSizeRef.current)
         }
-        batch.outlineWidth = outlineRef.current
-        batch.outlineColor = ROOM_LABEL_OUTLINE_COLOR
         applyMemberFades(members, fadesRef.current)
         if (cancelled || !batch) return
         batch.visible = true
@@ -240,8 +237,6 @@ export function BatchedRoomLabels({
       text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
       applyWrap(text, fontSize)
     }
-    batch.outlineWidth = outlineWidth
-    batch.outlineColor = ROOM_LABEL_OUTLINE_COLOR
     applyMemberFades(members, fadesRef.current)
     batch.sync(() => invalidate())
   }, [fadesRef, fontSize, invalidate, outlineWidth, packGen])
