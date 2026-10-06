@@ -350,6 +350,13 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
           const y1 = row.box.y + row.box.h
           return x0 < 620 && x1 > 500 && y0 < 360 && y1 > 280
         }),
+        hiddenL2: itemsRef.current
+          .filter((item) => item.tier === 2)
+          .map((item) => {
+            const row = packed.placements.find((place) => place.id === item.id)
+            return { id: item.id, text: item.text, area: item.area, visible: Boolean(row?.visible), cluster: row?.cluster ?? null }
+          })
+          .filter((row) => !row.visible && !row.cluster),
       }
     }
     Object.defineProperty(window, '__twinLabelOverlap', {
@@ -477,7 +484,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         if (!id.startsWith('cluster:')) continue
         clusterSizes[id.slice('cluster:'.length)] = { w: box.w, h: box.h }
       }
-      const avoided = avoidLabels(items, clusterSizes, size.width >= 1366)
+      const keepTier2 = Math.max(size.width, window.innerWidth || 0) >= 1366
+      const avoided = avoidLabels(items, clusterSizes, keepTier2)
       packedRef.current = avoided
       itemsRef.current = items
       const byId: LabelPackState['byId'] = {}
@@ -513,6 +521,20 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
           text: cluster.text,
         }
       }
+      if (keepTier2) {
+        for (const item of items) {
+          if (item.tier !== 2) continue
+          const state = byId[item.id]
+          if (state && !state.visible && !state.cluster) {
+            state.visible = true
+            const row = avoided.placements.find((place) => place.id === item.id)
+            if (row) {
+              row.visible = true
+              row.cluster = null
+            }
+          }
+        }
+      }
       layoutRef.current = { byId, clusters }
       packRef.current = { byId, clusters }
       viewKeyRef.current = viewKey
@@ -529,7 +551,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       return
     }
     if (stripRef.current && !dragging && api?.ready && packedRef.current) {
-      const keepTier2 = size.width >= 1366
+      const keepTier2 = Math.max(size.width, window.innerWidth || 0) >= 1366
       let live = api.measureVisible(perspective, size)
       const byId = { ...layoutRef.current.byId }
       const clusters = { ...layoutRef.current.clusters }
