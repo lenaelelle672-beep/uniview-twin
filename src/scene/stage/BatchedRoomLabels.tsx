@@ -5,7 +5,7 @@ import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { BatchedText, Text, preloadFont } from 'troika-three-text'
 import { clusterTemplates, LABEL_MAX_EMS, type LabelPackState, type LabelPlacementState } from './labelAvoidance'
 import { useTwinStore } from '../../store/store'
-import { ROOM_LABEL_FONT, roomLabelColors, type RoomLabel } from './roomLabels'
+import { ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_OPACITY, roomLabelColors, type RoomLabel } from './roomLabels'
 
 disableTroikaCdnFallback()
 
@@ -24,7 +24,7 @@ function applyMemberFades(members: Text[], fades: number[] | undefined) {
     const text = members[i]
     if (!text) continue
     text.fillOpacity = fade
-    text.outlineOpacity = fade
+    text.outlineOpacity = fade * ROOM_LABEL_OUTLINE_OPACITY
   }
 }
 
@@ -48,7 +48,7 @@ function applyPlacement(
 ) {
   const visible = show && (placement?.visible ?? true)
   text.fillOpacity = visible ? fade : 0
-  text.outlineOpacity = visible ? fade : 0
+  text.outlineOpacity = visible ? fade * ROOM_LABEL_OUTLINE_OPACITY : 0
   text.scale.setScalar(visible ? 1 : 0.001)
   const ox = placement?.offsetX ?? 0
   const oy = placement?.offsetY ?? 0

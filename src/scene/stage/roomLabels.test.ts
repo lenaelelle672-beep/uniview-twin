@@ -14,6 +14,8 @@ import {
   ROOM_LABEL_OUTLINE_COLOR,
   ROOM_LABEL_OUTLINE_COLOR_BALANCED,
   ROOM_LABEL_OUTLINE_EM,
+  ROOM_LABEL_OUTLINE_MIN,
+  ROOM_LABEL_OUTLINE_OPACITY,
   labelFadeForTarget,
   roomLabelCharacters,
   roomLabelColors,
@@ -94,7 +96,7 @@ describe('房间引线标签', () => {
     expect(source).not.toMatch(/clipRect/)
   })
 
-  it('整批深色字配浅色描边，描边约 0.12 em；perf 关 toneMapped，balanced 用更深源色', () => {
+  it('整批深色字配浅色细描边；perf 关 toneMapped，balanced 用更深源色', () => {
     expect(ROOM_LABEL_COLOR).toBe('#17324d')
     expect(ROOM_LABEL_OUTLINE_COLOR).toBe('#ffffff')
     expect(roomLabelColors('perf')).toEqual({ color: '#17324d', outline: '#ffffff' })
@@ -103,9 +105,11 @@ describe('房间引线标签', () => {
       outline: ROOM_LABEL_OUTLINE_COLOR_BALANCED,
     })
     expect(roomLabelColors('high').color).toBe(ROOM_LABEL_COLOR_BALANCED)
-    expect(ROOM_LABEL_OUTLINE_EM).toBe(0.12)
-    expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.0936)
-    expect(roomLabelOutlineWidth(0.5)).toBe(0.08)
+    expect(ROOM_LABEL_OUTLINE_EM).toBe(0.055)
+    expect(ROOM_LABEL_OUTLINE_MIN).toBe(0.035)
+    expect(ROOM_LABEL_OUTLINE_OPACITY).toBe(0.7)
+    expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.0429)
+    expect(roomLabelOutlineWidth(0.5)).toBe(0.035)
     const source = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
     const members = source.split('new Text()')
     expect(members.length).toBeGreaterThanOrEqual(3)
@@ -114,6 +118,7 @@ describe('房间引线标签', () => {
     expect(members[2]).toMatch(/outlineWidth = outlineRef.current/)
     expect(members[2]).toMatch(/outlineColor = paletteRef.current.outline/)
     expect(source).toMatch(/material.toneMapped = false/)
+    expect(source).toMatch(/ROOM_LABEL_OUTLINE_OPACITY/)
     expect(source).not.toMatch(/batch\.outlineWidth/)
     expect(source).not.toMatch(/MONITOR_LAYER|labelAfterTone|labelLayer/)
   })

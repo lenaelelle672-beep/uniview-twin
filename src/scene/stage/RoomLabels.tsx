@@ -366,6 +366,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       hidden: avoided.hidden,
       hiddenAfterZoom: avoided.hiddenAfterZoom,
       overlapPairs: avoided.overlapPairs,
+      maxOffset: avoided.maxOffset,
       visible: visibleOverlapBoxes(labels, items, avoided),
       d243: diagnoseRestCorridor(labels, items, avoided),
     }

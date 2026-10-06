@@ -2,8 +2,12 @@
 
 export const LABEL_MAX_EMS = 6
 export const LABEL_ZOOM_FACTOR = 8
+/** 屏幕位移步长。候选点 hypot 超过 LABEL_MAX_OFFSET 的丢掉。 */
+export const LABEL_SHIFT = 8
+/** 标签必须停在自己房间里或紧贴房间，超过就合组或隐藏。 */
+export const LABEL_MAX_OFFSET = 48
 const PAD = 4
-const SHIFT = 14
+const SHIFT = LABEL_SHIFT
 
 function buildAnchors(): Array<[number, number]> {
   const out: Array<[number, number]> = [[0, 0]]
@@ -17,8 +21,12 @@ function buildAnchors(): Array<[number, number]> {
     [-1, 1],
     [1, 1],
   ]
-  for (let ring = 1; ring <= 8; ring += 1) {
-    for (const [dx, dy] of dirs) out.push([dx * ring, dy * ring])
+  const rings = Math.ceil(LABEL_MAX_OFFSET / SHIFT)
+  for (let ring = 1; ring <= rings; ring += 1) {
+    for (const [dx, dy] of dirs) {
+      if (Math.hypot(dx * ring * SHIFT, dy * ring * SHIFT) > LABEL_MAX_OFFSET) continue
+      out.push([dx * ring, dy * ring])
+    }
   }
   return out
 }
@@ -72,6 +80,8 @@ export interface AvoidResult {
   hiddenAfterZoom: number
   /** 当前可见标签（单体 + 组）屏幕 AABB 开区间相交的对数，边相贴不算。 */
   overlapPairs: number
+  /** 当前可见单体和组标签的最大屏幕位移（px）。 */
+  maxOffset: number
 }
 
 export interface LabelPlacementState {
@@ -139,12 +149,19 @@ function boxAt(item: Pick<AvoidItem, 'x' | 'y' | 'w' | 'h'>, ax: number, ay: num
 
 function firstFree(item: AvoidItem, occupied: AvoidBox[], shift = SHIFT): { box: AvoidBox; ox: number; oy: number } | null {
   for (const [ax, ay] of ANCHORS) {
+    const ox = ax * shift
+    const oy = ay * shift
+    if (Math.hypot(ox, oy) > LABEL_MAX_OFFSET) continue
     const box = boxAt(item, ax, ay, shift)
     if (!occupied.some((other) => boxesOverlap(box, other))) {
-      return { box, ox: ax * shift, oy: ay * shift }
+      return { box, ox, oy }
     }
   }
   return null
+}
+
+export function placementOffsetLen(offsetX: number, offsetY: number): number {
+  return Math.hypot(offsetX, offsetY)
 }
 
 function sameNameNear(a: AvoidItem, b: AvoidItem): boolean {
@@ -194,6 +211,35 @@ const ZOOM_DIRS: Array<[number, number]> = [
   [1, 1],
 ]
 
+/** 拉近后把未锁定锚点铺开，使各自 (0,0) 盒不再相交，48 px 内就能放下。 */
+function separateZoomed(items: AvoidItem[]): AvoidItem[] {
+  const next = items.map((item) => ({ ...item }))
+  const locked = next.filter((item) => item.locked)
+  const free = next.filter((item) => !item.locked).sort((a, b) => a.id.localeCompare(b.id))
+  const placed: AvoidItem[] = [...locked]
+  const step = 36
+  for (const item of free) {
+    let found = false
+    for (let ring = 0; ring <= 24 && !found; ring += 1) {
+      const spots: Array<[number, number]> = ring === 0 ? [[0, 0]] : []
+      if (ring > 0) {
+        for (const [dx, dy] of ZOOM_DIRS) spots.push([dx * ring, dy * ring])
+      }
+      for (const [ax, ay] of spots) {
+        const trial = { ...item, x: item.x + ax * step, y: item.y + ay * step }
+        if (placed.some((other) => boxesOverlap(boxAt(trial, 0, 0), boxAt(other, 0, 0)))) continue
+        item.x = trial.x
+        item.y = trial.y
+        placed.push(item)
+        found = true
+        break
+      }
+    }
+    if (!found) placed.push(item)
+  }
+  return next
+}
+
 /** 把屏幕坐标相对质心放大，模拟拉近。重合点按 id 螺旋推开，保证 zoom 后能看见。 */
 export function zoomAvoidItems(items: readonly AvoidItem[], factor = LABEL_ZOOM_FACTOR): AvoidItem[] {
   if (items.length === 0) return []
@@ -208,7 +254,7 @@ export function zoomAvoidItems(items: readonly AvoidItem[], factor = LABEL_ZOOM_
       y: cy + (item.y - cy) * factor,
     }))
   const cells = new Map<string, number>()
-  return scaled.map((item) => {
+  const spread = scaled.map((item) => {
     const key = `${Math.round(item.x / 8)}:${Math.round(item.y / 8)}`
     const n = cells.get(key) ?? 0
     cells.set(key, n + 1)
@@ -218,6 +264,7 @@ export function zoomAvoidItems(items: readonly AvoidItem[], factor = LABEL_ZOOM_
     const [dx, dy] = ZOOM_DIRS[slot % 8]!
     return { ...item, x: item.x + dx * ring * 72, y: item.y + dy * ring * 72 }
   })
+  return separateZoomed(spread)
 }
 
 function packLabels(items: readonly AvoidItem[]): Omit<AvoidResult, 'hiddenAfterZoom'> {
@@ -326,7 +373,12 @@ function packLabels(items: readonly AvoidItem[]): Omit<AvoidResult, 'hiddenAfter
   const merged = placements.filter((row) => row.cluster).length
   const hidden = placements.filter((row) => !row.visible && !row.cluster).length
   const overlapPairs = countVisibleOverlapPairs(vis().map((row) => row.box))
-  return { placements, clusters, merged, hidden, overlapPairs }
+  const maxOffset = Math.max(
+    0,
+    ...placements.filter((row) => row.visible).map((row) => placementOffsetLen(row.offsetX, row.offsetY)),
+    ...clusters.map((row) => placementOffsetLen(row.offsetX, row.offsetY)),
+  )
+  return { placements, clusters, merged, hidden, overlapPairs, maxOffset }
 }
 
 export function avoidLabels(items: readonly AvoidItem[]): AvoidResult {

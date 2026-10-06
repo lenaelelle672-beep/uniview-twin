@@ -21,7 +21,10 @@ export const ROOM_LABEL_OUTLINE_COLOR = '#ffffff'
  */
 export const ROOM_LABEL_COLOR_BALANCED = '#020910'
 export const ROOM_LABEL_OUTLINE_COLOR_BALANCED = '#d8e2ec'
-export const ROOM_LABEL_OUTLINE_EM = 0.12
+/** 0.12 em 会糊住笔画外沿；0.055 配 0.7 透明度只做细边。 */
+export const ROOM_LABEL_OUTLINE_EM = 0.055
+export const ROOM_LABEL_OUTLINE_MIN = 0.035
+export const ROOM_LABEL_OUTLINE_OPACITY = 0.7
 
 export function roomLabelColors(quality: 'perf' | 'balanced' | 'high'): { color: string; outline: string } {
   if (quality === 'perf') return { color: ROOM_LABEL_COLOR, outline: ROOM_LABEL_OUTLINE_COLOR }
@@ -29,7 +32,7 @@ export function roomLabelColors(quality: 'perf' | 'balanced' | 'high'): { color:
 }
 
 export function roomLabelOutlineWidth(fontSize: number): number {
-  return Math.max(0.08, fontSize * ROOM_LABEL_OUTLINE_EM)
+  return Math.max(ROOM_LABEL_OUTLINE_MIN, fontSize * ROOM_LABEL_OUTLINE_EM)
 }
 
 /** 按当前机位距离把世界字号夹到 [minPx, maxPx] 屏幕像素。近景不再用 0.7 m 地板撑大字。 */

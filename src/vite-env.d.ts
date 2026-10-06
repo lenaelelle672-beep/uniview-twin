@@ -172,6 +172,7 @@ interface Window {
     hidden: number
     hiddenAfterZoom: number
     overlapPairs: number
+    maxOffset: number
     visible?: Array<{
       id: string
       text: string

@@ -3,6 +3,7 @@ import { getFloorPlan } from '../../floors/cache'
 import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { displayName, roomLabelsFromPlan } from '../../floors/labels'
 import {
+  LABEL_MAX_OFFSET,
   avoidLabels,
   clusterLabelText,
   clusterTemplates,
@@ -101,12 +102,43 @@ describe('房间标签避让', () => {
     expect(clusters.some((item) => item.text.startsWith('会议室 x'))).toBe(true)
   })
 
-  it('F1–F8 / F12 / F22 拉近后 hiddenAfterZoom 为 0，可见标签两两重叠为 0', () => {
-    for (const floorId of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F12', 'F22']) {
-      const result = avoidLabels(planItems(floorId))
-      expect(result.hiddenAfterZoom, floorId).toBe(0)
-      expect(result.overlapPairs, floorId).toBe(0)
+  it('F1–F8 / F12 / F22 在 1024/1366/1920 拉近后 hiddenAfterZoom 为 0，重叠为 0，挪位 ≤48', () => {
+    expect(LABEL_MAX_OFFSET).toBe(48)
+    for (const width of [1024, 1366, 1920]) {
+      for (const floorId of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F12', 'F22']) {
+        const result = avoidLabels(planItems(floorId, width))
+        expect(result.hiddenAfterZoom, `${floorId}@${width}`).toBe(0)
+        expect(result.overlapPairs, `${floorId}@${width}`).toBe(0)
+        expect(result.maxOffset, `${floorId}@${width}`).toBeLessThanOrEqual(LABEL_MAX_OFFSET)
+        for (const row of result.placements) {
+          if (!row.visible) continue
+          expect(Math.hypot(row.offsetX, row.offsetY), row.id).toBeLessThanOrEqual(LABEL_MAX_OFFSET)
+        }
+        for (const cluster of result.clusters) {
+          expect(Math.hypot(cluster.offsetX, cluster.offsetY), cluster.key).toBeLessThanOrEqual(LABEL_MAX_OFFSET)
+        }
+      }
     }
+  })
+
+  it('可见标签挪位不超过 48 px，48 内放不下就隐藏', () => {
+    const crowd = Array.from({ length: 20 }, (_, index) => ({
+      id: `n${index}`,
+      text: `房间${index}`,
+      x: 200,
+      y: 200,
+      w: 80,
+      h: 32,
+      priority: 3,
+      locked: false,
+      area: 8,
+    }))
+    const result = avoidLabels(crowd)
+    expect(result.maxOffset).toBeLessThanOrEqual(48)
+    expect(result.hidden).toBeGreaterThan(0)
+    expect(result.overlapPairs).toBe(0)
+    expect(result.hiddenAfterZoom).toBe(0)
+    expect(result.placements.filter((row) => row.visible).every((row) => Math.hypot(row.offsetX, row.offsetY) <= 48)).toBe(true)
   })
 
   it('F03 客户休息室与最近外廊世界距离约 27.4 m，合组只用重叠的那一撮', () => {
