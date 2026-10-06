@@ -304,6 +304,15 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const itemsRef = useRef<AvoidItem[]>([])
   const cameraRef = useRef(camera)
   const sizeRef = useRef(size)
+  const wakeRef = useRef(0)
+  const askFrame = () => {
+    if (wakeRef.current) return
+    // demand 下，当前 useFrame 里同步 invalidate 不一定能排到下一帧；停稳后 Hz=0 会把 80ms 淡入拖成数百毫秒。
+    wakeRef.current = requestAnimationFrame(() => {
+      wakeRef.current = 0
+      invalidate()
+    })
+  }
   const characters = roomLabelCharacters(labels)
   const points = labels.flatMap((label) => [label.anchor, label.label])
   cameraRef.current = camera
@@ -365,6 +374,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     packedKeyRef.current = ''
     packStepRef.current = 'idle'
     pendingFadeRef.current = false
+    fadeInRef.current = 0
+    window.__twinLabelFading = false
   }, [fontSize])
 
   useEffect(() => {
@@ -515,12 +526,16 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         sizedRef.current = true
       } else if (!sizedRef.current && settled && slabReady) {
         setFontSize((prev) => prev || 0.78)
-        invalidate()
+        askFrame()
       }
     }
     window.__twinLabelBatchPresent = Boolean(api?.ready)
     if (!settled) {
-      invalidate()
+      askFrame()
+      return
+    }
+    if (!sizedRef.current || fontSize <= 0) {
+      askFrame()
       return
     }
     let shouldPack = false
@@ -531,7 +546,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       shouldPack = true
     }
     if (shouldPack && !api?.ready) {
-      invalidate()
+      askFrame()
       return
     }
     if (shouldPack && api?.ready && packStepRef.current === 'idle') {
@@ -706,7 +721,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         maxFrameAvoid: avoidMs,
         packStep: 'sync',
       }
-      invalidate()
+      askFrame()
       return
     }
     if (packStepRef.current === 'sync' && packedRef.current && api?.ready) {
@@ -734,7 +749,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         packStep: 'fade',
       }
       packStepRef.current = 'fade'
-      invalidate()
+      askFrame()
       return
     }
     if (packStepRef.current === 'fade' && pendingFadeRef.current && fadeInRef.current === 0) {
@@ -742,7 +757,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       pendingFadeRef.current = false
       window.__twinLabelFading = true
       window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), fadeStartAt: fadeInRef.current, packStep: 'fade' }
-      invalidate()
+      askFrame()
       return
     }
     if (packStepRef.current === 'fade' && fadeInRef.current === 0) packStepRef.current = 'idle'
@@ -830,18 +845,20 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       }
       api?.applyPack(packRef.current)
       if (t >= 1) {
+        const fadeMs = Math.round(performance.now() - fadeInRef.current)
         fadeInRef.current = 0
         window.__twinLabelFading = false
         window.__twinLabelPhases = {
           ...(window.__twinLabelPhases ?? {}),
           fadeDoneAt: performance.now(),
-          maxFrameFade: FADE_IN_MS,
+          fadeMs,
+          maxFrameFade: fadeMs,
           packStep: 'idle',
         }
         packStepRef.current = 'idle'
       } else {
         window.__twinLabelFading = true
-        invalidate()
+        askFrame()
       }
     }
   })

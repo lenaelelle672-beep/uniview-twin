@@ -122,6 +122,8 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/__twinSlab/)
     expect(source).toMatch(/__twinLabelFading/)
     expect(source).toMatch(/FADE_IN_MS = 80/)
+    expect(source).toMatch(/askFrame/)
+    expect(source).toMatch(/requestAnimationFrame/)
     expect(source).not.toMatch(/if \(stripRef\.current && !dragging/)
   })
 

@@ -14,6 +14,7 @@ export const TROIKA_TEXT_CONFIG = {
  * D036 / D101 / D112：关掉 troika 缺字时走 jsDelivr 的 unicode-font-resolver。
  * 必须在创建任何 Text 之前调用，且只能从 textRuntime 包里引入，不能进主包。
  * 不用 worker：发布版 troika 已内联 resolver，别名替换不到，worker 会去拉被剥掉 CDN 主机后的 https://gh/lojjic/…。
+ * D264：图集初始高度由 patch-package 改成 512 字形（2048×256），这里不改 textureWidth。
  */
 export function disableTroikaCdnFallback(): void {
   if (configured) return

@@ -28,6 +28,7 @@ export function beginCameraMove(reason = 'move') {
   cleanup?.()
   cleanup = null
   write(false, reason)
+  if (typeof window !== 'undefined') window.__twinCameraMoveAt = performance.now()
 }
 
 export function markCameraRested(reason: string) {

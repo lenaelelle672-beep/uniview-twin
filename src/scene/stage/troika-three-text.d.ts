@@ -31,4 +31,9 @@ declare module 'troika-three-text' {
     options: { font?: string; characters?: string },
     callback: () => void,
   ): void
+
+  export function getTextRenderInfo(
+    args: { font?: string; text?: string; sdfGlyphSize?: number; lang?: string },
+    callback: (info: { sdfTexture?: { image?: { width?: number; height?: number } } }) => void,
+  ): void
 }

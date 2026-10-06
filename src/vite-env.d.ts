@@ -6,6 +6,10 @@ declare module 'troika-three-text' {
     unicodeFontsURL?: string | null
     useWorker?: boolean
   }): void
+  export function getTextRenderInfo(
+    args: { font?: string; text?: string; sdfGlyphSize?: number; lang?: string },
+    callback: (info: { sdfTexture?: { image?: { width?: number; height?: number } } }) => void,
+  ): void
 }
 
 interface TwinRenderStats {
@@ -200,6 +204,7 @@ interface Window {
   __twinCameraRested?: boolean
   __twinCameraRestReason?: string
   __twinCameraRestAt?: number
+  __twinCameraMoveAt?: number
   __twinFlyPromiseAt?: number
   __twinCameraFramed?: string
   __twinLabelPhases?: {
@@ -214,6 +219,7 @@ interface Window {
     syncAt?: number
     fadeStartAt?: number
     fadeDoneAt?: number
+    fadeMs?: number
     packStep?: 'idle' | 'avoid' | 'sync' | 'fade'
     maxFrameAvoid?: number
     maxFrameSync?: number
@@ -222,11 +228,22 @@ interface Window {
   __twinGlyphPreload?: {
     batchSize: number
     firstBatchSize: number
-    batches: Array<{ i: number; chars: number; ms: number; maxFrame: number; seen: number; floorId?: string }>
+    batches: Array<{
+      i: number
+      chars: number
+      ms: number
+      maxFrame: number
+      seen: number
+      floorId?: string
+      kind?: string
+    }>
     done: boolean
     atlasGrows: Array<{ at: number; msg: string; floorId: string | null; seen: number }>
     unique?: number
     newOnEntry?: Record<string, number>
+    atlasHeight?: number | null
+    paused?: boolean
+    warmup?: Array<{ kind: string; ms: number; maxFrame: number; atlasHeight?: number | null }>
   }
   __twinLabelBatchPresent?: boolean
   __twinLabelOverlap?: {
