@@ -12,7 +12,6 @@ import type { DeviceStatus } from '../../types'
 import { showCorridorPeople } from './corridor'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
-import { FloorStageCamera } from './FloorStageCamera'
 import { MONITOR_DISPLAY_COLOR } from './materials'
 import { workstationPosition } from './workstationPosition'
 
@@ -28,6 +27,7 @@ const B1Interior = lazy(async () => {
 
 const TowerInterior = lazy(() => import('./TowerInterior').then((mod) => ({ default: mod.TowerInterior })))
 const MonitorSamples = lazy(() => import('./MonitorSamples').then((mod) => ({ default: mod.MonitorSamples })))
+const FloorStageCamera = lazy(() => import('./FloorStageCamera').then((mod) => ({ default: mod.FloorStageCamera })))
 
 export { TowerInterior as LazyTowerInterior }
 
@@ -157,7 +157,11 @@ export function FloorStage() {
   return (
     <>
       <FloorCut />
-      <FloorStageCamera />
+      {active && (
+        <Suspense fallback={null}>
+          <FloorStageCamera />
+        </Suspense>
+      )}
       <BasementPick />
       <Suspense fallback={null}>
         {spec && spec.level > 0 && (

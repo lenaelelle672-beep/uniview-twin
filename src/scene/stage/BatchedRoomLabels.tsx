@@ -1,5 +1,5 @@
-import { useThree } from '@react-three/fiber'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useFrame, useThree } from '@react-three/fiber'
+import { useLayoutEffect, useRef, useState, type MutableRefObject } from 'react'
 import { DoubleSide, Group } from 'three'
 import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { BatchedText, Text, preloadFont } from 'troika-three-text'
@@ -16,18 +16,30 @@ function syncText(text: Text, invalidate: () => void): Promise<void> {
   })
 }
 
+function applyMemberFades(members: Text[], fades: number[] | undefined) {
+  for (let i = 0; i < members.length; i += 1) {
+    const fade = fades?.[i] ?? 1
+    const text = members[i]
+    if (!text) continue
+    text.fillOpacity = fade
+    text.outlineOpacity = fade
+  }
+}
+
 export function BatchedRoomLabels({
   floorId,
   labels,
   fontSize,
   outlineWidth,
   characters,
+  fadesRef,
 }: {
   floorId: string
   labels: RoomLabel[]
   fontSize: number
   outlineWidth: number
   characters: string
+  fadesRef: MutableRefObject<number[]>
 }) {
   disableTroikaCdnFallback()
   const groupRef = useRef<Group>(null)
@@ -118,6 +130,7 @@ export function BatchedRoomLabels({
           text.fontSize = fontSizeRef.current
           text.outlineWidth = outlineRef.current
         }
+        applyMemberFades(members, fadesRef.current)
         if (cancelled || !batch) return
         batch.visible = true
         group.add(batch)
@@ -149,8 +162,15 @@ export function BatchedRoomLabels({
       text.fontSize = fontSize
       text.outlineWidth = outlineWidth
     }
+    applyMemberFades(members, fadesRef.current)
     batch.sync(() => invalidate())
-  }, [fontSize, invalidate, outlineWidth, packGen])
+  }, [fadesRef, fontSize, invalidate, outlineWidth, packGen])
+
+  useFrame(() => {
+    const members = membersRef.current
+    if (members.length === 0) return
+    applyMemberFades(members, fadesRef.current)
+  })
 
   return <group ref={groupRef} name="RoomLabelBatch" />
 }
