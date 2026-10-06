@@ -279,7 +279,7 @@ function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, num
 
 export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
   const { camera, scene, size, gl, invalidate } = useThree()
-  const [fontSize, setFontSize] = useState(0)
+  const [fontSize] = useState(0.78)
   const sizedRef = useRef(false)
   const pxRef = useRef(0)
   const fadesRef = useRef<number[]>([])
@@ -336,7 +336,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
 
   useEffect(() => {
     sizedRef.current = false
-    setFontSize(0)
     clusterSyncedRef.current = ''
     viewKeyRef.current = ''
     packedRef.current = null
@@ -492,21 +491,11 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       viewKeyRef.current = viewKey
     }
     if (dragging) idleRef.current = -1
-    if (!cameraReady) {
-      window.__twinLabelFading = false
-      invalidate()
-      return
-    }
     if (!sizedRef.current) {
       host?.updateWorldMatrix(true, false)
       perspective.updateMatrixWorld()
-      const { maxPx } = maxProjectedEmPx(host ?? null, labels, perspective, size, 0.78)
-      if (maxPx > 1e-6) {
-        setFontSize(worldFontSizeFromProjectedEm(0.78, maxPx))
-        sizedRef.current = true
-      }
-      invalidate()
-      return
+      const { maxPx } = maxProjectedEmPx(host ?? null, labels, perspective, size, fontSize || 0.78)
+      if (maxPx > 1e-6) sizedRef.current = true
     }
     if (!settled) {
       invalidate()
@@ -756,12 +745,17 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       const pointerX = pointerPxRef.current.x
       const pointerY = pointerPxRef.current.y
       let hoverId: string | null = null
+      let hoverHidden: string | null = null
       for (const item of itemsRef.current) {
-        if (Math.hypot(pointerX - item.x, pointerY - item.y) < Math.max(item.w, item.h) * 0.65 + 18) {
-          hoverId = item.id
+        if (Math.hypot(pointerX - item.x, pointerY - item.y) >= Math.max(item.w, item.h) * 0.65 + 18) continue
+        const shown = layoutRef.current.byId[item.id]
+        if (shown && !shown.visible) {
+          hoverHidden = item.id
           break
         }
+        if (!hoverId) hoverId = item.id
       }
+      hoverId = hoverHidden ?? hoverId
       if (hoverId !== hoverIdRef.current) {
         hoverIdRef.current = hoverId
         revealHover(hoverId)
