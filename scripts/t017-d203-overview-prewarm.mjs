@@ -149,10 +149,30 @@ async function main() {
     }
   })
 
-  const readyToFlag = requests.filter((item) => {
-    const info = classify(item.url)
-    return info.floorJson || info.model
+  const timing = await page.evaluate(() => {
+    const readyAt = window.__twinReadyAt ?? 0
+    const first = window.__twinFirstFrameAt ?? 0
+    const prewarmedAt = window.__twinPrewarmedAt ?? performance.now()
+    return {
+      readyAt,
+      firstFrameAt: first,
+      prewarmedAt,
+      resources: performance.getEntriesByType('resource').map((entry) => ({
+        url: entry.name,
+        startTime: entry.startTime,
+      })),
+    }
   })
+  const afterReady = timing.resources
+    .map((entry) => ({
+      url: classify(entry.url).path,
+      startTime: entry.startTime,
+      afterReady: entry.startTime >= timing.readyAt,
+      afterFirstFrame: entry.startTime > timing.firstFrameAt,
+      beforePrewarmed: entry.startTime <= timing.prewarmedAt,
+    }))
+    .filter((entry) => entry.afterReady && entry.beforePrewarmed)
+  const readyToFlag = afterReady.filter((entry) => classify(entry.url).model || classify(entry.url).floorJson)
 
   await page.evaluate(() => {
     window.__twinSdfGrowth = []
@@ -189,7 +209,8 @@ async function main() {
     overview: { view: atFlag.view, selected: atFlag.selected },
     jsonFiles,
     jsonGzip,
-    extraModelsReadyToFlag: readyToFlag.filter((item) => classify(item.url).model),
+    readyToPrewarmed: afterReady.map((entry) => entry.url),
+    extraModelsReadyToFlag: readyToFlag.filter((item) => classify(item.url).model).map((item) => item.url),
     sdfBeforeF1: [...sdf, ...atFlag.sdf],
     sdfAfterF1: afterF1.sdf,
     f1Entry: afterF1,
