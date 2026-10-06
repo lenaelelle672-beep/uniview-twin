@@ -343,9 +343,12 @@ async function main() {
     console.error('  auto overview')
     const autoOv = await openScene(browser, '/')
     const autoOverview = await sampleIdle(autoOv, browser, 8)
-    console.error('  hidden')
-    const hidden = await sampleIdle(autoOv, browser, 4, true)
     await autoOv.close()
+
+    console.error('  hidden')
+    const hidPage = await openScene(browser, '/')
+    const hidden = await sampleIdle(hidPage, browser, 4, true)
+    await hidPage.close()
 
     console.error('  balanced overview')
     const balOv = await openScene(browser, '/?q=balanced')
