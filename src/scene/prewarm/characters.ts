@@ -83,6 +83,40 @@ function loadedPlanTexts(): string {
   }).join('')
 }
 
+/** 每次空闲只预热这一小片字形，有输入就由 IdlePrewarm 让出。 */
+export const GLYPH_PREWARM_CHUNK = 8
+
+export function chunkCharacters(text: string, chunkSize = GLYPH_PREWARM_CHUNK): string[] {
+  const glyphs = Array.from(uniqueCharacters(text))
+  const chunks: string[] = []
+  for (let index = 0; index < glyphs.length; index += chunkSize) {
+    chunks.push(glyphs.slice(index, index + chunkSize).join(''))
+  }
+  return chunks
+}
+
+/**
+ * 主线 5 层房间名优先，再补楼层名/告警文案。运行时图纸未到时用 DEMO_ROOM_LABEL_TEXTS。
+ */
+export function collectPrewarmCharacterChunks(chunkSize = GLYPH_PREWARM_CHUNK): string[] {
+  const seen = new Set<string>()
+  const ordered: string[] = []
+  const push = (text: string) => {
+    for (const glyph of uniqueCharacters(text)) {
+      if (seen.has(glyph)) continue
+      seen.add(glyph)
+      ordered.push(glyph)
+    }
+  }
+  for (const floorId of DEMO_PREWARM_FLOORS) {
+    const plan = peekFloorPlan(floorId)
+    if (plan) push(roomLabelsFromPlan(plan).map((label) => label.text).join(''))
+  }
+  push(DEMO_ROOM_LABEL_TEXTS.join(''))
+  push(collectPrewarmCharacters())
+  return chunkCharacters(ordered.join(''), chunkSize)
+}
+
 /** 房间名 + 楼层名 + 告警文案。字体参数与 RoomLabels 相同，多出来的字只增加空闲时 SDF。 */
 export function collectPrewarmCharacters(extra = ''): string {
   const roomPack = roomLabelCharacters([

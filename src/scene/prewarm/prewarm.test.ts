@@ -7,9 +7,11 @@ import { hydrateFloorFromDisk } from '../../floors/hydrateForTests'
 import { roomLabelsFromPlan } from '../../floors/labels'
 import { ROOM_LABEL_FONT, roomLabelCharacters } from '../stage/roomLabels'
 import {
+  collectPrewarmCharacterChunks,
   collectPrewarmCharacters,
   DEMO_PREWARM_FLOORS,
   DEMO_ROOM_LABEL_TEXTS,
+  GLYPH_PREWARM_CHUNK,
   uniqueCharacters,
 } from './characters'
 import { textRuntimePrefetchDone, woffAlreadyRequested } from './fontPrewarm'
@@ -52,6 +54,14 @@ describe('T017 进层预热', () => {
     expect(font).toMatch(/preloadFont\(\{ font: ROOM_LABEL_FONT, characters \}/)
     expect(font).toMatch(/waitTextRuntimePrefetch|textRuntimePrefetchDone/)
     expect(font).toMatch(/NotoSansSC-Regular-subset/)
+    const idle = read('./IdlePrewarm.tsx')
+    expect(idle).toMatch(/collectPrewarmCharacterChunks/)
+    expect(idle).toMatch(/preloadLabelFont\(chunk\)/)
+    expect(GLYPH_PREWARM_CHUNK).toBeLessThanOrEqual(8)
+    const chunks = collectPrewarmCharacterChunks()
+    expect(chunks.length).toBeGreaterThan(1)
+    expect(chunks.every((chunk) => chunk.length <= GLYPH_PREWARM_CHUNK)).toBe(true)
+    expect(chunks.join('')).toMatch(/电梯|会议|茶水/)
   })
 
   it('每组只编译一个 program / 一组材质，覆盖楼层共用材质', () => {
@@ -92,6 +102,7 @@ describe('T017 进层预热', () => {
     expect(idle).toMatch(/pointerdown|createYieldController/)
     expect(idle).toMatch(/FLOOR_SHADER_GROUPS/)
     expect(idle).toMatch(/__twinPrewarmed/)
+    expect(idle).toMatch(/collectPrewarmCharacterChunks/)
     expect(yieldSrc).toMatch(/pointerdown/)
     expect(yieldSrc).toMatch(/keydown/)
     expect(yieldSrc).toMatch(/requestIdleCallback/)

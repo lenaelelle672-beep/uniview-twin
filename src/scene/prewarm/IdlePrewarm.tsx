@@ -1,7 +1,7 @@
 import { useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 import { useTwinStore } from '../../store/store'
-import { collectPrewarmCharacters } from './characters'
+import { collectPrewarmCharacterChunks, collectPrewarmCharacters } from './characters'
 import { compileMaterialGroup, programCount } from './compileGroup'
 import { compilePeopleGroup, compileTroikaSample, peopleModelUrls } from './extraPrewarm'
 import { preloadLabelFont, textRuntimePrefetchDone, waitTextRuntimePrefetch } from './fontPrewarm'
@@ -78,9 +78,13 @@ export function IdlePrewarm() {
       try {
         const textReady = textRuntimePrefetchDone() || (await waitTextRuntimePrefetch())
         const characters = collectPrewarmCharacters()
+        const chunks = collectPrewarmCharacterChunks()
         if (textReady && !cancelled) {
-          await waitTurn()
-          if (!cancelled) await preloadLabelFont(characters)
+          for (const chunk of chunks) {
+            await waitTurn()
+            if (cancelled) return
+            await preloadLabelFont(chunk)
+          }
           await waitTurn()
           if (!cancelled) {
             const before = programCount(gl)

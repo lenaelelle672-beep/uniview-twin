@@ -8,6 +8,7 @@ export const TROIKA_TEXT_CONFIG = {
   defaultFontURL: ROOM_LABEL_FONT,
   unicodeFontsURL: '',
   useWorker: false,
+  sdfGlyphSize: 32,
 } as const
 
 /**
@@ -24,5 +25,6 @@ export function disableTroikaCdnFallback(): void {
     defaultFontURL: font,
     unicodeFontsURL: '',
     useWorker: false,
+    sdfGlyphSize: 32,
   })
 }

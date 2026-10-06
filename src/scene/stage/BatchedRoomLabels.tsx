@@ -1,6 +1,7 @@
 import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { DoubleSide, Group } from 'three'
+import { addLabelPackSample, measureLabelPackSample } from '../labels/labelPackTiming'
 import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { BatchedText, Text, preloadFont } from 'troika-three-text'
 import { ROOM_LABEL_FONT, type RoomLabel } from './roomLabels'
@@ -75,6 +76,7 @@ export function BatchedRoomLabels({
     })
       .then(async () => {
         if (cancelled) return
+        const afterSdf = performance.now()
         batch = new BatchedText()
         batch.name = 'RoomLabelBatchedText'
         batch.font = ROOM_LABEL_FONT
@@ -103,10 +105,12 @@ export function BatchedRoomLabels({
         }
         await Promise.all(members.map((text) => syncText(text)))
         if (cancelled) return
+        const afterLayout = performance.now()
         await new Promise<void>((resolve) => {
           batch?.sync(() => resolve())
         })
         if (cancelled || !batch) return
+        const afterSync = performance.now()
         const materials = Array.isArray(batch.material) ? batch.material : [batch.material]
         for (const material of materials) {
           if (material) material.side = DoubleSide
@@ -120,7 +124,14 @@ export function BatchedRoomLabels({
         group.add(batch)
         batchRef.current = batch
         membersRef.current = members
-        window.__twinLabelPackMs = performance.now() - started
+        addLabelPackSample(
+          measureLabelPackSample({
+            sdfWallMs: afterSdf - started,
+            layoutWallMs: afterLayout - afterSdf,
+            syncWallMs: afterSync - afterLayout,
+            members,
+          }),
+        )
         setPackGen((value) => value + 1)
         invalidate()
       })

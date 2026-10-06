@@ -5,7 +5,25 @@ declare module 'troika-three-text' {
     defaultFontURL?: string | null
     unicodeFontsURL?: string | null
     useWorker?: boolean
+    sdfGlyphSize?: number
   }): void
+}
+
+interface TwinLabelPackMs {
+  sdf: number
+  layout: number
+  sync: number
+  total: number
+}
+
+interface TwinLabelMount {
+  floorId: string
+  mounted: number
+  total: number
+  priorityIds: string[]
+  firstBatchIds: string[]
+  mountedIds: string[]
+  done: boolean
 }
 
 interface TwinRenderStats {
@@ -137,7 +155,8 @@ interface Window {
   __twinProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }
   __twinInterior?: TwinInteriorStats
   __twinLabelPx?: TwinLabelPx
-  __twinLabelPackMs?: number
+  __twinLabelPackMs?: TwinLabelPackMs
+  __twinLabelMount?: TwinLabelMount
   __twinFloor?: TwinFloorProbe
   __twinCut?: TwinCutStats
   __twinRig?: {
