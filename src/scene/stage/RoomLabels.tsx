@@ -553,6 +553,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     if (stripRef.current && !dragging && api?.ready && packedRef.current) {
       const keepTier2 = Math.max(size.width, window.innerWidth || 0) >= 1366
       let live = api.measureVisible(perspective, size)
+      if (live.length === 0) return
       const byId = { ...layoutRef.current.byId }
       const clusters = { ...layoutRef.current.clusters }
       const tierOf = (id: string) => {
