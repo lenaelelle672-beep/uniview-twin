@@ -28,7 +28,6 @@ import {
   stripStrongOverlaps,
   visibilityMismatch,
 } from './labelScreenMeasure'
-import { retainFrameChannel } from '../frameSchedule'
 import { isCameraRested } from './cameraRest'
 import { preloadLabelChars } from './glyphProbe'
 import type { LabelBatchApi } from './BatchedRoomLabels'
@@ -306,21 +305,50 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const cameraRef = useRef(camera)
   const sizeRef = useRef(size)
   const wakeRef = useRef(0)
-  const fadeHoldRef = useRef<(() => void) | null>(null)
-  const holdFadeFrames = () => {
-    if (!fadeHoldRef.current) fadeHoldRef.current = retainFrameChannel('motion')
-  }
-  const dropFadeFrames = () => {
-    fadeHoldRef.current?.()
-    fadeHoldRef.current = null
-  }
+  const fadeRafRef = useRef(0)
   const askFrame = () => {
     if (wakeRef.current) return
-    // demand 下，当前 useFrame 里同步 invalidate 不一定能排到下一帧；停稳后 Hz=0 会把 80ms 淡入拖成数百毫秒。
+    // demand 下，当前 useFrame 里同步 invalidate 不一定能排到下一帧。
     wakeRef.current = requestAnimationFrame(() => {
       wakeRef.current = 0
       invalidate()
     })
+  }
+  const stopFadeLoop = () => {
+    if (fadeRafRef.current) cancelAnimationFrame(fadeRafRef.current)
+    fadeRafRef.current = 0
+  }
+  const startFadeLoop = () => {
+    stopFadeLoop()
+    const started = performance.now()
+    fadeInRef.current = started
+    pendingFadeRef.current = false
+    window.__twinLabelFading = true
+    window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), fadeStartAt: started, packStep: 'fade' }
+    const step = () => {
+      const t = Math.min(1, (performance.now() - started) / FADE_IN_MS)
+      const fades = fadesRef.current
+      const targets = targetFadesRef.current
+      for (let i = 0; i < Math.max(fades.length, targets.length); i += 1) fades[i] = (targets[i] ?? 1) * t
+      measureRef.current?.applyPack(packRef.current)
+      invalidate()
+      if (t >= 1) {
+        fadeInRef.current = 0
+        fadeRafRef.current = 0
+        window.__twinLabelFading = false
+        window.__twinLabelPhases = {
+          ...(window.__twinLabelPhases ?? {}),
+          fadeDoneAt: performance.now(),
+          fadeMs: Math.round(performance.now() - started),
+          maxFrameFade: Math.round(performance.now() - started),
+          packStep: 'idle',
+        }
+        packStepRef.current = 'idle'
+        return
+      }
+      fadeRafRef.current = requestAnimationFrame(step)
+    }
+    fadeRafRef.current = requestAnimationFrame(step)
   }
   const characters = roomLabelCharacters(labels)
   const points = labels.flatMap((label) => [label.anchor, label.label])
@@ -375,7 +403,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     itemsRef.current = []
     packRef.current = hiddenLayout(labels)
     layoutRef.current = packRef.current
-    dropFadeFrames()
+    stopFadeLoop()
     void preloadLabelChars(characters, `entry:${floorId}`)
   }, [floorId, labels, characters])
 
@@ -386,7 +414,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     pendingFadeRef.current = false
     fadeInRef.current = 0
     window.__twinLabelFading = false
-    dropFadeFrames()
+    stopFadeLoop()
   }, [fontSize])
 
   useEffect(() => {
@@ -561,7 +589,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       return
     }
     if (shouldPack && api?.ready && packStepRef.current === 'idle') {
-      holdFadeFrames()
       const avoidStart = performance.now()
       window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), packStep: 'avoid', avoidStartAt: avoidStart }
       host?.updateWorldMatrix(true, false)
@@ -765,12 +792,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       return
     }
     if (packStepRef.current === 'fade' && pendingFadeRef.current && fadeInRef.current === 0) {
-      fadeInRef.current = performance.now()
-      pendingFadeRef.current = false
-      window.__twinLabelFading = true
-      window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), fadeStartAt: fadeInRef.current, packStep: 'fade' }
-      holdFadeFrames()
-      askFrame()
+      startFadeLoop()
     }
     if (packStepRef.current === 'fade' && fadeInRef.current === 0) packStepRef.current = 'idle'
     const writePackVisibility = (byId: LabelPackState['byId'], clusters: LabelPackState['clusters']) => {
@@ -847,33 +869,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       hoverIdRef.current = null
       revealHover(null)
       invalidate()
-    }
-    if (fadeInRef.current > 0) {
-      const t = Math.min(1, (performance.now() - fadeInRef.current) / FADE_IN_MS)
-      const fades = fadesRef.current
-      const targets = targetFadesRef.current
-      for (let i = 0; i < Math.max(fades.length, targets.length, labels.length); i += 1) {
-        fades[i] = (targets[i] ?? 1) * t
-      }
-      api?.applyPack(packRef.current)
-      if (t >= 1) {
-        const fadeMs = Math.round(performance.now() - fadeInRef.current)
-        fadeInRef.current = 0
-        window.__twinLabelFading = false
-        dropFadeFrames()
-        window.__twinLabelPhases = {
-          ...(window.__twinLabelPhases ?? {}),
-          fadeDoneAt: performance.now(),
-          fadeMs,
-          maxFrameFade: fadeMs,
-          packStep: 'idle',
-        }
-        packStepRef.current = 'idle'
-      } else {
-        window.__twinLabelFading = true
-        holdFadeFrames()
-        askFrame()
-      }
     }
   })
 

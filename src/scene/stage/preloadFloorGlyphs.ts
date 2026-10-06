@@ -17,6 +17,7 @@ import {
   takeGlyphBudget,
   unseenGlyphs,
   warmupFontParse,
+  warmupTextMesh,
 } from './glyphProbe'
 
 export const GLYPH_PRELOAD_FLOORS = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8'] as const
@@ -96,6 +97,7 @@ export function scheduleGlyphPreload(): () => void {
   let loaded = false
   let warmedFont = false
   let warmedGl = false
+  let warmedMesh = false
   let firstMain = true
 
   const tick = (deadline: { timeRemaining: () => number }) => {
@@ -177,6 +179,34 @@ export function scheduleGlyphPreload(): () => void {
           ]
         }
         warmedGl = true
+        idleId = scheduleIdleWork(tick)
+      })
+      return
+    }
+    if (!warmedMesh) {
+      if (deadline.timeRemaining() < 0.2) {
+        idleId = scheduleIdleWork(tick)
+        return
+      }
+      const started = performance.now()
+      void watchMaxFrame(() => warmupTextMesh().then(() => undefined)).then((maxFrame) => {
+        if (cancelled) return
+        const ms = Math.round(performance.now() - started)
+        recordBatch({
+          i: -3,
+          chars: 1,
+          ms,
+          maxFrame,
+          seen: window.__twinGlyphPreload?.unique ?? 0,
+          kind: 'warmup:mesh',
+        })
+        if (window.__twinGlyphPreload) {
+          window.__twinGlyphPreload.warmup = [
+            ...(window.__twinGlyphPreload.warmup ?? []),
+            { kind: 'mesh', ms, maxFrame, atlasHeight: window.__twinGlyphPreload.atlasHeight ?? null },
+          ]
+        }
+        warmedMesh = true
         idleId = scheduleIdleWork(tick)
       })
       return

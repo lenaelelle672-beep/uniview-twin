@@ -203,6 +203,34 @@ export async function warmupFontParse(): Promise<{ ms: number; atlasHeight: numb
   }
 }
 
+export async function warmupTextMesh(): Promise<number> {
+  installSdfAtlasHook()
+  installAtlasCanvasHook()
+  await loadTroika()
+  const { Text } = await import('troika-three-text')
+  const started = performance.now()
+  const text = new Text()
+  text.font = ROOM_LABEL_FONT
+  text.text = GLYPH_WARMUP_GLYPH
+  text.fontSize = 1
+  text.anchorX = 'center'
+  text.anchorY = 'middle'
+  await new Promise<void>((resolve) => {
+    text.sync(() => {
+      const img = (text as { textRenderInfo?: { sdfTexture?: { image?: { width?: number; height?: number }; source?: { data?: { width?: number; height?: number } } } } }).textRenderInfo
+        ?.sdfTexture
+      const canvas = img?.image ?? img?.source?.data
+      if (window.__twinGlyphPreload && typeof canvas?.height === 'number') {
+        window.__twinGlyphPreload.atlasHeight = canvas.height
+        window.__twinGlyphPreload.atlasWidth = canvas.width
+      }
+      text.dispose()
+      resolve()
+    })
+  })
+  return performance.now() - started
+}
+
 export async function preloadLabelChars(characters: string, source: string): Promise<number> {
   if (!characters) return 0
   installSdfAtlasHook()

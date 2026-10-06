@@ -42,6 +42,7 @@ describe('D262/D264 字形预排', () => {
     expect(preload).toMatch(/timeRemaining/)
     expect(preload).toMatch(/GLYPH_FIRST_BATCH/)
     expect(preload).toMatch(/warmupFontParse/)
+    expect(preload).toMatch(/warmupTextMesh/)
     expect(preload).toMatch(/glyphPreloadBlocked/)
     expect(preload).toMatch(/window\.__twinFirstFrameAt == null/)
     const probe = readFileSync(new URL('./glyphProbe.ts', import.meta.url), 'utf8')
