@@ -1,0 +1,35 @@
+{
+  "head": "24bca7598634fb203ec1173b1adef259166d2f62",
+  "merge": "origin/cursor/d-lazy-split-1005 @ 63764e3e52da2d7dd4db195723200c99a4258b66",
+  "gatesIdenticalToD": [
+    "src/scene/overviewReady.ts",
+    "src/scene/stage/prefetchLazyChunks.ts",
+    "src/components/scene/LocalEnvironment.tsx",
+    "src/components/scene/InstancedProp.tsx"
+  ],
+  "probe": "RenderProbe is inside the same Suspense as Site/Tower; markSuspenseReady waits for roof-sign, tree-lo, tree-hi, lamps. FacadeSamples and FloorStage interiors stay in later/inner Suspense.",
+  "gzip9": {
+    "mainJs": 394505,
+    "mainJsVsD395899": -1394,
+    "thisFixVsPreviousOverlay": 0,
+    "hardGate": 426677,
+    "hardGateLimit": 436361,
+    "balancedFx": 101498,
+    "balancedFxLimit": 105000,
+    "perfFirstScreen": 413100,
+    "perfRequestedBalancedFx": false,
+    "treeLoInHardGate": true,
+    "hdrExcluded": true,
+    "prefetchExcluded": true
+  },
+  "overviewCalls": { "balanced": 120, "limit": 140 },
+  "f12Alarm": {
+    "balancedRatio": 2.835,
+    "perfRatio": 2.848,
+    "hueStillRed": true
+  },
+  "switchHold": { "textures": "20=20", "geometries": "77=77" },
+  "console": { "errors": 0, "warnings": 0 },
+  "external": 0,
+  "tscVitestBuild": { "tsc": true, "vitest": "121 passed", "build": true }
+}

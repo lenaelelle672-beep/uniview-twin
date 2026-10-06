@@ -1,0 +1,442 @@
+[
+  {
+    "view": "F22",
+    "q": "balanced",
+    "w": 1366,
+    "head": "2d36d8d",
+    "protocol": "steady60+peak+attribTop10",
+    "t": "2026-10-05T09:52:40.375Z",
+    "readyMs": 1995,
+    "floorWaitMs": 88,
+    "labels": 32,
+    "officeJson": 12,
+    "officeRender": 12,
+    "labelPx": null,
+    "packMs": null,
+    "peak": 97,
+    "peakPhase": "labelSync",
+    "steady": 129,
+    "steadyN": 60,
+    "tris": 152424,
+    "attribFrameCalls": 129,
+    "attribFrameTris": 152424,
+    "shadow": 42,
+    "main": 87,
+    "byPass": {
+      "shadow": {
+        "calls": 42,
+        "tris": 43944
+      },
+      "main": {
+        "calls": 87,
+        "tris": 108480
+      }
+    },
+    "mainTop10": [
+      {
+        "path": "(unnamed)",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 7,
+        "tris": 46956,
+        "instances": null
+      },
+      {
+        "path": "Buildings/AboveGradeContext/EastBlock",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 5,
+        "tris": 1856,
+        "instances": null
+      },
+      {
+        "path": "Buildings/AboveGradeContext/Podium",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 4,
+        "tris": 868,
+        "instances": null
+      },
+      {
+        "path": "Buildings/Tower/FloorShell-F22/RoomLabelBatch/RoomLabelBatchedText",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "RoomLabelBatchedText",
+        "calls": 2,
+        "tris": 440,
+        "instances": null
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationDesks",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "WorkstationDesks",
+        "calls": 1,
+        "tris": 9600,
+        "instances": 160
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationMonitors",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "WorkstationMonitors",
+        "calls": 1,
+        "tris": 5760,
+        "instances": 160
+      },
+      {
+        "path": "FloorInterior/FloorWalls",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "FloorWalls",
+        "calls": 1,
+        "tris": 5508,
+        "instances": 459
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationChairs",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "WorkstationChairs",
+        "calls": 1,
+        "tris": 3840,
+        "instances": 160
+      },
+      {
+        "path": "FloorInterior/CorridorPeople/Person-7/Root_Scene/RootNode/Female",
+        "pass": "main",
+        "objType": "SkinnedMesh",
+        "objName": "Female",
+        "calls": 1,
+        "tris": 2776,
+        "instances": null
+      },
+      {
+        "path": "FloorInterior/CorridorPeople/Person-1/Root_Scene/RootNode/Female",
+        "pass": "main",
+        "objType": "SkinnedMesh",
+        "objName": "Female",
+        "calls": 1,
+        "tris": 2776,
+        "instances": null
+      }
+    ],
+    "shadowTop10": [
+      {
+        "path": "Buildings/AboveGradeContext/EastBlock",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 5,
+        "tris": 1856,
+        "instances": null
+      },
+      {
+        "path": "Buildings/AboveGradeContext/Podium",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 4,
+        "tris": 868,
+        "instances": null
+      },
+      {
+        "path": "(unnamed)",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 3,
+        "tris": 8232,
+        "instances": 113
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationDesks",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "WorkstationDesks",
+        "calls": 1,
+        "tris": 9600,
+        "instances": 160
+      },
+      {
+        "path": "tree_leaves_shadow",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "tree_leaves_shadow",
+        "calls": 1,
+        "tris": 6780,
+        "instances": 113
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationMonitors",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "WorkstationMonitors",
+        "calls": 1,
+        "tris": 5760,
+        "instances": 160
+      },
+      {
+        "path": "FloorInterior/FloorWalls",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "FloorWalls",
+        "calls": 1,
+        "tris": 5508,
+        "instances": 459
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationChairs",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "WorkstationChairs",
+        "calls": 1,
+        "tris": 3840,
+        "instances": 160
+      },
+      {
+        "path": "FloorInterior/FloorColumns",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "FloorColumns",
+        "calls": 1,
+        "tris": 276,
+        "instances": 23
+      },
+      {
+        "path": "FloorInterior/OfficeDesks",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "OfficeDesks",
+        "calls": 1,
+        "tris": 144,
+        "instances": 12
+      }
+    ],
+    "attribRowsN": 128,
+    "ok": true
+  },
+  {
+    "view": "F12",
+    "q": "balanced",
+    "w": 1366,
+    "head": "2d36d8d",
+    "protocol": "steady60+peak+attribTop10",
+    "t": "2026-10-05T09:54:53.720Z",
+    "readyMs": 4083,
+    "floorWaitMs": 64,
+    "labels": 30,
+    "officeJson": 0,
+    "officeRender": 0,
+    "labelPx": null,
+    "packMs": null,
+    "peak": 67,
+    "peakPhase": "labelSync",
+    "steady": 97,
+    "steadyN": 60,
+    "tris": 156444,
+    "attribFrameCalls": 97,
+    "attribFrameTris": 156444,
+    "shadow": 31,
+    "main": 66,
+    "byPass": {
+      "shadow": {
+        "calls": 31,
+        "tris": 46260
+      },
+      "main": {
+        "calls": 66,
+        "tris": 110184
+      }
+    },
+    "mainTop10": [
+      {
+        "path": "(unnamed)",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 7,
+        "tris": 46956,
+        "instances": null
+      },
+      {
+        "path": "Buildings/AboveGradeContext/EastBlock",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 5,
+        "tris": 1856,
+        "instances": null
+      },
+      {
+        "path": "Buildings/AboveGradeContext/Podium",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 4,
+        "tris": 868,
+        "instances": null
+      },
+      {
+        "path": "Buildings/Tower/FloorShell-F12/RoomLabelBatch/RoomLabelBatchedText",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "RoomLabelBatchedText",
+        "calls": 2,
+        "tris": 412,
+        "instances": null
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationDesks",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "WorkstationDesks",
+        "calls": 1,
+        "tris": 11040,
+        "instances": 184
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationMonitors",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "WorkstationMonitors",
+        "calls": 1,
+        "tris": 6624,
+        "instances": 184
+      },
+      {
+        "path": "FloorInterior/FloorWalls",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "FloorWalls",
+        "calls": 1,
+        "tris": 5568,
+        "instances": 464
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationChairs",
+        "pass": "main",
+        "objType": "Mesh",
+        "objName": "WorkstationChairs",
+        "calls": 1,
+        "tris": 4416,
+        "instances": 184
+      },
+      {
+        "path": "FloorInterior/CorridorPeople/Person-9/Root_Scene/RootNode/Female",
+        "pass": "main",
+        "objType": "SkinnedMesh",
+        "objName": "Female",
+        "calls": 1,
+        "tris": 2776,
+        "instances": null
+      },
+      {
+        "path": "FloorInterior/CorridorPeople/Person-1/Root_Scene/RootNode/Female",
+        "pass": "main",
+        "objType": "SkinnedMesh",
+        "objName": "Female",
+        "calls": 1,
+        "tris": 2776,
+        "instances": null
+      }
+    ],
+    "shadowTop10": [
+      {
+        "path": "Buildings/AboveGradeContext/EastBlock",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 5,
+        "tris": 1856,
+        "instances": null
+      },
+      {
+        "path": "Buildings/AboveGradeContext/Podium",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 4,
+        "tris": 868,
+        "instances": null
+      },
+      {
+        "path": "(unnamed)",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "",
+        "calls": 3,
+        "tris": 8232,
+        "instances": 113
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationDesks",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "WorkstationDesks",
+        "calls": 1,
+        "tris": 11040,
+        "instances": 184
+      },
+      {
+        "path": "tree_leaves_shadow",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "tree_leaves_shadow",
+        "calls": 1,
+        "tris": 6780,
+        "instances": 113
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationMonitors",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "WorkstationMonitors",
+        "calls": 1,
+        "tris": 6624,
+        "instances": 184
+      },
+      {
+        "path": "FloorInterior/FloorWalls",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "FloorWalls",
+        "calls": 1,
+        "tris": 5568,
+        "instances": 464
+      },
+      {
+        "path": "FloorInterior/Workstations/WorkstationChairs",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "WorkstationChairs",
+        "calls": 1,
+        "tris": 4416,
+        "instances": 184
+      },
+      {
+        "path": "FloorInterior/FloorColumns",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "FloorColumns",
+        "calls": 1,
+        "tris": 276,
+        "instances": 23
+      },
+      {
+        "path": "Buildings/Tower/FloorShell-F1/FloorBand-F1",
+        "pass": "shadow",
+        "objType": "Mesh",
+        "objName": "FloorBand-F1",
+        "calls": 1,
+        "tris": 48,
+        "instances": null
+      }
+    ],
+    "attribRowsN": 96,
+    "ok": true
+  }
+]

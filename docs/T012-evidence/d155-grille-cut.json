@@ -1,0 +1,122 @@
+{
+  "currentUrl": "http://127.0.0.1:5190",
+  "bUrl": "http://127.0.0.1:5195",
+  "floors": {
+    "F4": {
+      "inspect": {
+        "view": "floor",
+        "selected": "F4",
+        "cameraDist": 65.98446815918122,
+        "rows": [
+          {
+            "mesh": "east_grille_v4_lo",
+            "url": null,
+            "clipCount": 1,
+            "clipShadows": true,
+            "constant": 19.01,
+            "normalY": -1,
+            "depthClip": 0,
+            "depthClipShadows": false
+          }
+        ]
+      },
+      "bInspect": {
+        "view": "floor",
+        "selected": "F4",
+        "cameraDist": null,
+        "rows": []
+      },
+      "currentShot": "/opt/cursor/artifacts/screenshots/d155-grille-f4-current.png",
+      "bShot": "/opt/cursor/artifacts/screenshots/d155-grille-f4-b.png",
+      "diffShot": "/opt/cursor/artifacts/screenshots/d155-grille-f4-diff.png",
+      "clipped": true,
+      "meanAbs": 50.240752952714296,
+      "pctChanged": 97.36411596114338,
+      "changedPixels": 614204
+    },
+    "F12": {
+      "inspect": {
+        "view": "floor",
+        "selected": "F12",
+        "cameraDist": 65.98446815918122,
+        "rows": [
+          {
+            "mesh": "east_grille_v4_lo",
+            "url": null,
+            "clipCount": 1,
+            "clipShadows": true,
+            "constant": 53.022999999999996,
+            "normalY": -1,
+            "depthClip": 0,
+            "depthClipShadows": false
+          }
+        ]
+      },
+      "bInspect": {
+        "view": "floor",
+        "selected": "F12",
+        "cameraDist": null,
+        "rows": []
+      },
+      "currentShot": "/opt/cursor/artifacts/screenshots/d155-grille-f12-current.png",
+      "bShot": "/opt/cursor/artifacts/screenshots/d155-grille-f12-b.png",
+      "diffShot": "/opt/cursor/artifacts/screenshots/d155-grille-f12-diff.png",
+      "clipped": true,
+      "meanAbs": 0.5579578503732636,
+      "pctChanged": 3.23382453648515,
+      "changedPixels": 20400
+    },
+    "F22": {
+      "inspect": {
+        "view": "floor",
+        "selected": "F22",
+        "cameraDist": 65.98446815918122,
+        "rows": [
+          {
+            "mesh": "east_grille_v4_lo",
+            "url": null,
+            "clipCount": 1,
+            "clipShadows": true,
+            "constant": 96.057,
+            "normalY": -1,
+            "depthClip": 0,
+            "depthClipShadows": false
+          }
+        ]
+      },
+      "bInspect": {
+        "view": "floor",
+        "selected": "F22",
+        "cameraDist": null,
+        "rows": []
+      },
+      "currentShot": "/opt/cursor/artifacts/screenshots/d155-grille-f22-current.png",
+      "bShot": "/opt/cursor/artifacts/screenshots/d155-grille-f22-b.png",
+      "diffShot": "/opt/cursor/artifacts/screenshots/d155-grille-f22-diff.png",
+      "clipped": true,
+      "meanAbs": 0.5462764518392641,
+      "pctChanged": 3.2206673092043525,
+      "changedPixels": 20317
+    }
+  },
+  "overview": {
+    "view": "building",
+    "selected": null,
+    "cameraDist": 393.8744966016939,
+    "rows": [
+      {
+        "mesh": "east_grille_v4_lo",
+        "url": null,
+        "clipCount": 0,
+        "clipShadows": false,
+        "constant": null,
+        "normalY": null,
+        "depthClip": 0,
+        "depthClipShadows": false
+      }
+    ],
+    "shot": "/opt/cursor/artifacts/screenshots/d155-grille-overview-current.png"
+  },
+  "failures": [],
+  "ok": true
+}

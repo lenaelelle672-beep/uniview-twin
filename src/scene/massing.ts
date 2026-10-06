@@ -1,8 +1,29 @@
+import {
+  CURVED_RND_ROOF_M,
+  EAST_GRILLE_BOTTOM_M,
+  EAST_GRILLE_TOP_M,
+  EAST_PARAPET_TOP_M,
+  eastFloorBandLevels,
+} from '../data/levels'
 import { pageRingToWorld, plazaPage, podiumFrontPage, podiumPage } from './plan'
 import { pageToWorld } from './scale'
-import { EAST_CANTILEVER_M, EAST_ROOF_M, FOOTPRINT, PODIUM_HEIGHT_M } from './siteGeometry'
+import { EAST_CANTILEVER_M } from './siteGeometry'
+import {
+  EAST_FACE_X,
+  EAST_GRILLE_ROT_Y,
+  EAST_NORTH_Z,
+  EAST_SOUTH_GLASS_Z,
+  EAST_SOUTH_LENGTH_M,
+  EAST_SOUTH_WALL_Z,
+  EAST_WALL_LENGTH_M,
+  eastBlockOutline,
+  insetRing,
+} from './shell/rings'
 
-export { EAST_CANTILEVER_M, EAST_ROOF_M, PODIUM_HEIGHT_M }
+export { EAST_CANTILEVER_M }
+export const EAST_ROOF_M = EAST_PARAPET_TOP_M
+export const PODIUM_HEIGHT_M = CURVED_RND_ROOF_M
+export const EAST_LOWER_TOP_M = EAST_GRILLE_BOTTOM_M
 
 export function courtyardHole(): Array<[number, number]> {
   return pageRingToWorld(plazaPage())
@@ -24,98 +45,48 @@ export function podiumFocus(): [number, number] {
   return [sx / points.length, sz / points.length]
 }
 
-/**
- * 8F 闭合外轮廓的东墙外皮细线（site.svg 页面 x）。
- * 一条直墙，从北端 y=839.000 贯通到南端 y=1693.160。
- * 再往东 2.788 m、并一直伸到 8F 以北的是地下室粗墙，不用。
- */
-const EAST_SKIN_PAGE_X = 2451.1210938
-
 /** 消防车道靠近楼的那条细线。对侧细线在 y=1784.719，宽度 7.01 m。 */
 const FIRE_LANE_NORTH_PAGE_Y = 1726.519531
-
-/** 弧面和首层离车道北缘至少留这么多。 */
-const LANE_CLEARANCE_M = 4
+const EAST_SKIN_PAGE_X = 2451.1210938
 
 export interface EastWall {
   /** 外皮细线的世界 x。 */
   faceX: number
   /** 南北向墙长。 */
   length: number
-  /** 南墙角点到角点，西测量点到外皮细线。 */
+  /** 南墙玻璃线长度。 */
   southLength: number
   /** 车道北缘。世界 +Z 向南。 */
   laneNorthZ: number
+  northZ: number
+  southWallZ: number
+  southGlassZ: number
 }
 
 export function eastWall(): EastWall {
-  const faceX = pageToWorld(EAST_SKIN_PAGE_X, FIRE_LANE_NORTH_PAGE_Y)[0]
   return {
-    faceX,
-    length: FOOTPRINT.maxZ - FOOTPRINT.minZ,
-    southLength: faceX - FOOTPRINT.minX,
+    faceX: EAST_FACE_X,
+    length: EAST_WALL_LENGTH_M,
+    southLength: EAST_SOUTH_LENGTH_M,
     laneNorthZ: pageToWorld(EAST_SKIN_PAGE_X, FIRE_LANE_NORTH_PAGE_Y)[1],
+    northZ: EAST_NORTH_Z,
+    southWallZ: EAST_SOUTH_WALL_Z,
+    southGlassZ: EAST_SOUTH_GLASS_Z,
   }
 }
 
-/** 弧面停在车道北缘以北至少 4 m。 */
-function bulgeClearOfLane(zWall: number, requested: number, laneNorthZ: number): number {
-  const room = laneNorthZ - zWall - LANE_CLEARANCE_M
-  return Math.min(requested, Math.max(0, room))
-}
+/** 上层东缘内收，把外皮让给格栅，不平移挂点。 */
+export const EAST_UPPER_EAST_INSET_M = 0.6
 
-function withSouthCurve(
-  eastRun: Array<[number, number]>,
-  zSouth: number,
-  bulge: number,
-): Array<[number, number]> {
-  const steps = 20
-  const westX = eastRun[0][0]
-  const eastX = eastRun[eastRun.length - 1][0]
-  const points = eastRun.slice()
-  for (let i = 0; i <= steps; i += 1) {
-    const u = i / steps
-    const x = eastX + (westX - eastX) * u
-    points.push([x, zSouth + Math.sin(Math.PI * u) * bulge])
-  }
-  return points
-}
-
-/** 下部玻璃层顶。底层内退，上部从这里开始悬挑。 */
-export const EAST_LOWER_TOP_M = 6 + 4.2
-
-/**
- * 南墙在测量点 X=75926.890。东墙是外皮细线上的一条直墙。
- * 南侧弧面朝前，最南点离消防车道北缘至少 4 m。
- */
 export function eastUpperOutline(): Array<[number, number]> {
-  const wall = eastWall()
-  const bulge = bulgeClearOfLane(FOOTPRINT.maxZ, EAST_CANTILEVER_M, wall.laneNorthZ)
-  return withSouthCurve(
-    [
-      [FOOTPRINT.minX, FOOTPRINT.minZ],
-      [wall.faceX, FOOTPRINT.minZ],
-      [wall.faceX, FOOTPRINT.maxZ],
-    ],
-    FOOTPRINT.maxZ,
-    bulge,
+  return eastBlockOutline().map(([x, z]) =>
+    x > EAST_FACE_X - 0.25 ? [x - EAST_UPPER_EAST_INSET_M, z] : [x, z],
   )
 }
 
-/** 底层平面内退，南侧再收进，让出上部悬挑和弧面。东墙仍是一条直墙。 */
+/** 19.6 m 以下缩进的裙房。东、南各退约 1.2 m，给格栅让出外皮。 */
 export function eastLowerOutline(): Array<[number, number]> {
-  const wall = eastWall()
-  const zSouth = FOOTPRINT.maxZ - 1.5
-  const bulge = bulgeClearOfLane(zSouth, 1.2, wall.laneNorthZ)
-  return withSouthCurve(
-    [
-      [FOOTPRINT.minX + 1.4, FOOTPRINT.minZ + 1.6],
-      [wall.faceX - 1.2, FOOTPRINT.minZ + 1.6],
-      [wall.faceX - 1.2, zSouth],
-    ],
-    zSouth,
-    bulge,
-  )
+  return insetRing(eastBlockOutline(), 1.2)
 }
 
 export interface EastGrilleMount {
@@ -126,18 +97,24 @@ export interface EastGrilleMount {
 }
 
 /**
- * 东墙外皮挂载点。原点在外皮南端、标高 ±0.00。
- * 局部 +X 沿墙向北，+Z 朝东，+Y 向上。不挂格栅。
+ * 格栅 v4 挂点。原点在外皮南端、标高 ±0.00。
+ * 局部 +X 沿墙向北，+Z 朝东，+Y 向上。按挂点放，不按包围盒。
  */
 export function eastGrilleMount(): EastGrilleMount {
-  const wall = eastWall()
   return {
-    length: wall.length,
-    height: EAST_ROOF_M,
-    position: [wall.faceX, 0, FOOTPRINT.maxZ],
-    rotation: [0, Math.PI / 2, 0],
+    length: EAST_WALL_LENGTH_M,
+    height: EAST_GRILLE_TOP_M,
+    position: [EAST_FACE_X, 0, EAST_SOUTH_WALL_Z],
+    rotation: [0, EAST_GRILLE_ROT_Y, 0],
   }
 }
+
+/** 6F～8F 西面弧墙，给翅片用。 */
+export function eastWestArc(): Array<[number, number]> {
+  return eastBlockOutline().slice(5)
+}
+
+export { eastFloorBandLevels }
 
 export interface FinPoint {
   x: number

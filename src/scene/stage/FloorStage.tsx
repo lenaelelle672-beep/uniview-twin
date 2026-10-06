@@ -1,7 +1,10 @@
-import { useThree } from '@react-three/fiber'
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo } from 'react'
-import { InstancedMesh } from 'three'
+import { useFrame, useThree } from '@react-three/fiber'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { InstancedMesh, Mesh } from 'three'
+import { PICK_VOLUME_LAYER } from '../pickLayers'
 import { floorSpec } from '../../data/floors'
+import { isFloorHydrated } from '../../floors/cache'
+import { loadFloorPlan } from '../../floors/loadFloor'
 import { extrudeUp } from '../extrude'
 import { basementPickOutline } from './b1Plan'
 import { useTwinStore } from '../../store/store'
@@ -10,9 +13,8 @@ import { showCorridorPeople } from './corridor'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
 import { FloorStageCamera } from './FloorStageCamera'
-import { STATUS_COLOR } from './status'
+import { MONITOR_DISPLAY_COLOR } from './materials'
 import { workstationPosition } from './workstationPosition'
-import { loadFloorPlan } from '../../floors/loadFloor'
 
 const JsonFloorInterior = lazy(async () => {
   const mod = await import('../../floors/JsonFloorInterior')
@@ -23,6 +25,11 @@ const B1Interior = lazy(async () => {
   const mod = await import('./B1Interior')
   return { default: mod.B1Interior }
 })
+
+const TowerInterior = lazy(() => import('./TowerInterior').then((mod) => ({ default: mod.TowerInterior })))
+const MonitorSamples = lazy(() => import('./MonitorSamples').then((mod) => ({ default: mod.MonitorSamples })))
+
+export { TowerInterior as LazyTowerInterior }
 
 function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDesks: number }) {
   const scene = useThree((state) => state.scene)
@@ -42,6 +49,10 @@ function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDes
       roofVisible: Boolean(roof?.visible),
       aboveGradeVisible: Boolean(above?.visible),
     }
+    if (!floorId) delete window.__twinInterior
+  }, [floorId, scene])
+
+  useFrame(() => {
     if (!floorId) {
       delete window.__twinInterior
       return
@@ -53,7 +64,7 @@ function InteriorProbe({ floorId, dataDesks }: { floorId: string | null; dataDes
       dataDesks,
       renderedDesks: mesh?.count ?? window.__twinInterior?.renderedDesks ?? 0,
     }
-  }, [dataDesks, floorId, scene])
+  })
   return null
 }
 
@@ -68,6 +79,9 @@ function BasementPick() {
   if (inside) return null
   return (
     <mesh
+      ref={(mesh: Mesh | null) => {
+        mesh?.layers.set(PICK_VOLUME_LAYER)
+      }}
       name="B1Pick"
       geometry={geometry}
       onDoubleClick={(event) => {
@@ -97,17 +111,41 @@ export function FloorStage() {
     for (const device of devices) {
       if (device.type === 'pc' && device.deskId) byDesk.set(device.deskId, device.status)
     }
-    return floorDesks.map((desk) => STATUS_COLOR[byDesk.get(desk.id) ?? 'offline'])
+    return floorDesks.map((desk) => MONITOR_DISPLAY_COLOR[byDesk.get(desk.id) ?? 'offline'])
   }, [devices, floorDesks])
   const floorDevices = useMemo(() => {
     if (!active) return []
     return devices.filter((device) => device.floorId === active)
   }, [active, devices])
   const spec = active ? floorSpec(active) : null
+  const [hydratedFloor, setHydratedFloor] = useState<string | null>(() =>
+    active && active !== 'B1' && isFloorHydrated(active) ? active : null,
+  )
   useEffect(() => {
-    if (!active || active === 'B1') return
-    void loadFloorPlan(active)
+    if (!active || active === 'B1') {
+      setHydratedFloor(null)
+      return
+    }
+    if (isFloorHydrated(active)) {
+      setHydratedFloor(active)
+      return
+    }
+    let cancelled = false
+    void loadFloorPlan(active).then((plan) => {
+      if (!cancelled) setHydratedFloor(plan.floorId)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [active])
+  const slots = useMemo(() => {
+    if (!active || active === 'B1') return []
+    if (hydratedFloor !== active || !isFloorHydrated(active)) return []
+    return floorDesks.map((desk) => {
+      const position = workstationPosition(desk.floorId, desk.id)
+      return { x: position.x, z: position.z, rot: 0 }
+    })
+  }, [active, floorDesks, hydratedFloor])
   const basementSlots = useMemo(() => {
     if (active !== 'B1') return []
     return floorDesks.map((desk) => {
@@ -131,6 +169,15 @@ export function FloorStage() {
           />
         )}
         {spec && spec.level < 0 && <B1Interior slots={basementSlots} colors={colors} devices={floorDevices} />}
+        {spec && spec.level > 0 && (
+          <MonitorSamples
+            floorId={spec.id}
+            slots={slots}
+            colors={colors}
+            deskIds={floorDesks.map((desk) => desk.id)}
+          />
+        )}
+        {/* 总览不挂 MonitorSamples；进单层才加载该 chunk。 */}
       </Suspense>
       <InteriorProbe floorId={active} dataDesks={floorDesks.length} />
     </>

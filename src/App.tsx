@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { UIShell } from './components/UIShell'
 import { isReportPath, TWIN_NAVIGATE_EVENT } from './report/navigate'
-import { ReportPage } from './report/ReportPage'
+
+const ReportPage = lazy(() => import('./report/ReportPage').then((mod) => ({ default: mod.ReportPage })))
 
 export function App() {
   const [pathname, setPathname] = useState(() => window.location.pathname)
@@ -17,5 +18,15 @@ export function App() {
     }
   }, [])
 
-  return <ErrorBoundary>{isReportPath(pathname) ? <ReportPage /> : <UIShell />}</ErrorBoundary>
+  return (
+    <ErrorBoundary>
+      {isReportPath(pathname) ? (
+        <Suspense fallback={null}>
+          <ReportPage />
+        </Suspense>
+      ) : (
+        <UIShell />
+      )}
+    </ErrorBoundary>
+  )
 }

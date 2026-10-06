@@ -1,4 +1,20 @@
-import { DoubleSide, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
+import { Color, DoubleSide, MeshBasicMaterial, MeshPhysicalMaterial, MeshStandardMaterial } from 'three'
+
+/** 三维屏显示色。蓝图仍用 STATUS_HEX；这里单独写成显示色，保证告警/在线亮度比 ≥1.5。 */
+export const MONITOR_DISPLAY_SRGB = {
+  // 略提高饱和度，4×4 均值和 AgX 之后仍能看出红色（H≈5°，S≈0.64）。
+  alarm: '#ff6a5c',
+  online: '#176a40',
+  idle: '#2b58b3',
+  offline: '#757b82',
+} as const
+
+export const MONITOR_DISPLAY_COLOR = {
+  online: new Color(MONITOR_DISPLAY_SRGB.online),
+  idle: new Color(MONITOR_DISPLAY_SRGB.idle),
+  alarm: new Color(MONITOR_DISPLAY_SRGB.alarm),
+  offline: new Color(MONITOR_DISPLAY_SRGB.offline),
+}
 
 export const slabMaterial = new MeshStandardMaterial({ color: '#e6e1d8', roughness: 0.86, metalness: 0.02 })
 export const coreMaterial = new MeshStandardMaterial({ color: '#d5dbe3', roughness: 0.78, metalness: 0.04 })
@@ -10,7 +26,15 @@ export const columnMaterial = new MeshStandardMaterial({ color: '#f7f8fa', rough
 export const ceilingMaterial = new MeshStandardMaterial({ color: '#f3f5f7', roughness: 0.9, metalness: 0, side: DoubleSide })
 export const deskMaterial = new MeshStandardMaterial({ color: '#d9d0c3', roughness: 0.7, metalness: 0.04 })
 export const chairMaterial = new MeshStandardMaterial({ color: '#3c4654', roughness: 0.62, metalness: 0.08 })
-export const monitorMaterial = new MeshStandardMaterial({ color: '#ffffff', roughness: 0.35, metalness: 0.12 })
+export const monitorMaterial = new MeshBasicMaterial({
+  color: '#ffffff',
+  // 颜色走 InstancedMesh.instanceColor。打开 vertexColors 但几何没有 color 属性会画成黑屏。
+  vertexColors: false,
+  // 合成器之内、NoToneMapping 通道里画。实例色就是显示色，三层亮度一致。
+  toneMapped: false,
+  depthTest: true,
+  depthWrite: true,
+})
 export const kitchenMaterial = new MeshStandardMaterial({ color: '#d5dbdf', roughness: 0.42, metalness: 0.35 })
 export const fanFloorMaterial = new MeshStandardMaterial({ color: '#3e4652', roughness: 0.84, metalness: 0.04 })
 export const seatMaterial = new MeshStandardMaterial({ color: '#c43648', roughness: 0.62, metalness: 0.06 })

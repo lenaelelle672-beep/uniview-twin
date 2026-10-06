@@ -28,13 +28,14 @@ import {
 export function ParcelMesh() {
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const court = useMemo(() => courtyardHole(), [])
-  const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court]), [court])
+  const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court], 'top'), [court])
   return (
     <mesh
       name="Parcel"
       geometry={parcel}
       material={pavingMaterial}
       position={[0, 0.04, 0]}
+      renderOrder={1}
       receiveShadow
       onClick={(event) => {
         if (event.delta > 2) return
@@ -45,11 +46,21 @@ export function ParcelMesh() {
   )
 }
 
-/** 东缘伸到 `?cam=east` 机位（x=280）背后，平视时画面底部仍落在草地上。 */
+/**
+ * 整块草地一张网。东缘伸到 `?cam=east` 机位（x=290）背后。
+ * 边上加折点，避免 11b1bd0 之后东扩成长三角 / T 接缝（D094-2 / D115 / D123）。
+ */
 const PARK: Array<[number, number]> = [
   [-240, -90],
+  [-40, -90],
+  [160, -90],
+  [250, -90],
   [340, -90],
+  [340, 60],
   [340, 210],
+  [250, 210],
+  [160, 210],
+  [-40, 210],
   [-240, 210],
 ]
 
@@ -74,8 +85,8 @@ export function Site({ model, night, quality }: { model: boolean; night: boolean
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const furniture = useMemo(() => placeStreetFurniture(), [])
   const court = useMemo(() => courtyardHole(), [])
-  const park = useMemo(() => extrudeUp(PARK, 0.04, [court]), [court])
-  const plinth = useMemo(() => extrudeUp(footprintOutline(), 0.2), [])
+  const park = useMemo(() => extrudeUp(PARK, 0.02, [court], 'top'), [court])
+  const plinth = useMemo(() => extrudeUp(footprintOutline(), 0.2, [], 'top'), [])
   const sidewalk = useMemo(() => ribbonGeometry(sidewalkRibbons(), 0.08), [])
   const roads = useMemo(() => ribbonGeometry(roadRibbons(), 0.12), [])
   const zebras = useMemo(() => {
@@ -105,7 +116,7 @@ export function Site({ model, night, quality }: { model: boolean; night: boolean
 
   return (
     <group onClick={clearSelection}>
-      <mesh name="Park" geometry={park} material={grassMaterial} receiveShadow />
+      <mesh name="Park" geometry={park} material={grassMaterial} renderOrder={0} receiveShadow />
       <mesh geometry={sidewalk} material={sidewalkMaterial} receiveShadow />
       <mesh geometry={roads} material={roadMaterial} receiveShadow />
       <mesh geometry={zebras} material={zebraMaterial} receiveShadow />

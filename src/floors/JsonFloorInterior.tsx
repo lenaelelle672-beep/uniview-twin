@@ -11,6 +11,7 @@ import { columnMaterial, coreWallMaterial, meetingGlassMaterial, slabMaterial, w
 import { Ceiling } from '../scene/stage/Ceiling'
 import { DeskFlash } from '../scene/stage/DeskFlash'
 import { FloorDecor } from '../scene/stage/lazyFloorDecor'
+import { MonitorDepthProxies } from '../scene/stage/MonitorDepthProxies'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
 import { loadFloorPlan, peekFloorPlan } from './loadFloor'
 import { roomLabelsFromPlan } from './labels'
@@ -168,6 +169,7 @@ function JsonFloorReady({
       />
       <Workstations slots={slots} colors={colors} />
       <InstancedSlots name="OfficeDesks" geometry={officeDeskGeometry} material={woodMaterial} slots={officeSlots} />
+      <MonitorDepthProxies />
       <DeskFlash floorId={spec.id} />
       <FloorDecor floorId={spec.id} devices={devices} labels={labels} showPeople={showPeople} paths={peoplePaths} />
       <Ceiling

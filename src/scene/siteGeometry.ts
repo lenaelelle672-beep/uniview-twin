@@ -79,9 +79,7 @@ export const TOWER = {
 export const COURT_DEPTH_M = 5.5
 export const COURT_SLOPE_M = 4.5
 
-export const PODIUM_HEIGHT_M = 6 + 4.2
-/** 图注「8F/2D H=45.50m」。 */
-export const EAST_ROOF_M = 45.5
+export { CURVED_RND_ROOF_M as PODIUM_HEIGHT_M, EAST_PARAPET_TOP_M as EAST_ROOF_M } from '../data/levels'
 /** 上部南侧弧面相对下层向外悬挑。 */
 export const EAST_CANTILEVER_M = 4
 

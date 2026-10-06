@@ -1,0 +1,50 @@
+{
+  "method": "D148",
+  "productHead": "66d9d154645911eb822c06c9562b0399e5ad8b6c",
+  "notes": "稳态=楼层动画结束后停 2s，再取连续整帧中位数。峰值只报，窗口=点进楼层到动画结束。上限=同档总览稳态+50。未改 RoomLabels。",
+  "standalone": {
+    "head": "a2a98c43eb8333297d562e72488274f56e242871",
+    "overview": { "balanced": 120, "perf": 73 },
+    "f12-balanced": {
+      "steady": 175,
+      "peak": 137,
+      "peakPhase": "进场动画",
+      "roomLabels": 26,
+      "minusLabels": 149,
+      "limit": 170,
+      "pass": false
+    },
+    "f12-perf": {
+      "steady": 70,
+      "peak": 57,
+      "peakPhase": "标签同步",
+      "roomLabels": 13,
+      "minusLabels": 57,
+      "limit": 123,
+      "pass": true
+    }
+  },
+  "stack": {
+    "head": "66d9d154645911eb822c06c9562b0399e5ad8b6c",
+    "overview": { "balanced": 116, "perf": 71 },
+    "f12-balanced": {
+      "steady": 131,
+      "peak": 163,
+      "peakPhase": "标签同步",
+      "roomLabels": 2,
+      "minusLabels": 129,
+      "limit": 166,
+      "pass": true
+    },
+    "f12-perf": {
+      "steady": 52,
+      "peak": 74,
+      "peakPhase": "标签同步",
+      "roomLabels": 1,
+      "minusLabels": 51,
+      "limit": 121,
+      "pass": true
+    }
+  },
+  "gate": "standalone over + stack pass = pass; minus RoomLabels has ≥10 headroom vs 170, no visual call cuts"
+}

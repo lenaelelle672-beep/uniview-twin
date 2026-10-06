@@ -1,0 +1,905 @@
+{
+  "method": "D148-attrib",
+  "label": "after",
+  "baseUrl": "http://127.0.0.1:5190",
+  "views": {
+    "overview-balanced": {
+      "quality": "balanced",
+      "view": "overview",
+      "steadyMedian": 116,
+      "limit": 166,
+      "gate": 161,
+      "shadow": 35,
+      "main": 81,
+      "groups": {
+        "FloorBadges": {
+          "shadow": 0,
+          "main": 3,
+          "total": 3
+        },
+        "EastBlock": {
+          "shadow": 5,
+          "main": 5,
+          "total": 10
+        },
+        "Podium": {
+          "shadow": 2,
+          "main": 3,
+          "total": 5
+        },
+        "Trees": {
+          "shadow": 1,
+          "main": 0,
+          "total": 1
+        },
+        "unnamed": {
+          "shadow": 3,
+          "main": 17,
+          "total": 20
+        },
+        "other": {
+          "shadow": 24,
+          "main": 53,
+          "total": 77,
+          "paths": [
+            {
+              "path": "Buildings/Tower/FloorShell-F1/FloorBand-F1",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F2/FloorBand-F2",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F3/FloorBand-F3",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F4/FloorBand-F4",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F5/FloorBand-F5",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F6/FloorBand-F6",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F7/FloorBand-F7",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F8/FloorBand-F8",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F9/FloorBand-F9",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F10/FloorBand-F10",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F11/FloorBand-F11",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F12/FloorBand-F12",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            }
+          ]
+        }
+      },
+      "top": [
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 17,
+          "tris": 46967
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "shadow",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "shadow",
+          "calls": 3,
+          "tris": 8232
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 172
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 2,
+          "tris": 172
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F1/FloorBand-F1",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F2/FloorBand-F2",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F3/FloorBand-F3",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F4/FloorBand-F4",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F5/FloorBand-F5",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F6/FloorBand-F6",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F7/FloorBand-F7",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F8/FloorBand-F8",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F9/FloorBand-F9",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F10/FloorBand-F10",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        }
+      ]
+    },
+    "F12-balanced": {
+      "quality": "balanced",
+      "floorId": "F12",
+      "desks": 184,
+      "monitors": true,
+      "slotsHint": {
+        "floorId": "F12",
+        "canvas": {
+          "width": 886,
+          "height": 712
+        },
+        "alarm": {
+          "deskId": "F12-114",
+          "box": {
+            "x": 253.812201985901,
+            "y": 432.89431100519033,
+            "w": 5.9013832731280615,
+            "h": 4
+          },
+          "patches": [
+            {
+              "name": "plate",
+              "box": {
+                "x": 254.02496488747647,
+                "y": 437.1123949856768,
+                "w": 5.900581598583983,
+                "h": 4
+              }
+            }
+          ]
+        },
+        "online": {
+          "deskId": "F12-131",
+          "box": {
+            "x": 693.7757744275978,
+            "y": 432.89431100519033,
+            "w": 6.086421118614908,
+            "h": 4
+          },
+          "patches": [
+            {
+              "name": "plate",
+              "box": {
+                "x": 693.5043884018794,
+                "y": 437.1123949856768,
+                "w": 6.0480328570356505,
+                "h": 4
+              }
+            }
+          ]
+        }
+      },
+      "steadyMedian": 114,
+      "shadow": 33,
+      "main": 81,
+      "roomLabels": 1,
+      "corridorPeople": 12,
+      "groups": {
+        "RoomLabels": {
+          "shadow": 0,
+          "main": 1,
+          "total": 1
+        },
+        "CorridorPeople": {
+          "shadow": 0,
+          "main": 12,
+          "total": 12
+        },
+        "DeviceBadges": {
+          "shadow": 0,
+          "main": 1,
+          "total": 1
+        },
+        "WorkstationMonitors": {
+          "shadow": 0,
+          "main": 1,
+          "total": 1
+        },
+        "WorkstationDesks": {
+          "shadow": 2,
+          "main": 2,
+          "total": 4
+        },
+        "WorkstationChairs": {
+          "shadow": 1,
+          "main": 1,
+          "total": 2
+        },
+        "FloorCores": {
+          "shadow": 2,
+          "main": 2,
+          "total": 4
+        },
+        "FloorColumns": {
+          "shadow": 2,
+          "main": 2,
+          "total": 4
+        },
+        "FloorWalls": {
+          "shadow": 2,
+          "main": 2,
+          "total": 4
+        },
+        "FloorGlass": {
+          "shadow": 0,
+          "main": 1,
+          "total": 1
+        },
+        "FloorSlab": {
+          "shadow": 0,
+          "main": 2,
+          "total": 2
+        },
+        "EastBlock": {
+          "shadow": 5,
+          "main": 5,
+          "total": 10
+        },
+        "Podium": {
+          "shadow": 2,
+          "main": 3,
+          "total": 5
+        },
+        "Trees": {
+          "shadow": 2,
+          "main": 0,
+          "total": 2
+        },
+        "unnamed": {
+          "shadow": 3,
+          "main": 19,
+          "total": 22
+        },
+        "other": {
+          "shadow": 12,
+          "main": 27,
+          "total": 39,
+          "paths": [
+            {
+              "path": "Buildings/Tower/FloorShell-F12/RoomLabelBatch/RoomLabelBatchedText",
+              "pass": "main",
+              "calls": 2,
+              "tris": 412
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F1/FloorBand-F1",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F2/FloorBand-F2",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F3/FloorBand-F3",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F4/FloorBand-F4",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F5/FloorBand-F5",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F6/FloorBand-F6",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F7/FloorBand-F7",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F8/FloorBand-F8",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F9/FloorBand-F9",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F10/FloorBand-F10",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F11/FloorBand-F11",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            }
+          ]
+        }
+      },
+      "top": [
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 19,
+          "tris": 46971
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "shadow",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "shadow",
+          "calls": 3,
+          "tris": 8232
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 172
+        },
+        {
+          "path": "tree_leaves_shadow",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 13560
+        },
+        {
+          "path": "FloorInterior/FloorCores",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 48
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 552
+        },
+        {
+          "path": "FloorInterior/FloorWalls",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 11136
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 22080
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 2,
+          "tris": 172
+        },
+        {
+          "path": "FloorInterior/FloorPlate/FloorSlab",
+          "pass": "main",
+          "calls": 2,
+          "tris": 288
+        },
+        {
+          "path": "FloorInterior/FloorCores",
+          "pass": "main",
+          "calls": 2,
+          "tris": 48
+        },
+        {
+          "path": "FloorInterior/FloorWalls",
+          "pass": "main",
+          "calls": 2,
+          "tris": 11136
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "main",
+          "calls": 2,
+          "tris": 552
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "main",
+          "calls": 2,
+          "tris": 22080
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F12/RoomLabelBatch/RoomLabelBatchedText",
+          "pass": "main",
+          "calls": 2,
+          "tris": 412
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F1/FloorBand-F1",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F2/FloorBand-F2",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F3/FloorBand-F3",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        }
+      ],
+      "overviewSteady": 116,
+      "limit": 166,
+      "gate": 161,
+      "pass": true
+    },
+    "F22-balanced": {
+      "quality": "balanced",
+      "floorId": "F22",
+      "desks": 160,
+      "monitors": true,
+      "slotsHint": {
+        "floorId": "F22",
+        "canvas": {
+          "width": 886,
+          "height": 712
+        },
+        "alarm": {
+          "deskId": "F22-86",
+          "box": {
+            "x": 365.4638675416579,
+            "y": 404.64778765235314,
+            "w": 5.3407561447599505,
+            "h": 4
+          },
+          "patches": [
+            {
+              "name": "plate",
+              "box": {
+                "x": 365.5143419974496,
+                "y": 408.7041804785034,
+                "w": 5.399395111470312,
+                "h": 4
+              }
+            }
+          ]
+        },
+        "online": {
+          "deskId": "F22-116",
+          "box": {
+            "x": 695.726175985854,
+            "y": 426.0292386997164,
+            "w": 5.899233771109607,
+            "h": 4
+          },
+          "patches": [
+            {
+              "name": "plate",
+              "box": {
+                "x": 695.4615463088165,
+                "y": 430.1217719415174,
+                "w": 5.861290630618328,
+                "h": 4
+              }
+            }
+          ]
+        }
+      },
+      "steadyMedian": 146,
+      "shadow": 44,
+      "main": 102,
+      "roomLabels": 1,
+      "corridorPeople": 12,
+      "groups": {
+        "RoomLabels": {
+          "shadow": 0,
+          "main": 1,
+          "total": 1
+        },
+        "CorridorPeople": {
+          "shadow": 0,
+          "main": 12,
+          "total": 12
+        },
+        "DeviceBadges": {
+          "shadow": 0,
+          "main": 1,
+          "total": 1
+        },
+        "WorkstationMonitors": {
+          "shadow": 0,
+          "main": 1,
+          "total": 1
+        },
+        "WorkstationDesks": {
+          "shadow": 2,
+          "main": 2,
+          "total": 4
+        },
+        "WorkstationChairs": {
+          "shadow": 1,
+          "main": 1,
+          "total": 2
+        },
+        "FloorCores": {
+          "shadow": 2,
+          "main": 2,
+          "total": 4
+        },
+        "FloorColumns": {
+          "shadow": 2,
+          "main": 2,
+          "total": 4
+        },
+        "FloorWalls": {
+          "shadow": 2,
+          "main": 2,
+          "total": 4
+        },
+        "FloorGlass": {
+          "shadow": 0,
+          "main": 1,
+          "total": 1
+        },
+        "FloorSlab": {
+          "shadow": 0,
+          "main": 2,
+          "total": 2
+        },
+        "OfficeDesks": {
+          "shadow": 1,
+          "main": 1,
+          "total": 2
+        },
+        "EastBlock": {
+          "shadow": 5,
+          "main": 5,
+          "total": 10
+        },
+        "Podium": {
+          "shadow": 2,
+          "main": 3,
+          "total": 5
+        },
+        "Trees": {
+          "shadow": 2,
+          "main": 0,
+          "total": 2
+        },
+        "unnamed": {
+          "shadow": 3,
+          "main": 19,
+          "total": 22
+        },
+        "other": {
+          "shadow": 22,
+          "main": 47,
+          "total": 69,
+          "paths": [
+            {
+              "path": "Buildings/Tower/FloorShell-F22/RoomLabelBatch/RoomLabelBatchedText",
+              "pass": "main",
+              "calls": 2,
+              "tris": 440
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F1/FloorBand-F1",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F2/FloorBand-F2",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F3/FloorBand-F3",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F4/FloorBand-F4",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F5/FloorBand-F5",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F6/FloorBand-F6",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F7/FloorBand-F7",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F8/FloorBand-F8",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F9/FloorBand-F9",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F10/FloorBand-F10",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            },
+            {
+              "path": "Buildings/Tower/FloorShell-F11/FloorBand-F11",
+              "pass": "shadow",
+              "calls": 1,
+              "tris": 46
+            }
+          ]
+        }
+      },
+      "top": [
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 19,
+          "tris": 46971
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "shadow",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "shadow",
+          "calls": 3,
+          "tris": 8232
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 172
+        },
+        {
+          "path": "tree_leaves_shadow",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 13560
+        },
+        {
+          "path": "FloorInterior/FloorCores",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 48
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 552
+        },
+        {
+          "path": "FloorInterior/FloorWalls",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 11016
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 19200
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 2,
+          "tris": 172
+        },
+        {
+          "path": "FloorInterior/FloorPlate/FloorSlab",
+          "pass": "main",
+          "calls": 2,
+          "tris": 288
+        },
+        {
+          "path": "FloorInterior/FloorCores",
+          "pass": "main",
+          "calls": 2,
+          "tris": 48
+        },
+        {
+          "path": "FloorInterior/FloorWalls",
+          "pass": "main",
+          "calls": 2,
+          "tris": 11016
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "main",
+          "calls": 2,
+          "tris": 552
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "main",
+          "calls": 2,
+          "tris": 19200
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F22/RoomLabelBatch/RoomLabelBatchedText",
+          "pass": "main",
+          "calls": 2,
+          "tris": 440
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F1/FloorBand-F1",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F2/FloorBand-F2",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F3/FloorBand-F3",
+          "pass": "shadow",
+          "calls": 1,
+          "tris": 46
+        }
+      ],
+      "overviewSteady": 116,
+      "limit": 166,
+      "gate": 161,
+      "pass": true
+    }
+  }
+}

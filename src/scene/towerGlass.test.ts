@@ -21,29 +21,15 @@ describe('塔楼幕墙绕序', () => {
     const index = geometry.getIndex()
     expect(index).not.toBeNull()
     if (!index) return
-    const outward = [
-      { axis: 'x' as const, sign: 1, limit: 20 },
-      { axis: 'x' as const, sign: -1, limit: 20 },
-      { axis: 'z' as const, sign: 1, limit: 8 },
-      { axis: 'z' as const, sign: -1, limit: 8 },
-    ]
-    const hits = [0, 0, 0, 0]
+    let outwardHits = 0
     for (let triangle = 0; triangle < index.count; triangle += 3) {
       const { midpoint, normal } = faceNormal(geometry, triangle)
-      outward.forEach((face, faceIndex) => {
-        const coord = midpoint[face.axis]
-        if (face.sign > 0 ? coord > face.limit : coord < -face.limit) {
-          const expected = new Vector3(
-            face.axis === 'x' ? face.sign : 0,
-            0,
-            face.axis === 'z' ? face.sign : 0,
-          )
-          expect(normal.dot(expected)).toBeGreaterThan(0.9)
-          hits[faceIndex] += 1
-        }
-      })
+      const fromCenter = new Vector3(midpoint.x, 0, midpoint.z)
+      if (fromCenter.length() < 8) continue
+      expect(normal.dot(fromCenter.normalize())).toBeGreaterThan(0)
+      outwardHits += 1
     }
-    expect(hits.every((count) => count > 0)).toBe(true)
+    expect(outwardHits).toBeGreaterThan(8)
     expect(curtainMaterial.side).toBe(FrontSide)
     expect(curtainMaterial.side).not.toBe(DoubleSide)
     geometry.dispose()

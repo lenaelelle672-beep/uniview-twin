@@ -9,7 +9,7 @@ export function activeFloorId(view: ViewMode, selectedFloor: string | null): str
   return selectedFloor
 }
 
-/** 选中层以上的楼层外壳需要隐藏。总览时不隐藏。 */
+/** 选中层以上的楼层外壳需要隐藏。总览时不隐藏。下层玻璃筒跟 a 一样保留。 */
 export function hiddenFloorIds(view: ViewMode, selectedFloor: string | null): string[] {
   const active = activeFloorId(view, selectedFloor)
   if (!active) return []

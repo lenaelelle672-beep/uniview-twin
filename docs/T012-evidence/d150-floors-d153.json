@@ -1,0 +1,189 @@
+{
+  "label": "d153",
+  "baseUrl": "http://127.0.0.1:5190",
+  "method": "D148",
+  "overview": {
+    "balanced": {
+      "quality": "balanced",
+      "view": "overview",
+      "steadyMedian": 116,
+      "limit": 166,
+      "gate": 161,
+      "memory": {
+        "textures": 21,
+        "geometries": 76,
+        "programs": 34
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      }
+    },
+    "perf": {
+      "quality": "perf",
+      "view": "overview",
+      "steadyMedian": 71,
+      "limit": 121,
+      "gate": 116,
+      "memory": {
+        "textures": 4,
+        "geometries": 72,
+        "programs": 10
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      }
+    }
+  },
+  "floors": {
+    "B1-balanced": {
+      "quality": "balanced",
+      "floorId": "B1",
+      "desks": 100,
+      "steadyMedian": 65,
+      "peakCalls": 75,
+      "peakPhase": "标签同步",
+      "shot": null,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      },
+      "overviewSteady": 116,
+      "limit": 166,
+      "gate": 161,
+      "pass": true
+    },
+    "F4-balanced": {
+      "quality": "balanced",
+      "floorId": "F4",
+      "desks": 278,
+      "steadyMedian": 90,
+      "peakCalls": null,
+      "peakPhase": null,
+      "shot": null,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      },
+      "overviewSteady": 116,
+      "limit": 166,
+      "gate": 161,
+      "pass": true
+    },
+    "F12-balanced": {
+      "quality": "balanced",
+      "floorId": "F12",
+      "desks": 184,
+      "steadyMedian": 114,
+      "peakCalls": 152,
+      "peakPhase": "标签同步",
+      "shot": "/opt/cursor/artifacts/screenshots/d150_f12_balanced.png",
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      },
+      "overviewSteady": 116,
+      "limit": 166,
+      "gate": 161,
+      "pass": true
+    },
+    "F22-balanced": {
+      "quality": "balanced",
+      "floorId": "F22",
+      "desks": 160,
+      "steadyMedian": 146,
+      "peakCalls": 189,
+      "peakPhase": "标签同步",
+      "shot": "/opt/cursor/artifacts/screenshots/d150_f22_balanced.png",
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      },
+      "overviewSteady": 116,
+      "limit": 166,
+      "gate": 161,
+      "pass": true
+    },
+    "B1-perf": {
+      "quality": "perf",
+      "floorId": "B1",
+      "desks": 100,
+      "steadyMedian": 22,
+      "peakCalls": 71,
+      "peakPhase": "进场动画",
+      "shot": null,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      },
+      "overviewSteady": 71,
+      "limit": 121,
+      "gate": 116,
+      "pass": true
+    },
+    "F4-perf": {
+      "quality": "perf",
+      "floorId": "F4",
+      "desks": 278,
+      "steadyMedian": 36,
+      "peakCalls": null,
+      "peakPhase": null,
+      "shot": null,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      },
+      "overviewSteady": 71,
+      "limit": 121,
+      "gate": 116,
+      "pass": true
+    },
+    "F12-perf": {
+      "quality": "perf",
+      "floorId": "F12",
+      "desks": 184,
+      "steadyMedian": 52,
+      "peakCalls": 99,
+      "peakPhase": "标签同步",
+      "shot": null,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      },
+      "overviewSteady": 71,
+      "limit": 121,
+      "gate": 116,
+      "pass": true
+    },
+    "F22-perf": {
+      "quality": "perf",
+      "floorId": "F22",
+      "desks": 160,
+      "steadyMedian": 73,
+      "peakCalls": 97,
+      "peakPhase": "标签同步",
+      "shot": null,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      },
+      "overviewSteady": 71,
+      "limit": 121,
+      "gate": 116,
+      "pass": true
+    }
+  },
+  "failures": [],
+  "ok": true
+}

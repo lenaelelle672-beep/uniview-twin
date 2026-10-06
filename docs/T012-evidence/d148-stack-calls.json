@@ -1,0 +1,275 @@
+{
+  "method": "D148",
+  "views": {
+    "f12-balanced": {
+      "quality": "balanced",
+      "floorId": "F12",
+      "animMs": 17574,
+      "peakCalls": 163,
+      "peakPhase": "标签同步",
+      "peak": {
+        "calls": 163,
+        "t": 26408.5,
+        "phase": "标签同步",
+        "labelsPresent": true,
+        "desks": 184,
+        "explode": 0
+      },
+      "steadyMedian": 131,
+      "steadyMin": 131,
+      "steadyMax": 131,
+      "steadyCount": 14,
+      "lastRenderCalls": 131,
+      "roomLabels": 2,
+      "minusLabels": 129,
+      "shadow": 34,
+      "main": 97,
+      "corridorPeople": 24,
+      "top": [
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 19,
+          "tris": 46971
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "shadow",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "(unnamed)",
+          "pass": "shadow",
+          "calls": 3,
+          "tris": 8232
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 172
+        },
+        {
+          "path": "tree_leaves_shadow",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 13560
+        },
+        {
+          "path": "FloorInterior/FloorCores",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 48
+        },
+        {
+          "path": "FloorInterior/FloorColumns",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 552
+        },
+        {
+          "path": "FloorInterior/FloorWalls",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 11136
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationDesks",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 22080
+        },
+        {
+          "path": "FloorInterior/Workstations/WorkstationChairs",
+          "pass": "shadow",
+          "calls": 2,
+          "tris": 8832
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 2,
+          "tris": 172
+        }
+      ],
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      },
+      "overviewSteady": 116,
+      "limit": 166,
+      "pass": true
+    },
+    "f12-perf": {
+      "quality": "perf",
+      "floorId": "F12",
+      "animMs": 7646,
+      "peakCalls": 74,
+      "peakPhase": "标签同步",
+      "peak": {
+        "calls": 74,
+        "t": 13858.6,
+        "phase": "标签同步",
+        "labelsPresent": true,
+        "desks": 184,
+        "explode": 0
+      },
+      "steadyMedian": 52,
+      "steadyMin": 52,
+      "steadyMax": 52,
+      "steadyCount": 25,
+      "lastRenderCalls": 52,
+      "roomLabels": 1,
+      "minusLabels": 51,
+      "shadow": 0,
+      "main": 52,
+      "corridorPeople": 0,
+      "top": [
+        {
+          "path": "(unnamed)",
+          "pass": "main",
+          "calls": 7,
+          "tris": 11022
+        },
+        {
+          "path": "Buildings/AboveGradeContext/EastBlock",
+          "pass": "main",
+          "calls": 4,
+          "tris": 350
+        },
+        {
+          "path": "Buildings/AboveGradeContext/Podium",
+          "pass": "main",
+          "calls": 2,
+          "tris": 172
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F12/RoomLabelBatch/RoomLabelBatchedText",
+          "pass": "main",
+          "calls": 2,
+          "tris": 412
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F11/FloorCurtain-F11",
+          "pass": "main",
+          "calls": 1,
+          "tris": 74
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F10/FloorCurtain-F10",
+          "pass": "main",
+          "calls": 1,
+          "tris": 74
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F9/FloorCurtain-F9",
+          "pass": "main",
+          "calls": 1,
+          "tris": 74
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F8/FloorCurtain-F8",
+          "pass": "main",
+          "calls": 1,
+          "tris": 74
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F7/FloorCurtain-F7",
+          "pass": "main",
+          "calls": 1,
+          "tris": 74
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F6/FloorCurtain-F6",
+          "pass": "main",
+          "calls": 1,
+          "tris": 74
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F5/FloorCurtain-F5",
+          "pass": "main",
+          "calls": 1,
+          "tris": 74
+        },
+        {
+          "path": "Buildings/Tower/FloorShell-F4/FloorCurtain-F4",
+          "pass": "main",
+          "calls": 1,
+          "tris": 74
+        }
+      ],
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0,
+        "items": []
+      },
+      "overviewSteady": 71,
+      "limit": 121,
+      "pass": true
+    }
+  },
+  "overview": {
+    "balanced": {
+      "quality": "balanced",
+      "view": "overview",
+      "steadyMedian": 116,
+      "steadyMin": 116,
+      "steadyMax": 116,
+      "steadyCount": 28,
+      "lastRenderCalls": 116,
+      "roomLabels": 0,
+      "limit": 166,
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      }
+    },
+    "perf": {
+      "quality": "perf",
+      "view": "overview",
+      "steadyMedian": 71,
+      "steadyMin": 71,
+      "steadyMax": 71,
+      "steadyCount": 53,
+      "lastRenderCalls": 71,
+      "roomLabels": 0,
+      "limit": 121,
+      "glProbe": {
+        "samples": 4,
+        "errors": [],
+        "samplesReliableOnSwiftShader": false
+      },
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "blit": 0
+      }
+    }
+  }
+}

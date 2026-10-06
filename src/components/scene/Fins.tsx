@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
-import { BoxGeometry, InstancedMesh, Object3D } from 'three'
+import { InstancedMesh, Object3D, PlaneGeometry } from 'three'
 import { finsAlong, type FinPoint } from '../../scene/massing'
 import { finMaterial } from '../../scene/materials'
 
@@ -9,7 +9,7 @@ export function FinRow({
   y,
   height,
   depth = 0.42,
-  thickness = 0.07,
+  thickness: _thickness = 0.07,
   outwardFrom,
 }: {
   points: Array<[number, number]>
@@ -21,7 +21,11 @@ export function FinRow({
   outwardFrom: [number, number]
 }) {
   const fins = useMemo(() => finsAlong(points, spacing, outwardFrom, depth * 0.45), [depth, outwardFrom, points, spacing])
-  const geometry = useMemo(() => new BoxGeometry(thickness, height, depth), [depth, height, thickness])
+  const geometry = useMemo(() => {
+    const plane = new PlaneGeometry(depth, height)
+    plane.rotateY(Math.PI)
+    return plane
+  }, [depth, height])
   const ref = useRef<InstancedMesh>(null)
 
   useLayoutEffect(() => {

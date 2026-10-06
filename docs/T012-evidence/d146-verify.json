@@ -1,0 +1,105 @@
+{
+  "floors": {
+    "F4": {
+      "view": "floor",
+      "selected": "F4",
+      "desks": 278,
+      "pageErrors": []
+    },
+    "F12": {
+      "view": "floor",
+      "selected": "F12",
+      "desks": 184,
+      "pageErrors": []
+    },
+    "F22": {
+      "view": "floor",
+      "selected": "F22",
+      "desks": 160,
+      "pageErrors": []
+    }
+  },
+  "switches": [
+    {
+      "label": "cold-balanced",
+      "calls": 116,
+      "memory": {
+        "textures": 21,
+        "geometries": 76,
+        "programs": 34
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c1",
+      "calls": 116,
+      "memory": {
+        "textures": 21,
+        "geometries": 78,
+        "programs": 45
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c2",
+      "calls": 116,
+      "memory": {
+        "textures": 21,
+        "geometries": 78,
+        "programs": 45
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c3",
+      "calls": 116,
+      "memory": {
+        "textures": 21,
+        "geometries": 78,
+        "programs": 45
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c4",
+      "calls": 116,
+      "memory": {
+        "textures": 21,
+        "geometries": 78,
+        "programs": 45
+      },
+      "quality": "balanced"
+    },
+    {
+      "label": "c5",
+      "calls": 116,
+      "memory": {
+        "textures": 21,
+        "geometries": 78,
+        "programs": 45
+      },
+      "quality": "balanced"
+    }
+  ],
+  "failures": [],
+  "switchHold": {
+    "c2": {
+      "textures": 21,
+      "geometries": 78,
+      "programs": 45
+    },
+    "c5": {
+      "textures": 21,
+      "geometries": 78,
+      "programs": 45
+    },
+    "hold": true
+  },
+  "console": {
+    "errors": 0,
+    "warnings": 0,
+    "blit": 0,
+    "items": []
+  },
+  "ok": true
+}

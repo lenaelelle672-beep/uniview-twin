@@ -1,0 +1,56 @@
+{
+  "head": "66d9d154645911eb822c06c9562b0399e5ad8b6c",
+  "merged": {
+    "a": "2d36d8dbb4bdcfbb0b7fba71b6fc29ac3a9d2b4f",
+    "aBranch": "cursor/a-floor-interiors-1005",
+    "b": "35c13fc0aa9cc49a80cca9703da1c159b2e3c6ec",
+    "bBranch": "cursor/b-shell-grille-1005"
+  },
+  "conflicts": {
+    "a": {
+      "files": ["package-lock.json", "src/scene/stage/FloorStage.tsx", "src/vite-env.d.ts"],
+      "keep": "JsonFloorInterior/prefetch follow a; MonitorSamples and MONITOR_DISPLAY_COLOR follow c; vite-env keeps both hooks"
+    },
+    "b": {
+      "files": ["docs/d120-prefetch-after-first-frame.md", "src/components/scene/RenderProbe.tsx", "src/scene/stage/FloorStage.tsx", "src/scene/stage/stage.test.ts", "src/vite-env.d.ts"],
+      "keep": "prefetch doc ours; RenderProbe = b pick/raycast/grille + c devices/memory/frameWatch; FloorStage keeps a interiors + c alarms + b pick layer; stage.test keeps both imports"
+    }
+  },
+  "fixes": {
+    "materials": "constructor 0.2 / model 0.08 / night 0.1 / day 0.15",
+    "floorStage": "MonitorSamples slots empty until isFloorHydrated"
+  },
+  "gateFilesVsD": {
+    "overviewReady.ts": "identical",
+    "prefetchLazyChunks.ts": "identical",
+    "LocalEnvironment.tsx": "identical",
+    "InstancedProp.tsx": "identical"
+  },
+  "selfCheck": {
+    "base": "d196dc0",
+    "order": ["a2f6121", "63764e3", "2d36d8d", "35c13fc", "66d9d15"],
+    "lastMergeConflict": false,
+    "note": "last merge of c HEAD was clean after b resolution already carried hydrate FloorStage/stage.test",
+    "floors": { "F4": 278, "F12": 184, "F22": 160, "pageErrors": 0 }
+  },
+  "gzip9": {
+    "hardGate": 434890,
+    "hardGateLimit": 436361,
+    "balancedFx": 101114,
+    "main": 398724,
+    "perfFirst": 421313,
+    "perfFx": false,
+    "treeLoInFirstScreen": true
+  },
+  "switch": {
+    "c1": { "textures": 21, "geometries": 78, "programs": 45 },
+    "c2": { "textures": 21, "geometries": 78, "programs": 45 },
+    "c5": { "textures": 21, "geometries": 78, "programs": 45 },
+    "hold": true,
+    "c1VsCold": "geo 76→78 prog 34→45 first compile"
+  },
+  "console": { "errors": 0, "warnings": 0, "blit": 0 },
+  "tsc": true,
+  "vitest": "139 passed",
+  "build": true
+}

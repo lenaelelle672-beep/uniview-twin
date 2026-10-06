@@ -1,0 +1,990 @@
+{
+  "baseUrl": "http://127.0.0.1:5190",
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "rounds": [
+    {
+      "label": "normal-1",
+      "treeLo": 1812.0999999996275,
+      "hdrLoaded": 762.0999999996275,
+      "hdrReady": 794,
+      "ready": 1820.300000000745,
+      "firstFrame": 2192.300000000745,
+      "firstFrameUnix": 1791188624823,
+      "prefetch": 8217.900000000373,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 703.5,
+          "beforeReady": true,
+          "deltaMs": -1116.800000000745
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 99.80000000074506,
+          "beforeReady": true,
+          "deltaMs": -1720.5
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 624.6999999992549,
+          "beforeReady": true,
+          "deltaMs": -1195.6000000014901
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 101.59999999962747,
+          "beforeReady": true,
+          "deltaMs": -1718.7000000011176
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 47.90000000037253,
+          "beforeReady": true,
+          "deltaMs": -1772.4000000003725
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 3018,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 8218.699999999255,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.28732665249519185,
+        "buildingRatio": 0.4806660593177447,
+        "meanL": 166.5118664287509,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 2.095951589857526,
+        "diffRatio": 0.06338613133132118,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 6027.3779296875
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 6027.519775390625
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 6027.588134765625
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    },
+    {
+      "label": "normal-2",
+      "treeLo": 698,
+      "hdrLoaded": 756.8000000007451,
+      "hdrReady": 803.6000000014901,
+      "ready": 807.7000000011176,
+      "firstFrame": 2238.10000000149,
+      "firstFrameUnix": 1791188644372,
+      "prefetch": 8207.5,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 698.8000000007451,
+          "beforeReady": true,
+          "deltaMs": -108.90000000037253
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 99.80000000074506,
+          "beforeReady": true,
+          "deltaMs": -707.9000000003725
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 617,
+          "beforeReady": true,
+          "deltaMs": -190.7000000011176
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 100,
+          "beforeReady": true,
+          "deltaMs": -707.7000000011176
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 46.70000000111759,
+          "beforeReady": true,
+          "deltaMs": -761
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 2240.9000000003725,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 8207.900000000373,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.28732665249519185,
+        "buildingRatio": 0.4806660593177447,
+        "meanL": 166.5118664287509,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 2.095951589857526,
+        "diffRatio": 0.06338613133132118,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 5969.718994140625
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 5969.839111328125
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 5969.927978515625
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    },
+    {
+      "label": "normal-3",
+      "treeLo": 715.7000000011176,
+      "hdrLoaded": 763,
+      "hdrReady": 811.7000000011176,
+      "ready": 814.1000000014901,
+      "firstFrame": 2235.2000000011176,
+      "firstFrameUnix": 1791188663840,
+      "prefetch": 7233.60000000149,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 700.4000000003725,
+          "beforeReady": true,
+          "deltaMs": -113.70000000111759
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 105.90000000037253,
+          "beforeReady": true,
+          "deltaMs": -708.2000000011176
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 626.2000000011176,
+          "beforeReady": true,
+          "deltaMs": -187.90000000037253
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 106.10000000149012,
+          "beforeReady": true,
+          "deltaMs": -708
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 50.600000001490116,
+          "beforeReady": true,
+          "deltaMs": -763.5
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 2237.60000000149,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 7233.800000000745,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.28732665249519185,
+        "buildingRatio": 0.4806660593177447,
+        "meanL": 166.5118664287509,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 2.095951589857526,
+        "diffRatio": 0.06338613133132118,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 4999.139892578125
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 5000.39501953125
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 5002.717041015625
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    },
+    {
+      "label": "cpu-x8-1",
+      "treeLo": 3127.699999999255,
+      "hdrLoaded": 1636.8999999985099,
+      "hdrReady": 1770.5,
+      "ready": 3200.89999999851,
+      "firstFrame": 3723.0999999996275,
+      "firstFrameUnix": 1791188683798,
+      "prefetch": 12850.099999999627,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 1226.5,
+          "beforeReady": true,
+          "deltaMs": -1974.3999999985099
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 339,
+          "beforeReady": true,
+          "deltaMs": -2861.89999999851
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 1117.5999999996275,
+          "beforeReady": true,
+          "deltaMs": -2083.2999999988824
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 341.69999999925494,
+          "beforeReady": true,
+          "deltaMs": -2859.199999999255
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 79.19999999925494,
+          "beforeReady": true,
+          "deltaMs": -3121.699999999255
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 3748,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 12851.699999999255,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.28732665249519185,
+        "buildingRatio": 0.4806660593177447,
+        "meanL": 166.5118664287509,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 2.095951589857526,
+        "diffRatio": 0.06338613133132118,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 9129.153076171875
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 9130.950927734375
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 9131.80908203125
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    },
+    {
+      "label": "cpu-x8-2",
+      "treeLo": 3416.2999999988824,
+      "hdrLoaded": 1862.5999999996275,
+      "hdrReady": 2017.5,
+      "ready": 3512.7999999988824,
+      "firstFrame": 4044.2999999988824,
+      "firstFrameUnix": 1791188712146,
+      "prefetch": 14446.5,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 1430.2999999988824,
+          "beforeReady": true,
+          "deltaMs": -2082.5
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 440.5,
+          "beforeReady": true,
+          "deltaMs": -3072.2999999988824
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 1303.7999999988824,
+          "beforeReady": true,
+          "deltaMs": -2209
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 443.69999999925494,
+          "beforeReady": true,
+          "deltaMs": -3069.0999999996275
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 74.69999999925494,
+          "beforeReady": true,
+          "deltaMs": -3438.0999999996275
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 4072.9000000003725,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 14448.599999999627,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.28732665249519185,
+        "buildingRatio": 0.4806660593177447,
+        "meanL": 166.5118664287509,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 2.095951589857526,
+        "diffRatio": 0.06338613133132118,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 10404.653076171875
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 10404.800048828125
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 10404.89697265625
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    },
+    {
+      "label": "cpu-x8-3",
+      "treeLo": 3285.800000000745,
+      "hdrLoaded": 1741.9000000003725,
+      "hdrReady": 1903.7000000011176,
+      "ready": 3372.7000000011176,
+      "firstFrame": 3890,
+      "firstFrameUnix": 1791188741049,
+      "prefetch": 14444.200000001118,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 1331.0999999996275,
+          "beforeReady": true,
+          "deltaMs": -2041.6000000014901
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 435.09999999962747,
+          "beforeReady": true,
+          "deltaMs": -2937.60000000149
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 1223.5999999996275,
+          "beforeReady": true,
+          "deltaMs": -2149.10000000149
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 435.2000000011176,
+          "beforeReady": true,
+          "deltaMs": -2937.5
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 71.90000000037253,
+          "beforeReady": true,
+          "deltaMs": -3300.800000000745
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 3921.5999999996275,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 14445.800000000745,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.28732665249519185,
+        "buildingRatio": 0.4806660593177447,
+        "meanL": 166.5118664287509,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 2.095951589857526,
+        "diffRatio": 0.06338613133132118,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 10556.0361328125
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 10558.009033203125
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 10559.64892578125
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    },
+    {
+      "label": "fast3g-1",
+      "treeLo": 4080.2999999988824,
+      "hdrLoaded": 10506.400000000373,
+      "hdrReady": 10701.900000000373,
+      "ready": 10701.900000000373,
+      "firstFrame": 12201.799999998882,
+      "firstFrameUnix": 1791188778509,
+      "prefetch": 18053,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 10140.5,
+          "beforeReady": true,
+          "deltaMs": -561.4000000003725
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 3988.2999999988824,
+          "beforeReady": true,
+          "deltaMs": -6713.60000000149
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 4919,
+          "beforeReady": true,
+          "deltaMs": -5782.9000000003725
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 4044.5999999996275,
+          "beforeReady": true,
+          "deltaMs": -6657.300000000745
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 3289.699999999255,
+          "beforeReady": true,
+          "deltaMs": -7412.200000001118
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 12204.199999999255,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 18053.599999999627,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.2822907176839761,
+        "buildingRatio": 0.0953031683368762,
+        "meanL": 165.84358966495492,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 0,
+        "diffRatio": 0,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 5852.56787109375
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 5852.68994140625
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 5852.783935546875
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    },
+    {
+      "label": "fast3g-2",
+      "treeLo": 4075.39999999851,
+      "hdrLoaded": 10498.299999998882,
+      "hdrReady": 10688.099999999627,
+      "ready": 10688.099999999627,
+      "firstFrame": 12174.099999999627,
+      "firstFrameUnix": 1791188808501,
+      "prefetch": 17821,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 10139.5,
+          "beforeReady": true,
+          "deltaMs": -548.5999999996275
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 3989.2999999988824,
+          "beforeReady": true,
+          "deltaMs": -6698.800000000745
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 4918.5,
+          "beforeReady": true,
+          "deltaMs": -5769.5999999996275
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 4038.699999999255,
+          "beforeReady": true,
+          "deltaMs": -6649.4000000003725
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 3274.0999999996275,
+          "beforeReady": true,
+          "deltaMs": -7414
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 12176.199999999255,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 17821.39999999851,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.2822907176839761,
+        "buildingRatio": 0.0953031683368762,
+        "meanL": 165.84358966495492,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 0,
+        "diffRatio": 0,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 5647.8330078125
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 5647.960205078125
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 5648.072021484375
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    },
+    {
+      "label": "fast3g-3",
+      "treeLo": 4070.5,
+      "hdrLoaded": 10522.599999999627,
+      "hdrReady": 10726,
+      "ready": 10726,
+      "firstFrame": 12230.700000001118,
+      "firstFrameUnix": 1791188837346,
+      "prefetch": 17952.700000001118,
+      "readyFlag": true,
+      "calls": 120,
+      "resources": {
+        "hdr": {
+          "path": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+          "responseEnd": 10116.099999999627,
+          "beforeReady": true,
+          "deltaMs": -609.9000000003725
+        },
+        "treeLo": {
+          "path": "/models/street-tree-lo.glb",
+          "responseEnd": 3973.300000000745,
+          "beforeReady": true,
+          "deltaMs": -6752.699999999255
+        },
+        "treeHi": {
+          "path": "/models/street-tree-hi.glb",
+          "responseEnd": 4910.700000001118,
+          "beforeReady": true,
+          "deltaMs": -5815.299999998882
+        },
+        "roofSign": {
+          "path": "/models/roof-sign.glb",
+          "responseEnd": 4028.800000000745,
+          "beforeReady": true,
+          "deltaMs": -6697.199999999255
+        },
+        "mainChunk": {
+          "path": "/assets/index-lluB4Vxv.js",
+          "responseEnd": 3273.9000000003725,
+          "beforeReady": true,
+          "deltaMs": -7452.0999999996275
+        }
+      },
+      "interiorsAfterReady": [
+        {
+          "path": "/assets/MonitorSamples-Br9IXFhG.js",
+          "startTime": 12232.700000001118,
+          "afterReady": true
+        },
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "startTime": 17952.900000000373,
+          "afterReady": true
+        }
+      ],
+      "order": {
+        "treeLoFinishBeforeReady": true,
+        "treeHiFinishBeforeReady": true,
+        "hdrFinishBeforeReady": true,
+        "roofSignBeforeReady": true,
+        "mainChunkBeforeReady": true,
+        "hdrMarkBeforeReady": true,
+        "pmremBeforeReady": true,
+        "treeLoMarkBeforeReady": true,
+        "readyBeforeFirst": true,
+        "firstBeforePrefetch": true,
+        "prefetchRequestsAfterFirst": true
+      },
+      "orderOk": true,
+      "firstFramePixels": {
+        "width": 886,
+        "height": 712,
+        "emptyRatio": 0,
+        "darkRatio": 0,
+        "greenRatio": 0.2822907176839761,
+        "buildingRatio": 0.0953031683368762,
+        "meanL": 165.84358966495492,
+        "hasTrees": true,
+        "hasEnvLight": true
+      },
+      "lowerHalf": {
+        "mad": 0,
+        "diffRatio": 0,
+        "pixels": 315416
+      },
+      "prefetchDelta": [
+        {
+          "path": "/assets/floorDecor-CvYkKtlG.js",
+          "afterFirstFrameMs": 5722.696044921875
+        },
+        {
+          "path": "/assets/textRuntime-DLz2qvDb.js",
+          "afterFirstFrameMs": 5722.797119140625
+        },
+        {
+          "path": "/assets/BlueprintView-CsyjAcFc.js",
+          "afterFirstFrameMs": 5722.87890625
+        }
+      ],
+      "requestedBalancedFx": true,
+      "console": {
+        "errors": 0,
+        "warnings": 0,
+        "items": []
+      },
+      "external": [],
+      "ok": true
+    }
+  ],
+  "allOrderOk": true,
+  "allFirstFrameOk": true,
+  "allResourcesBeforeReady": true,
+  "console": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "external": [],
+  "ok": true
+}

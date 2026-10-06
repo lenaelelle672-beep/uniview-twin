@@ -1,0 +1,267 @@
+{
+  "views": {
+    "overview-balanced": {
+      "calls": 120,
+      "triangles": 71625,
+      "memory": {
+        "textures": 20,
+        "geometries": 76,
+        "programs": 38
+      },
+      "quality": "balanced",
+      "composerLive": true,
+      "shot": "/workspace/docs/T012-evidence/d138-overview-balanced.png",
+      "balancedFx": 1,
+      "external": [],
+      "errors": 0,
+      "warnings": 0,
+      "consoles": []
+    },
+    "overview-perf": {
+      "calls": 73,
+      "triangles": 16828,
+      "memory": {
+        "textures": 3,
+        "geometries": 72,
+        "programs": 15
+      },
+      "quality": "perf",
+      "composerLive": false,
+      "shot": "/workspace/docs/T012-evidence/d138-overview-perf.png",
+      "balancedFx": 0,
+      "external": [],
+      "errors": 0,
+      "warnings": 0,
+      "consoles": []
+    }
+  },
+  "alarms": {
+    "f12-balanced": {
+      "calls": 123,
+      "triangles": 118923,
+      "memory": {
+        "textures": 20,
+        "geometries": 59,
+        "programs": 45
+      },
+      "quality": "balanced",
+      "composerLive": true,
+      "deskIds": {
+        "alarm": "F12-74",
+        "online": "F12-41"
+      },
+      "alarm": {
+        "r": 248.13368983957218,
+        "g": 109.28609625668449,
+        "b": 96.46791443850267,
+        "L": 0.3183249949352275
+      },
+      "online": {
+        "r": 28.972631578947368,
+        "g": 107.14736842105263,
+        "b": 68.32,
+        "L": 0.11228232260321483
+      },
+      "ratio": 2.8350410603824945,
+      "hsv": {
+        "h": 5.070958870299523,
+        "s": 0.6112260511626904,
+        "v": 0.9730732934885183
+      },
+      "hueStillRed": true,
+      "shot": "/workspace/docs/T012-evidence/d138-f12-balanced.png",
+      "balancedFx": 1,
+      "external": [],
+      "errors": 0,
+      "warnings": 0,
+      "consoles": []
+    },
+    "f12-perf": {
+      "calls": 42,
+      "triangles": 15066,
+      "memory": {
+        "textures": 2,
+        "geometries": 40,
+        "programs": 12
+      },
+      "quality": "perf",
+      "composerLive": false,
+      "deskIds": {
+        "alarm": "F12-74",
+        "online": "F12-41"
+      },
+      "alarm": {
+        "r": 248.9090909090909,
+        "g": 109.4572192513369,
+        "b": 96.41711229946524,
+        "L": 0.32010355304300075
+      },
+      "online": {
+        "r": 29.021052631578947,
+        "g": 107.20210526315789,
+        "b": 68.4042105263158,
+        "L": 0.11241409588393056
+      },
+      "ratio": 2.847539274554261,
+      "hsv": {
+        "h": 5.130803759293027,
+        "s": 0.6126412581102565,
+        "v": 0.9761140819964349
+      },
+      "hueStillRed": true,
+      "shot": "/workspace/docs/T012-evidence/d138-f12-perf.png",
+      "balancedFx": 0,
+      "external": [],
+      "errors": 0,
+      "warnings": 0,
+      "consoles": []
+    }
+  },
+  "occlusion": {
+    "f12-slab-balanced": {
+      "shot": "/workspace/docs/T012-evidence/d138-occlusion-f12-slab-balanced.png",
+      "calls": 167,
+      "triangles": 176243,
+      "memory": {
+        "textures": 34,
+        "geometries": 69,
+        "programs": 49
+      },
+      "quality": "balanced",
+      "composerLive": true
+    },
+    "f12-behind-column-balanced": {
+      "shot": "/workspace/docs/T012-evidence/d138-occlusion-f12-behind-column-balanced.png",
+      "calls": 152,
+      "triangles": 176047,
+      "memory": {
+        "textures": 34,
+        "geometries": 70,
+        "programs": 49
+      },
+      "quality": "balanced",
+      "composerLive": true
+    },
+    "f12-slab-perf": {
+      "shot": "/workspace/docs/T012-evidence/d138-occlusion-f12-slab-perf.png",
+      "calls": 70,
+      "triangles": 28906,
+      "memory": {
+        "textures": 4,
+        "geometries": 62,
+        "programs": 17
+      },
+      "quality": "perf",
+      "composerLive": false
+    },
+    "f12-behind-column-perf": {
+      "shot": "/workspace/docs/T012-evidence/d138-occlusion-f12-behind-column-perf.png",
+      "calls": 53,
+      "triangles": 27436,
+      "memory": {
+        "textures": 4,
+        "geometries": 63,
+        "programs": 17
+      },
+      "quality": "perf",
+      "composerLive": false
+    }
+  },
+  "switches": [
+    {
+      "label": "性能(冷启动)",
+      "calls": 73,
+      "triangles": 16828,
+      "memory": {
+        "textures": 3,
+        "geometries": 72,
+        "programs": 15
+      },
+      "quality": "perf",
+      "composerLive": false
+    },
+    {
+      "label": "均衡",
+      "calls": 120,
+      "triangles": 71625,
+      "memory": {
+        "textures": 20,
+        "geometries": 77,
+        "programs": 51
+      },
+      "quality": "balanced",
+      "composerLive": true
+    },
+    {
+      "label": "性能",
+      "calls": 73,
+      "triangles": 16828,
+      "memory": {
+        "textures": 6,
+        "geometries": 76,
+        "programs": 49
+      },
+      "quality": "perf",
+      "composerLive": false
+    },
+    {
+      "label": "均衡",
+      "calls": 120,
+      "triangles": 71625,
+      "memory": {
+        "textures": 20,
+        "geometries": 77,
+        "programs": 53
+      },
+      "quality": "balanced",
+      "composerLive": true
+    },
+    {
+      "label": "性能",
+      "calls": 73,
+      "triangles": 16828,
+      "memory": {
+        "textures": 18,
+        "geometries": 76,
+        "programs": 51
+      },
+      "quality": "perf",
+      "composerLive": false
+    },
+    {
+      "label": "均衡",
+      "calls": 120,
+      "triangles": 71625,
+      "memory": {
+        "textures": 20,
+        "geometries": 77,
+        "programs": 53
+      },
+      "quality": "balanced",
+      "composerLive": true
+    }
+  ],
+  "failures": [],
+  "switchHold": {
+    "first": {
+      "textures": 20,
+      "geometries": 77,
+      "programs": 51
+    },
+    "fifth": {
+      "textures": 20,
+      "geometries": 77,
+      "programs": 53
+    },
+    "texturesHold": true,
+    "geometriesHold": true
+  },
+  "switchNet": {
+    "balancedFx": 1,
+    "external": [],
+    "errors": 0,
+    "warnings": 0,
+    "consoles": []
+  },
+  "ok": true
+}

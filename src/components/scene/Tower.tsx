@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
-import { BoxGeometry } from 'three'
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
-import { listFloorSpecs, TOWER_ROOF_M } from '../../data/floors'
+import { listFloorSpecs } from '../../data/floors'
+import { TOWER_PARAPET_TOP_M, TOWER_ROOF_M } from '../../data/levels'
+import { extrudeUp } from '../../scene/extrude'
 import {
   curtainMaterial,
   grilleMaterial,
@@ -10,42 +10,29 @@ import {
   jointMaterial,
   solidMaterial,
 } from '../../scene/materials'
+import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
+import { createRingBand, TOWER_BAND } from '../../scene/shell/facade'
+import { TOWER_OUTLINE_OVERVIEW } from '../../scene/shell/rings'
 import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
-import { TOWER } from '../../scene/siteGeometry'
 import { createTowerGlass } from '../../scene/towerGlass'
 import { useTwinStore } from '../../store/store'
 import { RoofSign } from './RoofSign'
-import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
 import { useFloorActions } from './floorPick'
 
-const BAND = 0.78
-const WIDTH = TOWER.maxX - TOWER.minX
-const DEPTH = TOWER.maxZ - TOWER.minZ
-
-function mergeParts(parts: BoxGeometry[]) {
-  const merged = mergeGeometries(parts)
-  parts.forEach((geometry) => geometry.dispose())
-  if (!merged) throw new Error('楼层几何为空')
-  return merged
-}
-
-function makeBand(elevation: number) {
-  const y = elevation + BAND / 2
-  const thickness = 0.28
-  const south = new BoxGeometry(WIDTH + 0.24, BAND, thickness)
-  south.translate(0, y, TOWER.maxZ + thickness / 2)
-  const north = new BoxGeometry(WIDTH + 0.24, BAND, thickness)
-  north.translate(0, y, TOWER.minZ - thickness / 2)
-  const east = new BoxGeometry(thickness, BAND, DEPTH + 0.24)
-  east.translate(TOWER.maxX + thickness / 2, y, 0)
-  const west = new BoxGeometry(thickness, BAND, DEPTH + 0.24)
-  west.translate(TOWER.minX - thickness / 2, y, 0)
-  return mergeParts([south, north, east, west])
-}
-
-function FloorShell({ id, elevation, height }: { id: string; elevation: number; height: number }) {
+function FloorShell({
+  id,
+  elevation,
+  height,
+}: {
+  id: string
+  elevation: number
+  height: number
+}) {
   const glass = useMemo(() => createTowerGlass(elevation, height), [elevation, height])
-  const band = useMemo(() => makeBand(elevation), [elevation])
+  const band = useMemo(
+    () => createRingBand(TOWER_OUTLINE_OVERVIEW, elevation + TOWER_BAND / 2, TOWER_BAND),
+    [elevation],
+  )
   const hidden = useTwinStore((state) => isFloorShellHidden(state.view, state.selectedFloor, elevation))
   const opened = useTwinStore((state) => isFloorCurtainOpen(state.view, state.selectedFloor, id))
   const selected = useTwinStore((state) => state.view === 'building' && state.selectedFloor === id)
@@ -71,33 +58,24 @@ function FloorShell({ id, elevation, height }: { id: string; elevation: number; 
   )
 }
 
-function makeParapet() {
-  const height = 4
-  const thickness = 0.36
-  const y = TOWER_ROOF_M + height / 2
-  const south = new BoxGeometry(WIDTH + 0.8, height, thickness)
-  south.translate(0, y, TOWER.maxZ + 0.1 + thickness / 2)
-  const north = new BoxGeometry(WIDTH + 0.8, height, thickness)
-  north.translate(0, y, TOWER.minZ - 0.1 - thickness / 2)
-  const east = new BoxGeometry(thickness, height, DEPTH + 0.8)
-  east.translate(TOWER.maxX + 0.1 + thickness / 2, y, 0)
-  const west = new BoxGeometry(thickness, height, DEPTH + 0.8)
-  west.translate(TOWER.minX - 0.1 - thickness / 2, y, 0)
-  return mergeParts([south, north, east, west])
+function roofSignPose(): [number, number, number] {
+  const southWest: [number, number] = [-21.6806, 17.1003]
+  return [southWest[0] + 7.5 + 1.4, TOWER_ROOF_M, southWest[1] + 0.1 + 0.36 + 0.03]
 }
 
 export function Tower({ night }: { night: boolean }) {
   const floors = useMemo(() => listFloorSpecs().filter((floor) => floor.level >= 1), [])
   const roofHidden = useTwinStore((state) => isRoofHidden(state.view, state.selectedFloor))
-  const parapet = useMemo(() => makeParapet(), [])
+  const parapet = useMemo(() => {
+    const height = TOWER_PARAPET_TOP_M - TOWER_ROOF_M
+    return createRingBand(TOWER_OUTLINE_OVERVIEW, TOWER_ROOF_M + height / 2, height, 0.36, 0.1, 'outer-top')
+  }, [])
   const roof = useMemo(() => {
-    const geometry = new BoxGeometry(WIDTH - 0.6, 0.35, DEPTH - 0.6)
-    geometry.translate(0, TOWER_ROOF_M - 0.175, 0)
+    const geometry = extrudeUp(TOWER_OUTLINE_OVERVIEW, 0.35, [], 'top')
+    geometry.translate(0, TOWER_ROOF_M - 0.35, 0)
     return geometry
   }, [])
-  // v2 宽 15 m、高 3 m，局部底边 y=0、字面朝 +Z。贴南侧女儿墙外皮靠西端，底边与屋面齐平。
-  const signZ = TOWER.maxZ + 0.1 + 0.36 + 0.03
-  const signX = TOWER.minX + 7.5 + 1.4
+  const sign = roofSignPose()
 
   return (
     <group name="Tower">
@@ -107,7 +85,7 @@ export function Tower({ night }: { night: boolean }) {
       <group name="RoofAssembly" visible={!roofHidden}>
         <mesh geometry={roof} material={solidMaterial} castShadow receiveShadow />
         <mesh name="RoofParapet" geometry={parapet} material={grilleMaterial} castShadow receiveShadow />
-        <RoofSign night={night} position={[signX, TOWER_ROOF_M, signZ]} />
+        <RoofSign night={night} position={sign} />
       </group>
     </group>
   )
