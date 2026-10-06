@@ -44,9 +44,9 @@
 }
 
 .app:has(.floor-panel.is-strip) .alarm-drawer.is-floor-collapsed {
-  left: 56px;
-  inset-inline-start: 56px;
-  width: min(560px, calc(100vw - 56px - 248px - 12px));
+  left: 68px;
+  inset-inline-start: 68px;
+  width: min(560px, calc(100vw - 68px - 248px - 12px));
 }
 
 @media (max-width: 1280px) {

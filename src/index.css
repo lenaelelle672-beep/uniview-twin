@@ -222,12 +222,17 @@ button {
   overflow: hidden;
 }
 
+.floor-panel.is-overview-compact,
+.floor-panel.is-strip {
+  align-self: stretch;
+}
+
 .floor-panel.is-overview-compact {
   width: 96px;
 }
 
 .floor-panel.is-strip {
-  width: 56px;
+  width: 68px;
   overflow: hidden;
 }
 
@@ -239,6 +244,8 @@ button {
 
 .floor-panel.is-overview-compact .floor-items,
 .floor-panel.is-strip .floor-items {
+  flex: 1 1 0;
+  min-height: 0;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -251,11 +258,14 @@ button {
   flex: 1 1 0;
   min-height: 0;
   margin: 0;
-  padding: 0 6px;
+  padding: 0 4px;
   display: flex;
   align-items: center;
   gap: 4px;
   border-radius: 4px;
+  font-size: 11px;
+  line-height: 1.15;
+  overflow: hidden;
 }
 
 .floor-panel.is-overview-compact .floor-name,

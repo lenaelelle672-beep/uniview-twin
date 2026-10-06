@@ -174,6 +174,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       sample.set(label.label[0], label.label[1], label.label[2])
       host?.localToWorld(sample)
       sample.project(perspective)
+      if (!Number.isFinite(sample.x) || sample.z > 1 || Math.abs(sample.x) > 1.25 || Math.abs(sample.y) > 1.25) {
+        continue
+      }
       const sx = (sample.x * 0.5 + 0.5) * size.width
       const sy = (-sample.y * 0.5 + 0.5) * size.height
       const box = labelScreenBox(label.text, Math.max(px, LABEL_MIN_PX))
@@ -208,6 +211,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     }
     const byId: LabelPackState['byId'] = {}
     const clusters: LabelPackState['clusters'] = {}
+    for (const label of labels) {
+      byId[label.id] = { visible: false, cluster: null, offsetX: 0, offsetY: 0 }
+    }
     for (const row of avoided.placements) byId[row.id] = row
     for (const cluster of avoided.clusters) clusters[cluster.key] = true
     packRef.current = { byId, clusters }

@@ -1,8 +1,8 @@
 /** 屏幕空间贪心避让。参照 MapLibre symbol-sort-key / variable-anchor / padding，约 60 行。 */
 
 export const LABEL_MAX_EMS = 6
-const PAD = 2
-const SHIFT = 10
+const PAD = 4
+const SHIFT = 14
 const ANCHORS: Array<[number, number]> = [
   [0, 0],
   [0, -1],
@@ -78,7 +78,7 @@ export interface LabelPackState {
 export function labelScreenBox(text: string, px: number): { w: number; h: number } {
   const em = Math.max(px, 1)
   const maxW = LABEL_MAX_EMS * em
-  const raw = Math.max(text.length, 1) * em * 0.98
+  const raw = Math.max(text.length, 1) * em * 1.05
   const w = Math.min(maxW, raw) + PAD * 2
   const lines = Math.min(2, Math.max(1, Math.ceil(raw / maxW)))
   return { w, h: lines * em * 1.2 + PAD * 2 }
@@ -107,6 +107,12 @@ function firstFree(item: AvoidItem, occupied: AvoidBox[], shift = SHIFT): { box:
   return null
 }
 
+function sameNameNear(a: AvoidItem, b: AvoidItem): boolean {
+  if (a.text !== b.text) return false
+  const reach = Math.max(a.w, b.w, a.h, b.h) * 1.15
+  return boxesOverlap(boxAt(a, 0, 0), boxAt(b, 0, 0)) || Math.hypot(a.x - b.x, a.y - b.y) < reach
+}
+
 export function avoidLabels(items: readonly AvoidItem[]): AvoidResult {
   const sorted = items.slice().sort((a, b) => a.priority - b.priority || b.area - a.area || a.id.localeCompare(b.id))
   const placements: AvoidPlacement[] = []
@@ -127,9 +133,7 @@ export function avoidLabels(items: readonly AvoidItem[]): AvoidResult {
       continue
     }
 
-    const mates = sorted.filter(
-      (other) => other.id !== item.id && other.text === item.text && boxesOverlap(boxAt(item, 0, 0), boxAt(other, 0, 0)),
-    )
+    const mates = sorted.filter((other) => other.id !== item.id && sameNameNear(item, other))
     if (mates.length > 0) {
       const group = [item, ...mates.filter((row) => !claimed.has(row.id) || placements.some((p) => p.id === row.id && !p.cluster))]
       for (const row of group) {
@@ -183,10 +187,37 @@ export function avoidLabels(items: readonly AvoidItem[]): AvoidResult {
     placements.push({ id: item.id, visible: false, cluster: null, offsetX: 0, offsetY: 0, box: boxAt(item, 0, 0) })
   }
 
-  const visibleBoxes = [
-    ...placements.filter((row) => row.visible).map((row) => row.box),
-    ...clusters.map((row) => row.box),
+  const locked = new Set(items.filter((item) => item.locked).map((item) => item.id))
+  const vis = () => [
+    ...placements.filter((row) => row.visible).map((row) => ({ id: row.id, box: row.box, cluster: false })),
+    ...clusters.map((row) => ({ id: `cluster:${row.key}`, box: row.box, cluster: true })),
   ]
+  for (let pass = 0; pass < 4; pass += 1) {
+    const shown = vis()
+    let changed = false
+    for (let i = 0; i < shown.length; i += 1) {
+      for (let j = i + 1; j < shown.length; j += 1) {
+        if (!boxesOverlap(shown[i].box, shown[j].box, 0)) continue
+        const drop = !locked.has(shown[j].id) ? shown[j] : !locked.has(shown[i].id) ? shown[i] : null
+        if (!drop) continue
+        if (drop.cluster) {
+          const key = drop.id.slice('cluster:'.length)
+          const index = clusters.findIndex((row) => row.key === key)
+          if (index >= 0) clusters.splice(index, 1)
+          for (const row of placements) {
+            if (row.cluster === key) row.cluster = null
+          }
+        } else {
+          const row = placements.find((item) => item.id === drop.id)
+          if (row) row.visible = false
+        }
+        changed = true
+      }
+    }
+    if (!changed) break
+  }
+
+  const visibleBoxes = vis().map((row) => row.box)
   let overlapPairs = 0
   for (let i = 0; i < visibleBoxes.length; i += 1) {
     for (let j = i + 1; j < visibleBoxes.length; j += 1) {
