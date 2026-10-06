@@ -73,7 +73,6 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const [prefetchDone, setPrefetchDone] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const [loopOn, setLoopOn] = useState(false)
-  const view = useTwinStore((state) => state.view)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
@@ -176,7 +175,6 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         )}
         <ExplodedLayout />
         <FloorStage />
-        {view === 'building' && <BadgeHud />}
         <RenderProbe />
       </Suspense>
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景。 */}

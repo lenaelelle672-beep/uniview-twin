@@ -132,6 +132,12 @@ describe('房间标签避让', () => {
     }
   })
 
+  it('1366 keepTier2 不藏第二级', () => {
+    const items = planItems('F2', 1366)
+    const result = avoidLabels(items, undefined, true)
+    expect(tier2Stats(items, result).hidden).toBe(0)
+  })
+
   it('可见标签挪位不超过 48 px，48 内放不下就隐藏', () => {
     const crowd = Array.from({ length: 20 }, (_, index) => ({
       id: `n${index}`,

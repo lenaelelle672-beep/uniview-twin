@@ -353,8 +353,8 @@ async function main() {
       if (row.syncs > 2) failed.push(`${floorId}@${width} syncs=${row.syncs}`)
       const ladder = report.zoomLadder[width][floorId]
       if (ladder && ladder.length === 3) {
-        if (ladder[1].visible < ladder[0].visible && ladder[2].visible < ladder[1].visible) {
-          failed.push(`${floorId}@${width} zoom not gradual ${ladder.map((item) => item.visible).join('>')}`)
+        if (ladder[2].hidden > ladder[0].hidden) {
+          failed.push(`${floorId}@${width} zoom hid more ${ladder.map((item) => item.hidden).join('>')}`)
         }
       }
     }

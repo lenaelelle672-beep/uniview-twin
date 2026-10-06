@@ -124,6 +124,21 @@ export function overlapPairNames(
   return pairs
 }
 
+export function pickOverlapVictim(
+  left: { id: string; text: string },
+  right: { id: string; text: string },
+  tierOf: (id: string) => number,
+  keepTier2: boolean,
+): string {
+  const score = (id: string) => {
+    const tier = tierOf(id)
+    if (keepTier2 && tier === 2 && !id.startsWith('cluster:')) return -50
+    if (id.startsWith('cluster:')) return 25
+    return tier === 2 ? 20 : 30
+  }
+  return score(left.id) >= score(right.id) ? left.id : right.id
+}
+
 export function visibilityMismatch(expected: ReadonlySet<string>, actual: ReadonlySet<string>): string[] {
   const extra = [...actual].filter((id) => !expected.has(id))
   const missing = [...expected].filter((id) => !actual.has(id))

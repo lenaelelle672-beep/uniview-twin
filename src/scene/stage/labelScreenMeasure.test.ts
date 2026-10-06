@@ -5,6 +5,7 @@ import {
   labelYawForCamera,
   overlapDepth,
   overlapPairNames,
+  pickOverlapVictim,
   visibilityMismatch,
 } from './labelScreenMeasure'
 
@@ -30,6 +31,12 @@ describe('独立重叠口径 / 合组可见集合', () => {
     const leftover = new Set(['cluster:洽谈室', 'F3:room-1'])
     expect(visibilityMismatch(expected, actualHidden)).toEqual([])
     expect(visibilityMismatch(expected, leftover)).toContain('F3:room-1')
+  })
+
+  it('1024 可藏第二级，1366 优先藏组标签和第三级', () => {
+    const tierOf = (id: string) => (id.includes('L2') || id.includes('部') ? 2 : 3)
+    expect(pickOverlapVictim({ id: 'aL3', text: 'x' }, { id: 'bL2部', text: 'y' }, tierOf, false)).toBe('aL3')
+    expect(pickOverlapVictim({ id: 'aL3', text: 'x' }, { id: 'bL2部', text: 'y' }, tierOf, true)).toBe('aL3')
   })
 
   it('转正 yaw 让字面朝向相机，俯视 -Z 时为 0', () => {

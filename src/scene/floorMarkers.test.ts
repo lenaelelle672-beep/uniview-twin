@@ -45,6 +45,7 @@ describe('总览楼层标记', () => {
     expect(source).toMatch(/is-overview-compact/)
     expect(source).toMatch(/is-strip/)
     expect(source).toMatch(/setSelectedFloor\(floor\.id\)/)
-    expect(source).not.toMatch(/enterFloor\(/)
+    expect(source).toMatch(/onDoubleClick/)
+    expect(source).toMatch(/enterFloor\(floor\.id\)/)
   })
 })

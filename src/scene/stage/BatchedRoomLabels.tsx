@@ -10,7 +10,6 @@ import { ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_OPACITY, roomLabelColors, type Room
 
 disableTroikaCdnFallback()
 
-<<<<<<< HEAD
 export interface LabelBatchApi {
   ready: boolean
   measureVisible: (camera: Camera, size: { width: number; height: number }) => MeasuredLabelBox[]
@@ -25,7 +24,9 @@ export interface LabelBatchApi {
 
 function bumpSync(): void {
   window.__twinLabelSyncs = (window.__twinLabelSyncs ?? 0) + 1
-=======
+}
+
+/** integration #18/#19：单个 Text.sync 后 invalidate。#22 进层只走一次 batch.sync，不在创建时对每个成员 sync。 */
 function syncText(text: Text, invalidate: () => void): Promise<void> {
   return new Promise((resolve) => {
     text.sync(() => {
@@ -33,7 +34,6 @@ function syncText(text: Text, invalidate: () => void): Promise<void> {
       resolve()
     })
   })
->>>>>>> origin/integration
 }
 
 function applyMemberFades(members: Text[], fades: number[] | undefined) {
@@ -106,6 +106,7 @@ export function BatchedRoomLabels({
   paletteRef.current = palette
   const signature = labels.map((label) => `${label.id}|${label.text}|${label.label.join(',')}`).join(';')
   const clusters = clusterTemplates(labels)
+  const appliedPackRef = useRef('')
 
   useLayoutEffect(() => {
     const host = groupRef.current
@@ -176,7 +177,6 @@ export function BatchedRoomLabels({
           batch.addText(text)
           members.push(text)
         }
-<<<<<<< HEAD
         for (const cluster of clusters) {
           const text = new Text()
           text.text = cluster.text
@@ -198,10 +198,6 @@ export function BatchedRoomLabels({
           batch.addText(text)
           clusterMembers.push(text)
         }
-=======
-        await Promise.all(members.map((text) => syncText(text, invalidate)))
-        if (cancelled) return
->>>>>>> origin/integration
         await new Promise<void>((resolve) => {
           batch?.sync(() => {
             bumpSync()
@@ -223,6 +219,7 @@ export function BatchedRoomLabels({
         clustersRef.current = clusterMembers
         clusterKeysRef.current = clusters.map((item) => item.key)
         window.__twinLabelPackMs = performance.now() - started
+        if (!window.__twinLabelReadyAt) window.__twinLabelReadyAt = performance.now()
         setPackGen((value) => value + 1)
         invalidate()
       })
@@ -315,14 +312,18 @@ export function BatchedRoomLabels({
       },
       async applyClusterTexts(next) {
         let dirty = false
+        const changed: Text[] = []
         for (let i = 0; i < clustersRef.current.length; i += 1) {
           const text = clustersRef.current[i]
           const key = clusterKeysRef.current[i]
           if (!text || !key || !next[key] || text.text === next[key]) continue
           text.text = next[key]!
           dirty = true
+          changed.push(text)
         }
         if (!dirty || !batchRef.current) return false
+        // D253：进层最多改一次合组文字。创建时已 batch.sync；这里若被调用再用 integration 的 syncText。
+        await Promise.all(changed.map((text) => syncText(text, invalidate)))
         await new Promise<void>((resolve) => {
           batchRef.current?.sync(() => {
             bumpSync()
@@ -351,8 +352,17 @@ export function BatchedRoomLabels({
   useFrame(() => {
     const members = membersRef.current
     if (members.length === 0) return
-    applyMemberFades(members, fadesRef.current)
     const pack = packRef.current
+    let sig = ''
+    for (const [id, row] of Object.entries(pack.byId)) {
+      if (row.visible) sig += `${id}:${row.local?.join(',') ?? ''};`
+    }
+    for (const [key, row] of Object.entries(pack.clusters)) {
+      if (row.visible) sig += `c${key}:${row.local?.join(',') ?? ''};`
+    }
+    if (sig === appliedPackRef.current) return
+    appliedPackRef.current = sig
+    applyMemberFades(members, fadesRef.current)
     const fades = fadesRef.current
     for (let i = 0; i < members.length; i += 1) {
       const label = labels[i]

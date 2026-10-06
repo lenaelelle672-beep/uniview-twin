@@ -99,6 +99,8 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/currentAction/)
     expect(source).toMatch(/orientToCamera/)
     expect(source).toMatch(/shouldPack && api\?\.ready/)
+    expect(source).not.toMatch(/applyClusterTexts/)
+    expect(source).toMatch(/defineProperty\(window, '__twinLabelOverlap'/)
   })
 
   it('换行用 maxWidth + break-word，不用 clipRect', () => {

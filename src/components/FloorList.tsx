@@ -13,6 +13,8 @@ export function FloorList({ open }: FloorListProps) {
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
   const hoveredFloor = useTwinStore((state) => state.hoveredFloor)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
+  const enterFloor = useTwinStore((state) => state.enterFloor)
+  const emitFloorFly = useTwinStore((state) => state.emitFloorFly)
   const setHoveredFloor = useTwinStore((state) => state.setHoveredFloor)
   const listRef = useRef<HTMLDivElement>(null)
   const overview = view === 'building'
@@ -52,8 +54,13 @@ export function FloorList({ open }: FloorListProps) {
               aria-label={`${floor.id} ${floor.name}，告警 ${floor.alarmCount}，离线 ${floor.offlineCount}`}
               aria-pressed={selected}
               onClick={() => {
-                // fb2 bf5479e：列表单击只选层；进层是 3D 楼板/徽标双击或顶栏「单层」。
+                // fb2 bf5479e / D253：单击只选中，双击进层。
                 setSelectedFloor(floor.id)
+                if (floor.id !== 'B1') void loadFloorPlan(floor.id)
+              }}
+              onDoubleClick={() => {
+                emitFloorFly(floor.id)
+                enterFloor(floor.id)
                 if (floor.id !== 'B1') void loadFloorPlan(floor.id)
               }}
               onMouseEnter={() => {
