@@ -531,7 +531,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     const locating = Boolean(flyEnd) && window.__twinLocate?.deskId !== flyEnd?.deskId
     const cameraReady = slabReady || (Boolean(state.focusedDeskId) && !locating)
     const settled = !dragging && !locating && cameraReady && isCameraRested()
-    const viewKey = `${floorId}|${state.focusedDeskId ?? ''}|${state.searchQuery}|${size.width}|${state.devices
+    const viewKey = `${floorId}|${state.focusedDeskId ?? ''}|${state.searchQuery}|${Math.round(size.width / 16) * 16}|${state.devices
       .filter((device) => device.floorId === floorId && device.status === 'alarm')
       .map((device) => device.id)
       .join(',')}`
