@@ -487,7 +487,7 @@ async function main() {
     },
     glSync: {
       samples: 'cached once in defaultFramebufferSamples',
-      getError: 'dev or window.__twinGlDebug only',
+      getError: 'import.meta.env.DEV only (prod tree-shakes drainGlErrors to stay ≤435764; __twinGlDebug not wired in prod)',
       otherPerFrame: [
         'MonitorPass/balancedFx: gl.getDrawingBufferSize (canvas w/h, not GPU getParameter)',
         'RenderProbe: gl.info.reset() (CPU counter, not GPU sync)',
