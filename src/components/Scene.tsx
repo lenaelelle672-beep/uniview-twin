@@ -26,6 +26,7 @@ const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ d
 const FacadeSamples = lazy(() =>
   import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
 )
+const PrewarmGate = lazy(() => import('../scene/prewarm/PrewarmGate').then((mod) => ({ default: mod.PrewarmGate })))
 const DemandLoop = lazy(() => import('./scene/DemandLoop'))
 
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render driver/i
@@ -93,25 +94,17 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
 
   useEffect(() => {
     let cancelled = false
-    const prefetchChunkStarted = () => {
-      const entries = performance.getEntriesByType('resource')
-      return ['floorDecor', 'textRuntime', 'BlueprintView'].every((name) =>
-        entries.some((entry) => entry.name.includes(name)),
-      )
-    }
     const tick = () => {
       if (cancelled) return
       if (window.__twinFirstFrameAt != null) setLoopOn(true)
-      // __twinPrefetchAt 在 import() 之前就写入，不能当“预取已发出”。
-      // 等三个预取包都进 Resource Timing，再隔一帧才挂 FacadeSamples，
-      // 避免 MonitorSamples 和预取抢同一拍、夹到首帧和预取之间。
-      if (window.__twinPrefetchAt != null && prefetchChunkStarted()) {
+      // D195：等 textRuntime 预取 import() 完成，再挂 FacadeSamples / IdlePrewarm。
+      // BadgeHud 走 #18 的首屏 Suspense，不进这条 prefetch 链。
+      if (window.__twinFirstPrefetchDone) {
         requestAnimationFrame(() => {
           if (!cancelled) setPrefetchDone(true)
         })
         return
       }
-      if (window.__twinFirstFrameAt != null && useTwinStore.getState().view !== 'building') return
       requestAnimationFrame(tick)
     }
     tick()
@@ -185,6 +178,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       <MonitorPass renderPriority={2} drawOverlay={!composerLive} />
       {prefetchDone && (
         <Suspense fallback={null}>
+          <PrewarmGate />
           <FacadeSamples />
         </Suspense>
       )}
