@@ -28,22 +28,29 @@ const DemandLoop = lazy(() => import('./scene/DemandLoop'))
 const BadgeHud = lazy(() => import('./scene/BadgeHud'))
 
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render driver/i
-let gpuProbe: { renderer: string; software: boolean; probeMs: number } | undefined
 
-function probeGpu() {
-  if (gpuProbe) return gpuProbe
-  const t0 = performance.now()
-  const gl = document.createElement('canvas').getContext('webgl2')
-  let renderer = ''
-  let software = false
-  if (gl) {
-    const ext = gl.getExtension('WEBGL_debug_renderer_info')
-    renderer = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) ?? '')
-    software = SOFTWARE.test(renderer)
-    gl.getExtension('WEBGL_lose_context')?.loseContext()
+/** 只认启动 URL 的 `keepDrawingBuffer=1`。gl 属性在创建 context 时定死，必须是模块常量。 */
+const KEEP_DRAWING_BUFFER =
+  typeof location !== 'undefined' &&
+  new URLSearchParams(location.search.startsWith('?') ? location.search.slice(1) : location.search).get(
+    'keepDrawingBuffer',
+  ) === '1'
+
+const CANVAS_GL = {
+  antialias: true,
+  alpha: false,
+  preserveDrawingBuffer: KEEP_DRAWING_BUFFER,
+  toneMapping: AgXToneMapping,
+}
+
+function readGpuRenderer(gl: { getContext: () => WebGLRenderingContext | WebGL2RenderingContext }) {
+  const ctx = gl.getContext()
+  try {
+    const ext = ctx.getExtension('WEBGL_debug_renderer_info')
+    return String(ctx.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : ctx.RENDERER) ?? '')
+  } catch {
+    return ''
   }
-  gpuProbe = { renderer, software, probeMs: performance.now() - t0 }
-  return gpuProbe
 }
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
@@ -200,10 +207,7 @@ export function SceneCanvas() {
   const cam = useTwinStore((state) => state.cam)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const [gpuReady, setGpuReady] = useState(false)
-  const probe = probeGpu()
-  const softwareAuto = probe.software && !useTwinStore.getState().qualityPinned
-  if (softwareAuto && quality !== 'perf') useTwinStore.setState({ quality: 'perf' })
-  const keepBuffer = location.search.includes('keepDrawingBuffer=1') || !probe.software
+  const [softwareAuto, setSoftwareAuto] = useState(false)
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
   const pose = cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview
   applySurfaceMode(mode)
@@ -220,13 +224,24 @@ export function SceneCanvas() {
         dpr={softwareAuto ? [0.75, 0.75] : qualityDprRange(quality)}
         shadows={gpuReady && !softwareAuto && quality !== 'perf' ? 'percentage' : false}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
-        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: keepBuffer, toneMapping: AgXToneMapping }}
-        onCreated={({ gl }) => {
+        gl={CANVAS_GL}
+        onCreated={({ gl, setDpr }) => {
+          const renderer = readGpuRenderer(gl)
+          const software = SOFTWARE.test(renderer)
+          const auto = software && !useTwinStore.getState().qualityPinned
+          if (auto) {
+            useTwinStore.setState({ quality: 'perf' })
+            setSoftwareAuto(true)
+            setDpr(0.75)
+          }
+          const liveQuality = useTwinStore.getState().quality
           window.__twinGpu = {
-            renderer: probe.renderer,
-            software: probe.software,
-            tier: softwareAuto || quality === 'perf' ? 'performance' : quality,
-            probeMs: probe.probeMs,
+            renderer,
+            software,
+            tier: auto || liveQuality === 'perf' ? 'performance' : liveQuality,
+            softwareAuto: auto,
+            preserveDrawingBuffer: KEEP_DRAWING_BUFFER,
+            dpr: auto ? 0.75 : undefined,
           }
           gl.shadowMap.autoUpdate = false
           setGpuReady(true)

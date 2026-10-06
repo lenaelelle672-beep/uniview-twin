@@ -52,12 +52,10 @@ describe('detectSoftwareRenderer', () => {
     expect(detectSoftwareRenderer(fakeGl('SwiftShader', null))).toEqual({
       renderer: 'WebKit WebGL',
       software: false,
-      probeMs: 0,
     })
     expect(detectSoftwareRenderer(fakeGl('SwiftShader', 'throw'))).toEqual({
       renderer: '',
       software: false,
-      probeMs: 0,
     })
   })
 
@@ -67,13 +65,13 @@ describe('detectSoftwareRenderer', () => {
     expect(gpuTierLabel('high')).toBe('high')
   })
 
-  it('只认 ?keepDrawingBuffer=1，不看 ?q= / ?cam=', () => {
+  it('只认 ?keepDrawingBuffer=1，没有则所有档都关', () => {
     expect(keepDrawingBufferRequested('?keepDrawingBuffer=1')).toBe(true)
     expect(keepDrawingBufferRequested('?q=perf&cam=east')).toBe(false)
     expect(keepDrawingBufferRequested('')).toBe(false)
-    expect(preserveDrawingBufferFor(true, '?keepDrawingBuffer=1')).toBe(true)
-    expect(preserveDrawingBufferFor(true, '?q=perf')).toBe(false)
-    expect(preserveDrawingBufferFor(true, '')).toBe(false)
-    expect(preserveDrawingBufferFor(false, '')).toBe(true)
+    expect(preserveDrawingBufferFor('?keepDrawingBuffer=1')).toBe(true)
+    expect(preserveDrawingBufferFor('?q=perf')).toBe(false)
+    expect(preserveDrawingBufferFor('?q=balanced')).toBe(false)
+    expect(preserveDrawingBufferFor('')).toBe(false)
   })
 })
