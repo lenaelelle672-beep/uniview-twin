@@ -13,13 +13,28 @@ const specs = listFloorSpecs()
  */
 export function ExplodedLayout() {
   const scene = useThree((state) => state.scene)
+  const invalidate = useThree((state) => state.invalidate)
   const cache = useRef(new Map<string, Object3D>())
+  const wasAnimating = useRef(false)
+  const wake = useRef(0)
+
+  const askFrame = () => {
+    if (wake.current) return
+    // demand 下，当前 useFrame 里同步 invalidate 不一定能排到下一帧。
+    wake.current = requestAnimationFrame(() => {
+      wake.current = 0
+      invalidate()
+    })
+  }
 
   useFrame(({ clock }) => {
     const { exploded, view } = useTwinStore.getState()
     const target = exploded && view === 'building' ? 1 : 0
     // 与徽标共用 stepExplodeMotion。同一帧再调一次，进度不变。
-    const { progress } = stepExplodeMotion(exploded, view, clock.elapsedTime)
+    const { progress, animating } = stepExplodeMotion(exploded, view, clock.elapsedTime)
+    if (animating) askFrame()
+    else if (wasAnimating.current) askFrame()
+    wasAnimating.current = animating
     const floors: NonNullable<Window['__twinExplode']>['floors'] = []
 
     specs.forEach((spec, index) => {
