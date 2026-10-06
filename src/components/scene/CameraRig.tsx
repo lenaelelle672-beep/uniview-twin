@@ -70,6 +70,7 @@ export function CameraRig({
   const cam = useTwinStore((state) => state.cam)
   const view = useTwinStore((state) => state.view)
   const exploded = useTwinStore((state) => state.exploded)
+  const quality = useTwinStore((state) => state.quality)
   const spread = view === 'building' && exploded
   const controls = useRef<CameraControls>(null)
   const distanceCap = useRef(CAMERA_LIMITS.maxDistance)
@@ -161,5 +162,5 @@ export function CameraRig({
     applyCameraLimits(rig, distanceCap.current)
   }, -2)
 
-  return <CameraControls ref={controls} makeDefault smoothTime={0} />
+  return <CameraControls ref={controls} makeDefault smoothTime={0} regress={quality === 'perf'} />
 }

@@ -1,6 +1,7 @@
 import { type CameraControls as CameraControlsImpl } from '@react-three/drei/core/CameraControls'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { retainFrameChannel } from '../frameSchedule'
 import { Box3, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
@@ -137,6 +138,16 @@ export function FloorStageCamera() {
   const size = useThree((state) => state.size)
   const presented = useRef(false)
   const framedKey = useRef('')
+
+  useEffect(() => {
+    if (focusSeq <= 0) return
+    const release = retainFrameChannel('motion')
+    const timer = window.setTimeout(release, 800)
+    return () => {
+      window.clearTimeout(timer)
+      release()
+    }
+  }, [focusSeq])
 
   useFrame(() => {
     presented.current = true

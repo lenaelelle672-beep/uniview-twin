@@ -53,6 +53,7 @@ export function tryMarkOverviewReady(): void {
   if (w.__twinHdrRequired !== false && w.__twinTreeLoReadyAt == null) return
   w.__twinReady = true
   w.__twinReadyAt = performance.now()
+  void w.__twinInvalidate?.()
 }
 
 export function resetOverviewReadyMarks(): void {

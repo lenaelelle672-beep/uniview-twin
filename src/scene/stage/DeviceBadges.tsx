@@ -1,5 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { discreteAlarmLit, retainFrameChannel } from '../frameSchedule'
+import { useTwinStore } from '../../store/store'
 import {
   CanvasTexture,
   InstancedBufferAttribute,
@@ -17,13 +19,16 @@ const dummy = new Object3D()
 const vertexShader = /* glsl */ `
 attribute float aStatus;
 uniform float uTime;
+uniform float uDiscrete;
 varying vec2 vUv;
 varying float vStatus;
 
 void main() {
   vUv = uv;
   vStatus = aStatus;
-  float pulse = abs(aStatus - 2.0) < 0.5 ? 1.0 + 0.16 * sin(uTime * 5.0) : 1.0;
+  float pulse = abs(aStatus - 2.0) < 0.5
+    ? (uDiscrete > 0.5 ? (uTime > 0.5 ? 1.16 : 1.0) : 1.0 + 0.16 * sin(uTime * 5.0))
+    : 1.0;
   vec4 worldCenter = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
   vec4 mvPosition = viewMatrix * worldCenter;
   mvPosition.xy += position.xy * pulse;
@@ -34,6 +39,7 @@ void main() {
 const fragmentShader = /* glsl */ `
 uniform sampler2D uAtlas;
 uniform float uTime;
+uniform float uDiscrete;
 varying vec2 vUv;
 varying float vStatus;
 
@@ -41,7 +47,9 @@ void main() {
   float u = (vUv.x + vStatus) / 4.0;
   vec4 tex = texture2D(uAtlas, vec2(u, vUv.y));
   if (tex.a < 0.45) discard;
-  float glow = abs(vStatus - 2.0) < 0.5 ? 0.78 + 0.22 * sin(uTime * 5.0) : 1.0;
+  float glow = abs(vStatus - 2.0) < 0.5
+    ? (uDiscrete > 0.5 ? (uTime > 0.5 ? 1.0 : 0.12) : 0.78 + 0.22 * sin(uTime * 5.0))
+    : 1.0;
   gl_FragColor = linearToOutputTexel(vec4(tex.rgb * glow, 1.0));
 }
 `
@@ -93,6 +101,9 @@ export function DeviceBadges({ floorId, devices }: { floorId: string; devices: D
   const badges = useMemo(() => deviceBadges(floorId, devices), [devices, floorId])
   const meshRef = useRef<InstancedMesh>(null)
   const time = useRef({ value: 0 })
+  const discrete = useRef({ value: 0 })
+  const hasAlarm = badges.some((badge) => badge.status === 'alarm')
+  useEffect(() => (hasAlarm ? retainFrameChannel('alarm') : undefined), [hasAlarm])
   const resources = useMemo(() => {
     const texture = createBadgeAtlas()
     const geometry = new PlaneGeometry(BADGE_SIZE, BADGE_SIZE)
@@ -101,6 +112,7 @@ export function DeviceBadges({ floorId, devices }: { floorId: string; devices: D
       uniforms: {
         uAtlas: { value: texture },
         uTime: time.current,
+        uDiscrete: discrete.current,
       },
       vertexShader,
       fragmentShader,
@@ -139,6 +151,13 @@ export function DeviceBadges({ floorId, devices }: { floorId: string; devices: D
   }, [resources])
 
   useFrame(({ clock }) => {
+    const quality = useTwinStore.getState().quality
+    if (quality === 'perf') {
+      discrete.current.value = 1
+      time.current.value = discreteAlarmLit(clock.elapsedTime) ? 1 : 0
+      return
+    }
+    discrete.current.value = 0
     time.current.value = clock.elapsedTime
   })
 

@@ -18,8 +18,12 @@ export function RenderProbe() {
   const camera = useThree((state) => state.camera)
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
+  const invalidate = useThree((state) => state.invalidate)
 
   useEffect(() => {
+    gl.shadowMap.autoUpdate = false
+    if (useTwinStore.getState().quality !== 'perf') gl.shadowMap.needsUpdate = true
+    invalidate()
     markSuspenseReady()
     window.__twinScene = scene
     window.__twinProject = (x, y, z) => {
@@ -96,7 +100,7 @@ export function RenderProbe() {
       delete window.__twinSetExploded
       unsubscribe()
     }
-  }, [camera, gl, scene])
+  }, [camera, gl, invalidate, scene])
 
   useFrame(() => {
     gl.info.autoReset = false

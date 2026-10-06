@@ -1,8 +1,9 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Object3D } from 'three'
 import { listFloorSpecs } from '../../data/floors'
 import { explodeOffset, floorWorldSpan, stepExplodeMotion } from '../../scene/explode'
+import { retainFrameChannel } from '../../scene/frameSchedule'
 import { useTwinStore } from '../../store/store'
 
 const specs = listFloorSpecs()
@@ -14,12 +15,26 @@ const specs = listFloorSpecs()
 export function ExplodedLayout() {
   const scene = useThree((state) => state.scene)
   const cache = useRef(new Map<string, Object3D>())
+  const motionHold = useRef<(() => void) | null>(null)
+
+  useEffect(
+    () => () => {
+      motionHold.current?.()
+      motionHold.current = null
+    },
+    [],
+  )
 
   useFrame(({ clock }) => {
     const { exploded, view } = useTwinStore.getState()
     const target = exploded && view === 'building' ? 1 : 0
     // 与徽标共用 stepExplodeMotion。同一帧再调一次，进度不变。
-    const { progress } = stepExplodeMotion(exploded, view, clock.elapsedTime)
+    const { progress, animating } = stepExplodeMotion(exploded, view, clock.elapsedTime)
+    if (animating && !motionHold.current) motionHold.current = retainFrameChannel('motion')
+    if (!animating && motionHold.current) {
+      motionHold.current()
+      motionHold.current = null
+    }
     const floors: NonNullable<Window['__twinExplode']>['floors'] = []
 
     specs.forEach((spec, index) => {

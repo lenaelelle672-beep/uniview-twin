@@ -2,9 +2,12 @@ import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
+import { bindTwinInvalidate } from '../scene/demandInvalidate'
+import { detectSoftwareRenderer, gpuTierLabel } from '../scene/gpuDetect'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
+import { DemandLoop } from './scene/DemandLoop'
 import { EastBlock } from './scene/EastBlock'
 import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
@@ -36,7 +39,8 @@ function DayExposure({ mode }: { mode: SurfaceMode }) {
   return null
 }
 
-function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'balanced' | 'high' }) {
+function SceneBody({ mode }: { mode: SurfaceMode }) {
+  const quality = useTwinStore((state) => state.quality)
   const model = mode === 'model'
   const night = mode === 'night'
   const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
@@ -90,6 +94,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
 
   return (
     <>
+      <DemandLoop />
       <color attach="background" args={[background]} />
       <EnablePickVolumeRaycast />
       <DayExposure mode={mode} />
@@ -170,6 +175,7 @@ export function SceneCanvas() {
   const presentation = useTwinStore((state) => state.presentation)
   const cam = useTwinStore((state) => state.cam)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
+  const [gpuReady, setGpuReady] = useState(false)
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
   const pose = cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview
   applySurfaceMode(mode)
@@ -182,15 +188,30 @@ export function SceneCanvas() {
     <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={quality}>
       {/* 不按性能档重建画布。换档会新建 WebGLRenderer，three 按渲染器缓存的 PMREM 会再生成一次。dpr 和阴影在同一个画布上更新。 */}
       <Canvas
-        dpr={qualityDprRange(quality)}
-        shadows={quality === 'perf' ? false : 'percentage'}
+        frameloop="demand"
+        dpr={gpuReady ? qualityDprRange(quality) : ([1, 1] as [number, number])}
+        shadows={gpuReady && quality !== 'perf' ? 'percentage' : false}
+        performance={{ min: quality === 'perf' ? 0.5 : 1, max: 1, debounce: 200 }}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
         gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, toneMapping: AgXToneMapping }}
+        onCreated={({ gl, invalidate }) => {
+          const detected = detectSoftwareRenderer(gl.getContext())
+          const pinned = useTwinStore.getState().qualityPinned
+          if (detected.software && !pinned) useTwinStore.setState({ quality: 'perf' })
+          const tier = useTwinStore.getState().quality
+          window.__twinGpu = {
+            renderer: detected.renderer,
+            software: detected.software,
+            tier: gpuTierLabel(tier),
+          }
+          bindTwinInvalidate(invalidate)
+          setGpuReady(true)
+        }}
         onPointerMissed={() => {
           setSelectedFloor(null)
         }}
       >
-        <SceneBody mode={mode} quality={quality} />
+        {gpuReady ? <SceneBody mode={mode} /> : null}
       </Canvas>
     </div>
   )
