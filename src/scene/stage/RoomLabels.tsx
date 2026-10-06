@@ -25,8 +25,10 @@ import {
   overlapDepth,
   overlapPairNames,
   OVERLAP_STRONG_PX,
+  pickHoverLabel,
   stripStrongOverlaps,
   visibilityMismatch,
+  type MeasuredLabelBox,
 } from './labelScreenMeasure'
 import { isCameraRested } from './cameraRest'
 import { preloadLabelChars } from './glyphProbe'
@@ -170,50 +172,31 @@ function placementRow(
   }
 }
 
-function visibleOverlapBoxes(
+function visibleFromRender(
+  live: MeasuredLabelBox[],
   labels: RoomLabel[],
-  items: AvoidItem[],
-  avoided: AvoidResult,
+  pack: LabelPackState,
 ): NonNullable<Window['__twinLabelOverlap']>['visible'] {
   const byLabel = new Map(labels.map((label) => [label.id, label]))
-  const byItem = new Map(items.map((item) => [item.id, item]))
-  const visible: NonNullable<Window['__twinLabelOverlap']>['visible'] = []
-  for (const row of avoided.placements) {
-    if (!row.visible) continue
+  return live.map((row) => {
     const label = byLabel.get(row.id)
-    const item = byItem.get(row.id)
-    if (!label || !item) continue
-    visible.push({
+    const place = row.id.startsWith('cluster:')
+      ? pack.clusters[row.id.slice('cluster:'.length)]
+      : pack.byId[row.id]
+    return {
       id: row.id,
-      text: label.text,
+      text: row.text,
       sx: row.box.x + row.box.w / 2,
       sy: row.box.y + row.box.h / 2,
       w: row.box.w,
       h: row.box.h,
-      offsetX: row.offsetX,
-      offsetY: row.offsetY,
-      cluster: null,
-      wx: label.label[0],
-      wz: label.label[2],
-    })
-  }
-  for (const cluster of avoided.clusters) {
-    const members = cluster.ids.map((id) => byLabel.get(id)).filter((label): label is RoomLabel => Boolean(label))
-    visible.push({
-      id: `cluster:${cluster.key}`,
-      text: cluster.text,
-      sx: cluster.box.x + cluster.box.w / 2,
-      sy: cluster.box.y + cluster.box.h / 2,
-      w: cluster.box.w,
-      h: cluster.box.h,
-      offsetX: cluster.offsetX,
-      offsetY: cluster.offsetY,
-      cluster: cluster.key,
-      wx: members.length ? members.reduce((sum, label) => sum + label.label[0], 0) / members.length : 0,
-      wz: members.length ? members.reduce((sum, label) => sum + label.label[2], 0) / members.length : 0,
-    })
-  }
-  return visible
+      offsetX: place?.offsetX ?? 0,
+      offsetY: place?.offsetY ?? 0,
+      cluster: row.cluster,
+      wx: label?.label[0] ?? 0,
+      wz: label?.label[2] ?? 0,
+    }
+  })
 }
 
 function diagnoseRestCorridor(labels: RoomLabel[], items: AvoidItem[], avoided: AvoidResult): TwinLabelD243 | undefined {
@@ -364,8 +347,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     const tierOf = (id: string) => {
       if (id.startsWith('cluster:')) {
         const key = id.slice('cluster:'.length)
-        const member = labels.find((label) => label.text === key)
-        return member ? classifyRoomLabel(member.sourceName ?? member.text, member.area ?? 0).tier : 3
+        const owned = packedRef.current?.clusters.find((row) => row.key === key)
+        const member = owned ? labels.find((label) => owned.ids.includes(label.id)) : undefined
+        return member ? classifyRoomLabel(member.sourceName ?? member.text, member.area ?? 0).tier : classifyRoomLabel(key, 0).tier
       }
       const label = labels.find((item) => item.id === id)
       return label ? classifyRoomLabel(label.sourceName ?? label.text, label.area ?? 0).tier : 3
@@ -379,6 +363,16 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     layoutRef.current = stripped.pack
     packRef.current = stripped.pack
     api.applyPack(stripped.pack)
+    const packed = packedRef.current
+    if (packed) {
+      for (const row of packed.placements) {
+        const shown = stripped.pack.byId[row.id]
+        if (!shown) continue
+        row.visible = shown.visible
+        row.cluster = shown.cluster
+      }
+      packed.hidden = packed.placements.filter((row) => !row.visible && !row.cluster).length
+    }
     const after = api.measureVisible(perspective, viewport)
     return countOverlapKinds(after.map((row) => row.box)).strong === 0
   }
@@ -456,9 +450,10 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         grazePairs: kinds.graze,
         mismatch: mismatchIds.length,
         mismatchIds,
+        hoverId: hoverIdRef.current,
         maxAngle,
         maxOffset: packed.maxOffset,
-        visible: visibleOverlapBoxes(labels, itemsRef.current, packed),
+        visible: visibleFromRender(live, labels, packRef.current),
         d243: diagnoseRestCorridor(labels, itemsRef.current, packed),
         tier2: tier2Stats(itemsRef.current, packed),
         measured: live,
@@ -715,11 +710,12 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
           if (item.tier !== 2) continue
           const state = byId[item.id]
           if (!state || state.visible || state.cluster) continue
-          const cluster = clusters[item.text]
-          const clusterBox = avoided.clusters.find((row) => row.key === item.text)?.box
+          const owned = avoided.clusters.find((row) => row.ids.includes(item.id))
+          const cluster = owned ? clusters[owned.key] : undefined
+          const clusterBox = owned?.box
           const itemBox = { x: item.x - item.w / 2, y: item.y - item.h / 2, w: item.w, h: item.h }
-          if (cluster?.visible && clusterBox && boxesOverlap(itemBox, clusterBox, 0)) {
-            state.cluster = item.text
+          if (owned && cluster?.visible && clusterBox && boxesOverlap(itemBox, clusterBox, 0)) {
+            state.cluster = owned.key
             continue
           }
           state.visible = true
@@ -846,20 +842,12 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       writePackVisibility(byId, clusters)
     }
     if (pointerMovedRef.current && pointerOnCanvasRef.current && packedRef.current) {
-      const pointerX = pointerPxRef.current.x
-      const pointerY = pointerPxRef.current.y
-      let hoverId: string | null = null
-      let hoverHidden: string | null = null
-      for (const item of itemsRef.current) {
-        if (Math.hypot(pointerX - item.x, pointerY - item.y) >= Math.max(item.w, item.h) * 0.65 + 18) continue
-        const shown = layoutRef.current.byId[item.id]
-        if (shown && !shown.visible) {
-          hoverHidden = item.id
-          break
-        }
-        if (!hoverId) hoverId = item.id
-      }
-      hoverId = hoverHidden ?? hoverId
+      const remes = api?.measureForAvoid(perspective, size, labels)
+      const hoverItems = itemsRef.current.map((item) => {
+        const box = remes?.get(item.id)
+        return box ? { id: item.id, x: box.x, y: box.y, w: box.w, h: box.h } : item
+      })
+      const hoverId = pickHoverLabel(pointerPxRef.current, hoverItems)
       if (hoverId !== hoverIdRef.current) {
         hoverIdRef.current = hoverId
         revealHover(hoverId)

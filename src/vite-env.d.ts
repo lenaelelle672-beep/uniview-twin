@@ -322,6 +322,7 @@ interface Window {
       wz: number
     }>
     d243?: TwinLabelD243
+    hoverId?: string | null
   }
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>
   __twinFly?: { floorId: string; nonce: number } | null

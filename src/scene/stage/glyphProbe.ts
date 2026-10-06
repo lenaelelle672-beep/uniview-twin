@@ -213,12 +213,16 @@ function writeProbe() {
   }
 }
 
+let textCtor: (typeof import('./disableTroikaCdn'))['Text'] | null = null
+let batchedCtor: (typeof import('./disableTroikaCdn'))['BatchedText'] | null = null
+
 async function loadTroika() {
-  if (preloadFontFn) return
-  const { disableTroikaCdnFallback } = await import('./disableTroikaCdn')
-  disableTroikaCdnFallback()
-  const mod = await import('troika-three-text')
+  if (preloadFontFn && textCtor && batchedCtor) return
+  const mod = await import('./disableTroikaCdn')
+  mod.disableTroikaCdnFallback()
   preloadFontFn = mod.preloadFont
+  textCtor = mod.Text
+  batchedCtor = mod.BatchedText
 }
 
 export function installTexImage2DHook(renderer?: WebGLRenderer | null) {
@@ -349,7 +353,9 @@ export async function compileDummyLabelMaterial(): Promise<{ ms: number; frameMs
   const renderer = window.__twinRenderer
   const camera = window.__twinCamera
   if (!renderer || !camera || window.__twinGlyphPreload?.compile) return window.__twinGlyphPreload?.compile ?? null
-  const { Text, BatchedText } = await import('troika-three-text')
+  await loadTroika()
+  const Text = textCtor!
+  const BatchedText = batchedCtor!
   const started = performance.now()
   const text = new Text()
   text.font = ROOM_LABEL_FONT
@@ -394,7 +400,7 @@ export async function warmupTextMesh(): Promise<number> {
   installSdfAtlasHook()
   installAtlasCanvasHook()
   await loadTroika()
-  const { Text } = await import('troika-three-text')
+  const Text = textCtor!
   const started = performance.now()
   const text = new Text()
   text.font = ROOM_LABEL_FONT

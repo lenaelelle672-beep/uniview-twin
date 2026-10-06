@@ -1,14 +1,21 @@
 import { describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { getFloorPlan } from '../../floors/cache'
+import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
+import { roomLabelsFromPlan } from '../../floors/labels'
 import {
   OVERLAP_STRONG_PX,
   countOverlapKinds,
   labelYawForCamera,
   overlapDepth,
   overlapPairNames,
+  pickHoverLabel,
   pickOverlapVictim,
   stripStrongOverlaps,
   visibilityMismatch,
 } from './labelScreenMeasure'
+
+hydrateAllAboveGrade()
 
 describe('独立重叠口径 / 合组可见集合', () => {
   it('两向都 >2 px 才算重叠，擦边只计数', () => {
@@ -82,5 +89,53 @@ describe('独立重叠口径 / 合组可见集合', () => {
   it('转正 yaw 让字面朝向相机，俯视 -Z 时为 0', () => {
     expect(labelYawForCamera(0, -1)).toBeCloseTo(0, 6)
     expect(labelYawForCamera(-1, 0)).toBeCloseTo(Math.PI / 2, 6)
+  })
+
+  it('同名会议室按 room id 命中，不会命中第一个同名者', () => {
+    const items = [
+      { id: 'F3:room-150', x: 100, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-157', x: 180, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-159', x: 260, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-161', x: 340, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-170', x: 420, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-175', x: 500, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-180', x: 580, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-185', x: 660, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-190', x: 740, y: 200, w: 48, h: 16 },
+      { id: 'F3:room-196', x: 820, y: 200, w: 48, h: 16 },
+    ]
+    expect(new Set(items.map((item) => item.id)).size).toBe(10)
+    expect(pickHoverLabel({ x: 180, y: 200 }, items)).toBe('F3:room-157')
+    expect(pickHoverLabel({ x: 260, y: 200 }, items)).toBe('F3:room-159')
+    expect(pickHoverLabel({ x: 100, y: 200 }, items)).toBe('F3:room-150')
+    expect(pickHoverLabel({ x: 180, y: 200 }, items)).not.toBe('F3:room-150')
+    const firstByName = items[0]!.id
+    expect(pickHoverLabel({ x: 500, y: 200 }, items)).not.toBe(firstByName)
+    expect(pickHoverLabel({ x: 500, y: 200 }, items)).toBe('F3:room-175')
+  })
+
+  it('F3 真实同名会议室 id 唯一，悬停按 id 而不是 text', () => {
+    const labels = roomLabelsFromPlan(getFloorPlan('F3')!)
+    const meetings = labels.filter((label) => label.text === '会议室')
+    expect(meetings.length).toBeGreaterThanOrEqual(3)
+    expect(new Set(meetings.map((label) => label.id)).size).toBe(meetings.length)
+    const items = meetings.map((label, index) => ({
+      id: label.id,
+      x: 80 + index * 72,
+      y: 240,
+      w: 48,
+      h: 16,
+    }))
+    const mid = items[1]!
+    const other = items[2]!
+    expect(pickHoverLabel({ x: mid.x, y: mid.y }, items)).toBe(mid.id)
+    expect(pickHoverLabel({ x: other.x, y: other.y }, items)).toBe(other.id)
+    expect(pickHoverLabel({ x: mid.x, y: mid.y }, items)).not.toBe(items[0]!.id)
+    const source = readFileSync(new URL('./RoomLabels.tsx', import.meta.url), 'utf8')
+    expect(source).toMatch(/pickHoverLabel/)
+    expect(source).toMatch(/measureForAvoid/)
+    expect(source).toMatch(/remes\?\.get\(item\.id\)/)
+    expect(source).not.toMatch(/hoverHidden/)
+    expect(source).not.toMatch(/labels\.find\(\(label\) => label\.text === key\)/)
   })
 })

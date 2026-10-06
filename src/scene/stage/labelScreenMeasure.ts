@@ -19,8 +19,31 @@ export interface MeasuredLabelBox {
   px: number
 }
 
-export function isDrawnText(text: { scale: { x: number }; fillOpacity?: number }): boolean {
-  return text.scale.x > 0.05 && (text.fillOpacity ?? 1) > 0.02
+export function isDrawnText(text: { visible?: boolean; scale: { x: number }; fillOpacity?: number; opacity?: number }): boolean {
+  if (text.visible === false) return false
+  const fade = text.fillOpacity ?? text.opacity ?? 1
+  return text.scale.x > 0.05 && fade > 0
+}
+
+/** 指针落在谁的屏上盒里：取中心最近、盒子更小者。不按数组顺序、不优先“第一个隐藏项”。 */
+export function pickHoverLabel(
+  pointer: { x: number; y: number },
+  items: ReadonlyArray<{ id: string; x: number; y: number; w: number; h: number }>,
+  pad = 4,
+): string | null {
+  let best: { id: string; dist: number; area: number } | null = null
+  for (const item of items) {
+    const halfW = item.w / 2 + pad
+    const halfH = item.h / 2 + pad
+    if (pointer.x < item.x - halfW || pointer.x > item.x + halfW) continue
+    if (pointer.y < item.y - halfH || pointer.y > item.y + halfH) continue
+    const dist = Math.hypot(pointer.x - item.x, pointer.y - item.y)
+    const area = Math.max(1, item.w * item.h)
+    if (!best || dist < best.dist - 0.25 || (Math.abs(dist - best.dist) <= 0.25 && area < best.area)) {
+      best = { id: item.id, dist, area }
+    }
+  }
+  return best?.id ?? null
 }
 
 export function projectBlockBounds(

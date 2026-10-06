@@ -116,6 +116,7 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/pointerMovedRef/)
     expect(source).toMatch(/pointerOnCanvasRef/)
     expect(source).toMatch(/pointerPxRef/)
+    expect(source).toMatch(/pickHoverLabel/)
     expect(source).toMatch(/addEventListener\('pointermove'/)
     expect(source).toMatch(/addEventListener\('pointerleave'/)
     expect(source).toMatch(/hiddenLayout/)
