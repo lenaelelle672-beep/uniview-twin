@@ -1,5 +1,5 @@
 import { useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTwinStore } from '../../store/store'
 import type { RoomLabel } from '../stage/roomLabels'
 import { beginLabelPack } from './labelPackTiming'
@@ -57,14 +57,15 @@ export function useLabelMountQueue(floorId: string, labels: readonly RoomLabel[]
   const firstCount = Math.max(priority.length, Math.min(LABEL_MOUNT_PER_FRAME, ordered.length))
   const packKey = `${floorId}:${ordered.map((label) => label.id).join('|')}`
   const [epoch, setEpoch] = useState({ packKey, released: 0 })
+  const packStartedFor = useRef<string | null>(null)
   if (epoch.packKey !== packKey) {
     setEpoch({ packKey, released: 0 })
   }
-  const released = epoch.packKey === packKey ? epoch.released : 0
-
-  useEffect(() => {
+  if (packStartedFor.current !== packKey) {
+    packStartedFor.current = packKey
     beginLabelPack(floorId)
-  }, [floorId, packKey])
+  }
+  const released = epoch.packKey === packKey ? epoch.released : 0
 
   useEffect(() => {
     const remaining = Math.max(0, ordered.length - firstCount)

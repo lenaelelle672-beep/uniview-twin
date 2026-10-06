@@ -121,6 +121,7 @@ function injectBaselineTiming() {
 async function attachFrameWatch(page) {
   await page.evaluate(() => {
     const frames = []
+    const longTasks = []
     let prev = performance.now()
     let active = true
     const tick = (now) => {
@@ -130,8 +131,19 @@ async function attachFrameWatch(page) {
       requestAnimationFrame(tick)
     }
     requestAnimationFrame(tick)
+    try {
+      const observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          longTasks.push({ at: entry.startTime, dt: entry.duration, name: entry.name })
+        }
+      })
+      observer.observe({ type: 'longtask', buffered: true })
+    } catch {
+      // SwiftShader / headless 可能没有 longtask
+    }
     window.__t017Frames = {
       frames,
+      longTasks,
       stop() {
         active = false
       },
@@ -143,11 +155,16 @@ async function frameStats(page, since) {
   return page.evaluate((start) => {
     const all = (window.__t017Frames?.frames ?? []).filter((frame) => frame.at >= start)
     const dts = all.map((frame) => frame.dt)
+    const longDts = (window.__t017Frames?.longTasks ?? [])
+      .filter((task) => task.at >= start)
+      .map((task) => task.dt)
     return {
       samples: dts.length,
       maxFrameMs: dts.length ? Math.max(...dts) : null,
       meanFrameMs: dts.length ? dts.reduce((sum, dt) => sum + dt, 0) / dts.length : null,
       p95FrameMs: dts.length ? dts.slice().sort((a, b) => a - b)[Math.floor(dts.length * 0.95)] : null,
+      longTaskCount: longDts.length,
+      maxLongTaskMs: longDts.length ? Math.max(...longDts) : null,
     }
   }, since)
 }
@@ -219,21 +236,49 @@ async function runPath(browser, baseUrl, quality, pathKind, injectTiming) {
     )
     .catch(() => {})
 
-  await page.waitForFunction(() => (window.__twinLabelMount?.done ?? true) === true || window.__twinLabelPackMs?.total > 0, {
-    timeout: 20_000,
-  }).catch(() => {})
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 2800)))
+  await page
+    .waitForFunction(() => {
+      const pack = window.__twinLabelPackMs
+      const packed = pack && typeof pack === 'object' && pack.total > 0
+      const done = window.__twinLabelMount?.done === true
+      const px = window.__twinLabelPx != null
+      return packed || done || px
+    }, { timeout: 45_000 })
+    .catch(() => {})
+  await page
+    .waitForFunction(() => {
+      const pack = window.__twinLabelPackMs
+      return (pack && typeof pack === 'object' && pack.total > 0) || window.__twinLabelMount?.done === true
+    }, { timeout: 45_000 })
+    .catch(() => {})
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1500)))
 
-  const probe = await page.evaluate(() => ({
-    pack: window.__twinLabelPackMs ?? null,
-    mount: window.__twinLabelMount ?? null,
-    interior: window.__twinInterior ?? null,
-    view: window.__twinView ?? null,
-    floor: window.__twinSelected ?? null,
-    programs: window.__twinMemory?.programs ?? null,
-    firstFrameAt: window.__twinFirstFrameAt ?? null,
-    prewarmed: window.__twinPrewarmed === true,
-  }))
+  const probe = await page.evaluate(() => {
+    const resources = performance.getEntriesByType('resource').map((entry) => entry.name)
+    return {
+      pack: window.__twinLabelPackMs ?? null,
+      mount: window.__twinLabelMount ?? null,
+      labelPx: window.__twinLabelPx ?? null,
+      interior: window.__twinInterior ?? null,
+      view: window.__twinView ?? null,
+      floor: window.__twinSelected ?? null,
+      programs: window.__twinMemory?.programs ?? null,
+      firstFrameAt: window.__twinFirstFrameAt ?? null,
+      prewarmed: window.__twinPrewarmed === true,
+      hasFloorDecor: resources.some((name) => name.includes('floorDecor')),
+      hasTextRuntime: resources.some((name) => name.includes('textRuntime')),
+      hasWoff: resources.some((name) => /NotoSansSC-Regular-subset\.woff/i.test(name)),
+      sceneLabels: (() => {
+        const names = []
+        window.__twinScene?.traverse((obj) => {
+          if (obj.name === 'RoomLabelBatch' || obj.name === 'ProgressiveRoomLabels' || obj.name === 'RoomLabelBatchedText') {
+            names.push(obj.name)
+          }
+        })
+        return names
+      })(),
+    }
+  })
   const frames = await frameStats(page, started)
   const shot = await page.screenshot({ encoding: 'binary' })
   await page.close()
