@@ -17,6 +17,12 @@ export function Stage() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
+      if (event.defaultPrevented) return
+      if (window.__twinDismissEsc?.()) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
       if (useTwinStore.getState().view !== 'floor') return
       event.preventDefault()
       useTwinStore.getState().exitFloor()
