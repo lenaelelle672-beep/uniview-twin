@@ -127,13 +127,14 @@ async function main() {
     wrap('debug')
   })
 
-  const measured = await measureOverviewPrewarmCounts(page, { baseUrl, quality: 'perf' })
+  const measured = await measureOverviewPrewarmCounts(page, { baseUrl, quality: 'perf', cache: true })
   const atFlag = await page.evaluate(() => ({
     prewarm: window.__twinPrewarm ?? null,
     sdf: window.__twinSdfGrowth ?? [],
     view: window.__twinView ?? null,
     selected: window.__twinSelected ?? null,
   }))
+  const f1RequestsAtFlag = requests.filter((item) => item.url === '/floors/F01.json').length
 
   const jsonFiles = FLOORS.map((floor) => {
     const hit = bodies.get(floor.file)
@@ -182,8 +183,8 @@ async function main() {
     glyphsRequired: atFlag.prewarm?.glyphsRequired ?? null,
     glyphsPrewarmed: atFlag.prewarm?.glyphsPrewarmed ?? null,
     flagDelayMs:
-      measured.prewarmed?.prewarmedAt != null && measured.ready?.readyAt != null
-        ? measured.prewarmed.prewarmedAt - measured.ready.readyAt
+      measured.prewarmed?.now != null && measured.ready?.now != null
+        ? measured.prewarmed.now - measured.ready.now
         : null,
     overview: { view: atFlag.view, selected: atFlag.selected },
     jsonFiles,
@@ -195,6 +196,8 @@ async function main() {
     f1JsonAfterEntry: {
       status: f1After?.status ?? null,
       fromCache: f1After?.fromCache ?? null,
+      requestsAtFlag: f1RequestsAtFlag,
+      requestsAfterEntry: requests.filter((item) => item.url === '/floors/F01.json').length,
     },
     errors,
   }

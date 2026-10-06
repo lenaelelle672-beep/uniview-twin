@@ -164,9 +164,9 @@ function delta(ready, prewarmed) {
 const BATCH_JUMP_BUFFERS = 40
 const BATCH_JUMP_TEXTURES = 16
 
-export async function measureOverviewPrewarmCounts(page, { baseUrl, quality = 'perf' } = {}) {
+export async function measureOverviewPrewarmCounts(page, { baseUrl, quality = 'perf', cache = false } = {}) {
   const injected = await installWebglLiveCounts(page)
-  await page.setCacheEnabled(false)
+  await page.setCacheEnabled(cache)
   await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
   await page.goto(`${baseUrl}/?q=${quality}`, { waitUntil: 'load', timeout: 90_000 })
   await page.waitForFunction(() => window.__twinReady === true, { timeout: 60_000 })
