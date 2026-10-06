@@ -12,11 +12,13 @@ import {
 import { useTwinStore } from '../../store/store'
 
 /**
- * D179 续帧：总览 0/2、单层性能 10（告警并入）、交互动画性能 30、后台 0。
+ * D180 续帧：总览 0/2、单层性能 ≤10 / 均衡 ≤30（告警并入）、运动性能 30、后台 0。
+ * 晚于场景 useFrame 读 hold，并把 invalidate 按当前 Hz 限幅（相机飞行/拖动走同一套）。
  * AdaptiveDpr 只在性能档。
  */
 export function DemandLoop() {
-  const invalidate = useThree((state) => state.invalidate)
+  const rawInvalidate = useThree((state) => state.invalidate)
+  const setThree = useThree((state) => state.set)
   const gl = useThree((state) => state.gl)
   const quality = useTwinStore((state) => state.quality)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
@@ -24,12 +26,31 @@ export function DemandLoop() {
   const view = useTwinStore((state) => state.view)
   const last = useRef(emptyChannelClock())
   const wake = useRef(0)
+  const lastGate = useRef(0)
+  const rawRef = useRef(rawInvalidate)
+  rawRef.current = rawInvalidate
+
+  const gatedInvalidate = useRef(() => {
+    if (document.visibilityState === 'hidden') return
+    const { quality: q, view: v } = useTwinStore.getState()
+    const hz = scheduledHz(q, v, false)
+    if (Number.isFinite(hz) && hz > 0) {
+      const now = performance.now()
+      if (now - lastGate.current < 1000 / hz - 1) return
+      lastGate.current = now
+    }
+    rawRef.current()
+  }).current
 
   useLayoutEffect(() => {
-    bindTwinInvalidate(invalidate)
+    bindTwinInvalidate(gatedInvalidate)
+    setThree({ invalidate: gatedInvalidate })
     gl.shadowMap.autoUpdate = false
     if (quality !== 'perf') gl.shadowMap.needsUpdate = true
-  }, [gl, invalidate, quality])
+    return () => {
+      setThree({ invalidate: rawInvalidate })
+    }
+  }, [gatedInvalidate, gl, quality, rawInvalidate, setThree])
 
   useLayoutEffect(() => {
     if (quality === 'perf') return
@@ -40,7 +61,7 @@ export function DemandLoop() {
     const unsubAfter = addAfterEffect(() => flushTwinInvalidate())
     const unsubStore = useTwinStore.subscribe(() => {
       if (document.visibilityState === 'hidden') return
-      invalidate()
+      gatedInvalidate()
     })
     const onVis = () => {
       if (document.visibilityState === 'hidden') {
@@ -50,17 +71,17 @@ export function DemandLoop() {
         }
         return
       }
-      invalidate()
+      gatedInvalidate()
     }
     document.addEventListener('visibilitychange', onVis)
-    invalidate()
+    gatedInvalidate()
     return () => {
       unsubAfter()
       unsubStore()
       document.removeEventListener('visibilitychange', onVis)
       if (wake.current) window.clearTimeout(wake.current)
     }
-  }, [invalidate])
+  }, [gatedInvalidate])
 
   useFrame(() => {
     const hidden = document.visibilityState === 'hidden'
@@ -75,15 +96,15 @@ export function DemandLoop() {
     if (!Number.isFinite(delay)) return
     if (delay === 0) {
       markDueChannels(last.current, quality, now, view)
-      invalidate()
+      gatedInvalidate()
       return
     }
     if (wake.current) return
     wake.current = window.setTimeout(() => {
       wake.current = 0
-      if (document.visibilityState !== 'hidden') invalidate()
+      if (document.visibilityState !== 'hidden') gatedInvalidate()
     }, delay)
-  })
+  }, 100)
 
   return quality === 'perf' ? <AdaptiveDpr /> : null
 }

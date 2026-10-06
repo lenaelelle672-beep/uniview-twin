@@ -28,9 +28,10 @@ export function holdSnapshot(): Record<FrameChannel, number> {
 }
 
 /**
- * D179 续帧上限（Hz）。0 = 不续帧；Infinity = 不限帧。
+ * D180 续帧上限（Hz）。0 = 不续帧；Infinity = 不限帧。
  * 告警 2 Hz = 亮 0.5 s / 灭 0.5 s，每次切换 1 帧。
- * 总览忽略人物通道；单层性能档人物与告警并入同一调度，不叠加。
+ * 总览忽略人物；单层人物与告警并入同一调度，不叠加。
+ * 单层：性能 ≤10（仅告警则 2）、均衡/高 ≤30。
  */
 export function scheduledHz(quality: QualityTier, view: string, hidden: boolean): number {
   if (hidden) return 0
@@ -41,7 +42,7 @@ export function scheduledHz(quality: QualityTier, view: string, hidden: boolean)
     if (holds.alarm > 0) return 2
     return 0
   }
-  if (holds.people > 0 || holds.alarm > 0) return Number.POSITIVE_INFINITY
+  if (holds.people > 0 || holds.alarm > 0) return 30
   return 0
 }
 
@@ -61,8 +62,8 @@ export function emptyChannelClock(): ChannelClock {
 /** @deprecated 用 scheduledIntervalMs；保留给人物 place() 节流。 */
 export function channelIntervalMs(channel: FrameChannel, quality: QualityTier): number {
   if (channel === 'motion') return quality === 'perf' ? 1000 / 30 : 0
-  if (channel === 'people') return quality === 'perf' ? 100 : 0
-  return quality === 'perf' ? 500 : 0
+  if (channel === 'people') return quality === 'perf' ? 100 : 1000 / 30
+  return quality === 'perf' ? 500 : 1000 / 30
 }
 
 export function channelDue(lastMs: number, nowMs: number, intervalMs: number): boolean {

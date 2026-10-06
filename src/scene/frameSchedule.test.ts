@@ -12,7 +12,7 @@ import {
   soonestWakeMs,
 } from './frameSchedule'
 
-describe('D179 续帧调度', () => {
+describe('D180 续帧调度', () => {
   afterEach(() => {
     resetFrameChannels()
   })
@@ -44,13 +44,15 @@ describe('D179 续帧调度', () => {
     expect(scheduledIntervalMs('perf', 'floor', false)).toBe(100)
   })
 
-  it('单层均衡档：人物/告警不限帧（22b0b64 现状）', () => {
+  it('单层均衡档：人物/告警并入同一调度，最多 30 fps', () => {
     retainFrameChannel('people')
-    expect(scheduledHz('balanced', 'floor', false)).toBe(Number.POSITIVE_INFINITY)
-    expect(scheduledIntervalMs('balanced', 'floor', false)).toBe(0)
+    expect(scheduledHz('balanced', 'floor', false)).toBe(30)
+    expect(scheduledIntervalMs('balanced', 'floor', false)).toBeCloseTo(1000 / 30)
+    retainFrameChannel('alarm')
+    expect(scheduledHz('balanced', 'floor', false)).toBe(30)
     resetFrameChannels()
     retainFrameChannel('alarm')
-    expect(scheduledHz('high', 'floor', false)).toBe(Number.POSITIVE_INFINITY)
+    expect(scheduledHz('high', 'floor', false)).toBe(30)
   })
 
   it('交互动画：均衡不限、性能 30 fps', () => {
@@ -68,10 +70,16 @@ describe('D179 续帧调度', () => {
     last.people = 1000
     last.motion = 1000
     expect(soonestWakeMs(last, 'perf', 1200, false, 'building')).toBeCloseTo(300)
-    expect(soonestWakeMs(last, 'balanced', 1200, false, 'floor')).toBe(0)
+    last.alarm = 1000
+    last.people = 1000
+    last.motion = 1000
+    expect(soonestWakeMs(last, 'balanced', 1010, false, 'floor')).toBeCloseTo(1000 / 30 - 10)
     resetFrameChannels()
     retainFrameChannel('people')
-    expect(soonestWakeMs(last, 'balanced', 1200, false, 'floor')).toBe(0)
+    last.alarm = 1000
+    last.people = 1000
+    last.motion = 1000
+    expect(soonestWakeMs(last, 'balanced', 1010, false, 'floor')).toBeCloseTo(1000 / 30 - 10)
   })
 
   it('channelDue 与告警 2 Hz 亮灭', () => {
