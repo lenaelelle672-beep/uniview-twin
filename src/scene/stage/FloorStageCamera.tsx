@@ -1,12 +1,22 @@
 import { type CameraControls as CameraControlsImpl } from '@react-three/drei/core/CameraControls'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Box3, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
 import { activeFloorId } from './cut'
 import { obliqueOverviewSeed } from './poses'
+import {
+  OVERLAY_LAYOUT_EVENT,
+  focalOffsetToVisibleCenter,
+  readOverlayRects,
+  visibleCanvasRegion,
+} from './visibleFocus'
 import { workstationPosition } from './workstationPosition'
+
+type FocusRig = CameraControlsImpl & {
+  setFocalOffset?: (x: number, y: number, z: number, enableTransition?: boolean) => Promise<void>
+}
 
 const FLOOR_FOV = 48
 const DESK_FOV = 42
@@ -14,6 +24,7 @@ const FLY_SECONDS = 0.42
 const POLAR_DIP = 1.05
 
 const corner = new Vector3()
+const targetScratch = new Vector3()
 
 function setFov(camera: PerspectiveCamera, fov: number) {
   if (!camera.isPerspectiveCamera || Math.abs(camera.fov - fov) <= 0.05) return
@@ -51,7 +62,52 @@ function projectBox(camera: PerspectiveCamera, box: Box3) {
   }
 }
 
-function frameSlab(rig: CameraControlsImpl, camera: PerspectiveCamera, plate: Object3D, floorId: string) {
+function applyVisibleFocalOffset(
+  rig: FocusRig,
+  camera: PerspectiveCamera,
+  canvas: HTMLCanvasElement,
+  enableTransition: boolean,
+  targetWorld?: Vector3,
+) {
+  if (typeof rig.setFocalOffset !== 'function') return
+  const measured = readOverlayRects()
+  const box = canvas.getBoundingClientRect()
+  const canvasRect = measured?.canvas ?? { left: box.left, right: box.right, top: box.top, bottom: box.bottom }
+  const visible = visibleCanvasRegion(canvasRect, measured?.overlays ?? [])
+  const offset = focalOffsetToVisibleCenter(canvasRect, visible, rig.distance, camera.fov, box.height || 1)
+  void rig.setFocalOffset(offset.x, offset.y, offset.z, enableTransition)
+  if (!enableTransition) rig.update(0)
+  let target: { x: number; y: number } | undefined
+  if (targetWorld) {
+    camera.updateMatrixWorld()
+    targetScratch.copy(targetWorld).project(camera)
+    target = {
+      x: box.left + (targetScratch.x * 0.5 + 0.5) * box.width,
+      y: box.top + (-targetScratch.y * 0.5 + 0.5) * box.height,
+    }
+  }
+  window.__twinVisibleFocus = {
+    canvas: canvasRect,
+    visible,
+    focal: offset,
+    distance: rig.distance,
+    target,
+  }
+}
+
+function resetFocalOffset(rig: FocusRig | null) {
+  if (!rig || typeof rig.setFocalOffset !== 'function') return
+  void rig.setFocalOffset(0, 0, 0, false)
+  delete window.__twinVisibleFocus
+}
+
+function frameSlab(
+  rig: FocusRig,
+  camera: PerspectiveCamera,
+  plate: Object3D,
+  floorId: string,
+  canvas: HTMLCanvasElement,
+) {
   plate.updateWorldMatrix(true, true)
   const box = new Box3().setFromObject(plate)
   if (box.isEmpty()) return false
@@ -71,10 +127,12 @@ function frameSlab(rig: CameraControlsImpl, camera: PerspectiveCamera, plate: Ob
     false,
   )
   void rig.fitToBox(box, false)
+  applyVisibleFocalOffset(rig, camera, canvas, false)
   rig.update(0)
   const fitted = projectBox(camera, box)
   if (fitted.widthRatio > 0.05 && fitted.widthRatio < 0.7) {
     rig.dollyTo(rig.distance * (fitted.widthRatio / 0.78), false)
+    applyVisibleFocalOffset(rig, camera, canvas, false)
     rig.update(0)
   }
   rig.maxPolarAngle = Math.PI
@@ -84,12 +142,13 @@ function frameSlab(rig: CameraControlsImpl, camera: PerspectiveCamera, plate: Ob
 }
 
 function flyToDesk(
-  rig: CameraControlsImpl,
+  rig: FocusRig,
   camera: PerspectiveCamera,
   interior: Object3D,
   floorId: string,
   deskId: string,
   transition: boolean,
+  canvas: HTMLCanvasElement,
 ) {
   interior.updateWorldMatrix(true, false)
   const local = workstationPosition(floorId, deskId)
@@ -106,14 +165,18 @@ function flyToDesk(
   if (!transition) {
     rig.smoothTime = 0
     void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, false)
+    applyVisibleFocalOffset(rig, camera, canvas, false, target)
     rig.update(0)
+    applyVisibleFocalOffset(rig, camera, canvas, false, target)
     markLocated(deskId, started)
     return true
   }
   rig.smoothTime = FLY_SECONDS
   void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, true).then(() => {
+    applyVisibleFocalOffset(rig, camera, canvas, false, target)
     markLocated(deskId, started)
   })
+  applyVisibleFocalOffset(rig, camera, canvas, true, target)
   return true
 }
 
@@ -135,8 +198,36 @@ export function FloorStageCamera() {
   const camera = useThree((state) => state.camera)
   const scene = useThree((state) => state.scene)
   const size = useThree((state) => state.size)
+  const gl = useThree((state) => state.gl)
   const presented = useRef(false)
   const framedKey = useRef('')
+  const overlayGen = useRef(0)
+
+  useEffect(() => {
+    const bump = () => {
+      overlayGen.current += 1
+      const rig = controls as FocusRig | null
+      if (!rig || !active) {
+        resetFocalOffset(rig)
+        return
+      }
+      const perspective = camera as PerspectiveCamera
+      applyVisibleFocalOffset(rig, perspective, gl.domElement, true)
+      const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
+      const interior = scene.getObjectByName('FloorInterior')
+      if (!focused || focused.floorId !== active || !interior) return
+      try {
+        const local = workstationPosition(focused.floorId, focused.deskId)
+        const target = new Vector3(local.x, 0.55, local.z)
+        interior.localToWorld(target)
+        applyVisibleFocalOffset(rig, perspective, gl.domElement, true, target)
+      } catch {
+        // 图纸未就绪时只保留偏移，不写目标点。
+      }
+    }
+    window.addEventListener(OVERLAY_LAYOUT_EVENT, bump)
+    return () => window.removeEventListener(OVERLAY_LAYOUT_EVENT, bump)
+  }, [active, camera, controls, focusedDeskId, gl, scene])
 
   useFrame(() => {
     presented.current = true
@@ -149,7 +240,7 @@ export function FloorStageCamera() {
       if (dx * dx + dy * dy + dz * dz < 1.2 * 1.2) markLocated(end.deskId, end.started)
     }
 
-    const rig = controls as CameraControlsImpl | null
+    const rig = controls as FocusRig | null
     if (!rig || !active) return
     const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
     const deskId = focused && focused.floorId === active ? focused.deskId : null
@@ -159,18 +250,18 @@ export function FloorStageCamera() {
       const interior = scene.getObjectByName('FloorInterior')
       if (!interior) return
       interior.updateMatrixWorld(true)
-      flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, false)
+      flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, false, gl.domElement)
       framedKey.current = key
       return
     }
     const plate = scene.getObjectByName('FloorPlate')
     if (!plate) return
-    frameSlab(rig, camera as PerspectiveCamera, plate, active)
+    frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
     framedKey.current = key
   })
 
   useLayoutEffect(() => {
-    const rig = controls as CameraControlsImpl | null
+    const rig = controls as FocusRig | null
     let cancelled = false
     let attempts = 0
     // 以本次提交时是否已经出过帧为准。直达链接的楼板可能要等几帧才挂上，
@@ -188,6 +279,7 @@ export function FloorStageCamera() {
       }
       if (!active) {
         rig.smoothTime = 0
+        resetFocalOffset(rig)
         return
       }
       const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
@@ -201,7 +293,7 @@ export function FloorStageCamera() {
           }
           return
         }
-        flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide)
+        flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide, gl.domElement)
         framedKey.current = `${active}:${deskId}:${focusSeq}`
         return
       }
@@ -213,14 +305,14 @@ export function FloorStageCamera() {
         }
         return
       }
-      frameSlab(rig, camera as PerspectiveCamera, plate, active)
+      frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
       framedKey.current = `${active}:slab:${focusSeq}`
     }
     tick()
     return () => {
       cancelled = true
     }
-  }, [active, camera, controls, focusSeq, focusedDeskId, scene, size.height, size.width])
+  }, [active, camera, controls, focusSeq, focusedDeskId, gl, scene, size.height, size.width])
 
   return null
 }

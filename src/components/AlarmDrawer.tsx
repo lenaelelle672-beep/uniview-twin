@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { flushSync } from 'react-dom'
 import {
   alarmBadgeSum,
   buildExceptionRows,
@@ -15,7 +16,15 @@ import { downloadTextFile } from '../alarms/downloadCsv'
 import { buildReportSearch } from '../alarms/reportQuery'
 import { isFloorId } from '../data/floors'
 import { navigateTo } from '../report/navigate'
+import {
+  notifyOverlayLayout,
+  readOverlayRects,
+  rectWidth,
+  shouldCollapseDrawer,
+  visibleCanvasRegion,
+} from '../scene/stage/visibleFocus'
 import { useTwinStore } from '../store/store'
+import { registerEscapeLayer } from '../ui/escapeLayers'
 import '../alarms/alarm.css'
 
 interface AlarmDrawerProps {
@@ -38,9 +47,16 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
   const [draftEnd, setDraftEnd] = useState(() => range?.end ?? '')
   const [activeId, setActiveId] = useState<string | null>(null)
   const [focusNote, setFocusNote] = useState('')
+  const [collapsed, setCollapsed] = useState(false)
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const tableRef = useRef<HTMLDivElement>(null)
+  const savedScroll = useRef(0)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
+
+  useEffect(() => {
+    if (!open) setCollapsed(false)
+  }, [open])
 
   useEffect(() => {
     const dialog = dialogRef.current
@@ -49,18 +65,22 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
       if (!dialog.open) return
       dialog.close()
       document.getElementById('alarm-toggle')?.focus()
+      notifyOverlayLayout()
       return
     }
     if (!dialog.open) dialog.show()
-    dialog.focus()
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return
-      event.preventDefault()
-      onCloseRef.current()
-    }
-    document.addEventListener('keydown', onKeyDown)
-    return () => document.removeEventListener('keydown', onKeyDown)
-  }, [open])
+    if (!collapsed) dialog.focus()
+    notifyOverlayLayout()
+    return registerEscapeLayer('alarm-drawer', () => onCloseRef.current())
+  }, [collapsed, floorListOpen, open])
+
+  function expandList() {
+    setCollapsed(false)
+    requestAnimationFrame(() => {
+      if (tableRef.current) tableRef.current.scrollTop = savedScroll.current
+      notifyOverlayLayout()
+    })
+  }
 
   const floorOptions = useMemo(
     () => [...floors].sort((left, right) => floorLevel(left.id) - floorLevel(right.id)),
@@ -97,6 +117,12 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
 
   function pick(row: AlarmListRow) {
     setActiveId(row.deviceId)
+    const measured = readOverlayRects()
+    if (measured && shouldCollapseDrawer(rectWidth(visibleCanvasRegion(measured.canvas, measured.overlays)))) {
+      savedScroll.current = tableRef.current?.scrollTop ?? 0
+      flushSync(() => setCollapsed(true))
+      notifyOverlayLayout()
+    }
     focusDevice({ floor: row.floorId, deskId: row.deskId, deviceId: row.deviceId })
     setFocusNote(
       row.deskId ? `已选择工位 ${row.deskId}，楼层 ${row.floorId}` : `已选择楼层 ${row.floorId}，该设备没有工位`,
@@ -122,11 +148,18 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
     <dialog
       ref={dialogRef}
       id="alarm-drawer"
-      className={floorListOpen ? 'alarm-drawer' : 'alarm-drawer is-floor-collapsed'}
+      className={`${floorListOpen ? 'alarm-drawer' : 'alarm-drawer is-floor-collapsed'}${collapsed ? ' is-strip' : ''}`}
+      data-alarm-mode={collapsed ? 'strip' : 'full'}
       aria-label="告警抽屉"
       aria-modal="false"
       tabIndex={-1}
     >
+      {collapsed && (
+        <button type="button" className="alarm-return" aria-label="返回告警列表" onClick={expandList}>
+          返回告警列表
+        </button>
+      )}
+      <div className="alarm-full" hidden={collapsed}>
       <div className="alarm-head">
         <h2>告警</h2>
         <button type="button" className="alarm-close" aria-label="关闭告警抽屉" onClick={onClose}>
@@ -214,7 +247,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
       <p className="alarm-focus" role="status">
         {focusNote}
       </p>
-      <div className="alarm-table">
+      <div className="alarm-table" ref={tableRef}>
         <div className="alarm-cols" aria-hidden="true">
           <span>楼层</span>
           <span>工位</span>
@@ -241,6 +274,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
               <span className="cell-time">{row.time}</span>
             </button>
           ))}
+      </div>
       </div>
     </dialog>
   )

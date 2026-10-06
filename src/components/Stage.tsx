@@ -1,6 +1,7 @@
 import { useEffect, useState, type ComponentType } from 'react'
 import { schedulePrefetchAfterFirstFrame } from '../scene/stage/prefetchLazyChunks'
 import { useTwinStore } from '../store/store'
+import { dismissTopEscapeLayer } from '../ui/escapeLayers'
 import { SceneCanvas } from './Scene'
 
 export function Stage() {
@@ -17,6 +18,12 @@ export function Stage() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
+      if (event.defaultPrevented) return
+      if (dismissTopEscapeLayer()) {
+        event.preventDefault()
+        event.stopPropagation()
+        return
+      }
       if (useTwinStore.getState().view !== 'floor') return
       event.preventDefault()
       useTwinStore.getState().exitFloor()
