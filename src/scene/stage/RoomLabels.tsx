@@ -33,9 +33,11 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   useFrame(() => {
     if (labels.length === 0) return
     const perspective = camera as PerspectiveCamera
+    const interior = scene.getObjectByName('FloorInterior')
     let nearest = Infinity
     for (const label of labels) {
       sample.set(label.label[0], label.label[1], label.label[2])
+      if (interior) interior.localToWorld(sample)
       nearest = Math.min(nearest, camera.position.distanceTo(sample))
     }
     const next = worldFontSizeForDistance(nearest, size.height, perspective.fov, LABEL_MIN_PX, LABEL_MAX_PX)
@@ -45,7 +47,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     pxRef.current = px
     const focused = useTwinStore.getState().focusedDeskId
     const target = focused ? resolveWorkstationRef(focused) : null
-    const interior = scene.getObjectByName('FloorInterior')
     let deskX = NaN
     let deskY = NaN
     if (target && target.floorId === floorId && interior) {

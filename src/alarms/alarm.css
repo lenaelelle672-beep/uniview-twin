@@ -51,6 +51,14 @@
   flex-direction: column;
 }
 
+.alarm-full[hidden] {
+  display: none;
+}
+
+.alarm-drawer.is-strip {
+  overflow: hidden;
+}
+
 .alarm-return {
   writing-mode: vertical-rl;
   text-orientation: mixed;
