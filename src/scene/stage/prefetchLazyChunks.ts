@@ -3,6 +3,8 @@ const firstPrefetch = new Promise<void>((resolve) => {
   settleFirstPrefetch = resolve
 })
 let firstPrefetchSettled = false
+let scheduleArmed = false
+let preferImmediate = false
 
 function markFirstPrefetchDone() {
   if (firstPrefetchSettled) return
@@ -47,50 +49,62 @@ function waitUntil(ok: () => boolean): Promise<void> {
         resolve()
         return
       }
-      requestAnimationFrame(tick)
+      window.requestAnimationFrame(tick)
     }
-    requestAnimationFrame(tick)
+    window.requestAnimationFrame(tick)
   })
 }
 
 function nextFrame(): Promise<void> {
   return new Promise((resolve) => {
-    requestAnimationFrame(() => resolve())
+    window.requestAnimationFrame(() => resolve())
   })
 }
 
-/**
- * D120 / D126：HDR+PMREM 与 Suspense 资源都就绪后才 __twinReady，
- * 再等首帧 useFrame、多 1 个 rAF、可选 idle，然后才发三个 import()。
- */
-export function schedulePrefetchAfterFirstFrame(): () => void {
-  let cancelled = false
-  let idleId = 0
-
+function startWhenReady(): void {
   const run = async () => {
     await waitUntil(() => window.__twinReady === true)
-    if (cancelled) return
     await waitUntil(() => window.__twinFirstFrameAt != null)
-    if (cancelled) return
     await nextFrame()
-    if (cancelled) return
+    if (preferImmediate) {
+      prefetchLazyChunks()
+      return
+    }
     const go = () => {
-      if (cancelled) return
       prefetchLazyChunks()
     }
     if (typeof window.requestIdleCallback === 'function') {
-      idleId = window.requestIdleCallback(go, { timeout: 4000 })
+      window.requestIdleCallback(go, { timeout: 4000 })
     } else {
       go()
     }
   }
 
   void run()
+}
 
-  return () => {
-    cancelled = true
-    if (idleId && typeof window.cancelIdleCallback === 'function') {
-      window.cancelIdleCallback(idleId)
-    }
+/**
+ * D120 / D126：HDR+PMREM 与 Suspense 资源都就绪后才 __twinReady，
+ * 再等首帧 useFrame、多 1 个 rAF、可选 idle，然后才发三个 import()。
+ * D223：模块级单例，离开 building 不取消；重复调用不会再调度。
+ */
+export function schedulePrefetchAfterFirstFrame(): void {
+  if (scheduleArmed) return
+  scheduleArmed = true
+  startWhenReady()
+}
+
+/**
+ * D223：进楼层或直接打开楼层 URL 时，若首次 prefetch 还没发出就立刻启动。
+ * 仍必须等首帧；首帧未到则只把后续调度改成立即，不提前 import。
+ */
+export function ensurePrefetchStarted(): void {
+  preferImmediate = true
+  if (typeof window === 'undefined') return
+  if (window.__twinPrefetchAt != null) return
+  if (window.__twinReady === true && window.__twinFirstFrameAt != null) {
+    prefetchLazyChunks()
+    return
   }
+  schedulePrefetchAfterFirstFrame()
 }

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ComponentType } from 'react'
-import { schedulePrefetchAfterFirstFrame } from '../scene/stage/prefetchLazyChunks'
+import { ensurePrefetchStarted, schedulePrefetchAfterFirstFrame } from '../scene/stage/prefetchLazyChunks'
 import { useTwinStore } from '../store/store'
 import { SceneCanvas } from './Scene'
 
@@ -43,8 +43,8 @@ export function Stage() {
   }, [BlueprintView, view])
 
   useEffect(() => {
-    if (view !== 'building') return
-    return schedulePrefetchAfterFirstFrame()
+    schedulePrefetchAfterFirstFrame()
+    if (view === 'floor') ensurePrefetchStarted()
   }, [view])
 
   const showBlueprint = view === 'blueprint' && BlueprintView !== null
