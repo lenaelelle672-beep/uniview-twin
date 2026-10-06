@@ -8,6 +8,8 @@ declare module 'troika-three-text' {
     color: ColorRepresentation
     outlineWidth: number
     outlineColor: ColorRepresentation
+    fillOpacity?: number
+    outlineOpacity?: number
     anchorX: string | number
     anchorY: string | number
     characters?: string

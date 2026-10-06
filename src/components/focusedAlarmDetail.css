@@ -27,7 +27,8 @@
   min-width: 0;
   flex: 1;
   text-align: right;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .focus-card .cell-alarm {

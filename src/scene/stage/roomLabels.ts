@@ -9,18 +9,32 @@ export interface RoomLabel {
 
 export const ROOM_LABEL_FONT = '/fonts/NotoSansSC-Regular-subset.woff'
 export const LABEL_MIN_PX = 13
-export const LABEL_MAX_PX = 20
+export const LABEL_MAX_PX = 16
 
-/** 按当前机位距离把世界字号调到不少于 minPx 屏幕像素。 */
+/** 按当前机位距离把世界字号夹到 [minPx, maxPx] 屏幕像素。近景不再用 0.7 m 地板撑大字。 */
 export function worldFontSizeForDistance(
   distance: number,
   viewportHeight: number,
   fovDeg: number,
   minPx = LABEL_MIN_PX,
+  maxPx = LABEL_MAX_PX,
 ): number {
   if (!Number.isFinite(distance) || distance <= 0 || viewportHeight <= 0) return 0.78
   const worldPerPx = (2 * Math.tan((fovDeg * Math.PI) / 360) * distance) / viewportHeight
-  return Math.min(4.2, Math.max(0.7, minPx * worldPerPx))
+  const minWorld = minPx * worldPerPx
+  const maxWorld = maxPx * worldPerPx
+  return Math.min(4.2, maxWorld, Math.max(minWorld, Math.min(0.7, maxWorld)))
+}
+
+/** 屏幕上与目标标记重叠或相邻的房间标签降透明度，不删标签。 */
+export function labelFadeForTarget(
+  label: { x: number; y: number },
+  target: { x: number; y: number },
+  labelPx: number,
+  adjacentPx = 56,
+): number {
+  const reach = labelPx * 2.4 + adjacentPx
+  return Math.hypot(label.x - target.x, label.y - target.y) < reach ? 0.22 : 1
 }
 
 /** drei Text 的 characters，用来只预排这些字，避免回退字体。洽/丙始终编进子集。 */

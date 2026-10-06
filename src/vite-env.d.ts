@@ -182,6 +182,14 @@ interface Window {
   __twinLabelPx?: TwinLabelPx
   __twinLabelPackMs?: TwinLabelPackMs
   __twinLabelMount?: TwinLabelMount
+  __twinDismissEsc?: () => boolean
+  __twinVisibleFocus?: {
+    canvas: { left: number; right: number; top: number; bottom: number }
+    visible: { left: number; right: number; top: number; bottom: number }
+    focal: { x: number; y: number; z: number }
+    distance: number
+    target?: { x: number; y: number }
+  }
   __twinFloor?: TwinFloorProbe
   __twinCut?: TwinCutStats
   __twinRig?: {
@@ -205,6 +213,7 @@ interface Window {
       tz: number,
       enableTransition?: boolean,
     ) => Promise<void>
+    setFocalOffset?: (x: number, y: number, z: number, enableTransition?: boolean) => Promise<void>
     setBoundary: (box: import('three').Box3 | null) => void
     getPosition: (out: import('three').Vector3, receiveEndValue?: boolean) => import('three').Vector3
     getTarget: (out: import('three').Vector3, receiveEndValue?: boolean) => import('three').Vector3
