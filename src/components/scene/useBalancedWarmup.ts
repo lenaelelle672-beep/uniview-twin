@@ -58,6 +58,8 @@ function waitFrames(count: number): Promise<void> {
 }
 
 function enableBalancedShadows(gl: WebGLRenderer, scene: Object3D) {
+  // three 0.186：PCFShadowMap=1。R3F 在 shadows=false 时会写成已删除的 PCFSoft。
+  gl.shadowMap.type = 1
   gl.shadowMap.enabled = true
   gl.shadowMap.needsUpdate = true
   scene.traverse((object) => {
@@ -81,6 +83,7 @@ function renderShadowWarmup(gl: WebGLRenderer, scene: Scene, camera: Camera) {
   const previous = gl.getRenderTarget()
   const previousAutoClear = gl.autoClear
   gl.autoClear = true
+  gl.shadowMap.type = 1
   gl.shadowMap.enabled = true
   gl.shadowMap.needsUpdate = true
   gl.setRenderTarget(target)

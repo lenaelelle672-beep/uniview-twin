@@ -1,4 +1,4 @@
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { BufferAttribute, BufferGeometry, Color, PlaneGeometry, Vector3 } from 'three'
 import atlas from '../../assets/ready/textures/badge-digits-bold.json'
 import {
@@ -47,7 +47,7 @@ export function glyphFrame(
   height = BADGE_GLYPH_HEIGHT,
 ): { width: number; uv: [number, number, number, number] } {
   const glyph = glyphs[char]
-  if (!glyph) throw new Error(`徽标图集没有字符 ${char}`)
+  if (!glyph) throw new Error(`badge ${char}`)
   const advancePx = glyph.advanceRatio * atlas.fontSizePx
   const keep = advancePx / SPAN_PX
   const [u0, v0, u1, v1] = glyph.uv
@@ -102,7 +102,7 @@ export function buildBadgeDigitGeometry(
   })
   const geometry = mergeGeometries(parts, false)
   parts.forEach((part) => part.dispose())
-  if (!geometry) throw new Error('徽标数字网格合并失败')
+  if (!geometry) throw new Error('badge')
   const position = geometry.attributes.position.array as Float32Array
   const centers = new Float32Array(anchorIds.length * 3)
   for (let index = 0; index < anchorIds.length; index += 1) {
@@ -290,7 +290,7 @@ export function buildAlarmMarkerGeometry(floors: BadgeDigitSource[]): BadgeDigit
   })
   const geometry = mergeGeometries(parts, false)
   parts.forEach((part) => part.dispose())
-  if (!geometry) throw new Error('告警标记网格合并失败')
+  if (!geometry) throw new Error('badge')
   const position = geometry.attributes.position.array as Float32Array
   const centers = new Float32Array(anchorIds.length * 3)
   for (let index = 0; index < anchorIds.length; index += 1) {
@@ -331,7 +331,7 @@ vec4 mvC = modelViewMatrix * vec4(badgeCenter, 1.0);
 ${BADGE_SCALE}transformed = badgeCenter + (transformed - badgeCenter) * k;
 `,
     )
-  if (!vertex.includes('vMarkerPart = markerPart')) throw new Error('告警标记顶点着色器没有接上')
+  if (!vertex.includes('vMarkerPart = markerPart')) throw new Error('badge')
   shader.vertexShader = vertex
   const fragment = shader.fragmentShader
     .replace(
@@ -347,7 +347,7 @@ uniform vec3 alarmColor;
 if (vMarkerPart < 0.5) diffuseColor = vec4(alarmColor, 1.0);
 `,
     )
-  if (!fragment.includes('vMarkerPart < 0.5')) throw new Error('告警标记片元着色器没有接上')
+  if (!fragment.includes('vMarkerPart < 0.5')) throw new Error('badge')
   shader.fragmentShader = fragment
 }
 
@@ -370,7 +370,7 @@ vec4 mvC = modelViewMatrix * vec4(badgeCenter, 1.0);
 ${BADGE_SCALE}transformed = badgeCenter + (transformed - badgeCenter) * k;
 `,
     )
-  if (!vertex.includes('float k =')) throw new Error('徽标数字顶点着色器没有接上屏幕尺寸')
+  if (!vertex.includes('float k =')) throw new Error('badge')
   shader.vertexShader = vertex
 }
 
@@ -397,7 +397,7 @@ ${BADGE_SCALE}transformed *= k;
 #endif
 `,
     )
-  if (!vertex.includes('transformed *= k')) throw new Error('徽标底板顶点着色器没有接上屏幕尺寸')
+  if (!vertex.includes('transformed *= k')) throw new Error('badge')
   shader.vertexShader = vertex
 }
 
