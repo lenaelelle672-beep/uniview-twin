@@ -1,25 +1,6 @@
 import { Group, type Camera, type Object3D, type Scene, type WebGLRenderer } from 'three'
 import { supportsParallelShaderCompile } from '../glProbe'
 
-export interface ProgramSnap {
-  name: string
-  cacheKey: string
-}
-
-export function programKeys(gl: WebGLRenderer): string[] {
-  return (gl.info.programs ?? []).map((program) => program.cacheKey)
-}
-
-export function snapshotPrograms(gl: WebGLRenderer, label: string): ProgramSnap[] {
-  const snap = (gl.info.programs ?? []).map((program) => ({
-    name: program.name,
-    cacheKey: program.cacheKey,
-  }))
-  const bag = window.__twinProgramSnaps ?? (window.__twinProgramSnaps = {})
-  bag[label] = snap
-  return snap
-}
-
 function bindComposerTarget(gl: WebGLRenderer) {
   const previous = gl.getRenderTarget()
   const target = window.__twinComposerInput
@@ -82,8 +63,4 @@ export async function compileMaterialGroup(
   } finally {
     built.dispose()
   }
-}
-
-export function programCount(gl: WebGLRenderer): number {
-  return gl.info.programs?.length ?? 0
 }

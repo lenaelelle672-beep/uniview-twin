@@ -2,11 +2,10 @@ import { useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 import { useTwinStore } from '../../store/store'
 import { collectPrewarmCharacterChunks, collectPrewarmCharacters } from './characters'
-import { compileMaterialGroup, programCount, snapshotPrograms } from './compileGroup'
 import { compilePeopleGroup, compileTroikaSample, peopleModelUrls } from './extraPrewarm'
 import { preloadLabelFont, textRuntimePrefetchDone, waitTextRuntimePrefetch } from './fontPrewarm'
 import { createYieldController, waitIdle } from './idleYield'
-import { FLOOR_SHADER_GROUPS } from './shaderGroups'
+import { programCount, snapshotPrograms } from './programSnapshot'
 import { SHADER_PREWARM_ENABLED } from './shaderPrewarmFlag'
 
 function markDone(stats: NonNullable<Window['__twinPrewarm']>) {
@@ -60,6 +59,8 @@ export function IdlePrewarm() {
 
       const shaderStarted = performance.now()
       if (SHADER_PREWARM_ENABLED) {
+        const { compileMaterialGroup } = await import('./compileGroup')
+        const { FLOOR_SHADER_GROUPS } = await import('./shaderGroups')
         for (const group of FLOOR_SHADER_GROUPS) {
           await waitTurn()
           if (cancelled) return

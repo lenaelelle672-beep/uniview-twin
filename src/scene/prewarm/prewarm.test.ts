@@ -86,6 +86,8 @@ describe('T017 进层预热', () => {
     expect(SHADER_PREWARM_ENABLED).toBe(false)
     const idle = read('./IdlePrewarm.tsx')
     expect(idle).toMatch(/SHADER_PREWARM_ENABLED/)
+    expect(idle).toMatch(/import\('\.\/compileGroup'\)/)
+    expect(read('../../components/scene/RenderProbe.tsx')).not.toMatch(/compileGroup/)
     const extra = read('./extraPrewarm.ts')
     expect(extra).toMatch(/preloadFont|compileTroikaSample/)
     expect(extra).toMatch(/man-in-suit/)
