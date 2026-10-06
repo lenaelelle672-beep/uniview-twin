@@ -4,6 +4,7 @@ import { Color, InstancedMesh, Mesh } from 'three'
 import { retainFrameChannel } from '../frameSchedule'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
+import { ALARM_MARKER_ORDER } from '../overlayOrder'
 import { workstationPosition } from './workstationPosition'
 
 const FLASH_MS = 3000
@@ -96,10 +97,10 @@ export function DeskFlash({ floorId }: { floorId: string }) {
       name="DeskFlash"
       position={[place.x, 0.08, place.z]}
       rotation={[-Math.PI / 2, 0, 0]}
-      renderOrder={2}
+      renderOrder={ALARM_MARKER_ORDER}
     >
       <ringGeometry args={[0.95, 1.28, 40]} />
-      <meshBasicMaterial color="#ff8a00" transparent opacity={1} depthWrite={false} toneMapped={false} />
+      <meshBasicMaterial color="#ff8a00" transparent opacity={1} depthTest={false} depthWrite={false} toneMapped={false} />
     </mesh>
   )
 }
