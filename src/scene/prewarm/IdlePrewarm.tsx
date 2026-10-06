@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useTwinStore } from '../../store/store'
 import { collectPrewarmCharacters } from './characters'
 import { compileMaterialGroup, programCount } from './compileGroup'
+import { compilePeopleGroup, compileTroikaSample, peopleModelUrls } from './extraPrewarm'
 import { preloadLabelFont, textRuntimePrefetchDone, waitTextRuntimePrefetch } from './fontPrewarm'
 import { createYieldController, waitIdle } from './idleYield'
 import { FLOOR_SHADER_GROUPS } from './shaderGroups'
@@ -61,8 +62,9 @@ export function IdlePrewarm() {
         await waitTurn()
         if (cancelled) return
         try {
+          const before = programCount(gl)
           await compileMaterialGroup(gl, scene, camera, group)
-          compiled.push(group.id)
+          compiled.push(`${group.id}:+${programCount(gl) - before}`)
         } catch {
           compiled.push(`${group.id}:error`)
         }
@@ -75,15 +77,34 @@ export function IdlePrewarm() {
       let fontMs = 0
       try {
         const textReady = textRuntimePrefetchDone() || (await waitTextRuntimePrefetch())
+        const characters = collectPrewarmCharacters()
         if (textReady && !cancelled) {
           await waitTurn()
-          if (!cancelled) await preloadLabelFont(collectPrewarmCharacters())
+          if (!cancelled) await preloadLabelFont(characters)
+          await waitTurn()
+          if (!cancelled) {
+            const before = programCount(gl)
+            await compileTroikaSample(gl, scene, camera, characters)
+            compiled.push(`troika-text:+${programCount(gl) - before}`)
+          }
         }
         fontMs = performance.now() - fontStarted
       } catch {
         fontMs = performance.now() - fontStarted
       }
       if (cancelled) return
+
+      for (const url of peopleModelUrls(quality !== 'perf')) {
+        await waitTurn()
+        if (cancelled) return
+        try {
+          const before = programCount(gl)
+          await compilePeopleGroup(gl, scene, camera, url)
+          compiled.push(`${url.split('/').pop() ?? url}:+${programCount(gl) - before}`)
+        } catch {
+          compiled.push(`${url}:error`)
+        }
+      }
 
       markDone({
         startedAt,

@@ -61,12 +61,17 @@ describe('T017 进层预热', () => {
     expect(ids).toContain('instanced-physical-glass')
     expect(ids).toContain('instanced-monitor-basic')
     expect(ids).toContain('ceiling-standard')
+    expect(ids).toContain('room-label-line')
     expect(new Set(ids).size).toBe(ids.length)
     const compile = read('./compileGroup.ts')
     expect(compile).toMatch(/compileMaterialGroup/)
+    expect(compile).toMatch(/compileAsync\(host, camera, liveScene\)|compile\(host, camera, liveScene\)/)
+    expect(compile).toMatch(/WebGLRenderTarget\(8, 8\)/)
     expect(compile).not.toMatch(/compileAsync\(liveScene/)
-    expect(compile).toMatch(/addLightClones/)
     expect(compile).toMatch(/supportsParallelShaderCompile/)
+    const extra = read('./extraPrewarm.ts')
+    expect(extra).toMatch(/preloadFont|compileTroikaSample/)
+    expect(extra).toMatch(/man-in-suit/)
   })
 
   it('入口只挂门闩，首帧前不拉 troika / woff / 图纸', () => {

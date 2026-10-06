@@ -1,5 +1,4 @@
 import {
-  Bone,
   BoxGeometry,
   CanvasTexture,
   Color,
@@ -13,10 +12,9 @@ import {
   Object3D,
   PlaneGeometry,
   ShaderMaterial,
-  Skeleton,
-  SkinnedMesh,
   SRGBColorSpace,
 } from 'three'
+import { LineMaterial, LineSegments2, LineSegmentsGeometry } from 'three-stdlib'
 import { DEPTH_PROXY_LAYER, MONITOR_LAYER } from '../overlayOrder'
 import {
   ceilingMaterial,
@@ -154,27 +152,6 @@ export const FLOOR_SHADER_GROUPS: ShaderGroup[] = [
     },
   },
   {
-    id: 'people-skinned-vertexcolor',
-    build() {
-      const geometry = new BoxGeometry(0.2, 0.2, 0.2)
-      const material = new MeshStandardMaterial({ vertexColors: true, color: '#ffffff' })
-      const bone = new Bone()
-      const mesh = new SkinnedMesh(geometry, material)
-      mesh.add(bone)
-      mesh.bind(new Skeleton([bone]))
-      mesh.castShadow = false
-      mesh.receiveShadow = false
-      mesh.visible = false
-      return {
-        objects: [mesh],
-        dispose() {
-          geometry.dispose()
-          material.dispose()
-        },
-      }
-    },
-  },
-  {
     id: 'desk-flash-basic',
     build() {
       const geometry = new PlaneGeometry(0.3, 0.3)
@@ -277,6 +254,33 @@ void main() {
           geometry.dispose()
           material.dispose()
           texture.dispose()
+        },
+      }
+    },
+  },
+  {
+    id: 'room-label-line',
+    build() {
+      const geometry = new LineSegmentsGeometry()
+      geometry.setPositions([0, 0, 0, 0.4, 0.8, 0.2])
+      const material = new LineMaterial({
+        color: 0x5c6b7c,
+        linewidth: 1.5,
+        worldUnits: false,
+        dashed: false,
+      })
+      material.resolution.set(
+        typeof window !== 'undefined' ? window.innerWidth : 1366,
+        typeof window !== 'undefined' ? window.innerHeight : 768,
+      )
+      const line = new LineSegments2(geometry, material)
+      line.computeLineDistances()
+      line.visible = false
+      return {
+        objects: [line],
+        dispose() {
+          geometry.dispose()
+          material.dispose()
         },
       }
     },
