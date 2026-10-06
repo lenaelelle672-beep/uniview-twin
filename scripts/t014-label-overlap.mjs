@@ -64,10 +64,12 @@ async function waitOverlap(page) {
       window.__twinLabelOverlap &&
       typeof window.__twinLabelOverlap.overlapPairs === 'number' &&
       typeof window.__twinLabelOverlap.maxOffset === 'number' &&
-      window.__twinLabelOverlap.tier2,
-    { timeout: 60_000 },
+      window.__twinLabelOverlap.tier2 &&
+      (window.__twinLabelSyncs ?? 0) >= 1 &&
+      window.__twinLabelReadyAt,
+    { timeout: 90_000 },
   )
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 900)))
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)))
   return page.evaluate(() =>
     structuredClone({
       overlap: window.__twinLabelOverlap,

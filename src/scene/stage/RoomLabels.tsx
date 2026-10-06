@@ -409,14 +409,17 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       .join('|')
     if (api?.ready && measured && !clusterSyncedRef.current) {
       clusterSyncedRef.current = clusterSig || 'none'
-      if (clusterSig) void api.applyClusterTexts(clusterTexts)
+      if (clusterSig) {
+        void api.applyClusterTexts(clusterTexts).then(() => {
+          if (!window.__twinLabelReadyAt) window.__twinLabelReadyAt = performance.now()
+        })
+      } else if (!window.__twinLabelReadyAt) {
+        window.__twinLabelReadyAt = performance.now()
+      }
     }
     const live = api?.ready ? api.measureVisible(perspective, size) : []
     const measuredPairs = countMeasuredOverlap(live.map((row) => row.box))
     const tier = tier2Stats(items, avoided)
-    if (!window.__twinLabelReadyAt && api?.ready && measured) {
-      window.__twinLabelReadyAt = performance.now()
-    }
     window.__twinLabelOverlap = {
       merged: avoided.merged,
       hidden: avoided.hidden,
