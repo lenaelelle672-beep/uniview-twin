@@ -69,8 +69,7 @@ function syncViewport(material: MeshBasicMaterial, cssHeight: number) {
 export function FloorBadges() {
   const floors = useTwinStore((state) => state.floors)
   const hidden = useTwinStore(
-    (state) =>
-      state.view !== 'building' || state.exploded || state.presentation === 'model' || state.cam != null,
+    (state) => state.view !== 'building' || state.presentation === 'model' || state.cam != null,
   )
   const invalidate = useThree((state) => state.invalidate)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
@@ -206,9 +205,10 @@ export function FloorBadges() {
     syncViewport(digitMaterial, cssHeight)
     syncViewport(alarmMaterial, cssHeight)
     const { exploded, view } = useTwinStore.getState()
+    // 与 ExplodedLayout 共用进度。动画的 0.8 秒内先藏起来，结束后再落到新高度。
     const motion = stepExplodeMotion(exploded, view, clock.elapsedTime)
-    const conceal = hidden
-    if (groupRef.current) groupRef.current.visible = show
+    const conceal = hidden || motion.animating
+    if (groupRef.current) groupRef.current.visible = show && !motion.animating
     if (conceal || anchors.length === 0 || !(frameCamera instanceof PerspectiveCamera)) {
       window.__twinBadgeCenters = []
       window.__twinBadges = 0
