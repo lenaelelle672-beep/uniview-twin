@@ -5,7 +5,25 @@ declare module 'troika-three-text' {
     defaultFontURL?: string | null
     unicodeFontsURL?: string | null
     useWorker?: boolean
+    sdfGlyphSize?: number
   }): void
+}
+
+interface TwinLabelPackMs {
+  sdf: number
+  layout: number
+  sync: number
+  total: number
+}
+
+interface TwinLabelMount {
+  floorId: string
+  mounted: number
+  total: number
+  priorityIds: string[]
+  firstBatchIds: string[]
+  mountedIds: string[]
+  done: boolean
 }
 
 interface TwinRenderStats {
@@ -168,7 +186,8 @@ interface Window {
     distance: number
     target?: { x: number; y: number }
   }
-  __twinLabelPackMs?: number
+  __twinLabelPackMs?: TwinLabelPackMs
+  __twinLabelMount?: TwinLabelMount
   __twinFloor?: TwinFloorProbe
   __twinCut?: TwinCutStats
   __twinRig?: {
@@ -230,6 +249,27 @@ interface Window {
   }
   __twinBlitSites?: ReadonlyArray<{ file: string; fn: string; dest: string }>
   __twinComposerLive?: boolean
+  __twinComposerInput?: import('three').WebGLRenderTarget
+  __twinProgramSnaps?: Record<string, Array<{ name: string; cacheKey: string }>>
+  __twinSnapPrograms?: (label: string) => Array<{ name: string; cacheKey: string }>
+  __twinPrewarmed?: boolean
+  __twinPrewarmStartedAt?: number
+  __twinPrewarmedAt?: number
+  __twinPrewarm?: {
+    startedAt: number
+    doneAt: number
+    totalMs: number
+    shaderMs: number
+    fontMs: number
+    groups: string[]
+    yielded: number
+    quality: string
+    parallelShaderCompile: boolean
+    programsBefore: number
+    programsAfter: number
+    textRuntimeFirst: boolean
+    shaderEnabled: boolean
+  }
   __twinWarmup?: {
     compileMs: number
     totalMs: number

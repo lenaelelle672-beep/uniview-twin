@@ -190,6 +190,7 @@ export function FloorStageCamera() {
   const scene = useThree((state) => state.scene)
   const size = useThree((state) => state.size)
   const gl = useThree((state) => state.gl)
+  const invalidate = useThree((state) => state.invalidate)
   const presented = useRef(false)
   const framedKey = useRef('')
 
@@ -260,6 +261,7 @@ export function FloorStageCamera() {
         }
         flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide, gl.domElement)
         framedKey.current = `${active}:${deskId}:${focusSeq}`
+        invalidate()
         return
       }
       const plate = scene.getObjectByName('FloorPlate')
@@ -272,13 +274,14 @@ export function FloorStageCamera() {
       }
       frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
       framedKey.current = `${active}:slab:${focusSeq}`
+      invalidate()
     }
     tick()
     return () => {
       cancelled = true
       resetFocalOffset(rig)
     }
-  }, [active, camera, controls, focusSeq, focusedDeskId, gl, scene, size.height, size.width])
+  }, [active, camera, controls, focusSeq, focusedDeskId, gl, invalidate, scene, size.height, size.width])
 
   return null
 }

@@ -131,6 +131,10 @@ let lastFocus: { rig: FocusRig; camera: Camera & { fov: number }; canvas: HTMLCa
   null
 let overlayBound = false
 
+function requestDemandPaint() {
+  void window.__twinInvalidate?.()
+}
+
 function bindOverlayOnce() {
   if (overlayBound || typeof window === 'undefined') return
   overlayBound = true
@@ -173,6 +177,7 @@ export function applyVisibleFocalOffset(
     distance: rig.distance,
     target,
   }
+  requestDemandPaint()
 }
 
 export function resetFocalOffset(rig: Pick<FocusRig, 'setFocalOffset'> | null) {
@@ -180,4 +185,5 @@ export function resetFocalOffset(rig: Pick<FocusRig, 'setFocalOffset'> | null) {
   void rig.setFocalOffset(0, 0, 0, false)
   lastFocus = null
   delete window.__twinVisibleFocus
+  requestDemandPaint()
 }
