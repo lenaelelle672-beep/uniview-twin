@@ -12,6 +12,7 @@ import {
   LABEL_MIN_PX,
   labelFadeForTarget,
   roomLabelCharacters,
+  roomLabelOutlineWidth,
   type RoomLabel,
 } from './roomLabels'
 import { workstationPosition } from './workstationPosition'
@@ -233,7 +234,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   })
 
   if (labels.length === 0) return null
-  const outline = Math.max(0.03, fontSize * 0.055)
+  const outline = roomLabelOutlineWidth(fontSize)
   return (
     <group name="RoomLabels">
       <Line points={points} segments color="#5c6b7c" lineWidth={1.5} />

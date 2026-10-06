@@ -71,9 +71,21 @@ describe('D237 / D238 标签文本', () => {
     expect(displayName('采购部（88+1人）')).toBe('采购部')
     expect(displayName('IT部（96+1人）')).toBe('IT部')
     expect(displayName('IT部（90+1人）')).toBe('IT部')
-    expect(displayName('技服培训室(120㎡）')).toBe('技服培训室(120㎡）')
-    expect(displayName('丙类仓库(30㎡）')).toBe('丙类仓库(30㎡）')
+    expect(displayName('技服培训室(120㎡）')).toBe('技服培训室\n(120㎡）')
+    expect(displayName('丙类仓库(30㎡）')).toBe('丙类仓库\n(30㎡）')
     expect(displayName('面试等候区/公共空间')).toBe('面试等候区/公共空间')
+  })
+
+  it('面积括号只在「(」前换行，括号整段在第二行', () => {
+    const cases = ['技服培训室(120㎡）', '技服培训室(180㎡）', '丙类仓库(30㎡）'] as const
+    for (const name of cases) {
+      const shown = displayName(name)
+      const lines = shown.split('\n')
+      expect(lines).toHaveLength(2)
+      expect(lines[0]).not.toMatch(/[（(]/)
+      expect(lines[1]).toMatch(/^[（(]\d+㎡[）)]$/)
+      expect(shown.startsWith('\n')).toBe(false)
+    }
   })
 
   it('预排字符串去掉 × 和 嗆，只留 洽丙x0123456789', () => {
@@ -99,6 +111,7 @@ describe('D237 / D238 标签文本', () => {
     const missing: string[] = []
     const check = (source: string, text: string) => {
       for (const char of text) {
+        if (char.charCodeAt(0) < 32) continue
         if (!cmap.has(char)) missing.push(`${source} ${JSON.stringify(text)} 缺 ${JSON.stringify(char)}`)
       }
     }

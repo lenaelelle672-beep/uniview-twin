@@ -38,6 +38,12 @@ const CAD_NOTE = [
 ]
 /** 部门名后的人数算式，只在 displayName 去掉。 */
 const HEADCOUNT = /[（(][\d＋+\s=]*\d[\d＋+\s=]*人[）)]/g
+/** 面积括号整段不拆，只在括号前硬换行。troika normal 会尊重 \\n，不占字形。 */
+const AREA_BRACKET = /(?<!\n)([（(]\d+\s*㎡[）)])/g
+
+export function keepAreaBracketTogether(text: string): string {
+  return text.replace(AREA_BRACKET, '\n$1')
+}
 
 export function isRoomName(name: string): boolean {
   const text = name.trim()
@@ -63,7 +69,7 @@ export function displayName(name: string): string {
   if (/前台/.test(text)) return '前台'
   if (/洽谈/.test(text)) return '洽谈室'
   if (/会议/.test(text)) return text.startsWith('会议') ? text : '会议室'
-  return text
+  return keepAreaBracketTogether(text)
 }
 
 function ringArea(ring: Array<[number, number]> | null | undefined): number {

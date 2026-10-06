@@ -8,9 +8,13 @@ import {
   basementRoomLabels,
   LABEL_MAX_PX,
   LABEL_MIN_PX,
+  ROOM_LABEL_COLOR,
   ROOM_LABEL_FONT,
+  ROOM_LABEL_OUTLINE_COLOR,
+  ROOM_LABEL_OUTLINE_EM,
   labelFadeForTarget,
   roomLabelCharacters,
+  roomLabelOutlineWidth,
   worldFontSizeForDistance,
 } from './roomLabels'
 
@@ -85,5 +89,16 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/overflowWrap = 'break-word'/)
     expect(source).toMatch(/maxWidth/)
     expect(source).not.toMatch(/clipRect/)
+  })
+
+  it('整批深色字配浅色描边，描边约 0.12 em', () => {
+    expect(ROOM_LABEL_COLOR).toBe('#17324d')
+    expect(ROOM_LABEL_OUTLINE_COLOR).toBe('#ffffff')
+    expect(ROOM_LABEL_OUTLINE_EM).toBe(0.12)
+    expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.0936)
+    expect(roomLabelOutlineWidth(0.5)).toBe(0.08)
+    const source = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
+    expect(source).toMatch(/ROOM_LABEL_OUTLINE_COLOR/)
+    expect(source).toMatch(/batch.outlineWidth/)
   })
 })

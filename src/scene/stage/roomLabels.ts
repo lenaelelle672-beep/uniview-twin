@@ -12,6 +12,14 @@ export interface RoomLabel {
 export const ROOM_LABEL_FONT = '/fonts/NotoSansSC-Regular-subset.woff'
 export const LABEL_MIN_PX = 13
 export const LABEL_MAX_PX = 16
+/** 深色字 + 浅色描边：浅地靠填色，树/墙靠描边，拉近后描边仍够厚。 */
+export const ROOM_LABEL_COLOR = '#17324d'
+export const ROOM_LABEL_OUTLINE_COLOR = '#ffffff'
+export const ROOM_LABEL_OUTLINE_EM = 0.12
+
+export function roomLabelOutlineWidth(fontSize: number): number {
+  return Math.max(0.08, fontSize * ROOM_LABEL_OUTLINE_EM)
+}
 
 /** 按当前机位距离把世界字号夹到 [minPx, maxPx] 屏幕像素。近景不再用 0.7 m 地板撑大字。 */
 export function worldFontSizeForDistance(
@@ -44,7 +52,8 @@ export const ROOM_LABEL_PACK_EXTRA = '洽丙x0123456789'
 
 /** drei Text 的 characters，用来只预排这些字。 */
 export function roomLabelCharacters(labels: RoomLabel[]): string {
-  return Array.from(new Set(`${labels.map((label) => label.text).join('')}${ROOM_LABEL_PACK_EXTRA}`)).join('')
+  const raw = `${labels.map((label) => label.text).join('')}${ROOM_LABEL_PACK_EXTRA}`.replace(/[\u0000-\u001f]/g, '')
+  return Array.from(new Set(raw)).join('')
 }
 
 /** 标准层：三间会议室、茶水间、前台、电梯厅。引线终点在房间上方。 */

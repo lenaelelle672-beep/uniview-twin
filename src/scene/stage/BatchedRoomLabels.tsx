@@ -4,7 +4,7 @@ import { DoubleSide, Group, Vector3, type Camera } from 'three'
 import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { BatchedText, Text, preloadFont } from 'troika-three-text'
 import { clusterTemplates, LABEL_MAX_EMS, type LabelPackState, type LabelPlacementState } from './labelAvoidance'
-import { ROOM_LABEL_FONT, type RoomLabel } from './roomLabels'
+import { ROOM_LABEL_COLOR, ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_COLOR, type RoomLabel } from './roomLabels'
 
 disableTroikaCdnFallback()
 
@@ -140,8 +140,9 @@ export function BatchedRoomLabels({
         batch = new BatchedText()
         batch.name = 'RoomLabelBatchedText'
         batch.font = ROOM_LABEL_FONT
-        batch.color = '#17324d'
-        batch.outlineColor = '#f7f4ee'
+        batch.color = ROOM_LABEL_COLOR
+        batch.outlineColor = ROOM_LABEL_OUTLINE_COLOR
+        batch.outlineWidth = outlineRef.current
         batch.anchorX = 'center'
         batch.anchorY = 'middle'
         batch.renderOrder = 3
@@ -152,9 +153,9 @@ export function BatchedRoomLabels({
           text.text = label.text
           text.font = ROOM_LABEL_FONT
           text.fontSize = fontSizeRef.current
-          text.color = '#17324d'
+          text.color = ROOM_LABEL_COLOR
           text.outlineWidth = outlineRef.current
-          text.outlineColor = '#f7f4ee'
+          text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
           text.anchorX = 'center'
           text.anchorY = 'middle'
           text.characters = characters
@@ -169,9 +170,9 @@ export function BatchedRoomLabels({
           text.text = cluster.text
           text.font = ROOM_LABEL_FONT
           text.fontSize = fontSizeRef.current
-          text.color = '#17324d'
+          text.color = ROOM_LABEL_COLOR
           text.outlineWidth = outlineRef.current
-          text.outlineColor = '#f7f4ee'
+          text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
           text.anchorX = 'center'
           text.anchorY = 'middle'
           text.characters = characters
@@ -195,8 +196,11 @@ export function BatchedRoomLabels({
         for (const text of [...members, ...clusterMembers]) {
           text.fontSize = fontSizeRef.current
           text.outlineWidth = outlineRef.current
+          text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
           applyWrap(text, fontSizeRef.current)
         }
+        batch.outlineWidth = outlineRef.current
+        batch.outlineColor = ROOM_LABEL_OUTLINE_COLOR
         applyMemberFades(members, fadesRef.current)
         if (cancelled || !batch) return
         batch.visible = true
@@ -233,8 +237,11 @@ export function BatchedRoomLabels({
     for (const text of [...members, ...clusterMembers]) {
       text.fontSize = fontSize
       text.outlineWidth = outlineWidth
+      text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
       applyWrap(text, fontSize)
     }
+    batch.outlineWidth = outlineWidth
+    batch.outlineColor = ROOM_LABEL_OUTLINE_COLOR
     applyMemberFades(members, fadesRef.current)
     batch.sync(() => invalidate())
   }, [fadesRef, fontSize, invalidate, outlineWidth, packGen])
