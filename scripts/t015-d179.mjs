@@ -41,6 +41,8 @@ async function launch() {
 }
 
 async function waitReady(page) {
+  const already = await page.evaluate(() => window.__twinReady === true).catch(() => false)
+  if (already) return
   await page.waitForFunction(() => window.__twinReady === true, { timeout: 90_000 })
 }
 
@@ -89,19 +91,7 @@ function cpuTicks(pids) {
 
 const CLK = Number(require('node:child_process').spawnSync('getconf', ['CLK_TCK'], { encoding: 'utf8' }).stdout.trim()) || 100
 
-async function pageCpuCores(page, browser, seconds) {
-  const client = await page.createCDPSession()
-  let cdp = null
-  try {
-    cdp = await client.send('SystemInfo.getProcessInfo')
-  } catch {
-    cdp = null
-  }
-  try {
-    await client.detach()
-  } catch {
-    // ignore
-  }
+async function pageCpuCores(_page, browser, seconds) {
   const root = browser.process()?.pid
   const pids = root ? childPids(root) : []
   const a = cpuTicks(pids)
@@ -115,7 +105,6 @@ async function pageCpuCores(page, browser, seconds) {
     via: 'proc-renderer-gpu',
     pids: pids.length,
     matched: b.matched,
-    cdpTypes: Array.isArray(cdp?.processInfo) ? cdp.processInfo.map((p) => p.type) : null,
   }
 }
 
@@ -351,23 +340,29 @@ async function main() {
   for (let i = 0; i < 2; i += 1) {
     console.error(`idle ${i + 1}/2`)
     const browser = await launch()
+    console.error('  auto overview')
     const autoOv = await openScene(browser, '/')
     const autoOverview = await sampleIdle(autoOv, browser, 8)
+    console.error('  hidden')
     const hidden = await sampleIdle(autoOv, browser, 4, true)
     await autoOv.close()
 
+    console.error('  balanced overview')
     const balOv = await openScene(browser, '/?q=balanced')
     const balancedOverview = await sampleIdle(balOv, browser, 8)
     await balOv.close()
 
+    console.error('  auto F12')
     const autoFloor = await openScene(browser, '/?view=floor&floor=F12')
     const autoF12 = await sampleIdle(autoFloor, browser, 8)
     await autoFloor.close()
 
+    console.error('  balanced F12')
     const balFloor = await openScene(browser, '/?q=balanced&view=floor&floor=F12')
     const balancedF12 = await sampleIdle(balFloor, browser, 8)
     await balFloor.close()
 
+    console.error('  perf F12')
     const perfFloor = await openScene(browser, '/?q=perf&view=floor&floor=F12')
     const perfF12 = await sampleIdle(perfFloor, browser, 8)
     await perfFloor.close()
