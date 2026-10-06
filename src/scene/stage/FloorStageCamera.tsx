@@ -119,6 +119,7 @@ async function frameSlab(
     seed.target[2],
     false,
   )
+  window.__twinCameraFramed = floorId
   await rig.fitToBox(box, false)
   applyVisibleFocalOffset(rig, camera, canvas, false)
   rig.update(0)

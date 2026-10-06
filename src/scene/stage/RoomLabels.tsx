@@ -279,7 +279,7 @@ function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, num
 
 export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
   const { camera, scene, size, gl, invalidate } = useThree()
-  const [fontSize] = useState(0.78)
+  const [fontSize, setFontSize] = useState(0)
   const sizedRef = useRef(false)
   const pxRef = useRef(0)
   const fadesRef = useRef<number[]>([])
@@ -336,6 +336,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
 
   useEffect(() => {
     sizedRef.current = false
+    setFontSize(0)
     clusterSyncedRef.current = ''
     viewKeyRef.current = ''
     packedRef.current = null
@@ -491,11 +492,16 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       viewKeyRef.current = viewKey
     }
     if (dragging) idleRef.current = -1
-    if (!sizedRef.current) {
+    const framed = window.__twinCameraFramed === floorId || slabReady
+    if (!sizedRef.current && framed) {
       host?.updateWorldMatrix(true, false)
       perspective.updateMatrixWorld()
-      const { maxPx } = maxProjectedEmPx(host ?? null, labels, perspective, size, fontSize || 0.78)
-      if (maxPx > 1e-6) sizedRef.current = true
+      const { maxPx } = maxProjectedEmPx(host ?? null, labels, perspective, size, 0.78)
+      if (maxPx > 1e-6) {
+        setFontSize(worldFontSizeFromProjectedEm(0.78, maxPx))
+        sizedRef.current = true
+      }
+      invalidate()
     }
     if (!settled) {
       invalidate()

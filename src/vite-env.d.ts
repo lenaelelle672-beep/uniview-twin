@@ -201,6 +201,7 @@ interface Window {
   __twinCameraRestReason?: string
   __twinCameraRestAt?: number
   __twinFlyPromiseAt?: number
+  __twinCameraFramed?: string
   __twinLabelPhases?: {
     restAt?: number
     restReason?: string
