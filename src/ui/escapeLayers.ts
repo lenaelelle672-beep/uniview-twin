@@ -2,6 +2,20 @@ type EscapeLayer = { id: string; dismiss: () => void }
 
 const layers: EscapeLayer[] = []
 
+export type SearchEscapeAction = 'close-list' | 'clear' | 'blur'
+
+/** 搜索框聚焦时的 Esc 步进：先关下拉，再清空，再失焦。 */
+export function nextSearchEscapeAction(state: {
+  focused: boolean
+  listOpen: boolean
+  query: string
+}): SearchEscapeAction | null {
+  if (state.listOpen) return 'close-list'
+  if (state.query !== '') return 'clear'
+  if (state.focused) return 'blur'
+  return null
+}
+
 export function registerEscapeLayer(id: string, dismiss: () => void): () => void {
   layers.push({ id, dismiss })
   return () => {
