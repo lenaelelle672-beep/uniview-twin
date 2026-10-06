@@ -244,6 +244,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const measureRef = useRef<LabelBatchApi | null>(null)
   const viewKeyRef = useRef('')
   const clusterSyncedRef = useRef('')
+  const packedRef = useRef<AvoidResult | null>(null)
   const characters = roomLabelCharacters(labels)
   const points = labels.flatMap((label) => [label.anchor, label.label])
 
@@ -252,6 +253,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     setFontSize(0)
     clusterSyncedRef.current = ''
     viewKeyRef.current = ''
+    packedRef.current = null
   }, [floorId])
 
   useFrame(() => {
@@ -358,17 +360,23 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         clusterSizes[id.slice('cluster:'.length)] = { w: box.w, h: box.h }
       }
     }
-    const viewKey = `${floorId}|${Math.round((window.__twinRig?.distance ?? 0) * 20)}|${alarmDesks.join(',')}|${focused ?? ''}|${state.searchQuery}|${size.width}`
-    const shouldPack = viewKey !== viewKeyRef.current || !packRef.current || items.length > 0
+    const viewKey = `${floorId}|${Math.round((window.__twinRig?.distance ?? 0) * 20)}|${alarmDesks.join(',')}|${focused ?? ''}|${state.searchQuery}|${size.width}|${measured ? 'm' : 'e'}`
+    const shouldPack = viewKey !== viewKeyRef.current || !packedRef.current
     if (shouldPack) viewKeyRef.current = viewKey
-    const avoided = avoidLabels(items, clusterSizes)
+    const packed = shouldPack || !packedRef.current ? avoidLabels(items, clusterSizes) : packedRef.current
+    packedRef.current = packed
+    let avoided = packed
     if (hoverId) {
-      const row = avoided.placements.find((item) => item.id === hoverId)
+      const row = packed.placements.find((item) => item.id === hoverId)
       if (row && !row.visible) {
-        if (row.cluster) avoided.merged = Math.max(0, avoided.merged - 1)
-        else avoided.hidden = Math.max(0, avoided.hidden - 1)
-        row.visible = true
-        row.cluster = null
+        avoided = {
+          ...packed,
+          merged: row.cluster ? Math.max(0, packed.merged - 1) : packed.merged,
+          hidden: row.cluster ? packed.hidden : Math.max(0, packed.hidden - 1),
+          placements: packed.placements.map((item) =>
+            item.id === hoverId ? { ...item, visible: true, cluster: null } : item,
+          ),
+        }
       }
     }
     const byId: LabelPackState['byId'] = {}
@@ -399,14 +407,14 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([key, text]) => `${key}:${text}`)
       .join('|')
-    if (api && clusterSig && clusterSig !== clusterSyncedRef.current) {
-      clusterSyncedRef.current = clusterSig
-      void api.applyClusterTexts(clusterTexts)
+    if (api?.ready && measured && !clusterSyncedRef.current) {
+      clusterSyncedRef.current = clusterSig || 'none'
+      if (clusterSig) void api.applyClusterTexts(clusterTexts)
     }
     const live = api?.ready ? api.measureVisible(perspective, size) : []
     const measuredPairs = countMeasuredOverlap(live.map((row) => row.box))
     const tier = tier2Stats(items, avoided)
-    if (!window.__twinLabelReadyAt && api?.ready && live.length + avoided.hidden >= 0) {
+    if (!window.__twinLabelReadyAt && api?.ready && measured) {
       window.__twinLabelReadyAt = performance.now()
     }
     window.__twinLabelOverlap = {
@@ -428,10 +436,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         return x0 < 620 && x1 > 500 && y0 < 360 && y1 > 280
       }),
     }
-    const heights = live.filter((row) => !row.cluster && row.px > 4).map((row) => row.px)
     window.__twinLabelPx = {
       fontSize,
-      px: heights.length ? heights.reduce((sum, value) => sum + value, 0) / heights.length : px,
+      px,
       minPx: LABEL_MIN_PX,
       maxPx: LABEL_MAX_PX,
       distance: nearest,

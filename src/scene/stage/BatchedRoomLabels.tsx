@@ -147,6 +147,7 @@ export function BatchedRoomLabels({
     const started = performance.now()
     window.__twinLabelSyncs = 0
     window.__twinLabelSyncStartedAt = started
+    window.__twinLabelReadyAt = undefined
 
     void new Promise<void>((resolve) => {
       preloadFont({ font: ROOM_LABEL_FONT, characters }, () => resolve())

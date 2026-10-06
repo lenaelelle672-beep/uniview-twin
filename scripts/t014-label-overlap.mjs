@@ -200,6 +200,14 @@ async function main() {
       }))
       await leaveFloor(page)
     }
+    await enterFloor(page, 'F12')
+    await page.evaluate(() => {
+      window.__twinDefaultDistance = undefined
+    })
+    const f12 = summarize(await waitOverlap(page))
+    report.fontPx[width].F12 = f12.px
+    report.syncs[width].F12 = { syncs: f12.syncs, syncMs: f12.syncMs }
+    await leaveFloor(page)
     if (width === 1366) {
       for (const floorId of CONSOLE_FLOORS) {
         await enterFloor(page, floorId)
