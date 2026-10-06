@@ -28,6 +28,7 @@ import {
   stripStrongOverlaps,
   visibilityMismatch,
 } from './labelScreenMeasure'
+import { retainFrameChannel } from '../frameSchedule'
 import { isCameraRested } from './cameraRest'
 import { preloadLabelChars } from './glyphProbe'
 import type { LabelBatchApi } from './BatchedRoomLabels'
@@ -305,6 +306,14 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const cameraRef = useRef(camera)
   const sizeRef = useRef(size)
   const wakeRef = useRef(0)
+  const fadeHoldRef = useRef<(() => void) | null>(null)
+  const holdFadeFrames = () => {
+    if (!fadeHoldRef.current) fadeHoldRef.current = retainFrameChannel('motion')
+  }
+  const dropFadeFrames = () => {
+    fadeHoldRef.current?.()
+    fadeHoldRef.current = null
+  }
   const askFrame = () => {
     if (wakeRef.current) return
     // demand 下，当前 useFrame 里同步 invalidate 不一定能排到下一帧；停稳后 Hz=0 会把 80ms 淡入拖成数百毫秒。
@@ -366,6 +375,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     itemsRef.current = []
     packRef.current = hiddenLayout(labels)
     layoutRef.current = packRef.current
+    dropFadeFrames()
     void preloadLabelChars(characters, `entry:${floorId}`)
   }, [floorId, labels, characters])
 
@@ -376,6 +386,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     pendingFadeRef.current = false
     fadeInRef.current = 0
     window.__twinLabelFading = false
+    dropFadeFrames()
   }, [fontSize])
 
   useEffect(() => {
@@ -550,6 +561,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       return
     }
     if (shouldPack && api?.ready && packStepRef.current === 'idle') {
+      holdFadeFrames()
       const avoidStart = performance.now()
       window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), packStep: 'avoid', avoidStartAt: avoidStart }
       host?.updateWorldMatrix(true, false)
@@ -757,8 +769,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       pendingFadeRef.current = false
       window.__twinLabelFading = true
       window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), fadeStartAt: fadeInRef.current, packStep: 'fade' }
+      holdFadeFrames()
       askFrame()
-      return
     }
     if (packStepRef.current === 'fade' && fadeInRef.current === 0) packStepRef.current = 'idle'
     const writePackVisibility = (byId: LabelPackState['byId'], clusters: LabelPackState['clusters']) => {
@@ -848,6 +860,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         const fadeMs = Math.round(performance.now() - fadeInRef.current)
         fadeInRef.current = 0
         window.__twinLabelFading = false
+        dropFadeFrames()
         window.__twinLabelPhases = {
           ...(window.__twinLabelPhases ?? {}),
           fadeDoneAt: performance.now(),
@@ -858,6 +871,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         packStepRef.current = 'idle'
       } else {
         window.__twinLabelFading = true
+        holdFadeFrames()
         askFrame()
       }
     }
