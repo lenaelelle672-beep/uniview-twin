@@ -18,6 +18,7 @@ import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
+import { installInvalidateTrace } from '../scene/invalidateLog'
 import BadgeHud from './scene/BadgeHud'
 
 const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
@@ -221,7 +222,9 @@ export function SceneCanvas() {
         shadows={gpuReady && !softwareAuto && quality !== 'perf' ? 'percentage' : false}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
         gl={CANVAS_GL}
-        onCreated={({ gl, setDpr }) => {
+        onCreated={(state) => {
+          if (import.meta.env.DEV) installInvalidateTrace(state)
+          const { gl, setDpr } = state
           const renderer = readGpuRenderer(gl)
           const software = SOFTWARE.test(renderer)
           const auto = software && !useTwinStore.getState().qualityPinned

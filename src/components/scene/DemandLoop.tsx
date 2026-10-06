@@ -43,6 +43,7 @@ export function DemandLoop() {
       if (now - lastGate.current < 1000 / hz - 1) return
       lastGate.current = now
     }
+    if (import.meta.env.DEV) window.__twinInvalidateNext = 'demand-store'
     rawRef.current()
   }).current
 
@@ -131,6 +132,7 @@ export function DemandLoop() {
     if (!Number.isFinite(delay)) return
     if (delay === 0 && hz === Number.POSITIVE_INFINITY) {
       markDueChannels(last.current, liveQuality, now, liveView)
+      if (import.meta.env.DEV) window.__twinInvalidateNext = 'demand-unlimited'
       rawRef.current()
       return
     }
@@ -139,7 +141,10 @@ export function DemandLoop() {
     wake.current = window.setTimeout(() => {
       wake.current = 0
       markDueChannels(last.current, liveQuality, performance.now(), liveView)
-      if (document.visibilityState !== 'hidden') rawRef.current()
+      if (document.visibilityState !== 'hidden') {
+        if (import.meta.env.DEV) window.__twinInvalidateNext = `demand-hz-${hz}`
+        rawRef.current()
+      }
     }, wait)
   }, 100)
 
