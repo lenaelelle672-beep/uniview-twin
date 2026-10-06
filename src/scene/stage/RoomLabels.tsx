@@ -264,7 +264,7 @@ function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, num
 }
 
 export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
-  const { camera, scene, size, pointer, invalidate } = useThree()
+  const { camera, scene, size, invalidate } = useThree()
   const [fontSize, setFontSize] = useState(0)
   const sizedRef = useRef(false)
   const pxRef = useRef(0)
@@ -280,7 +280,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const poseRef = useRef('')
   const poseIdleRef = useRef(0)
   const itemsRef = useRef<AvoidItem[]>([])
-  const hoverIdRef = useRef<string | null>(null)
   const cameraRef = useRef(camera)
   const sizeRef = useRef(size)
   const characters = roomLabelCharacters(labels)
@@ -585,7 +584,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       packRef.current = { byId, clusters }
       viewKeyRef.current = viewKey
       clusterSyncedRef.current = 'once'
-      hoverIdRef.current = null
       window.__twinLabelPx = {
         fontSize,
         px,
@@ -605,23 +603,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       invalidate()
       return
     }
-    const pointerX = (pointer.x * 0.5 + 0.5) * size.width
-    const pointerY = (-pointer.y * 0.5 + 0.5) * size.height
-    let hoverId: string | null = null
-    for (const item of itemsRef.current) {
-      if (Math.hypot(pointerX - item.x, pointerY - item.y) < Math.max(item.w, item.h) * 0.65 + 18) {
-        hoverId = item.id
-        break
-      }
-    }
-    if (hoverId === hoverIdRef.current) return
-    hoverIdRef.current = hoverId
-    const layout = layoutRef.current
-    const byId =
-      hoverId && layout.byId[hoverId] && !layout.byId[hoverId].visible
-        ? { ...layout.byId, [hoverId]: { ...layout.byId[hoverId]!, visible: true, cluster: null } }
-        : layout.byId
-    packRef.current = { byId, clusters: layout.clusters }
   })
 
   if (labels.length === 0) return null

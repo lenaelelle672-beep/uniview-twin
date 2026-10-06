@@ -84,8 +84,9 @@ describe('房间引线标签', () => {
   it('单个标签透明度走 useFrame，不额外 sync', () => {
     const source = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
     const frame = source.slice(source.lastIndexOf('useFrame'))
-    expect(frame).toMatch(/applyMemberFades/)
-    expect(frame).not.toMatch(/applyMemberFades[\s\S]{0,180}\.sync\(/)
+    expect(source).toMatch(/writePack[\s\S]*applyMemberFades/)
+    expect(frame).toMatch(/writePack\(pack\)/)
+    expect(source).not.toMatch(/applyMemberFades[\s\S]{0,180}\.sync\(/)
     expect(source.match(/\.sync\(/g)?.length).toBeGreaterThanOrEqual(1)
     expect(source).toMatch(/bumpSync/)
     expect(source).toMatch(/placement\?\.visible === true/)
