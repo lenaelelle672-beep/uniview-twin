@@ -4,7 +4,6 @@ import { useLayoutEffect, useRef, type RefObject } from 'react'
 import { Box3, Group, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { CAMERA_LIMITS, CAMERA_POSES, maxPolarAngleAboveGround } from '../../scene/cameras'
 import { explodeOffset, FLOOR_COUNT } from '../../scene/explode'
-import { retainFrameChannel } from '../../scene/frameSchedule'
 import { useTwinStore } from '../../store/store'
 
 const targetScratch = new Vector3()
@@ -155,26 +154,6 @@ export function CameraRig({
     applyCameraLimits(rig, distanceCap.current)
     rig.update(0)
   }, [cam, camera, fitGeneration, fitRef, size.height, size.width, spread, view])
-
-  useLayoutEffect(() => {
-    const rig = controls.current
-    if (!rig) return
-    let release: (() => void) | null = null
-    const hold = () => {
-      if (!release) release = retainFrameChannel('motion')
-    }
-    const drop = () => {
-      release?.()
-      release = null
-    }
-    rig.addEventListener('wake', hold)
-    rig.addEventListener('sleep', drop)
-    return () => {
-      rig.removeEventListener('wake', hold)
-      rig.removeEventListener('sleep', drop)
-      drop()
-    }
-  }, [])
 
   useFrame(() => {
     const rig = controls.current

@@ -2,10 +2,12 @@ import { AdaptiveDpr } from '@react-three/drei/core/AdaptiveDpr'
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
+import { stepExplodeMotion } from '../../scene/explode'
 import {
   emptyChannelClock,
   holdSnapshot,
   markDueChannels,
+  retainFrameChannel,
   scheduledHz,
   soonestWakeMs,
 } from '../../scene/frameSchedule'
@@ -24,9 +26,11 @@ export function DemandLoop() {
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
   const exploded = useTwinStore((state) => state.exploded)
   const view = useTwinStore((state) => state.view)
+  const controls = useThree((state) => state.controls)
   const last = useRef(emptyChannelClock())
   const wake = useRef(0)
   const lastGate = useRef(0)
+  const explodeHold = useRef<(() => void) | null>(null)
   const rawRef = useRef(rawInvalidate)
   rawRef.current = rawInvalidate
 
@@ -58,6 +62,28 @@ export function DemandLoop() {
   }, [exploded, gl, quality, selectedFloor, view])
 
   useEffect(() => {
+    const rig = controls as { addEventListener?: (type: string, fn: () => void) => void; removeEventListener?: (type: string, fn: () => void) => void } | null
+    const on = rig?.addEventListener
+    const off = rig?.removeEventListener
+    if (!on || !off) return undefined
+    let release: (() => void) | null = null
+    const hold = () => {
+      if (!release) release = retainFrameChannel('motion')
+    }
+    const drop = () => {
+      release?.()
+      release = null
+    }
+    on('wake', hold)
+    on('sleep', drop)
+    return () => {
+      off('wake', hold)
+      off('sleep', drop)
+      drop()
+    }
+  }, [controls])
+
+  useEffect(() => {
     const unsubAfter = addAfterEffect(() => flushTwinInvalidate())
     const unsubStore = useTwinStore.subscribe(() => {
       if (document.visibilityState === 'hidden') return
@@ -83,19 +109,28 @@ export function DemandLoop() {
     }
   }, [gatedInvalidate])
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
+    const { exploded: boom, view: liveView, quality: liveQuality } = useTwinStore.getState()
+    const { animating } = stepExplodeMotion(boom, liveView, clock.elapsedTime)
+    if (animating) {
+      if (!explodeHold.current) explodeHold.current = retainFrameChannel('motion')
+      window.__twinBadges = 0
+    } else if (explodeHold.current) {
+      explodeHold.current()
+      explodeHold.current = null
+    }
     const hidden = document.visibilityState === 'hidden'
-    const hz = scheduledHz(quality, view, hidden)
+    const hz = scheduledHz(liveQuality, liveView, hidden)
     window.__twinFrameCount = (window.__twinFrameCount ?? 0) + 1
     window.__twinLastFrameAt = performance.now()
     window.__twinGlFrame = gl.info.render.frame
-    window.__twinSchedule = { hz, view, quality, hidden, holds: holdSnapshot() }
+    window.__twinSchedule = { hz, view: liveView, quality: liveQuality, hidden, holds: holdSnapshot() }
     if (hidden) return
     const now = performance.now()
-    const delay = soonestWakeMs(last.current, quality, now, false, view)
+    const delay = soonestWakeMs(last.current, liveQuality, now, false, liveView)
     if (!Number.isFinite(delay)) return
     if (delay === 0) {
-      markDueChannels(last.current, quality, now, view)
+      markDueChannels(last.current, liveQuality, now, liveView)
       gatedInvalidate()
       return
     }
@@ -108,3 +143,5 @@ export function DemandLoop() {
 
   return quality === 'perf' ? <AdaptiveDpr /> : null
 }
+
+export default DemandLoop

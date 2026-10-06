@@ -26,7 +26,7 @@ const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ d
 const FacadeSamples = lazy(() =>
   import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
 )
-const DemandLoop = lazy(() => import('./scene/DemandLoop').then((mod) => ({ default: mod.DemandLoop })))
+const DemandLoop = lazy(() => import('./scene/DemandLoop'))
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
