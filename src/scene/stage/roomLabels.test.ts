@@ -77,4 +77,11 @@ describe('房间引线标签', () => {
     expect(frame).not.toMatch(/\.sync\(/)
     expect(source.match(/batch\??\.sync/g)?.length).toBe(2)
   })
+
+  it('换行用 maxWidth + break-word，不用 clipRect', () => {
+    const source = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
+    expect(source).toMatch(/overflowWrap = 'break-word'/)
+    expect(source).toMatch(/maxWidth/)
+    expect(source).not.toMatch(/clipRect/)
+  })
 })

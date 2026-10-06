@@ -131,7 +131,17 @@ interface Window {
   __twinFocusDevice?: (target: { floor: string; deskId: string | null; deviceId?: string | null }) => void
   __twinSelectFloor?: (floorId: string | null) => void
   __twinStats?: TwinRenderStats
-  __twinBadges?: number
+  __twinFloorMarkers?: {
+    count: number
+    renderedBeforeFirstFrame: boolean
+    at: number
+  }
+  __twinLabelOverlap?: {
+    overlapPairs: number
+    hidden: number
+    visible: number
+    clusters: number
+  }
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>
   __twinFly?: { floorId: string; nonce: number } | null
   __twinProject?: (x: number, y: number, z: number) => { x: number; y: number; behind: boolean }

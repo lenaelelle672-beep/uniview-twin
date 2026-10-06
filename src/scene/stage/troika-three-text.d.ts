@@ -14,6 +14,9 @@ declare module 'troika-three-text' {
     anchorY: string | number
     characters?: string
     depthOffset?: number
+    maxWidth?: number
+    overflowWrap?: 'normal' | 'break-word'
+    whiteSpace?: 'normal' | 'nowrap'
     sync(callback?: () => void): void
     dispose(): void
   }

@@ -1,4 +1,3 @@
-import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
@@ -6,7 +5,6 @@ import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
 import { EastBlock } from './scene/EastBlock'
-import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
 import { MainScenePass, MonitorPass } from './scene/MonitorPass'
@@ -142,14 +140,9 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <FloorStage />
         <RenderProbe />
       </Suspense>
-      {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
+      {/* 合成器首帧出来之前继续由 MainScenePass 画主场景。 */}
       {!composerLive && <MainScenePass renderPriority={1} />}
       <MonitorPass renderPriority={2} drawOverlay={!composerLive} />
-      <Suspense fallback={null}>
-        <Hud renderPriority={3}>
-          <FloorBadges />
-        </Hud>
-      </Suspense>
       {prefetchDone && (
         <Suspense fallback={null}>
           <FacadeSamples />

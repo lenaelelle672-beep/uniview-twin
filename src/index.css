@@ -222,6 +222,77 @@ button {
   overflow: hidden;
 }
 
+.floor-panel.is-overview-compact {
+  width: 96px;
+}
+
+.floor-panel.is-strip {
+  width: 56px;
+  overflow: hidden;
+}
+
+.floor-panel.is-overview-compact .panel-title,
+.floor-panel.is-strip .panel-title {
+  padding: 6px 8px 2px;
+  font-size: 12px;
+}
+
+.floor-panel.is-overview-compact .floor-items,
+.floor-panel.is-strip .floor-items {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 0 4px 4px;
+}
+
+.floor-panel.is-overview-compact .floor-item,
+.floor-panel.is-strip .floor-item {
+  flex: 1 1 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+}
+
+.floor-panel.is-overview-compact .floor-name,
+.floor-panel.is-strip .floor-name {
+  display: none;
+}
+
+.floor-panel.is-overview-compact .floor-counts,
+.floor-panel.is-strip .floor-counts {
+  grid-column: unset;
+  margin-left: auto;
+  gap: 4px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.floor-item.is-hovered {
+  background: #e7f1fb;
+}
+
+.floor-leader {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 2;
+  overflow: visible;
+}
+
+.floor-leader path {
+  fill: none;
+  stroke: #0b6bcb;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
 .detail-panel {
   width: 248px;
   flex: none;
@@ -571,6 +642,14 @@ button {
     width: 208px;
   }
 
+  .floor-panel.is-overview-compact {
+    width: 88px;
+  }
+
+  .floor-panel.is-strip {
+    width: 52px;
+  }
+
   .detail-panel {
     width: 220px;
   }
@@ -581,6 +660,12 @@ button {
 }
 
 @media (max-width: 1100px) {
+  .app:has(.floor-panel.is-overview-compact) .alarm-drawer:not(.is-floor-collapsed) {
+    left: 88px;
+    inset-inline-start: 88px;
+    width: min(560px, calc(100vw - 88px - 220px - 12px));
+  }
+
   .topbar {
     gap: 6px;
     padding: 6px 8px;

@@ -9,7 +9,9 @@ import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
 import { useFloorActions } from './floorPick'
 
 export function B1({ model }: { model: boolean }) {
-  const selected = useTwinStore((state) => state.view === 'building' && state.selectedFloor === 'B1')
+  const selected = useTwinStore(
+    (state) => state.view === 'building' && (state.selectedFloor === 'B1' || state.hoveredFloor === 'B1'),
+  )
   const actions = useFloorActions('B1')
   const hideSlab = useTwinStore((state) => isBasementSlabHidden(state.view, state.selectedFloor))
   const hideZones = useTwinStore((state) => isBasementZonesHidden(state.view, state.selectedFloor))

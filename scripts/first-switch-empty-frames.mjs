@@ -40,7 +40,7 @@ async function waitReady(page) {
   await page.waitForFunction(() => window.__twinReady === true && window.__twinStats?.calls > 0, {
     timeout: 60_000,
   })
-  await page.waitForFunction(() => (window.__twinBadges ?? 0) >= 20, { timeout: 30_000 }).catch(() => {})
+  await page.waitForFunction(() => (window.__twinFloorMarkers?.count ?? 0) >= 20, { timeout: 30_000 }).catch(() => {})
 }
 
 async function runRound(browser, index) {

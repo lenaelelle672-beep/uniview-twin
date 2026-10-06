@@ -2,8 +2,11 @@ import { Line } from '@react-three/drei/core/Line'
 import { useFrame, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useRef, useState } from 'react'
 import { PerspectiveCamera, Vector3, type Camera, type Object3D } from 'three'
+import { searchWorkstations } from '../../locate/search'
 import { resolveWorkstationRef } from '../../locate/ref'
+import { pointInRing } from '../../floors/parsePlan'
 import { useTwinStore } from '../../store/store'
+import { avoidLabels, labelScreenBox, type AvoidItem, type LabelPackState } from './labelAvoidance'
 import {
   LABEL_MAX_PX,
   LABEL_MIN_PX,
@@ -89,11 +92,22 @@ export function worldFontSizeFromProjectedEm(
   return currentFontSize * (want / currentMaxPx)
 }
 
+function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, number]> | null | undefined): boolean {
+  if (!polygon || polygon.length < 3) return false
+  try {
+    const place = workstationPosition(floorId, deskId)
+    return pointInRing(place.x, place.z, polygon)
+  } catch {
+    return false
+  }
+}
+
 export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
-  const { camera, scene, size } = useThree()
+  const { camera, scene, size, pointer } = useThree()
   const [fontSize, setFontSize] = useState(0.78)
   const pxRef = useRef(0)
   const fadesRef = useRef<number[]>([])
+  const packRef = useRef<LabelPackState>({ byId: {}, clusters: {} })
   const characters = roomLabelCharacters(labels)
   const points = labels.flatMap((label) => [label.anchor, label.label])
 
@@ -109,7 +123,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     if (currentMaxPx > 1e-6 && Math.abs(currentMaxPx - LABEL_TARGET_PX) > PX_EPS) setFontSize(next)
     const px = currentMaxPx > 1e-6 ? next * (currentMaxPx / fontSize) : currentMaxPx
     pxRef.current = px
-    const focused = useTwinStore.getState().focusedDeskId
+    const state = useTwinStore.getState()
+    const focused = state.focusedDeskId
     const target = focused ? resolveWorkstationRef(focused) : null
     let deskX = NaN
     let deskY = NaN
@@ -127,20 +142,80 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     }
     const fades = fadesRef.current
     fades.length = labels.length
+    const items: AvoidItem[] = []
+    const pointerX = (pointer.x * 0.5 + 0.5) * size.width
+    const pointerY = (-pointer.y * 0.5 + 0.5) * size.height
+    const searchHits =
+      state.searchQuery.trim() === ''
+        ? []
+        : searchWorkstations({ desks: state.desks, people: state.people }, state.searchQuery, 40).filter(
+            (hit) => hit.floorId === floorId,
+          )
+    const alarmDesks = state.devices
+      .filter((device) => device.floorId === floorId && device.status === 'alarm' && device.deskId)
+      .map((device) => device.deskId as string)
+    const areas = labels.map((label) => label.area ?? 0).sort((a, b) => a - b)
+    const largeCut = areas[Math.floor(areas.length * 0.65)] ?? 0
+    let hoverId: string | null = null
     for (let i = 0; i < labels.length; i += 1) {
       const label = labels[i]
-      if (!label || !Number.isFinite(deskX) || !interior) {
-        fades[i] = 1
-        continue
+      if (!label) continue
+      if (!Number.isFinite(deskX) || !interior) fades[i] = 1
+      else {
+        sample.set(label.label[0], label.label[1], label.label[2])
+        interior.localToWorld(sample)
+        sample.project(perspective)
+        fades[i] = labelFadeForTarget(
+          { x: (sample.x * 0.5 + 0.5) * size.width, y: (-sample.y * 0.5 + 0.5) * size.height },
+          { x: deskX, y: deskY },
+          px,
+        )
       }
       sample.set(label.label[0], label.label[1], label.label[2])
-      interior.localToWorld(sample)
+      host?.localToWorld(sample)
       sample.project(perspective)
-      fades[i] = labelFadeForTarget(
-        { x: (sample.x * 0.5 + 0.5) * size.width, y: (-sample.y * 0.5 + 0.5) * size.height },
-        { x: deskX, y: deskY },
-        px,
-      )
+      const sx = (sample.x * 0.5 + 0.5) * size.width
+      const sy = (-sample.y * 0.5 + 0.5) * size.height
+      const box = labelScreenBox(label.text, Math.max(px, LABEL_MIN_PX))
+      const alarm = alarmDesks.some((deskId) => deskInRoom(floorId, deskId, label.polygon))
+      const selected = Boolean(focused && deskInRoom(floorId, focused, label.polygon))
+      const searchHit =
+        searchHits.some((hit) => deskInRoom(floorId, hit.deskId, label.polygon)) ||
+        (state.searchQuery.trim() !== '' && label.text.toLowerCase().includes(state.searchQuery.trim().toLowerCase()))
+      const large = (label.area ?? 0) >= Math.max(largeCut, 12)
+      const locked = alarm || selected || searchHit
+      if (Math.hypot(pointerX - sx, pointerY - sy) < Math.max(box.w, box.h) * 0.65 + 18) hoverId = label.id
+      items.push({
+        id: label.id,
+        text: label.text,
+        x: sx,
+        y: sy,
+        w: box.w,
+        h: box.h,
+        priority: alarm ? 0 : locked ? 1 : large ? 2 : 3,
+        locked,
+        area: label.area ?? 0,
+      })
+    }
+    const avoided = avoidLabels(items)
+    if (hoverId) {
+      const row = avoided.placements.find((item) => item.id === hoverId)
+      if (row && !row.visible) {
+        row.visible = true
+        row.cluster = null
+        avoided.hidden = Math.max(0, avoided.hidden - 1)
+      }
+    }
+    const byId: LabelPackState['byId'] = {}
+    const clusters: LabelPackState['clusters'] = {}
+    for (const row of avoided.placements) byId[row.id] = row
+    for (const cluster of avoided.clusters) clusters[cluster.key] = true
+    packRef.current = { byId, clusters }
+    window.__twinLabelOverlap = {
+      overlapPairs: avoided.overlapPairs,
+      hidden: avoided.hidden,
+      visible: avoided.placements.filter((row) => row.visible).length + avoided.clusters.length,
+      clusters: avoided.clusters.length,
     }
     window.__twinLabelPx = {
       fontSize: next,
@@ -164,6 +239,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
           outlineWidth={outline}
           characters={characters}
           fadesRef={fadesRef}
+          packRef={packRef}
         />
       </Suspense>
     </group>
