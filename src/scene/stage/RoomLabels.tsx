@@ -583,6 +583,10 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       askFrame()
       return
     }
+    if (packStepRef.current === 'sync' && (!api?.ready || !packedRef.current)) {
+      askFrame()
+      return
+    }
     if (shouldPack && api?.ready && packStepRef.current === 'idle') {
       const avoidStart = performance.now()
       window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), packStep: 'avoid', avoidStartAt: avoidStart }
