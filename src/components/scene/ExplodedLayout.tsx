@@ -21,7 +21,7 @@ export function ExplodedLayout() {
     const target = exploded && view === 'building' ? 1 : 0
     // 与徽标共用 stepExplodeMotion。同一帧再调一次，进度不变。
     const { progress, animating } = stepExplodeMotion(exploded, view, clock.elapsedTime)
-    if (animating && document.visibilityState !== 'hidden') invalidate()
+    if (animating) invalidate()
     const floors: NonNullable<Window['__twinExplode']>['floors'] = []
 
     specs.forEach((spec, index) => {

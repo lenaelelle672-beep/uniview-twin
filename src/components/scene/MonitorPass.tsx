@@ -52,7 +52,7 @@ export function MonitorPass({
     window.__twinBlitSites = BLIT_SITES
     window.__twinGlProbe = {
       samples: defaultFramebufferSamples(gl),
-      errors: drainGlErrors(gl),
+      errors: import.meta.env.DEV ? drainGlErrors(gl) : [],
       samplesReliableOnSwiftShader: false,
     }
     if (!drawOverlay || !scene.getObjectByName('WorkstationMonitors')) return
