@@ -3,6 +3,9 @@ import type { Scene } from 'three'
 
 export type IdleHandle = number
 
+/** 用户输入后至少空闲这么久才继续预热。 */
+export const PREWARM_RESUME_IDLE_MS = 1000
+
 export function scheduleIdle(callback: () => void, timeout = 800): IdleHandle {
   if (typeof requestIdleCallback === 'function') {
     return requestIdleCallback(callback, { timeout })
@@ -26,13 +29,26 @@ export function waitIdle(timeout = 800): Promise<void> {
 
 export function createYieldController() {
   let interrupted = false
+  let lastInputAt = 0
+  let lastFloorToken = `${useTwinStore.getState().view}:${useTwinStore.getState().selectedFloor ?? ''}`
 
   const onInterrupt = () => {
     interrupted = true
+    lastInputAt = performance.now()
   }
 
-  window.addEventListener('pointerdown', onInterrupt, true)
-  window.addEventListener('keydown', onInterrupt, true)
+  const capture: AddEventListenerOptions = { capture: true }
+  const passive: AddEventListenerOptions = { capture: true, passive: true }
+  window.addEventListener('pointerdown', onInterrupt, capture)
+  window.addEventListener('keydown', onInterrupt, capture)
+  window.addEventListener('wheel', onInterrupt, passive)
+
+  const unsubFloor = useTwinStore.subscribe((state) => {
+    const token = `${state.view}:${state.selectedFloor ?? ''}`
+    if (token === lastFloorToken) return
+    lastFloorToken = token
+    onInterrupt()
+  })
 
   return {
     consumeInterrupt(): boolean {
@@ -42,6 +58,7 @@ export function createYieldController() {
     },
     shouldPause(scene?: Scene): boolean {
       if (interrupted) return true
+      if (lastInputAt > 0 && performance.now() - lastInputAt < PREWARM_RESUME_IDLE_MS) return true
       const state = useTwinStore.getState()
       if (state.view === 'floor' && state.floorFlyRequest) return true
       const end = window.__twinFlyEnd
@@ -51,9 +68,23 @@ export function createYieldController() {
       }
       return false
     },
+    waitQuiet(ms = PREWARM_RESUME_IDLE_MS): Promise<void> {
+      return new Promise((resolve) => {
+        const tick = () => {
+          if (performance.now() - lastInputAt >= ms) {
+            resolve()
+            return
+          }
+          window.setTimeout(tick, 50)
+        }
+        tick()
+      })
+    },
     dispose() {
-      window.removeEventListener('pointerdown', onInterrupt, true)
-      window.removeEventListener('keydown', onInterrupt, true)
+      window.removeEventListener('pointerdown', onInterrupt, capture)
+      window.removeEventListener('keydown', onInterrupt, capture)
+      window.removeEventListener('wheel', onInterrupt, passive)
+      unsubFloor()
     },
   }
 }

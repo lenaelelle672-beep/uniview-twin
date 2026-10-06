@@ -6,8 +6,8 @@ import {
   collectDemoLabelCharacters,
   collectPrewarmCharacterChunks,
   collectPrewarmCharacters,
-  DEMO_PREWARM_FLOORS,
   demoPrewarmPlansReady,
+  pendingDemoPrewarmFloors,
   uniqueCharacters,
 } from './characters'
 import { compilePeopleGroup, compileTroikaSample, peopleModelUrls } from './extraPrewarm'
@@ -41,13 +41,32 @@ export function IdlePrewarm() {
 
     async function waitTurn() {
       while (!cancelled) {
+        if (yieldCtl.consumeInterrupt() || yieldCtl.shouldPause(scene)) {
+          yielded += 1
+          await yieldCtl.waitQuiet()
+          if (cancelled) return
+          continue
+        }
         await waitIdle()
         if (cancelled) return
         if (yieldCtl.consumeInterrupt() || yieldCtl.shouldPause(scene)) {
           yielded += 1
+          await yieldCtl.waitQuiet()
           continue
         }
         return
+      }
+    }
+
+    async function loadDemoPlans() {
+      while (!cancelled) {
+        const next = pendingDemoPrewarmFloors(useTwinStore.getState().selectedFloor)[0]
+        if (!next) return
+        await waitTurn()
+        if (cancelled) return
+        const prioritized = pendingDemoPrewarmFloors(useTwinStore.getState().selectedFloor)[0]
+        if (!prioritized) return
+        await loadFloorPlan(prioritized)
       }
     }
 
@@ -96,11 +115,7 @@ export function IdlePrewarm() {
       try {
         const textReady = textRuntimePrefetchDone() || (await waitTextRuntimePrefetch())
         if (textReady && !cancelled) {
-          for (const floorId of DEMO_PREWARM_FLOORS) {
-            await waitTurn()
-            if (cancelled) return
-            await loadFloorPlan(floorId)
-          }
+          await loadDemoPlans()
         }
         const characters = collectPrewarmCharacters()
         const chunks = collectPrewarmCharacterChunks()

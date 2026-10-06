@@ -10,7 +10,7 @@ export const DEMO_PREWARM_FLOORS = ['F12', 'F22', 'F18', 'F3', 'F1'] as const
 
 /**
  * 构建时从 F12/F22/F18/F3/F1 图纸 displayName 抽出的房间文案。
- * 运行时图纸还没加载，先用这份，避免预热去拉 JSON。
+ * 图纸未到时先用这份排优先级；完整演示主线字形仍以 loadFloorPlan 缓存为准。
  */
 export const DEMO_ROOM_LABEL_TEXTS = [
   '电梯厅',
@@ -132,6 +132,17 @@ export function collectDemoLabelCharacters(): string {
 
 export function demoPrewarmPlansReady(): boolean {
   return DEMO_PREWARM_FLOORS.every((floorId) => Boolean(peekFloorPlan(floorId)))
+}
+
+/** 未入缓存的演示主线楼层。用户已选层且仍在队列里时，把该层提到最前。 */
+export function pendingDemoPrewarmFloors(
+  selectedFloor?: string | null,
+): Array<(typeof DEMO_PREWARM_FLOORS)[number]> {
+  const remaining = DEMO_PREWARM_FLOORS.filter((id) => !peekFloorPlan(id))
+  if (!selectedFloor) return remaining
+  const picked = remaining.find((id) => id === selectedFloor)
+  if (!picked) return remaining
+  return [picked, ...remaining.filter((id) => id !== picked)]
 }
 
 /** 房间名 + 楼层名 + 告警文案。字体参数与 RoomLabels 相同，多出来的字只增加空闲时 SDF。 */

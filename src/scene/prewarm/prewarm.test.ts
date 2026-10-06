@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { getFloorPlan } from '../../floors/cache'
+import { clearFloorCache, getFloorPlan } from '../../floors/cache'
 import { hydrateFloorFromDisk } from '../../floors/hydrateForTests'
 import { roomLabelsFromPlan } from '../../floors/labels'
 import { ROOM_LABEL_FONT, roomLabelCharacters } from '../stage/roomLabels'
@@ -12,6 +12,7 @@ import {
   DEMO_PREWARM_FLOORS,
   DEMO_ROOM_LABEL_TEXTS,
   GLYPH_PREWARM_CHUNK,
+  pendingDemoPrewarmFloors,
   uniqueCharacters,
 } from './characters'
 import { textRuntimePrefetchDone, woffAlreadyRequested } from './fontPrewarm'
@@ -26,7 +27,17 @@ function read(rel: string) {
 
 describe('T017 进层预热', () => {
   it('演示主线楼层顺序是 F12 → F22 → F18 → F3 → F1', () => {
-    expect([...DEMO_PREWARM_FLOORS]).toEqual(['F12', 'F22', 'F18', 'F3', 'F1'])
+    clearFloorCache()
+    try {
+      expect([...DEMO_PREWARM_FLOORS]).toEqual(['F12', 'F22', 'F18', 'F3', 'F1'])
+      expect(pendingDemoPrewarmFloors(null)).toEqual(['F12', 'F22', 'F18', 'F3', 'F1'])
+      expect(pendingDemoPrewarmFloors('F1')).toEqual(['F1', 'F12', 'F22', 'F18', 'F3'])
+      expect(pendingDemoPrewarmFloors('F9')).toEqual(['F12', 'F22', 'F18', 'F3', 'F1'])
+      hydrateFloorFromDisk('F12')
+      expect(pendingDemoPrewarmFloors('F1')).toEqual(['F1', 'F22', 'F18', 'F3'])
+    } finally {
+      clearFloorCache()
+    }
   })
 
   it('字形覆盖房间名、楼层名、告警文案，且含 RoomLabels 的洽丙嗆', () => {
@@ -59,10 +70,23 @@ describe('T017 进层预热', () => {
     expect(idle).toMatch(/collectPrewarmCharacterChunks/)
     expect(idle).toMatch(/preloadLabelFont\(chunk\)/)
     expect(idle).toMatch(/loadFloorPlan/)
-    expect(idle).toMatch(/DEMO_PREWARM_FLOORS/)
+    expect(idle).toMatch(/pendingDemoPrewarmFloors/)
+    expect(idle).toMatch(/waitQuiet/)
+    expect(idle).not.toMatch(/JsonFloorInterior/)
+    expect(idle).not.toMatch(/geometries|__twinMemory|info\.memory/)
     expect(idle).toMatch(/glyphsComplete/)
     expect(idle).toMatch(/if \(!glyphsComplete\) return/)
     expect(idle).not.toMatch(/void run\(\)\.catch\(\(\) => \{[\s\S]*markDone/)
+    const loadFloor = read('../../floors/loadFloor.ts')
+    expect(loadFloor).toMatch(/fetch\(`\/floors\/\$\{floorJsonFile/)
+    expect(loadFloor).not.toMatch(/glb|ktx2|meshopt|draco/i)
+    const yieldSrc = read('./idleYield.ts')
+    expect(yieldSrc).toMatch(/pointerdown/)
+    expect(yieldSrc).toMatch(/keydown/)
+    expect(yieldSrc).toMatch(/wheel/)
+    expect(yieldSrc).toMatch(/selectedFloor/)
+    expect(yieldSrc).toMatch(/PREWARM_RESUME_IDLE_MS/)
+    expect(yieldSrc).toMatch(/waitQuiet/)
     expect(GLYPH_PREWARM_CHUNK).toBeLessThanOrEqual(8)
     const chunks = collectPrewarmCharacterChunks()
     expect(chunks.length).toBeGreaterThan(1)
@@ -130,8 +154,18 @@ describe('T017 进层预热', () => {
     expect(idle).toMatch(/FLOOR_SHADER_GROUPS|SHADER_PREWARM_ENABLED/)
     expect(idle).toMatch(/__twinPrewarmed/)
     expect(idle).toMatch(/collectPrewarmCharacterChunks/)
+    expect(idle).toMatch(/loadFloorPlan/)
+    expect(read('../../components/Scene.tsx')).not.toMatch(/info\.memory|geometries/)
+    const harness = readFileSync(join(here, '../../../perf/harness/webgl-live-counts.mjs'), 'utf8')
+    expect(harness).toMatch(/createBuffer/)
+    expect(harness).toMatch(/deleteBuffer/)
+    expect(harness).toMatch(/createTexture/)
+    expect(harness).toMatch(/deleteTexture/)
+    expect(harness).toMatch(/evaluateOnNewDocument|addInitScript|addScriptToEvaluateOnNewDocument/)
     expect(yieldSrc).toMatch(/pointerdown/)
     expect(yieldSrc).toMatch(/keydown/)
+    expect(yieldSrc).toMatch(/wheel/)
+    expect(yieldSrc).toMatch(/selectedFloor/)
     expect(yieldSrc).toMatch(/requestIdleCallback/)
     expect(yieldSrc).toMatch(/setTimeout/)
     expect(yieldSrc).toMatch(/FloorInterior/)
