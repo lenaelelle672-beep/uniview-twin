@@ -20,7 +20,6 @@ import { useTwinStore } from '../../store/store'
  */
 export function DemandLoop() {
   const rawInvalidate = useThree((state) => state.invalidate)
-  const setThree = useThree((state) => state.set)
   const gl = useThree((state) => state.gl)
   const quality = useTwinStore((state) => state.quality)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
@@ -48,13 +47,9 @@ export function DemandLoop() {
 
   useLayoutEffect(() => {
     bindTwinInvalidate(gatedInvalidate)
-    setThree({ invalidate: gatedInvalidate })
     gl.shadowMap.autoUpdate = false
     if (quality !== 'perf') gl.shadowMap.needsUpdate = true
-    return () => {
-      setThree({ invalidate: rawInvalidate })
-    }
-  }, [gatedInvalidate, gl, quality, rawInvalidate, setThree])
+  }, [gatedInvalidate, gl, quality])
 
   useLayoutEffect(() => {
     if (quality === 'perf') return

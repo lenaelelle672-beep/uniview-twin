@@ -119,7 +119,6 @@ async function snapshot(page) {
 }
 
 async function sampleIdle(page, browser, seconds, hide = false) {
-  await waitReady(page)
   await waitLoop(page)
   if (hide) {
     await page.evaluate(() => {
