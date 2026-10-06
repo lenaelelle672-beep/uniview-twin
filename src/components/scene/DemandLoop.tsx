@@ -14,6 +14,15 @@ import {
 } from '../../scene/frameSchedule'
 import { useTwinStore } from '../../store/store'
 
+function markInv(src: string) {
+  if (!import.meta.env.DEV) return
+  const counts = (window.__twinInvalidateCounts ??= {})
+  counts[src] = (counts[src] ?? 0) + 1
+  const log = (window.__twinInvalidateLog ??= [])
+  log.push({ t: performance.now(), src })
+  if (log.length > 400) log.splice(0, log.length - 400)
+}
+
 /**
  * D180 续帧：总览 0/2、单层性能 ≤10 / 均衡 ≤30（告警并入）、运动性能 30、后台 0。
  * 晚于场景 useFrame 读 hold，并把 invalidate 按当前 Hz 限幅（相机飞行/拖动走同一套）。
@@ -43,7 +52,7 @@ export function DemandLoop() {
       if (now - lastGate.current < 1000 / hz - 1) return
       lastGate.current = now
     }
-    if (import.meta.env.DEV) window.__twinInvalidateNext = 'demand-store'
+    if (import.meta.env.DEV) markInv('demand-store')
     rawRef.current()
   }).current
 
@@ -132,7 +141,7 @@ export function DemandLoop() {
     if (!Number.isFinite(delay)) return
     if (delay === 0 && hz === Number.POSITIVE_INFINITY) {
       markDueChannels(last.current, liveQuality, now, liveView)
-      if (import.meta.env.DEV) window.__twinInvalidateNext = 'demand-unlimited'
+      if (import.meta.env.DEV) markInv('demand-unlimited')
       rawRef.current()
       return
     }
@@ -142,7 +151,7 @@ export function DemandLoop() {
       wake.current = 0
       markDueChannels(last.current, liveQuality, performance.now(), liveView)
       if (document.visibilityState !== 'hidden') {
-        if (import.meta.env.DEV) window.__twinInvalidateNext = `demand-hz-${hz}`
+        if (import.meta.env.DEV) markInv(`demand-hz-${hz}`)
         rawRef.current()
       }
     }, wait)
