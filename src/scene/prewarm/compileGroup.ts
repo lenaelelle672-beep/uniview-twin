@@ -1,26 +1,38 @@
-import { Group, WebGLRenderTarget, type Camera, type Object3D, type Scene, type WebGLRenderer } from 'three'
+import { Group, type Camera, type Object3D, type Scene, type WebGLRenderer } from 'three'
 import { supportsParallelShaderCompile } from '../glProbe'
 
-function renderTiny(gl: WebGLRenderer, scene: Scene, camera: Camera) {
-  const target = new WebGLRenderTarget(8, 8)
-  const previous = gl.getRenderTarget()
-  const previousAutoClear = gl.autoClear
-  gl.autoClear = true
-  gl.shadowMap.needsUpdate = true
-  gl.setRenderTarget(target)
-  gl.render(scene, camera)
-  gl.setRenderTarget(previous)
-  gl.autoClear = previousAutoClear
-  target.dispose()
+export interface ProgramSnap {
+  name: string
+  cacheKey: string
 }
 
 export function programKeys(gl: WebGLRenderer): string[] {
   return (gl.info.programs ?? []).map((program) => program.cacheKey)
 }
 
+export function snapshotPrograms(gl: WebGLRenderer, label: string): ProgramSnap[] {
+  const snap = (gl.info.programs ?? []).map((program) => ({
+    name: program.name,
+    cacheKey: program.cacheKey,
+  }))
+  const bag = window.__twinProgramSnaps ?? (window.__twinProgramSnaps = {})
+  bag[label] = snap
+  return snap
+}
+
+function bindComposerTarget(gl: WebGLRenderer) {
+  const previous = gl.getRenderTarget()
+  const target = window.__twinComposerInput
+  if (target) gl.setRenderTarget(target)
+  return () => {
+    gl.setRenderTarget(previous)
+  }
+}
+
 /**
- * 占位物体挂进当前场景，灯/阴影/雾/环境与进层一致。
- * compile 只针对这一组；再向 8×8 目标画一帧，把阴影 program 也编出来。
+ * 占位物体挂进当前场景，灯/阴影/雾/环境走第三个参数 liveScene。
+ * 均衡档先绑 composer.inputBuffer，避免 RT=null 编出 sRGB / AgX 另一套 cacheKey。
+ * 阴影深度 program 不在 compile 覆盖范围内，不强求。
  */
 export async function compileObjects(
   gl: WebGLRenderer,
@@ -40,6 +52,7 @@ export async function compileObjects(
 
   const prevMask = camera.layers.mask
   camera.layers.enableAll()
+  const restoreTarget = bindComposerTarget(gl)
   try {
     const renderer = gl as WebGLRenderer & {
       compileAsync?: (scene: Object3D, camera: Camera, targetScene?: Scene) => Promise<void>
@@ -49,8 +62,8 @@ export async function compileObjects(
     } else {
       gl.compile(host, camera, liveScene)
     }
-    renderTiny(gl, liveScene, camera)
   } finally {
+    restoreTarget()
     camera.layers.mask = prevMask
     liveScene.remove(host)
     host.clear()

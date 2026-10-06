@@ -15,6 +15,7 @@ import {
   uniqueCharacters,
 } from './characters'
 import { textRuntimePrefetchDone, woffAlreadyRequested } from './fontPrewarm'
+import { SHADER_PREWARM_ENABLED } from './shaderPrewarmFlag'
 import { FLOOR_SHADER_GROUPS } from './shaderGroups'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -76,9 +77,15 @@ describe('T017 进层预热', () => {
     const compile = read('./compileGroup.ts')
     expect(compile).toMatch(/compileMaterialGroup/)
     expect(compile).toMatch(/compileAsync\(host, camera, liveScene\)|compile\(host, camera, liveScene\)/)
-    expect(compile).toMatch(/WebGLRenderTarget\(8, 8\)/)
+    expect(compile).toMatch(/__twinComposerInput/)
+    expect(compile).toMatch(/setRenderTarget/)
     expect(compile).not.toMatch(/compileAsync\(liveScene/)
     expect(compile).toMatch(/supportsParallelShaderCompile/)
+    const flag = read('./shaderPrewarmFlag.ts')
+    expect(flag).toMatch(/SHADER_PREWARM_ENABLED/)
+    expect(SHADER_PREWARM_ENABLED).toBe(false)
+    const idle = read('./IdlePrewarm.tsx')
+    expect(idle).toMatch(/SHADER_PREWARM_ENABLED/)
     const extra = read('./extraPrewarm.ts')
     expect(extra).toMatch(/preloadFont|compileTroikaSample/)
     expect(extra).toMatch(/man-in-suit/)
@@ -100,7 +107,7 @@ describe('T017 进层预热', () => {
     expect(gate).not.toMatch(/troika-three-text/)
     expect(idle).toMatch(/waitTextRuntimePrefetch|textRuntimePrefetchDone/)
     expect(idle).toMatch(/pointerdown|createYieldController/)
-    expect(idle).toMatch(/FLOOR_SHADER_GROUPS/)
+    expect(idle).toMatch(/FLOOR_SHADER_GROUPS|SHADER_PREWARM_ENABLED/)
     expect(idle).toMatch(/__twinPrewarmed/)
     expect(idle).toMatch(/collectPrewarmCharacterChunks/)
     expect(yieldSrc).toMatch(/pointerdown/)

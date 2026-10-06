@@ -217,6 +217,9 @@ interface Window {
   }
   __twinBlitSites?: ReadonlyArray<{ file: string; fn: string; dest: string }>
   __twinComposerLive?: boolean
+  __twinComposerInput?: import('three').WebGLRenderTarget
+  __twinProgramSnaps?: Record<string, Array<{ name: string; cacheKey: string }>>
+  __twinSnapPrograms?: (label: string) => Array<{ name: string; cacheKey: string }>
   __twinPrewarmed?: boolean
   __twinPrewarmStartedAt?: number
   __twinPrewarmedAt?: number
@@ -233,6 +236,7 @@ interface Window {
     programsBefore: number
     programsAfter: number
     textRuntimeFirst: boolean
+    shaderEnabled: boolean
   }
   __twinWarmup?: {
     compileMs: number

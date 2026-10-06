@@ -2,11 +2,12 @@ import { useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 import { useTwinStore } from '../../store/store'
 import { collectPrewarmCharacterChunks, collectPrewarmCharacters } from './characters'
-import { compileMaterialGroup, programCount } from './compileGroup'
+import { compileMaterialGroup, programCount, snapshotPrograms } from './compileGroup'
 import { compilePeopleGroup, compileTroikaSample, peopleModelUrls } from './extraPrewarm'
 import { preloadLabelFont, textRuntimePrefetchDone, waitTextRuntimePrefetch } from './fontPrewarm'
 import { createYieldController, waitIdle } from './idleYield'
 import { FLOOR_SHADER_GROUPS } from './shaderGroups'
+import { SHADER_PREWARM_ENABLED } from './shaderPrewarmFlag'
 
 function markDone(stats: NonNullable<Window['__twinPrewarm']>) {
   const ended = performance.now()
@@ -58,16 +59,20 @@ export function IdlePrewarm() {
       if (cancelled) return
 
       const shaderStarted = performance.now()
-      for (const group of FLOOR_SHADER_GROUPS) {
-        await waitTurn()
-        if (cancelled) return
-        try {
-          const before = programCount(gl)
-          await compileMaterialGroup(gl, scene, camera, group)
-          compiled.push(`${group.id}:+${programCount(gl) - before}`)
-        } catch {
-          compiled.push(`${group.id}:error`)
+      if (SHADER_PREWARM_ENABLED) {
+        for (const group of FLOOR_SHADER_GROUPS) {
+          await waitTurn()
+          if (cancelled) return
+          try {
+            const before = programCount(gl)
+            await compileMaterialGroup(gl, scene, camera, group)
+            compiled.push(`${group.id}:+${programCount(gl) - before}`)
+          } catch {
+            compiled.push(`${group.id}:error`)
+          }
         }
+      } else {
+        compiled.push('shader-prewarm:off')
       }
       const shaderMs = performance.now() - shaderStarted
 
@@ -98,18 +103,21 @@ export function IdlePrewarm() {
       }
       if (cancelled) return
 
-      for (const url of peopleModelUrls(quality !== 'perf')) {
-        await waitTurn()
-        if (cancelled) return
-        try {
-          const before = programCount(gl)
-          await compilePeopleGroup(gl, scene, camera, url)
-          compiled.push(`${url.split('/').pop() ?? url}:+${programCount(gl) - before}`)
-        } catch {
-          compiled.push(`${url}:error`)
+      if (SHADER_PREWARM_ENABLED) {
+        for (const url of peopleModelUrls(quality !== 'perf')) {
+          await waitTurn()
+          if (cancelled) return
+          try {
+            const before = programCount(gl)
+            await compilePeopleGroup(gl, scene, camera, url)
+            compiled.push(`${url.split('/').pop() ?? url}:+${programCount(gl) - before}`)
+          } catch {
+            compiled.push(`${url}:error`)
+          }
         }
       }
 
+      snapshotPrograms(gl, 'prewarmed')
       markDone({
         startedAt,
         doneAt: performance.now(),
@@ -123,6 +131,7 @@ export function IdlePrewarm() {
         programsBefore,
         programsAfter: programCount(gl),
         textRuntimeFirst: textRuntimePrefetchDone(),
+        shaderEnabled: SHADER_PREWARM_ENABLED,
       })
     }
 
@@ -141,6 +150,7 @@ export function IdlePrewarm() {
         programsBefore: programCount(gl),
         programsAfter: programCount(gl),
         textRuntimeFirst: textRuntimePrefetchDone(),
+        shaderEnabled: SHADER_PREWARM_ENABLED,
       })
     })
 
