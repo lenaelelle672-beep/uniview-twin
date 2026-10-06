@@ -85,7 +85,7 @@ function pickResource(resources, test) {
 function classify(url) {
   return {
     idlePrewarm: /IdlePrewarm/i.test(url),
-    labels: /\/labels-/i.test(url) || /\/labels\./i.test(url),
+    labels: /\/labels-/i.test(url) || /\/labels\./i.test(url) || /ProgressiveRoomLabels/i.test(url),
     textRuntime: /textRuntime/i.test(url),
     floorDecor: /floorDecor/i.test(url),
     blueprint: /BlueprintView/i.test(url),
@@ -204,7 +204,7 @@ async function runTimeline(browser, quality, round) {
   await page.waitForFunction(
     () =>
       performance.getEntriesByType('resource').some((entry) => /IdlePrewarm/i.test(entry.name)) &&
-      performance.getEntriesByType('resource').some((entry) => /\/labels-/i.test(entry.name) || /\/labels\./i.test(entry.name)),
+      performance.getEntriesByType('resource').some((entry) => /\/labels-/i.test(entry.name) || /ProgressiveRoomLabels/i.test(entry.name)),
     { timeout: 60_000 },
   ).catch(() => {})
   await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 2500)))
