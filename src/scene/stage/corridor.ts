@@ -2,6 +2,8 @@ import type { QualityTier } from '../../types'
 import { TOWER } from '../siteGeometry'
 import { CORE, MEETINGS, type Point } from './layout'
 
+export type { Point }
+
 /** 走廊里同时走动的人数上限。性能档不生成。 */
 export const CORRIDOR_PEOPLE_COUNT = 12
 

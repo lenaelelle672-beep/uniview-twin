@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { floorDeskCount } from '../floors/deskCounts'
+import { hydrateAllAboveGrade } from '../floors/hydrateForTests'
 import { createMockData, DESKS_PER_FLOOR } from '../data/mockData'
 import { b1SlabBounds, b1SlabOutline } from '../scene/stage/b1Plan'
 import { B1_CORE } from '../scene/stage/layout'
@@ -6,15 +8,17 @@ import { STATUS_COLOR, STATUS_HEX, STATUS_SHAPE } from '../scene/stage/status'
 import { workstationPosition } from '../scene/stage/workstationPosition'
 import { COLUMN_SIZE_M, floorPlanGeometry, planDesks } from './plan'
 
+hydrateAllAboveGrade()
+
 describe('蓝图平面', () => {
-  it('F12 画出墙、房间和 100 个工位，落点来自 workstationPosition', () => {
+  it('F12 画出墙、房间和图纸工位，落点来自 workstationPosition', () => {
     const data = createMockData()
     const plan = floorPlanGeometry('F12')
     const desks = planDesks('F12', data.desks, data.devices)
-    expect(plan.rooms.map((room) => room.name)).toEqual(['核心筒', '会议室 1', '会议室 2', '会议室 3', '前台', '茶水间'])
+    expect(plan.rooms.some((room) => room.name.includes('会议') || room.name.includes('茶水'))).toBe(true)
     expect(plan.walls.length).toBeGreaterThan(8)
     expect(plan.columns.length).toBeGreaterThan(8)
-    expect(desks).toHaveLength(DESKS_PER_FLOOR)
+    expect(desks).toHaveLength(floorDeskCount('F12'))
     const source = data.desks.filter((desk) => desk.floorId === 'F12')
     expect(desks.every((desk) => desk.x === workstationPosition('F12', desk.id).x && desk.z === workstationPosition('F12', desk.id).z)).toBe(true)
     expect(desks.some((desk, index) => desk.x !== source[index].x || desk.z !== source[index].z)).toBe(true)
@@ -36,7 +40,8 @@ describe('蓝图平面', () => {
     const plan = floorPlanGeometry('B1')
     expect(plan.slab).toEqual(b1SlabOutline())
     expect(plan.outline).toEqual(b1SlabBounds())
-    expect(floorPlanGeometry('F12').slab).toBeNull()
+    expect(floorPlanGeometry('F12').slab).not.toBeNull()
+    expect(floorPlanGeometry('F12').slab!.length).toBeGreaterThan(8)
     const onSlab = (x: number, z: number) =>
       x >= plan.outline.x0 && x <= plan.outline.x1 && z >= plan.outline.z0 && z <= plan.outline.z1
     const desks = planDesks('B1', data.desks, data.devices)

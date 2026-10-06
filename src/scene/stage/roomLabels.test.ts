@@ -1,6 +1,16 @@
 import { describe, expect, it } from 'vitest'
+import { getFloorPlan } from '../../floors/cache'
+import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
+import { roomLabelsFromPlan } from '../../floors/labels'
 import { TROIKA_TEXT_CONFIG } from './disableTroikaCdn'
-import { basementRoomLabels, ROOM_LABEL_FONT, roomLabelCharacters, towerRoomLabels } from './roomLabels'
+import {
+  basementRoomLabels,
+  ROOM_LABEL_FONT,
+  roomLabelCharacters,
+  worldFontSizeForDistance,
+} from './roomLabels'
+
+hydrateAllAboveGrade()
 
 describe('房间引线标签', () => {
   it('单层标签用本地 woff 子集，不指向 otf 或外网，也不开 troika worker', () => {
@@ -10,23 +20,32 @@ describe('房间引线标签', () => {
     expect(TROIKA_TEXT_CONFIG.defaultFontURL).toBe(ROOM_LABEL_FONT)
   })
 
-  it('标准层包含会议室、茶水间、前台、电梯厅，总数不超过 30', () => {
-    const labels = towerRoomLabels()
+  it('图纸层标签放在 JSON 的 label 点上，地下室仍用原方案，id 唯一', () => {
+    const labels = roomLabelsFromPlan(getFloorPlan('F12')!)
     const basement = basementRoomLabels()
-    expect(labels.length + basement.length).toBeLessThanOrEqual(30)
+    expect(labels.length).toBeGreaterThan(10)
     const text = labels.map((label) => label.text).join(' ')
-    expect(text).toContain('会议室')
-    expect(text).toContain('茶水间')
-    expect(text).toContain('前台')
-    expect(text).toContain('电梯厅')
-    expect(labels.filter((label) => label.text.startsWith('会议室'))).toHaveLength(3)
+    expect(text).toMatch(/会议|茶水|电梯/)
     for (const label of [...labels, ...basement]) {
       expect(label.anchor).toHaveLength(3)
       expect(label.label).toHaveLength(3)
       expect(label.label[1]).toBeGreaterThan(label.anchor[1])
     }
     const characters = roomLabelCharacters(labels)
-    expect(characters).toContain('会')
+    expect(characters.length).toBeGreaterThan(0)
     expect(characters).not.toMatch(/\s/)
+    expect(characters).toMatch(/洽/)
+    expect(characters).toMatch(/丙/)
+    expect(characters).toMatch(/嗆/)
+    expect(new Set(labels.map((label) => label.id)).size).toBe(labels.length)
+    expect(new Set(basement.map((label) => label.id)).size).toBe(basement.length)
+  })
+
+  it('远机位把世界字号抬到至少 13 px', () => {
+    const far = worldFontSizeForDistance(180, 768, 48, 13)
+    const near = worldFontSizeForDistance(18, 768, 48, 13)
+    const farPx = (far / ((2 * Math.tan((48 * Math.PI) / 360) * 180) / 768))
+    expect(far).toBeGreaterThan(near)
+    expect(farPx).toBeGreaterThanOrEqual(12.5)
   })
 })

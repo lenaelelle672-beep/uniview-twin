@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import type { Device } from '../../types'
+import type { Point } from './corridor'
 import type { RoomLabel } from './roomLabels'
 
 const FloorDecorImpl = lazy(async () => {
@@ -13,15 +14,17 @@ export function FloorDecor({
   devices,
   labels,
   showPeople = false,
+  paths,
 }: {
   floorId: string
   devices: Device[]
   labels: RoomLabel[]
   showPeople?: boolean
+  paths?: Point[][]
 }) {
   return (
     <Suspense fallback={null}>
-      <FloorDecorImpl floorId={floorId} devices={devices} labels={labels} showPeople={showPeople} />
+      <FloorDecorImpl floorId={floorId} devices={devices} labels={labels} showPeople={showPeople} paths={paths} />
     </Suspense>
   )
 }

@@ -1,0 +1,28 @@
+import type { ColorRepresentation, Mesh } from 'three'
+
+declare module 'troika-three-text' {
+  export class Text extends Mesh {
+    text: string
+    font: string
+    fontSize: number
+    color: ColorRepresentation
+    outlineWidth: number
+    outlineColor: ColorRepresentation
+    anchorX: string | number
+    anchorY: string | number
+    characters?: string
+    depthOffset?: number
+    sync(callback?: () => void): void
+    dispose(): void
+  }
+
+  export class BatchedText extends Text {
+    addText(text: Text): void
+    removeText(text: Text): void
+  }
+
+  export function preloadFont(
+    options: { font?: string; characters?: string },
+    callback: () => void,
+  ): void
+}
