@@ -52,6 +52,7 @@ export function FloorList({ open }: FloorListProps) {
               aria-label={`${floor.id} ${floor.name}，告警 ${floor.alarmCount}，离线 ${floor.offlineCount}`}
               aria-pressed={selected}
               onClick={() => {
+                // fb2 bf5479e：列表单击只选层；进层是 3D 楼板/徽标双击或顶栏「单层」。
                 setSelectedFloor(floor.id)
                 if (floor.id !== 'B1') void loadFloorPlan(floor.id)
               }}

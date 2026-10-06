@@ -16,7 +16,14 @@ import {
   type AvoidResult,
   type LabelPackState,
 } from './labelAvoidance'
-import { countMeasuredOverlap, overlapPairNames } from './labelScreenMeasure'
+import {
+  baselineAngleDeg,
+  countOverlapKinds,
+  findRoomLabelBatch,
+  isDrawnText,
+  overlapPairNames,
+  visibilityMismatch,
+} from './labelScreenMeasure'
 import type { LabelBatchApi } from './BatchedRoomLabels'
 import {
   LABEL_MAX_PX,
@@ -44,6 +51,26 @@ const ndcTop = new Vector3()
 const ndcBottom = new Vector3()
 const viewTop = new Vector3()
 const viewBottom = new Vector3()
+const offsetWorld = new Vector3()
+
+function offsetToLocal(
+  base: [number, number, number],
+  ox: number,
+  oy: number,
+  host: Object3D | null,
+  camera: Camera,
+  viewport: { width: number; height: number },
+): [number, number, number] {
+  if (ox === 0 && oy === 0) return base
+  offsetWorld.set(base[0], base[1], base[2])
+  host?.localToWorld(offsetWorld)
+  offsetWorld.project(camera)
+  offsetWorld.x += (ox / Math.max(viewport.width, 1)) * 2
+  offsetWorld.y -= (oy / Math.max(viewport.height, 1)) * 2
+  offsetWorld.unproject(camera)
+  host?.worldToLocal(offsetWorld)
+  return [offsetWorld.x, offsetWorld.y, offsetWorld.z]
+}
 
 export function projectedEmHeightPx(
   topWorld: Vector3,
@@ -241,10 +268,12 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const pxRef = useRef(0)
   const fadesRef = useRef<number[]>([])
   const packRef = useRef<LabelPackState>({ byId: {}, clusters: {} })
+  const layoutRef = useRef<LabelPackState>({ byId: {}, clusters: {} })
   const measureRef = useRef<LabelBatchApi | null>(null)
   const viewKeyRef = useRef('')
   const clusterSyncedRef = useRef('')
   const packedRef = useRef<AvoidResult | null>(null)
+  const idleRef = useRef(0)
   const characters = roomLabelCharacters(labels)
   const points = labels.flatMap((label) => [label.anchor, label.label])
 
@@ -254,6 +283,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     clusterSyncedRef.current = ''
     viewKeyRef.current = ''
     packedRef.current = null
+    layoutRef.current = { byId: {}, clusters: {} }
   }, [floorId])
 
   useFrame(() => {
@@ -360,11 +390,39 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         clusterSizes[id.slice('cluster:'.length)] = { w: box.w, h: box.h }
       }
     }
-    const viewKey = `${floorId}|${Math.round((window.__twinRig?.distance ?? 0) * 20)}|${alarmDesks.join(',')}|${focused ?? ''}|${state.searchQuery}|${size.width}|${measured ? 'm' : 'e'}`
-    const shouldPack = viewKey !== viewKeyRef.current || !packedRef.current
-    if (shouldPack) viewKeyRef.current = viewKey
-    const packed = shouldPack || !packedRef.current ? avoidLabels(items, clusterSizes) : packedRef.current
-    packedRef.current = packed
+    const rig = window.__twinRig as (Window['__twinRig'] & { currentAction?: number; azimuthAngle?: number }) | undefined
+    const dragging = (rig?.currentAction ?? 0) !== 0
+    const poseKey = `${Math.round((rig?.azimuthAngle ?? 0) * 8)}|${Math.round((rig?.polarAngle ?? 0) * 20)}|${Math.round((rig?.distance ?? 0) * 4)}`
+    const viewKey = `${floorId}|${poseKey}|${alarmDesks.join(',')}|${focused ?? ''}|${state.searchQuery}|${size.width}|${measured ? 'm' : 'e'}`
+    let shouldPack = false
+    if (dragging) idleRef.current = 0
+    else if (viewKey !== viewKeyRef.current || !packedRef.current) {
+      idleRef.current += 1
+      if (!packedRef.current || idleRef.current >= 2) {
+        shouldPack = true
+        viewKeyRef.current = viewKey
+        idleRef.current = 0
+      }
+    }
+    if (shouldPack && api?.ready) {
+      api.orientToCamera(perspective)
+      const remes = api.measureForAvoid(perspective, size, labels)
+      for (const item of items) {
+        const box = remes.get(item.id)
+        if (!box) continue
+        item.x = box.x
+        item.y = box.y
+        item.w = box.w
+        item.h = box.h
+      }
+      for (const [id, box] of remes) {
+        if (!id.startsWith('cluster:')) continue
+        clusterSizes[id.slice('cluster:'.length)] = { w: box.w, h: box.h }
+      }
+    }
+    if (shouldPack) packedRef.current = avoidLabels(items, clusterSizes)
+    const packed = packedRef.current
+    if (!packed) return
     let avoided = packed
     if (hoverId) {
       const row = packed.placements.find((item) => item.id === hoverId)
@@ -379,52 +437,97 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         }
       }
     }
-    const byId: LabelPackState['byId'] = {}
-    const clusters: LabelPackState['clusters'] = {}
-    for (const label of labels) {
-      byId[label.id] = { visible: false, cluster: null, offsetX: 0, offsetY: 0 }
-    }
-    for (const row of avoided.placements) byId[row.id] = row
-    const clusterTexts: Record<string, string> = {}
-    for (const cluster of avoided.clusters) {
-      const members = labels.filter((label) => cluster.ids.includes(label.id))
-      if (members.length === 0) continue
-      clusters[cluster.key] = {
-        visible: true,
-        offsetX: cluster.offsetX,
-        offsetY: cluster.offsetY,
-        world: [
+    if (shouldPack) {
+      const byId: LabelPackState['byId'] = {}
+      const clusters: LabelPackState['clusters'] = {}
+      for (const label of labels) {
+        byId[label.id] = { visible: false, cluster: null, offsetX: 0, offsetY: 0, local: label.label }
+      }
+      for (const row of avoided.placements) {
+        const label = labels.find((item) => item.id === row.id)
+        const base = label?.label ?? [row.box.x, 3.2, row.box.y]
+        byId[row.id] = {
+          visible: row.visible,
+          cluster: row.cluster,
+          offsetX: row.offsetX,
+          offsetY: row.offsetY,
+          local: offsetToLocal(base, row.offsetX, row.offsetY, host ?? null, perspective, size),
+        }
+      }
+      const clusterTexts: Record<string, string> = {}
+      for (const cluster of avoided.clusters) {
+        const members = labels.filter((label) => cluster.ids.includes(label.id))
+        if (members.length === 0) continue
+        const world: [number, number, number] = [
           members.reduce((sum, label) => sum + label.label[0], 0) / members.length,
           members.reduce((sum, label) => sum + label.label[1], 0) / members.length,
           members.reduce((sum, label) => sum + label.label[2], 0) / members.length,
-        ],
-        text: cluster.text,
+        ]
+        clusters[cluster.key] = {
+          visible: true,
+          offsetX: cluster.offsetX,
+          offsetY: cluster.offsetY,
+          world,
+          local: offsetToLocal(world, cluster.offsetX, cluster.offsetY, host ?? null, perspective, size),
+          text: cluster.text,
+        }
+        clusterTexts[cluster.key] = cluster.text
       }
-      clusterTexts[cluster.key] = cluster.text
+      layoutRef.current = { byId, clusters }
+      const clusterSig = Object.entries(clusterTexts)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([key, text]) => `${key}:${text}`)
+        .join('|')
+      if (api?.ready && measured && !clusterSyncedRef.current) {
+        clusterSyncedRef.current = clusterSig || 'none'
+        if (clusterSig) {
+          void api.applyClusterTexts(clusterTexts).then(() => {
+            if (!window.__twinLabelReadyAt) window.__twinLabelReadyAt = performance.now()
+          })
+        } else if (!window.__twinLabelReadyAt) {
+          window.__twinLabelReadyAt = performance.now()
+        }
+      }
     }
+    const layout = layoutRef.current
+    const byId =
+      hoverId && layout.byId[hoverId] && !layout.byId[hoverId].visible
+        ? { ...layout.byId, [hoverId]: { ...layout.byId[hoverId]!, visible: true, cluster: null } }
+        : layout.byId
+    const clusters = layout.clusters
     packRef.current = { byId, clusters }
-    const clusterSig = Object.entries(clusterTexts)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, text]) => `${key}:${text}`)
-      .join('|')
-    if (api?.ready && measured && !clusterSyncedRef.current) {
-      clusterSyncedRef.current = clusterSig || 'none'
-      if (clusterSig) {
-        void api.applyClusterTexts(clusterTexts).then(() => {
-          if (!window.__twinLabelReadyAt) window.__twinLabelReadyAt = performance.now()
-        })
-      } else if (!window.__twinLabelReadyAt) {
-        window.__twinLabelReadyAt = performance.now()
+    const batch = findRoomLabelBatch(scene)
+    const live = api?.ready ? api.measureVisible(perspective, size) : []
+    const kinds = countOverlapKinds(live.map((row) => row.box))
+    const expected = new Set<string>()
+    for (const [id, row] of Object.entries(byId)) if (row.visible) expected.add(id)
+    for (const [key, row] of Object.entries(clusters)) if (row.visible) expected.add(`cluster:${key}`)
+    const actual = new Set(live.map((row) => row.id))
+    const mismatchIds = visibilityMismatch(expected, actual)
+    let maxAngle = 0
+    if (batch) {
+      batch.updateWorldMatrix(true, false)
+      const members = (batch as { _members?: Map<{ textRenderInfo?: { blockBounds?: number[] }; matrix: import('three').Matrix4 }, unknown> })._members
+      if (members) {
+        for (const text of members.keys()) {
+          if (!isDrawnText(text as unknown as { scale: { x: number }; fillOpacity?: number })) continue
+          const bounds = text.textRenderInfo?.blockBounds
+          if (!bounds) continue
+          const deg = baselineAngleDeg(bounds, batch.matrixWorld, text.matrix, perspective, size)
+          if (deg != null) maxAngle = Math.max(maxAngle, Math.abs(deg))
+        }
       }
     }
-    const live = api?.ready ? api.measureVisible(perspective, size) : []
-    const measuredPairs = countMeasuredOverlap(live.map((row) => row.box))
     const tier = tier2Stats(items, avoided)
     window.__twinLabelOverlap = {
       merged: avoided.merged,
       hidden: avoided.hidden,
       hiddenAfterZoom: avoided.hiddenAfterZoom,
-      overlapPairs: measuredPairs,
+      overlapPairs: kinds.strong,
+      grazePairs: kinds.graze,
+      mismatch: mismatchIds.length,
+      mismatchIds,
+      maxAngle,
       maxOffset: avoided.maxOffset,
       visible: visibleOverlapBoxes(labels, items, avoided),
       d243: diagnoseRestCorridor(labels, items, avoided),

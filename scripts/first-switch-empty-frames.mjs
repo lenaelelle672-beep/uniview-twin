@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /**
  * 每次新开页面后第一次从性能档切到均衡档，抓切档那几帧，判断有没有空画布。
+ * 楼层标记与 fb2 一致：单击选层、不进层；本脚本不点楼层标记。
  * 用法：先预览或开发服，再 `node scripts/first-switch-empty-frames.mjs [baseUrl]`
  */
 import { mkdir, writeFile } from 'node:fs/promises'

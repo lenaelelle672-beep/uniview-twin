@@ -175,6 +175,10 @@ interface Window {
     hidden: number
     hiddenAfterZoom: number
     overlapPairs: number
+    grazePairs?: number
+    mismatch?: number
+    mismatchIds?: string[]
+    maxAngle?: number
     maxOffset: number
     tier2?: { visible: number; total: number; hidden: number }
     measured?: Array<{ id: string; text: string; box: { x: number; y: number; w: number; h: number }; cluster: string | null; px: number }>

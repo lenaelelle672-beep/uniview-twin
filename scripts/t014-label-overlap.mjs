@@ -80,6 +80,9 @@ async function waitOverlap(page) {
           ? window.__twinLabelReadyAt - window.__twinLabelSyncStartedAt
           : window.__twinLabelPackMs ?? null,
       distance: window.__twinRig?.distance ?? null,
+      graze: window.__twinLabelOverlap?.grazePairs ?? 0,
+      mismatch: window.__twinLabelOverlap?.mismatch ?? 0,
+      maxAngle: window.__twinLabelOverlap?.maxAngle ?? 0,
     }),
   )
 }
@@ -146,6 +149,9 @@ function summarize(bundle) {
     px: bundle.px?.px ?? null,
     syncs: bundle.syncs,
     syncMs: bundle.syncMs,
+    grazePairs: def.grazePairs ?? bundle.graze ?? 0,
+    mismatch: def.mismatch ?? bundle.mismatch ?? 0,
+    maxAngle: Number((def.maxAngle ?? bundle.maxAngle ?? 0).toFixed?.(2) ?? def.maxAngle ?? 0),
     pairs: def.pairs ?? [],
     region: (def.region ?? []).map((row) => ({
       text: row.text,
@@ -299,11 +305,41 @@ async function main() {
     await page.close()
   }
 
+  {
+    const { page } = await openPage(browser, 'balanced', 1366)
+    await enterFloor(page, 'F2')
+    await waitOverlap(page)
+    const f2 = resolve(outDir, 'F2_1366_default_balanced_day.png')
+    await page.screenshot({ path: f2 })
+    report.shots.push(f2)
+    const before = await page.evaluate(() => window.__twinLabelSyncs ?? 0)
+    await page.evaluate(async () => {
+      const rig = window.__twinRig
+      if (!rig) return
+      const started = performance.now()
+      let angle = 0
+      while (performance.now() - started < 10_000) {
+        angle += 0.12
+        void rig.rotateTo(angle, rig.polarAngle, false)
+        rig.update(0)
+        await new Promise((resolve) => requestAnimationFrame(resolve))
+      }
+    })
+    const after = await page.evaluate(() => window.__twinLabelSyncs ?? 0)
+    report.dragSyncs = { before, after }
+    await page.close()
+  }
+
   const failed = []
+  if (report.dragSyncs && report.dragSyncs.after !== report.dragSyncs.before) {
+    failed.push(`drag10s syncs ${report.dragSyncs.before}->${report.dragSyncs.after}`)
+  }
   for (const width of WIDTHS) {
     for (const floorId of OVERLAP_FLOORS) {
       const row = report.overlap[width][floorId]
       if (row.overlapPairs !== 0) failed.push(`${floorId}@${width} overlapPairs=${row.overlapPairs} ${JSON.stringify(row.pairs)}`)
+      if (row.mismatch > 0) failed.push(`${floorId}@${width} mismatch=${row.mismatch}`)
+      if (row.maxAngle > 15) failed.push(`${floorId}@${width} maxAngle=${row.maxAngle}`)
       if (row.hiddenAfterZoom !== 0) failed.push(`${floorId}@${width} hiddenAfterZoom=${row.hiddenAfterZoom}`)
       if (row.maxOffset > MAX_OFFSET) failed.push(`${floorId}@${width} maxOffset=${row.maxOffset}`)
       if (width >= 1366 && row.tier2Hidden > 0) {
@@ -339,7 +375,7 @@ async function main() {
                 const row = report.overlap[width][floorId]
                 return [
                   floorId,
-                  `${row.overlapPairs}/${row.maxOffset}/${row.merged}/${row.hidden}/${row.tier2Visible}/${row.tier2Total}/${row.hiddenAfterZoom}`,
+                  `${row.overlapPairs}/${row.grazePairs}/${row.mismatch}/${row.maxAngle}/${row.maxOffset}/${row.merged}/${row.hidden}/${row.tier2Visible}/${row.tier2Total}/${row.hiddenAfterZoom}`,
                 ]
               }),
             ),
@@ -349,6 +385,7 @@ async function main() {
         fontPx: report.fontPx,
         syncs: report.syncs,
         f1ZoomSyncs: report.f1ZoomSyncs,
+        dragSyncs: report.dragSyncs,
         regionF3: report.regionF3,
         shots: report.shots,
         consoles: Object.fromEntries(Object.entries(report.consoles).map(([key, rows]) => [key, rows.length])),

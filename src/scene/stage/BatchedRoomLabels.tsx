@@ -1,10 +1,10 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef, useState, type MutableRefObject } from 'react'
-import { DoubleSide, Group, Vector3, type Camera } from 'three'
+import { DoubleSide, Group, type Camera } from 'three'
 import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { BatchedText, Text, preloadFont } from 'troika-three-text'
 import { clusterTemplates, LABEL_MAX_EMS, type LabelPackState, type LabelPlacementState } from './labelAvoidance'
-import { isDrawnText, measureTextBox, type MeasuredLabelBox } from './labelScreenMeasure'
+import { cameraLookYaw, isDrawnText, measureTextBox, type MeasuredLabelBox } from './labelScreenMeasure'
 import { useTwinStore } from '../../store/store'
 import { ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_OPACITY, roomLabelColors, type RoomLabel } from './roomLabels'
 
@@ -19,6 +19,7 @@ export interface LabelBatchApi {
     labels: RoomLabel[],
   ) => Map<string, { x: number; y: number; w: number; h: number }>
   applyClusterTexts: (next: Record<string, string>) => Promise<boolean>
+  orientToCamera: (camera: Camera) => number
 }
 
 function bumpSync(): void {
@@ -41,37 +42,19 @@ function applyWrap(text: Text, fontSize: number) {
   text.whiteSpace = 'normal'
 }
 
-const placed = new Vector3()
-
 function applyPlacement(
   text: Text,
   base: [number, number, number],
   placement: LabelPlacementState | undefined,
   fade: number,
-  host: Group | null,
-  camera: Camera,
-  size: { width: number; height: number },
   show: boolean,
 ) {
-  const visible = show && (placement?.visible ?? true)
+  const visible = show && placement?.visible === true
   text.fillOpacity = visible ? fade : 0
   text.outlineOpacity = visible ? fade * ROOM_LABEL_OUTLINE_OPACITY : 0
   text.scale.setScalar(visible ? 1 : 0.001)
-  const ox = placement?.offsetX ?? 0
-  const oy = placement?.offsetY ?? 0
-  if (!visible || (ox === 0 && oy === 0)) {
-    text.position.set(base[0], base[1], base[2])
-    text.updateMatrix()
-    return
-  }
-  placed.set(base[0], base[1], base[2])
-  host?.localToWorld(placed)
-  placed.project(camera)
-  placed.x += (ox / Math.max(size.width, 1)) * 2
-  placed.y -= (oy / Math.max(size.height, 1)) * 2
-  placed.unproject(camera)
-  host?.worldToLocal(placed)
-  text.position.copy(placed)
+  const local = placement?.local ?? base
+  text.position.set(local[0], local[1], local[2])
   text.updateMatrix()
 }
 
@@ -155,7 +138,7 @@ export function BatchedRoomLabels({
       .then(async () => {
         if (cancelled) return
         batch = new BatchedText()
-        batch.name = 'RoomLabelBatchedText'
+        batch.name = 'RoomLabelBatchedText' // QA 独立脚本读 window.__twinScene 里这个名字和 batch._members
         batch.font = ROOM_LABEL_FONT
         batch.color = paletteRef.current.color
         batch.anchorX = 'center'
@@ -175,7 +158,10 @@ export function BatchedRoomLabels({
           text.anchorY = 'middle'
           text.characters = characters
           applyWrap(text, fontSize)
+          text.userData.labelId = label.id
           text.position.set(label.label[0], label.label[1], label.label[2])
+          text.scale.setScalar(0.001)
+          text.fillOpacity = 0
           text.frustumCulled = false
           batch.addText(text)
           members.push(text)
@@ -192,8 +178,11 @@ export function BatchedRoomLabels({
           text.anchorY = 'middle'
           text.characters = characters
           applyWrap(text, fontSize)
+          text.userData.clusterKey = cluster.key
+          text.userData.labelId = `cluster:${cluster.key}`
           text.position.set(cluster.label[0], cluster.label[1], cluster.label[2])
           text.scale.setScalar(0.001)
+          text.fillOpacity = 0
           text.frustumCulled = false
           batch.addText(text)
           clusterMembers.push(text)
@@ -328,24 +317,33 @@ export function BatchedRoomLabels({
         invalidate()
         return true
       },
+      orientToCamera(camera) {
+        const host = groupRef.current
+        const yaw = cameraLookYaw(camera, host)
+        for (const text of [...membersRef.current, ...clustersRef.current]) {
+          if (!text) continue
+          text.rotation.y = yaw
+          text.updateMatrix()
+        }
+        return (Math.abs(yaw) * 180) / Math.PI
+      },
     }
     return () => {
       measureRef.current = null
     }
   }, [invalidate, labels, measureRef, packGen])
 
-  useFrame(({ camera, size }) => {
+  useFrame(() => {
     const members = membersRef.current
     if (members.length === 0) return
     applyMemberFades(members, fadesRef.current)
-    const host = groupRef.current
     const pack = packRef.current
     const fades = fadesRef.current
     for (let i = 0; i < members.length; i += 1) {
       const label = labels[i]
       const text = members[i]
       if (!label || !text) continue
-      applyPlacement(text, label.label, pack.byId[label.id], fades[i] ?? 1, host, camera, size, true)
+      applyPlacement(text, label.label, pack.byId[label.id], fades[i] ?? 1, true)
     }
     for (let i = 0; i < clustersRef.current.length; i += 1) {
       const cluster = clusters[i]
@@ -353,15 +351,18 @@ export function BatchedRoomLabels({
       if (!cluster || !text) continue
       const state = pack.clusters[cluster.key]
       const show = Boolean(state?.visible)
-      const base = state?.world ?? cluster.label
+      const base = state?.local ?? state?.world ?? cluster.label
       applyPlacement(
         text,
         base,
-        { visible: show, cluster: cluster.key, offsetX: state?.offsetX ?? 0, offsetY: state?.offsetY ?? 0 },
+        {
+          visible: show,
+          cluster: cluster.key,
+          offsetX: state?.offsetX ?? 0,
+          offsetY: state?.offsetY ?? 0,
+          local: state?.local ?? state?.world,
+        },
         1,
-        host,
-        camera,
-        size,
         show,
       )
     }

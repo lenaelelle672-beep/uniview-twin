@@ -19,7 +19,13 @@ const CAD_NOTES = [
   'IPX7/IPX8水桶',
   '干燥箱、紫外老化箱',
   '大干燥箱',
+  '一体机选型',
+  '饮水机',
+  '直立式饮水机',
+  '茶水柜',
 ] as const
+
+const EQUIPMENT_NOTES = ['饮水机', '一体机选型', '直立式饮水机', '茶水柜'] as const
 
 const HEADCOUNT_NAMES = [
   '国内市场部（61+1+100+3=165人）',
@@ -48,16 +54,42 @@ const KEEP_ROOMS = [
   '前段产品图像测试区',
   '技服培训室(120㎡）',
   '丙类仓库(30㎡）',
+  '茶水间',
+  '茶水',
 ] as const
 
 const FONT_PATH = join(process.cwd(), 'public/fonts/NotoSansSC-Regular-subset.woff')
 
 describe('D237 / D238 标签文本', () => {
-  it('8 种 CAD/设备注记被过滤，普通房间名不受影响', () => {
-    expect(CAD_NOTES).toHaveLength(8)
+  it('12 种 CAD/设备注记被过滤，茶水间不受「茶水柜」误伤', () => {
+    expect(CAD_NOTES).toHaveLength(12)
     for (const name of CAD_NOTES) expect(isRoomName(name), name).toBe(false)
     for (const name of KEEP_ROOMS) expect(isRoomName(name), name).toBe(true)
     for (const name of HEADCOUNT_NAMES) expect(isRoomName(name), name).toBe(true)
+    expect(isRoomName('茶水间')).toBe(true)
+    expect(isRoomName('茶水')).toBe(true)
+  })
+
+  it('F2–F8 设备标注 49 条：饮水机 20、一体机选型 15、直立式饮水机 10、茶水柜 4', () => {
+    const counts = { 饮水机: 0, 一体机选型: 0, 直立式饮水机: 0, 茶水柜: 0 }
+    const perFloor: Record<string, number> = {}
+    for (let level = 2; level <= 8; level += 1) {
+      const floorId = `F${level}`
+      let n = 0
+      for (const room of getFloorPlan(floorId)!.rooms) {
+        if (!EQUIPMENT_NOTES.includes(room.name as (typeof EQUIPMENT_NOTES)[number])) continue
+        counts[room.name as keyof typeof counts] += 1
+        n += 1
+      }
+      perFloor[floorId] = n
+    }
+    expect(counts).toEqual({ 饮水机: 20, 一体机选型: 15, 直立式饮水机: 10, 茶水柜: 4 })
+    expect(Object.values(counts).reduce((sum, value) => sum + value, 0)).toBe(49)
+    expect(perFloor.F2).toBe(10)
+    expect(perFloor.F3).toBe(22)
+    for (const name of EQUIPMENT_NOTES) {
+      expect(roomLabelsFromPlan(getFloorPlan('F3')!).some((label) => label.sourceName === name || label.text === name)).toBe(false)
+    }
   })
 
   it('人数算式只在 displayName 去掉，原文仍是房间名', () => {

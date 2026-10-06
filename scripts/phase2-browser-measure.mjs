@@ -538,8 +538,9 @@ async function main() {
       }
       await page.click(`[data-twin-floor-marker="${id}"]`)
       await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 120)))
-      const selected = await page.evaluate(() => window.__twinSelected ?? null)
-      clicks.push({ index, id, selected, ok: selected === id })
+      const selected = await page.evaluate(() => ({ floor: window.__twinSelected ?? null, view: window.__twinView ?? null }))
+      // fb2：列表/标记单击只选层，view 仍是 building。
+      clicks.push({ index, id, selected: selected.floor, view: selected.view, ok: selected.floor === id && selected.view !== 'floor' })
     }
     report.floorMarkers = { ...(report.floorMarkers ?? {}), clicks }
 

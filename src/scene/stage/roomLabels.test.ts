@@ -88,6 +88,17 @@ describe('房间引线标签', () => {
     expect(frame).not.toMatch(/applyMemberFades[\s\S]{0,180}\.sync\(/)
     expect(source.match(/\.sync\(/g)?.length).toBeGreaterThanOrEqual(1)
     expect(source).toMatch(/bumpSync/)
+    expect(source).toMatch(/placement\?\.visible === true/)
+    expect(source).toMatch(/orientToCamera/)
+    expect(source).toMatch(/RoomLabelBatchedText/)
+    expect(source).toMatch(/_members/)
+  })
+
+  it('转正只在进层/层级/拖动结束计算，不每帧跟相机', () => {
+    const source = readFileSync(new URL('./RoomLabels.tsx', import.meta.url), 'utf8')
+    expect(source).toMatch(/currentAction/)
+    expect(source).toMatch(/orientToCamera/)
+    expect(source).toMatch(/shouldPack && api\?\.ready/)
   })
 
   it('换行用 maxWidth + break-word，不用 clipRect', () => {

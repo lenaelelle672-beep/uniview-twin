@@ -93,6 +93,8 @@ export interface LabelPlacementState {
   cluster: string | null
   offsetX: number
   offsetY: number
+  /** 进层/层级/拖动结束时算好的本地坐标，拖动中不再重投。 */
+  local?: [number, number, number]
 }
 
 export interface LabelClusterState {
@@ -100,6 +102,7 @@ export interface LabelClusterState {
   offsetX: number
   offsetY: number
   world: [number, number, number]
+  local?: [number, number, number]
   text: string
 }
 
