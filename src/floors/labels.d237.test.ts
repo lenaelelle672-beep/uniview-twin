@@ -116,11 +116,11 @@ const KEEP_ROOMS = [
   '打印',
   '茶水台',
   '会议室',
-  '货架区',
 ] as const
 
-/** 纯 ASCII 拿不准，D258 清单未列，先不滤。 */
-const UNSURE_ASCII = ['-2~8', '1-5', '7(14)'] as const
+/** D260：电梯层数、井道编号、洁具数量、无多边形货架区。 */
+const D260_NOTES = ['-2~8', '1-5', '7(14)', '货架区'] as const
+const D260_PATTERNS = [/^-?\d+\s*[~\-－]\s*\d+$/, /^\d+[（(]\d+[）)]$/, /^货架区$/] as const
 
 const FONT_PATH = join(process.cwd(), 'public/fonts/NotoSansSC-Regular-subset.woff')
 
@@ -134,7 +134,7 @@ describe('D237 / D238 标签文本', () => {
     expect(isRoomName('茶水间')).toBe(true)
     expect(isRoomName('茶水')).toBe(true)
     expect(isRoomName('会议室A1')).toBe(true)
-    for (const name of UNSURE_ASCII) expect(isRoomName(name), name).toBe(true)
+    for (const name of D260_NOTES) expect(isRoomName(name), name).toBe(false)
   })
 
   it('D258 A 类 23 条：XSIZE/YSIZE/功率/HALT，UPS 只滤 F2 无多边形', () => {
@@ -199,7 +199,7 @@ describe('D237 / D238 标签文本', () => {
     expect(isRoomName('茶水台')).toBe(true)
     expect(isRoomName('打印')).toBe(true)
     expect(isRoomName('会议室')).toBe(true)
-    expect(isRoomName('货架区')).toBe(true)
+    expect(isRoomName('货架区')).toBe(false)
     const f6 = getFloorPlan('F6')!
     expect(f6.rooms.some((room) => room.name === '茶水台' && isRoomName(room.name, room))).toBe(true)
     expect(f6.rooms.some((room) => room.name === '打印' && isRoomName(room.name, room))).toBe(true)
@@ -228,6 +228,45 @@ describe('D237 / D238 标签文本', () => {
     for (const name of EQUIPMENT_NOTES) {
       expect(roomLabelsFromPlan(getFloorPlan('F3')!).some((label) => label.sourceName === name || label.text === name)).toBe(false)
     }
+  })
+
+  it('D260 三条正则在 F01–F22 只命中 18 条，带楼层号的房间和楼梯不误伤', () => {
+    const hits: Array<{ floorId: string; name: string; poly: boolean; area: number | null | undefined }> = []
+    for (let level = 1; level <= 22; level += 1) {
+      const floorId = `F${level}`
+      const plan = getFloorPlan(floorId)!
+      for (const room of plan.rooms) {
+        if (!D260_PATTERNS.some((pattern) => pattern.test(room.name))) continue
+        hits.push({
+          floorId,
+          name: room.name,
+          poly: Boolean(room.polygon && room.polygon.length >= 3),
+          area: room.labelArea_m2,
+        })
+        expect(isRoomName(room.name, room), `${floorId} ${room.name}`).toBe(false)
+      }
+    }
+    expect(hits).toHaveLength(18)
+    expect(hits.filter((row) => row.name === '-2~8')).toHaveLength(7)
+    expect(hits.filter((row) => row.name === '1-5')).toHaveLength(9)
+    expect(hits.filter((row) => row.name === '7(14)')).toHaveLength(1)
+    expect(hits.filter((row) => row.name === '货架区')).toHaveLength(1)
+    expect(hits.every((row) => !row.poly)).toBe(true)
+    expect(hits.every((row) => row.area == null)).toBe(true)
+    expect(hits.filter((row) => row.floorId === 'F1' && row.name === '-2~8')).toHaveLength(1)
+    expect(hits.filter((row) => row.floorId === 'F7' && row.name === '-2~8')).toHaveLength(1)
+    expect(hits.filter((row) => row.floorId === 'F1' && row.name === '1-5')).toHaveLength(1)
+    expect(hits.filter((row) => row.floorId === 'F5' && row.name === '1-5')).toHaveLength(2)
+    expect(hits.filter((row) => row.floorId === 'F5' && row.name === '7(14)')).toHaveLength(1)
+    expect(hits.filter((row) => row.floorId === 'F1' && row.name === '货架区')).toHaveLength(1)
+    expect(D260_PATTERNS.some((pattern) => pattern.test('1#楼梯'))).toBe(false)
+    expect(D260_PATTERNS.some((pattern) => pattern.test('18#电梯(消)'))).toBe(false)
+    expect(D260_PATTERNS.some((pattern) => pattern.test('会议室A1'))).toBe(false)
+    expect(D260_PATTERNS.some((pattern) => pattern.test('技服培训室(120㎡）'))).toBe(false)
+    expect(D260_PATTERNS.some((pattern) => pattern.test('核心筒（楼梯；XSIZE、YSIZE）'))).toBe(false)
+    expect(isRoomName('1#楼梯')).toBe(true)
+    expect(isRoomName('会议室A1')).toBe(true)
+    expect(isRoomName('技服培训室(120㎡）')).toBe(true)
   })
 
   it('人数算式只在 displayName 去掉，原文仍是房间名', () => {

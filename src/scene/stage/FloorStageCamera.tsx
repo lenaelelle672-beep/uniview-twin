@@ -1,12 +1,13 @@
 import { type CameraControls as CameraControlsImpl } from '@react-three/drei/core/CameraControls'
 import { useFrame, useThree } from '@react-three/fiber'
-import { useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Box3, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
 import { activeFloorId } from './cut'
 import { obliqueOverviewSeed } from './poses'
 import { workstationPosition } from './workstationPosition'
+import { beginCameraMove, markCameraRested, watchCameraRest } from './cameraRest'
 
 type VisibleFocusApi = typeof import('./visibleFocus')
 let visibleFocusApi: VisibleFocusApi | null = null
@@ -92,7 +93,7 @@ function resetFocalOffset(rig: FocusRig | null) {
   void rig.setFocalOffset(0, 0, 0, false)
 }
 
-function frameSlab(
+async function frameSlab(
   rig: FocusRig,
   camera: PerspectiveCamera,
   plate: Object3D,
@@ -105,10 +106,11 @@ function frameSlab(
   const center = box.getCenter(new Vector3())
   const size = box.getSize(new Vector3())
   const seed = obliqueOverviewSeed(center, { x: size.x, z: size.z })
+  beginCameraMove('frame-slab')
   rig.smoothTime = 0
   rig.maxPolarAngle = Math.PI / 2 - POLAR_DIP
   setFov(camera, FLOOR_FOV)
-  void rig.setLookAt(
+  await rig.setLookAt(
     seed.position[0],
     seed.position[1],
     seed.position[2],
@@ -117,18 +119,20 @@ function frameSlab(
     seed.target[2],
     false,
   )
-  void rig.fitToBox(box, false)
+  await rig.fitToBox(box, false)
   applyVisibleFocalOffset(rig, camera, canvas, false)
   rig.update(0)
   const fitted = projectBox(camera, box)
   if (fitted.widthRatio > 0.05 && fitted.widthRatio < 0.7) {
-    rig.dollyTo(rig.distance * (fitted.widthRatio / 0.78), false)
+    await rig.dollyTo(rig.distance * (fitted.widthRatio / 0.78), false)
     applyVisibleFocalOffset(rig, camera, canvas, false)
     rig.update(0)
   }
   rig.maxPolarAngle = Math.PI
   const settled = projectBox(camera, box)
   window.__twinSlab = { floorId, ...settled }
+  window.__twinFlyPromiseAt = performance.now()
+  markCameraRested('setLookAt')
   return true
 }
 
@@ -153,9 +157,13 @@ function flyToDesk(
   window.__twinFlyEnd = { deskId, x: eye.x, y: eye.y, z: eye.z, started }
   // 首帧画出来之前做阻尼，SwiftShader 上要等很久才进入 1.2 m。
   // 直达链接在第一帧提交时直接落到工位；已经在看画面时再平滑飞入。
+  beginCameraMove('fly-desk')
   if (!transition) {
     rig.smoothTime = 0
-    void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, false)
+    void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, false).then(() => {
+      window.__twinFlyPromiseAt = performance.now()
+      markCameraRested('setLookAt')
+    })
     applyVisibleFocalOffset(rig, camera, canvas, false, target)
     rig.update(0)
     applyVisibleFocalOffset(rig, camera, canvas, false, target)
@@ -164,8 +172,10 @@ function flyToDesk(
   }
   rig.smoothTime = FLY_SECONDS
   void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, true).then(() => {
+    window.__twinFlyPromiseAt = performance.now()
     applyVisibleFocalOffset(rig, camera, canvas, false, target)
     markLocated(deskId, started)
+    markCameraRested('setLookAt')
   })
   applyVisibleFocalOffset(rig, camera, canvas, true, target)
   return true
@@ -193,13 +203,22 @@ export function FloorStageCamera() {
   const invalidate = useThree((state) => state.invalidate)
   const presented = useRef(false)
   const framedKey = useRef('')
-  const settlePulse = useRef(0)
 
-  const pulseSettleFrames = () => {
-    settlePulse.current += 1
-    invalidate()
-    if (settlePulse.current < 8) requestAnimationFrame(pulseSettleFrames)
-  }
+  useEffect(() => {
+    const rig = controls as (FocusRig & {
+      addEventListener?: (type: string, fn: () => void) => void
+      removeEventListener?: (type: string, fn: () => void) => void
+    }) | null
+    if (!rig?.addEventListener || !rig.removeEventListener) return undefined
+    const onStart = () => beginCameraMove('controlstart')
+    const onEnd = () => watchCameraRest(rig, invalidate)
+    rig.addEventListener('controlstart', onStart)
+    rig.addEventListener('controlend', onEnd)
+    return () => {
+      rig.removeEventListener('controlstart', onStart)
+      rig.removeEventListener('controlend', onEnd)
+    }
+  }, [controls, invalidate])
 
   useFrame(() => {
     presented.current = true
@@ -224,16 +243,15 @@ export function FloorStageCamera() {
       interior.updateMatrixWorld(true)
       flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, false, gl.domElement)
       framedKey.current = key
-      settlePulse.current = 0
-      requestAnimationFrame(pulseSettleFrames)
+      watchCameraRest(rig, invalidate)
       return
     }
     const plate = scene.getObjectByName('FloorPlate')
     if (!plate) return
-    frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
     framedKey.current = key
-    settlePulse.current = 0
-    requestAnimationFrame(pulseSettleFrames)
+    void frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement).then((ok) => {
+      if (ok) watchCameraRest(rig, invalidate)
+    })
   })
 
   useLayoutEffect(() => {
@@ -272,8 +290,7 @@ export function FloorStageCamera() {
         }
         flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide, gl.domElement)
         framedKey.current = `${active}:${deskId}:${focusSeq}`
-        settlePulse.current = 0
-        requestAnimationFrame(pulseSettleFrames)
+        watchCameraRest(rig, invalidate)
         return
       }
       const plate = scene.getObjectByName('FloorPlate')
@@ -284,17 +301,18 @@ export function FloorStageCamera() {
         }
         return
       }
-      frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement)
       framedKey.current = `${active}:slab:${focusSeq}`
-      settlePulse.current = 0
-      requestAnimationFrame(pulseSettleFrames)
+      void frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement).then((ok) => {
+        if (cancelled || !ok) return
+        watchCameraRest(rig, invalidate)
+      })
     }
     tick()
     return () => {
       cancelled = true
       resetFocalOffset(rig)
     }
-  }, [active, camera, controls, focusSeq, focusedDeskId, gl, scene, size.height, size.width])
+  }, [active, camera, controls, focusSeq, focusedDeskId, gl, invalidate, scene, size.height, size.width])
 
   return null
 }

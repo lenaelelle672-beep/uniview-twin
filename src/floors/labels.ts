@@ -44,7 +44,7 @@ const CAD_NOTE = [
 ]
 /**
  * D258 B 类设备/家具。会议桌精确匹配；不过滤 茶水台、打印、会议室。
- * 货架不写裸 /货架/，避免误伤「货架区」。
+ * D260：货架区无多边形，单独精确匹配，不写裸 /货架/。
  */
 const CAD_FURNITURE = [
   /测试桌|测试整改桌/,
@@ -67,7 +67,10 @@ const CAD_FURNITURE = [
   /^机柜$/,
   /投影仪/,
   /锅炉烟囱/,
+  /^货架区$/,
 ]
+/** D260：电梯层数范围、井道编号、洁具数量。建模确认 F1–F22 只命中 18 条。 */
+const CAD_RANGE_NOTE = [/^-?\d+\s*[~\-－]\s*\d+$/, /^\d+[（(]\d+[）)]$/]
 /** 部门名后的人数算式，只在 displayName 去掉。 */
 const HEADCOUNT = /[（(][\d＋+\s=]*\d[\d＋+\s=]*人[）)]/g
 /** 面积括号整段不拆，只在括号前硬换行。troika normal 会尊重 \\n，不占字形。 */
@@ -87,6 +90,7 @@ export function isRoomName(name: string, room?: Pick<FloorRoom, 'polygon'> | nul
   if (ANNOTATION.test(text)) return false
   if (CAD_NOTE.some((pattern) => pattern.test(text))) return false
   if (CAD_FURNITURE.some((pattern) => pattern.test(text))) return false
+  if (CAD_RANGE_NOTE.some((pattern) => pattern.test(text))) return false
   if (text === 'UPS' && room && (!room.polygon || room.polygon.length < 3)) return false
   return true
 }

@@ -197,6 +197,18 @@ interface Window {
   __twinLabelSyncStartedAt?: number
   __twinLabelReadyAt?: number
   __twinLabelFading?: boolean
+  __twinCameraRested?: boolean
+  __twinCameraRestReason?: string
+  __twinCameraRestAt?: number
+  __twinFlyPromiseAt?: number
+  __twinLabelPhases?: {
+    restAt?: number
+    restReason?: string
+    flyPromiseAt?: number
+    packedAt?: number
+    syncAt?: number
+    fadeDoneAt?: number
+  }
   __twinLabelOverlap?: {
     merged: number
     hidden: number

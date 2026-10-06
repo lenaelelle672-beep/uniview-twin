@@ -22,10 +22,13 @@ import {
   countOverlapKinds,
   findRoomLabelBatch,
   isDrawnText,
+  overlapDepth,
   overlapPairNames,
+  OVERLAP_STRONG_PX,
   stripStrongOverlaps,
   visibilityMismatch,
 } from './labelScreenMeasure'
+import { isCameraRested } from './cameraRest'
 import type { LabelBatchApi } from './BatchedRoomLabels'
 import {
   LABEL_MAX_PX,
@@ -45,8 +48,6 @@ const BatchedRoomLabels = lazy(async () => {
 
 /** 1366 单层目标屏上字高；全层最大夹在 LABEL_MIN/MAX。 */
 export const LABEL_TARGET_PX = 16
-/** 相机位姿连续不变这么多帧才算停稳。进层当下不算避让。 */
-const SETTLE_FRAMES = 3
 /** 停稳后淡入时长。算出齐时间，所以要短；只改 fillOpacity。 */
 const FADE_IN_MS = 80
 
@@ -290,10 +291,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const packedRef = useRef<AvoidResult | null>(null)
   const idleRef = useRef(0)
   const stripRef = useRef(false)
-  const poseRef = useRef('')
-  const poseIdleRef = useRef(0)
   const packedKeyRef = useRef('')
-  const packedPoseRef = useRef('')
   const pointerMovedRef = useRef(false)
   const pointerOnCanvasRef = useRef(false)
   const pointerPxRef = useRef({ x: 0, y: 0 })
@@ -344,10 +342,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     packedRef.current = null
     layoutRef.current = { byId: {}, clusters: {} }
     stripRef.current = false
-    poseRef.current = ''
-    poseIdleRef.current = 0
     packedKeyRef.current = ''
-    packedPoseRef.current = ''
     pointerMovedRef.current = false
     pointerOnCanvasRef.current = false
     hoverIdRef.current = null
@@ -475,19 +470,12 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     const api = measureRef.current
     const rig = window.__twinRig as (Window['__twinRig'] & { currentAction?: number }) | undefined
     const dragging = (rig?.currentAction ?? 0) !== 0
-    const poseKey = `${perspective.position.x.toFixed(1)}|${perspective.position.y.toFixed(1)}|${perspective.position.z.toFixed(1)}`
-    if (poseKey !== poseRef.current) {
-      poseRef.current = poseKey
-      poseIdleRef.current = 0
-    } else {
-      poseIdleRef.current += 1
-    }
     const state = useTwinStore.getState()
     const slabReady = window.__twinSlab?.floorId === floorId
     const flyEnd = window.__twinFlyEnd
     const locating = Boolean(flyEnd) && window.__twinLocate?.deskId !== flyEnd?.deskId
     const cameraReady = slabReady || (Boolean(state.focusedDeskId) && !locating)
-    const settled = !dragging && !locating && cameraReady && poseIdleRef.current >= SETTLE_FRAMES
+    const settled = !dragging && !locating && cameraReady && isCameraRested()
     const viewKey = `${floorId}|${state.focusedDeskId ?? ''}|${state.searchQuery}|${size.width}|${state.devices
       .filter((device) => device.floorId === floorId && device.status === 'alarm')
       .map((device) => device.id)
@@ -495,7 +483,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     if (viewKey !== viewKeyRef.current) {
       packedRef.current = null
       packedKeyRef.current = ''
-      packedPoseRef.current = ''
       fadeInRef.current = 0
       targetFadesRef.current = []
       hoverIdRef.current = null
@@ -507,6 +494,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     if (dragging) idleRef.current = -1
     if (!cameraReady) {
       window.__twinLabelFading = false
+      invalidate()
       return
     }
     if (!sizedRef.current) {
@@ -521,14 +509,14 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       return
     }
     if (!settled) {
-      if (!api?.ready) invalidate()
+      invalidate()
       return
     }
     let shouldPack = false
     if (idleRef.current === -1) {
       shouldPack = true
       idleRef.current = 0
-    } else if (packedKeyRef.current !== viewKey || packedPoseRef.current !== poseKey || !packedRef.current) {
+    } else if (packedKeyRef.current !== viewKey || !packedRef.current) {
       shouldPack = true
     }
     if (shouldPack && !api?.ready) {
@@ -680,7 +668,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       viewKeyRef.current = viewKey
       const needsFade = packedKeyRef.current !== viewKey
       packedKeyRef.current = viewKey
-      packedPoseRef.current = poseKey
       clusterSyncedRef.current = 'once'
       hoverIdRef.current = null
       window.__twinLabelPx = {
@@ -693,6 +680,14 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       targetFadesRef.current = fades.slice()
       stripLiveOverlaps(perspective, size, keepTier2)
       stripRef.current = false
+      window.__twinLabelPhases = {
+        ...(window.__twinLabelPhases ?? {}),
+        restAt: window.__twinCameraRestAt,
+        restReason: window.__twinCameraRestReason,
+        flyPromiseAt: window.__twinFlyPromiseAt,
+        packedAt: performance.now(),
+        syncAt: window.__twinLabelReadyAt,
+      }
       if (needsFade) {
         fadeInRef.current = performance.now()
         window.__twinLabelFading = true
@@ -707,13 +702,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       invalidate()
       return
     }
-    const revealHover = (hoverId: string | null) => {
-      const layout = layoutRef.current
-      const byId = { ...layout.byId }
-      if (hoverId && byId[hoverId] && !layout.byId[hoverId]!.visible) {
-        byId[hoverId] = { ...byId[hoverId]!, visible: true, cluster: null }
-      }
-      packRef.current = { byId, clusters: layout.clusters }
+    const writePackVisibility = (byId: LabelPackState['byId'], clusters: LabelPackState['clusters']) => {
+      packRef.current = { byId, clusters }
       const packed = packedRef.current
       if (packed) {
         for (const row of packed.placements) {
@@ -725,6 +715,42 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         packed.hidden = packed.placements.filter((row) => !row.visible && !row.cluster).length
       }
       api?.applyPack(packRef.current)
+    }
+    const revealHover = (hoverId: string | null) => {
+      const layout = layoutRef.current
+      const restore = () => writePackVisibility({ ...layout.byId }, { ...layout.clusters })
+      if (!hoverId || !layout.byId[hoverId] || layout.byId[hoverId]!.visible) {
+        restore()
+        return
+      }
+      const byId = { ...layout.byId, [hoverId]: { ...layout.byId[hoverId]!, visible: true, cluster: null } }
+      const clusters = { ...layout.clusters }
+      writePackVisibility(byId, clusters)
+      const live = api?.measureVisible(perspective, size) ?? []
+      const revealed = live.find((row) => row.id === hoverId)
+      if (!revealed) {
+        restore()
+        return
+      }
+      const locked = new Set(itemsRef.current.filter((item) => item.locked).map((item) => item.id))
+      const blockers = live.filter((row) => {
+        if (row.id === hoverId) return false
+        const { ox, oy } = overlapDepth(row.box, revealed.box)
+        return ox > OVERLAP_STRONG_PX && oy > OVERLAP_STRONG_PX
+      })
+      if (blockers.some((row) => locked.has(row.id))) {
+        restore()
+        return
+      }
+      for (const row of blockers) {
+        if (row.id.startsWith('cluster:')) {
+          const key = row.id.slice('cluster:'.length)
+          if (clusters[key]) clusters[key] = { ...clusters[key]!, visible: false }
+        } else if (byId[row.id]) {
+          byId[row.id] = { ...byId[row.id]!, visible: false }
+        }
+      }
+      writePackVisibility(byId, clusters)
     }
     if (pointerMovedRef.current && pointerOnCanvasRef.current && packedRef.current) {
       const pointerX = pointerPxRef.current.x
@@ -757,6 +783,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       if (t >= 1) {
         fadeInRef.current = 0
         window.__twinLabelFading = false
+        window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), fadeDoneAt: performance.now() }
       } else {
         window.__twinLabelFading = true
         invalidate()
