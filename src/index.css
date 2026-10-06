@@ -295,6 +295,7 @@ button {
 .detail-list div {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 12px;
   padding: 6px 0;
   border-bottom: 1px solid #e6edf5;
