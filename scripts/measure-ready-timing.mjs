@@ -164,7 +164,7 @@ async function runRound(browser, label, opts) {
     })
   })
 
-  await page.goto(`${baseUrl}/?q=balanced`, { waitUntil: 'load', timeout: 180_000 })
+  await page.goto(`${baseUrl}/?q=balanced&keepDrawingBuffer=1`, { waitUntil: 'load', timeout: 180_000 })
   await page.waitForFunction(() => window.__twinReady === true && window.__twinFirstFrameAt != null, {
     timeout: 180_000,
   })

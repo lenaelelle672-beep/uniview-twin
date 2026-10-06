@@ -29,6 +29,7 @@ interface TwinLabelMount {
 interface TwinRenderStats {
   calls: number
   triangles: number
+  frame?: number
 }
 
 interface TwinInteriorStats {
@@ -131,6 +132,28 @@ interface TwinEnvMaterial {
 interface Window {
   __twinReady?: boolean
   __twinReadyAt?: number
+  __twinGpu?: {
+    renderer: string
+    software: boolean
+    tier: 'performance' | 'balanced' | 'high'
+    softwareAuto?: boolean
+    preserveDrawingBuffer?: boolean
+    dpr?: number
+    probeMs?: number
+  }
+  __twinInvalidate?: () => Promise<void>
+  __twinFrameCount?: number
+  __twinFrames?: number
+  __twinGlDebug?: boolean
+  __twinLastFrameAt?: number
+  __twinGlFrame?: number
+  __twinSchedule?: {
+    hz: number
+    view: string
+    quality: string
+    hidden: boolean
+    holds: { motion: number; people: number; alarm: number }
+  }
   __twinSuspenseReady?: boolean
   __twinHdrRequired?: boolean
   __twinHdrLoadedAt?: number

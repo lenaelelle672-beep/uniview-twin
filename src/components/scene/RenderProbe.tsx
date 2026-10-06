@@ -19,8 +19,10 @@ export function RenderProbe() {
   const camera = useThree((state) => state.camera)
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
+  const invalidate = useThree((state) => state.invalidate)
 
   useEffect(() => {
+    invalidate()
     markSuspenseReady()
     window.__twinScene = scene
     window.__twinSnapPrograms = (label) => snapshotPrograms(gl, label)
@@ -98,7 +100,7 @@ export function RenderProbe() {
       delete window.__twinSetExploded
       unsubscribe()
     }
-  }, [camera, gl, scene])
+  }, [camera, gl, invalidate, scene])
 
   useFrame(() => {
     gl.info.autoReset = false

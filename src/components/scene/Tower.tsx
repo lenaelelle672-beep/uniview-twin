@@ -35,7 +35,9 @@ function FloorShell({
   )
   const hidden = useTwinStore((state) => isFloorShellHidden(state.view, state.selectedFloor, elevation))
   const opened = useTwinStore((state) => isFloorCurtainOpen(state.view, state.selectedFloor, id))
-  const selected = useTwinStore((state) => state.view === 'building' && state.selectedFloor === id)
+  const selected = useTwinStore(
+    (state) => state.view === 'building' && (state.selectedFloor === id || state.hoveredFloor === id),
+  )
   const actions = useFloorActions(id)
   return (
     <group name={`FloorShell-${id}`} visible={!hidden} {...actions}>

@@ -8,9 +8,12 @@ import { ROOM_LABEL_FONT, type RoomLabel } from './roomLabels'
 
 disableTroikaCdnFallback()
 
-function syncText(text: Text): Promise<void> {
+function syncText(text: Text, invalidate: () => void): Promise<void> {
   return new Promise((resolve) => {
-    text.sync(() => resolve())
+    text.sync(() => {
+      invalidate()
+      resolve()
+    })
   })
 }
 
@@ -103,7 +106,7 @@ export function BatchedRoomLabels({
           batch.addText(text)
           members.push(text)
         }
-        await Promise.all(members.map((text) => syncText(text)))
+        await Promise.all(members.map((text) => syncText(text, invalidate)))
         if (cancelled) return
         const afterLayout = performance.now()
         await new Promise<void>((resolve) => {
