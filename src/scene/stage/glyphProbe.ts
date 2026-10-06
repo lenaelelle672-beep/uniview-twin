@@ -48,9 +48,14 @@ export function takeGlyphBudget(
 }
 
 export function unseenGlyphs(characters: string): string {
-  return Array.from(characters)
-    .filter((char) => char && !seen.has(char))
-    .join('')
+  const local = new Set<string>()
+  const out: string[] = []
+  for (const char of characters) {
+    if (!char || seen.has(char) || local.has(char)) continue
+    local.add(char)
+    out.push(char)
+  }
+  return out.join('')
 }
 
 export function noteGlyphChars(source: string, characters: string): number {
@@ -178,9 +183,13 @@ export async function warmupFontParse(): Promise<{ ms: number; atlasHeight: numb
     getTextRenderInfoFn?.(
       { font: ROOM_LABEL_FONT, text: GLYPH_WARMUP_SPACE },
       (info) => {
-        const height = info.sdfTexture?.image?.height
-        if (typeof height === 'number' && window.__twinGlyphPreload) {
-          window.__twinGlyphPreload.atlasHeight = height
+        const tex = info.sdfTexture as { image?: { width?: number; height?: number }; source?: { data?: { width?: number; height?: number } } } | undefined
+        const img = tex?.image ?? tex?.source?.data
+        const height = img?.height
+        const width = img?.width
+        if (window.__twinGlyphPreload) {
+          if (typeof height === 'number') window.__twinGlyphPreload.atlasHeight = height
+          if (typeof width === 'number') window.__twinGlyphPreload.atlasWidth = width
         }
         resolve()
       },

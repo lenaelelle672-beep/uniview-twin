@@ -199,7 +199,7 @@ export function scheduleGlyphPreload(): () => void {
     const index = window.__twinGlyphPreload?.batches.filter((row) => (row.i ?? 0) >= 0).length ?? 0
     void watchMaxFrame(() => preloadLabelChars(slice, `preload:${index}`).then(() => undefined)).then((maxFrame) => {
       if (cancelled) return
-      remaining = remaining.slice(slice.length)
+      remaining = unseenGlyphs(remaining.slice(slice.length))
       recordBatch({
         i: index,
         chars: slice.length,

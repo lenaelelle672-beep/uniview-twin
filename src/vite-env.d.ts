@@ -242,6 +242,7 @@ interface Window {
     unique?: number
     newOnEntry?: Record<string, number>
     atlasHeight?: number | null
+    atlasWidth?: number | null
     paused?: boolean
     warmup?: Array<{ kind: string; ms: number; maxFrame: number; atlasHeight?: number | null }>
   }
