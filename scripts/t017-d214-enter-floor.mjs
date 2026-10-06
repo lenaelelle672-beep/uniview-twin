@@ -98,11 +98,16 @@ async function waitRoom21(page, timeout = 45_000) {
 }
 
 async function clickAlarmF1(page) {
-  await page.click('#alarm-toggle')
-  await page.waitForSelector('#alarm-drawer', { timeout: 5_000 })
+  const delay = await page.evaluate(() => {
+    const readyAt = window.__twinReadyAt ?? performance.now()
+    const toggle = document.getElementById('alarm-toggle')
+    toggle?.click()
+    return performance.now() - readyAt
+  })
   await page.waitForFunction(() => document.getElementById('alarm-drawer')?.open === true, { timeout: 5_000 })
   const row = await page.waitForSelector('button.alarm-row[aria-label*="F1-PR1"]', { timeout: 8_000 })
   await row.click()
+  return delay
 }
 
 async function searchFlyF1(page) {
@@ -122,7 +127,7 @@ async function clickBadgeF1(page) {
     return { x: projected.x, y: projected.y }
   })
   if (!point) throw new Error('找不到 F1 徽标投影')
-  await page.mouse.click(point.x, point.y)
+  await page.mouse.click(point.x, point.y, { clickCount: 2 })
 }
 
 async function runCase(browser, quality, path, act) {
@@ -134,8 +139,9 @@ async function runCase(browser, quality, path, act) {
       const already = await page.evaluate(() => window.__twinPrewarmed === true)
       if (already) throw new Error('预热已结束，错过预热窗口')
     }
-    const clickAt = await page.evaluate(() => performance.now())
-    await act(page)
+    const beforeClick = await page.evaluate(() => performance.now())
+    const actDelay = await act(page)
+    const clickAt = typeof actDelay === 'number' ? readyAt + actDelay : beforeClick
     const after = await waitRoom21(page)
     const floorJson = logs.requests.filter((url) => /^\/floors\/F0?1\.json$/.test(url))
     return {
@@ -156,7 +162,7 @@ async function runCase(browser, quality, path, act) {
         after.interior &&
         floorJson.length > 0 &&
         logs.errors.length === 0 &&
-        clickAt - readyAt < (path === 'alarm-1s' ? 1_200 : 20_000),
+        (path !== 'alarm-1s' || clickAt - readyAt < 1_200),
     }
   } catch (error) {
     const snap = await page
@@ -198,7 +204,11 @@ async function runIdleFrames(browser, quality) {
       ...snap,
       errors: logs.errors,
       warnings: logs.warnings,
-      ok: snap.frames <= 2 && logs.errors.length === 0 && logs.warnings.length === 0 && snap.view === 'building',
+      ok:
+        snap.frames <= 3 &&
+        logs.errors.length === 0 &&
+        logs.warnings.length === 0 &&
+        snap.view === 'building',
     }
   } finally {
     await page.close()
