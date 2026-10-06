@@ -277,7 +277,7 @@ function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, num
 }
 
 export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
-  const { camera, scene, size, pointer, gl, invalidate } = useThree()
+  const { camera, scene, size, gl, invalidate } = useThree()
   const [fontSize, setFontSize] = useState(0)
   const sizedRef = useRef(false)
   const pxRef = useRef(0)
@@ -296,6 +296,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const packedPoseRef = useRef('')
   const pointerMovedRef = useRef(false)
   const pointerOnCanvasRef = useRef(false)
+  const pointerPxRef = useRef({ x: 0, y: 0 })
   const hoverIdRef = useRef<string | null>(null)
   const fadeInRef = useRef(0)
   const targetFadesRef = useRef<number[]>([])
@@ -442,9 +443,16 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
 
   useEffect(() => {
     const canvas = gl.domElement
-    const onMove = () => {
+    const onMove = (event: PointerEvent) => {
       pointerMovedRef.current = true
       pointerOnCanvasRef.current = true
+      const rect = canvas.getBoundingClientRect()
+      const width = Math.max(rect.width, 1)
+      const height = Math.max(rect.height, 1)
+      pointerPxRef.current = {
+        x: ((event.clientX - rect.left) / width) * sizeRef.current.width,
+        y: ((event.clientY - rect.top) / height) * sizeRef.current.height,
+      }
       invalidate()
     }
     const onLeave = () => {
@@ -719,8 +727,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       api?.applyPack(packRef.current)
     }
     if (pointerMovedRef.current && pointerOnCanvasRef.current && packedRef.current) {
-      const pointerX = (pointer.x * 0.5 + 0.5) * size.width
-      const pointerY = (-pointer.y * 0.5 + 0.5) * size.height
+      const pointerX = pointerPxRef.current.x
+      const pointerY = pointerPxRef.current.y
       let hoverId: string | null = null
       for (const item of itemsRef.current) {
         if (Math.hypot(pointerX - item.x, pointerY - item.y) < Math.max(item.w, item.h) * 0.65 + 18) {
