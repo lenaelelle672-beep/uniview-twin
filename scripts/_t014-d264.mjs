@@ -173,6 +173,16 @@ function d263Frames(page) {
   })
 }
 
+async function waitGlyph(page) {
+  const appeared = await page
+    .waitForFunction(() => window.__twinGlyphPreload != null, { timeout: 4000 })
+    .then(() => true)
+    .catch(() => false)
+  if (!appeared) return false
+  await page.waitForFunction(() => window.__twinGlyphPreload?.done === true, { timeout: 45_000 }).catch(() => {})
+  return true
+}
+
 async function enterFloor(page, floor) {
   const clickAt = await page.evaluate(() => {
     window.__twinCameraMoveAt = undefined
@@ -199,7 +209,7 @@ const out = {
   const page = await open()
   await page.waitForFunction(() => window.__twinFirstFrameAt != null, { timeout: 30_000 })
   const idleStart = await page.evaluate(() => performance.now())
-  await page.waitForFunction(() => window.__twinGlyphPreload?.done === true, { timeout: 45_000 }).catch(() => {})
+  await waitGlyph(page)
   await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
   const idle = await page.evaluate((t0) => {
     const g = window.__twinGlyphPreload
@@ -273,7 +283,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
   for (let i = 0; i < 3; i += 1) {
     const page = await open()
     await page.waitForFunction(() => window.__twinReady === true, { timeout: 90_000 })
-    await page.waitForFunction(() => window.__twinGlyphPreload?.done === true || performance.now() > 8000, { timeout: 20_000 }).catch(() => {})
+    await waitGlyph(page)
     const resetAt = await page.evaluate(() => {
       const now = performance.now()
       if (Array.isArray(window.__twinRafStamps)) window.__twinRafStamps.length = 0
@@ -305,7 +315,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
 {
   const page = await open()
   await page.waitForFunction(() => window.__twinFirstFrameAt != null, { timeout: 30_000 })
-  await page.waitForFunction(() => window.__twinGlyphPreload?.done === true, { timeout: 45_000 }).catch(() => {})
+  await waitGlyph(page)
   for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     const resetAt = await page.evaluate(() => {
       const now = performance.now()
