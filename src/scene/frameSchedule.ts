@@ -2,13 +2,6 @@ import type { QualityTier } from '../types'
 
 export type FrameChannel = 'motion' | 'people' | 'alarm'
 
-/** 性能档：连续动画 30 fps、人物 10 fps、告警 2 Hz。均衡/高档不限。 */
-export const CHANNEL_HZ: Record<FrameChannel, Record<QualityTier, number>> = {
-  motion: { perf: 30, balanced: Number.POSITIVE_INFINITY, high: Number.POSITIVE_INFINITY },
-  people: { perf: 10, balanced: Number.POSITIVE_INFINITY, high: Number.POSITIVE_INFINITY },
-  alarm: { perf: 2, balanced: Number.POSITIVE_INFINITY, high: Number.POSITIVE_INFINITY },
-}
-
 const CHANNELS: FrameChannel[] = ['motion', 'people', 'alarm']
 
 const holds: Record<FrameChannel, number> = { motion: 0, people: 0, alarm: 0 }
@@ -30,25 +23,33 @@ export function channelHeld(channel: FrameChannel): boolean {
   return holds[channel] > 0
 }
 
-export function anyChannelHeld(): boolean {
-  return holds.motion > 0 || holds.people > 0 || holds.alarm > 0
+export function holdSnapshot(): Record<FrameChannel, number> {
+  return { motion: holds.motion, people: holds.people, alarm: holds.alarm }
 }
 
-export function channelIntervalMs(channel: FrameChannel, quality: QualityTier): number {
-  const hz = CHANNEL_HZ[channel][quality]
-  if (!Number.isFinite(hz) || hz <= 0) return 0
+/**
+ * D179 续帧上限（Hz）。0 = 不续帧；Infinity = 不限帧。
+ * 告警 2 Hz = 亮 0.5 s / 灭 0.5 s，每次切换 1 帧。
+ * 总览忽略人物通道；单层性能档人物与告警并入同一调度，不叠加。
+ */
+export function scheduledHz(quality: QualityTier, view: string, hidden: boolean): number {
+  if (hidden) return 0
+  if (holds.motion > 0) return quality === 'perf' ? 30 : Number.POSITIVE_INFINITY
+  if (view !== 'floor') return holds.alarm > 0 ? 2 : 0
+  if (quality === 'perf') {
+    if (holds.people > 0) return 10
+    if (holds.alarm > 0) return 2
+    return 0
+  }
+  if (holds.people > 0 || holds.alarm > 0) return Number.POSITIVE_INFINITY
+  return 0
+}
+
+export function scheduledIntervalMs(quality: QualityTier, view: string, hidden: boolean): number {
+  const hz = scheduledHz(quality, view, hidden)
+  if (hz <= 0) return Number.POSITIVE_INFINITY
+  if (!Number.isFinite(hz)) return 0
   return 1000 / hz
-}
-
-/** intervalMs=0 表示不限帧。 */
-export function channelDue(lastMs: number, nowMs: number, intervalMs: number): boolean {
-  if (intervalMs <= 0) return true
-  return nowMs - lastMs >= intervalMs
-}
-
-export function nextChannelDelay(lastMs: number, nowMs: number, intervalMs: number): number {
-  if (intervalMs <= 0) return 0
-  return Math.max(0, intervalMs - (nowMs - lastMs))
 }
 
 export type ChannelClock = Record<FrameChannel, number>
@@ -57,34 +58,49 @@ export function emptyChannelClock(): ChannelClock {
   return { motion: 0, people: 0, alarm: 0 }
 }
 
-/**
- * 最近一次该醒来的延迟（毫秒）。
- * Infinity = 没有续帧源；0 = 立刻再要一帧（不限帧）。
- * hidden 时永不续帧。
- */
-export function soonestWakeMs(last: ChannelClock, quality: QualityTier, now: number, hidden: boolean): number {
-  if (hidden) return Number.POSITIVE_INFINITY
-  let soonest = Number.POSITIVE_INFINITY
-  for (const channel of CHANNELS) {
-    if (holds[channel] <= 0) continue
-    soonest = Math.min(soonest, nextChannelDelay(last[channel], now, channelIntervalMs(channel, quality)))
-  }
-  return soonest
+/** @deprecated 用 scheduledIntervalMs；保留给人物 place() 节流。 */
+export function channelIntervalMs(channel: FrameChannel, quality: QualityTier): number {
+  if (channel === 'motion') return quality === 'perf' ? 1000 / 30 : 0
+  if (channel === 'people') return quality === 'perf' ? 100 : 0
+  return quality === 'perf' ? 500 : 0
 }
 
-export function markDueChannels(last: ChannelClock, quality: QualityTier, now: number): void {
-  for (const channel of CHANNELS) {
-    if (holds[channel] <= 0) continue
-    if (channelDue(last[channel], now, channelIntervalMs(channel, quality))) last[channel] = now
-  }
+export function channelDue(lastMs: number, nowMs: number, intervalMs: number): boolean {
+  if (intervalMs <= 0) return true
+  if (!Number.isFinite(intervalMs)) return false
+  return nowMs - lastMs >= intervalMs
 }
 
-/** 性能档 2 Hz 离散亮灭。偶数半周期亮。 */
+export function nextChannelDelay(lastMs: number, nowMs: number, intervalMs: number): number {
+  if (intervalMs <= 0) return 0
+  if (!Number.isFinite(intervalMs)) return Number.POSITIVE_INFINITY
+  return Math.max(0, intervalMs - (nowMs - lastMs))
+}
+
+export function soonestWakeMs(
+  last: ChannelClock,
+  quality: QualityTier,
+  now: number,
+  hidden: boolean,
+  view = 'floor',
+): number {
+  const interval = scheduledIntervalMs(quality, view, hidden)
+  if (!Number.isFinite(interval)) return Number.POSITIVE_INFINITY
+  if (interval === 0) return 0
+  const lastAny = Math.max(last.motion, last.people, last.alarm)
+  return nextChannelDelay(lastAny, now, interval)
+}
+
+export function markDueChannels(last: ChannelClock, quality: QualityTier, now: number, view = 'floor'): void {
+  if (scheduledIntervalMs(quality, view, false) === Number.POSITIVE_INFINITY) return
+  for (const channel of CHANNELS) last[channel] = now
+}
+
+/** 2 Hz 离散亮灭：偶数半秒亮。 */
 export function discreteAlarmLit(elapsedSec: number): boolean {
   return Math.floor(elapsedSec * 2) % 2 === 0
 }
 
-/** 均衡档现状：sin(t*5) 脉冲。 */
 export function balancedAlarmGlow(elapsedSec: number): number {
   return 0.78 + 0.22 * Math.sin(elapsedSec * 5)
 }

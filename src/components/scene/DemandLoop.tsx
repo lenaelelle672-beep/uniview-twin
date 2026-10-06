@@ -1,18 +1,19 @@
 import { AdaptiveDpr } from '@react-three/drei/core/AdaptiveDpr'
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
-import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import { useEffect, useLayoutEffect, useRef } from 'react'
+import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import {
   emptyChannelClock,
+  holdSnapshot,
   markDueChannels,
-  retainFrameChannel,
+  scheduledHz,
   soonestWakeMs,
 } from '../../scene/frameSchedule'
 import { useTwinStore } from '../../store/store'
 
 /**
- * demand 模式下的统一续帧：store 变化 invalidate、动画节流、隐藏停帧、阴影只烘一次。
- * AdaptiveDpr 只在性能档挂载。
+ * D179 续帧：总览 0/2、单层性能 10（告警并入）、交互动画性能 30、后台 0。
+ * AdaptiveDpr 只在性能档。
  */
 export function DemandLoop() {
   const invalidate = useThree((state) => state.invalidate)
@@ -61,24 +62,19 @@ export function DemandLoop() {
     }
   }, [invalidate])
 
-  useEffect(() => {
-    const release = retainFrameChannel('motion')
-    const timer = window.setTimeout(release, 700)
-    return () => {
-      window.clearTimeout(timer)
-      release()
-    }
-  }, [quality, view])
-
   useFrame(() => {
+    const hidden = document.visibilityState === 'hidden'
+    const hz = scheduledHz(quality, view, hidden)
     window.__twinFrameCount = (window.__twinFrameCount ?? 0) + 1
     window.__twinLastFrameAt = performance.now()
-    if (document.visibilityState === 'hidden') return
+    window.__twinGlFrame = gl.info.render.frame
+    window.__twinSchedule = { hz, view, quality, hidden, holds: holdSnapshot() }
+    if (hidden) return
     const now = performance.now()
-    const delay = soonestWakeMs(last.current, quality, now, false)
+    const delay = soonestWakeMs(last.current, quality, now, false, view)
     if (!Number.isFinite(delay)) return
     if (delay === 0) {
-      markDueChannels(last.current, quality, now)
+      markDueChannels(last.current, quality, now, view)
       invalidate()
       return
     }

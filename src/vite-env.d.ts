@@ -11,6 +11,7 @@ declare module 'troika-three-text' {
 interface TwinRenderStats {
   calls: number
   triangles: number
+  frame?: number
 }
 
 interface TwinInteriorStats {
@@ -117,6 +118,14 @@ interface Window {
   __twinInvalidate?: () => Promise<void>
   __twinFrameCount?: number
   __twinLastFrameAt?: number
+  __twinGlFrame?: number
+  __twinSchedule?: {
+    hz: number
+    view: string
+    quality: string
+    hidden: boolean
+    holds: { motion: number; people: number; alarm: number }
+  }
   __twinSuspenseReady?: boolean
   __twinHdrRequired?: boolean
   __twinHdrLoadedAt?: number

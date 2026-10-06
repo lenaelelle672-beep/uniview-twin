@@ -23,6 +23,11 @@ describe('detectSoftwareRenderer', () => {
   it('匹配 SwiftShader / llvmpipe / softpipe / software / Basic Render Driver', () => {
     expect(
       detectSoftwareRenderer(
+        fakeGl('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)'),
+      ).software,
+    ).toBe(true)
+    expect(
+      detectSoftwareRenderer(
         fakeGl('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)'),
       ).software,
     ).toBe(true)

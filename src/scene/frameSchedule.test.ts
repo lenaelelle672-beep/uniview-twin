@@ -1,89 +1,96 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
-  anyChannelHeld,
-  balancedAlarmGlow,
   channelDue,
-  channelIntervalMs,
   discreteAlarmLit,
   emptyChannelClock,
+  holdSnapshot,
   markDueChannels,
-  nextChannelDelay,
   resetFrameChannels,
   retainFrameChannel,
+  scheduledHz,
+  scheduledIntervalMs,
   soonestWakeMs,
 } from './frameSchedule'
 
-describe('续帧调度器节流', () => {
+describe('D179 续帧调度', () => {
   afterEach(() => {
     resetFrameChannels()
   })
 
-  it('性能档间隔：动画 30 fps、人物 10 fps、告警 2 Hz；均衡档不限', () => {
-    expect(channelIntervalMs('motion', 'perf')).toBeCloseTo(1000 / 30)
-    expect(channelIntervalMs('people', 'perf')).toBeCloseTo(100)
-    expect(channelIntervalMs('alarm', 'perf')).toBeCloseTo(500)
-    expect(channelIntervalMs('motion', 'balanced')).toBe(0)
-    expect(channelIntervalMs('people', 'high')).toBe(0)
+  it('标签页后台一律 0', () => {
+    retainFrameChannel('motion')
+    retainFrameChannel('people')
+    retainFrameChannel('alarm')
+    expect(scheduledHz('perf', 'floor', true)).toBe(0)
+    expect(scheduledHz('balanced', 'building', true)).toBe(0)
+    expect(soonestWakeMs(emptyChannelClock(), 'perf', 0, true, 'floor')).toBe(Number.POSITIVE_INFINITY)
   })
 
-  it('channelDue：不限帧每拍都到期；限帧按间隔', () => {
+  it('总览两档：人物不续帧；有告警 2 Hz，没告警 0', () => {
+    retainFrameChannel('people')
+    expect(scheduledHz('balanced', 'building', false)).toBe(0)
+    expect(scheduledHz('perf', 'building', false)).toBe(0)
+    retainFrameChannel('alarm')
+    expect(scheduledHz('balanced', 'building', false)).toBe(2)
+    expect(scheduledHz('perf', 'building', false)).toBe(2)
+    expect(scheduledIntervalMs('perf', 'building', false)).toBe(500)
+  })
+
+  it('单层性能档：人物 10 fps，告警并入不叠加；仅告警则 2 Hz', () => {
+    retainFrameChannel('alarm')
+    expect(scheduledHz('perf', 'floor', false)).toBe(2)
+    retainFrameChannel('people')
+    expect(scheduledHz('perf', 'floor', false)).toBe(10)
+    expect(scheduledIntervalMs('perf', 'floor', false)).toBe(100)
+  })
+
+  it('单层均衡档：人物/告警不限帧（22b0b64 现状）', () => {
+    retainFrameChannel('people')
+    expect(scheduledHz('balanced', 'floor', false)).toBe(Number.POSITIVE_INFINITY)
+    expect(scheduledIntervalMs('balanced', 'floor', false)).toBe(0)
+    resetFrameChannels()
+    retainFrameChannel('alarm')
+    expect(scheduledHz('high', 'floor', false)).toBe(Number.POSITIVE_INFINITY)
+  })
+
+  it('交互动画：均衡不限、性能 30 fps', () => {
+    retainFrameChannel('motion')
+    expect(scheduledHz('balanced', 'building', false)).toBe(Number.POSITIVE_INFINITY)
+    expect(scheduledHz('perf', 'building', false)).toBe(30)
+    expect(scheduledHz('perf', 'floor', false)).toBe(30)
+  })
+
+  it('soonestWakeMs：无源 Infinity；不限 0；限帧按间隔', () => {
+    const last = emptyChannelClock()
+    expect(soonestWakeMs(last, 'perf', 0, false, 'building')).toBe(Number.POSITIVE_INFINITY)
+    retainFrameChannel('alarm')
+    last.alarm = 1000
+    last.people = 1000
+    last.motion = 1000
+    expect(soonestWakeMs(last, 'perf', 1200, false, 'building')).toBeCloseTo(300)
+    expect(soonestWakeMs(last, 'balanced', 1200, false, 'floor')).toBe(0)
+    resetFrameChannels()
+    retainFrameChannel('people')
+    expect(soonestWakeMs(last, 'balanced', 1200, false, 'floor')).toBe(0)
+  })
+
+  it('channelDue 与告警 2 Hz 亮灭', () => {
     expect(channelDue(0, 1, 0)).toBe(true)
-    expect(channelDue(1000, 1030, 1000 / 30)).toBe(false)
-    expect(channelDue(1000, 1034, 1000 / 30)).toBe(true)
     expect(channelDue(0, 99, 100)).toBe(false)
     expect(channelDue(0, 100, 100)).toBe(true)
-  })
-
-  it('soonestWakeMs：无源或 hidden 为 Infinity；不限帧为 0；限帧取最近', () => {
-    const last = emptyChannelClock()
-    expect(soonestWakeMs(last, 'perf', 0, false)).toBe(Number.POSITIVE_INFINITY)
-    const release = retainFrameChannel('alarm')
-    expect(soonestWakeMs(last, 'perf', 0, true)).toBe(Number.POSITIVE_INFINITY)
-    last.alarm = 1000
-    expect(soonestWakeMs(last, 'perf', 1200, false)).toBeCloseTo(300)
-    expect(soonestWakeMs(last, 'balanced', 1200, false)).toBe(0)
-    release()
-  })
-
-  it('多通道取最近唤醒；markDue 只推进到期的通道', () => {
-    const last = emptyChannelClock()
-    const stopPeople = retainFrameChannel('people')
-    const stopAlarm = retainFrameChannel('alarm')
-    last.people = 1000
-    last.alarm = 1000
-    expect(soonestWakeMs(last, 'perf', 1050, false)).toBeCloseTo(50)
-    markDueChannels(last, 'perf', 1100)
-    expect(last.people).toBe(1100)
-    expect(last.alarm).toBe(1000)
-    stopPeople()
-    stopAlarm()
-  })
-
-  it('retain / release 引用计数，归零后不再续帧', () => {
-    const a = retainFrameChannel('motion')
-    const b = retainFrameChannel('motion')
-    expect(anyChannelHeld()).toBe(true)
-    a()
-    expect(anyChannelHeld()).toBe(true)
-    b()
-    expect(anyChannelHeld()).toBe(false)
-    expect(soonestWakeMs(emptyChannelClock(), 'perf', 0, false)).toBe(Number.POSITIVE_INFINITY)
-  })
-
-  it('nextChannelDelay 不会为负', () => {
-    expect(nextChannelDelay(0, 5000, 100)).toBe(0)
-    expect(nextChannelDelay(0, 40, 100)).toBe(60)
-  })
-
-  it('性能档告警 2 Hz 离散亮灭，均衡档保持正弦脉冲', () => {
     expect(discreteAlarmLit(0)).toBe(true)
     expect(discreteAlarmLit(0.49)).toBe(true)
     expect(discreteAlarmLit(0.5)).toBe(false)
-    expect(discreteAlarmLit(0.99)).toBe(false)
     expect(discreteAlarmLit(1)).toBe(true)
-    expect(discreteAlarmLit(1.5)).toBe(false)
-    const glow = balancedAlarmGlow(0)
-    expect(glow).toBeCloseTo(0.78)
-    expect(balancedAlarmGlow(Math.PI / 10)).toBeCloseTo(1)
+  })
+
+  it('holdSnapshot / markDue', () => {
+    const stop = retainFrameChannel('alarm')
+    expect(holdSnapshot().alarm).toBe(1)
+    const last = emptyChannelClock()
+    markDueChannels(last, 'perf', 5000, 'building')
+    expect(last.alarm).toBe(5000)
+    stop()
+    expect(holdSnapshot().alarm).toBe(0)
   })
 })

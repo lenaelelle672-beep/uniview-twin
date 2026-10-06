@@ -161,5 +161,5 @@ export function CameraRig({
     applyCameraLimits(rig, distanceCap.current)
   }, -2)
 
-  return <CameraControls ref={controls} makeDefault smoothTime={0} regress />
+  return <CameraControls ref={controls} makeDefault smoothTime={0} />
 }
