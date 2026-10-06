@@ -417,6 +417,13 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
             return { id: item.id, text: item.text, area: item.area, visible: Boolean(row?.visible), cluster: row?.cluster ?? null }
           })
           .filter((row) => !row.visible && !row.cluster),
+        hiddenAt: itemsRef.current
+          .map((item) => {
+            const row = packed.placements.find((place) => place.id === item.id)
+            if (!row || row.visible || row.cluster) return null
+            return { id: item.id, text: item.text, sx: item.x, sy: item.y, w: item.w, h: item.h }
+          })
+          .filter((row): row is NonNullable<typeof row> => Boolean(row)),
       }
     }
     Object.defineProperty(window, '__twinLabelOverlap', {

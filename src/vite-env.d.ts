@@ -211,6 +211,7 @@ interface Window {
     measured?: Array<{ id: string; text: string; box: { x: number; y: number; w: number; h: number }; cluster: string | null; px: number }>
     pairs?: Array<[string, string]>
     region?: Array<{ id: string; text: string; box: { x: number; y: number; w: number; h: number }; cluster: string | null; px: number }>
+    hiddenAt?: Array<{ id: string; text: string; sx: number; sy: number; w: number; h: number }>
     visible?: Array<{
       id: string
       text: string
