@@ -29,11 +29,11 @@ import {
   visibilityMismatch,
 } from './labelScreenMeasure'
 import { isCameraRested } from './cameraRest'
+import { preloadLabelChars } from './glyphProbe'
 import type { LabelBatchApi } from './BatchedRoomLabels'
 import {
   LABEL_MAX_PX,
   LABEL_MIN_PX,
-  ROOM_LABEL_FONT,
   labelFadeForTarget,
   roomLabelCharacters,
   roomLabelOutlineWidth,
@@ -292,6 +292,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const idleRef = useRef(0)
   const stripRef = useRef(false)
   const packedKeyRef = useRef('')
+  const packStepRef = useRef<'idle' | 'avoid' | 'sync' | 'fade'>('idle')
+  const pendingFadeRef = useRef(false)
+  const keepTier2Ref = useRef(false)
   const pointerMovedRef = useRef(false)
   const pointerOnCanvasRef = useRef(false)
   const pointerPxRef = useRef({ x: 0, y: 0 })
@@ -336,13 +339,15 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
 
   useEffect(() => {
     sizedRef.current = false
-    setFontSize(0)
+    setFontSize((prev) => prev || 0.78)
     clusterSyncedRef.current = ''
     viewKeyRef.current = ''
     packedRef.current = null
     layoutRef.current = { byId: {}, clusters: {} }
     stripRef.current = false
     packedKeyRef.current = ''
+    packStepRef.current = 'idle'
+    pendingFadeRef.current = false
     pointerMovedRef.current = false
     pointerOnCanvasRef.current = false
     hoverIdRef.current = null
@@ -352,9 +357,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     itemsRef.current = []
     packRef.current = hiddenLayout(labels)
     layoutRef.current = packRef.current
-    void import('troika-three-text').then((mod) => {
-      mod.preloadFont({ font: ROOM_LABEL_FONT, characters }, () => {})
-    }).catch(() => {})
+    void preloadLabelChars(characters, `entry:${floorId}`)
   }, [floorId, labels, characters])
 
   useEffect(() => {
@@ -483,6 +486,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     if (viewKey !== viewKeyRef.current) {
       packedRef.current = null
       packedKeyRef.current = ''
+      packStepRef.current = 'idle'
+      pendingFadeRef.current = false
       fadeInRef.current = 0
       targetFadesRef.current = []
       hoverIdRef.current = null
@@ -498,11 +503,16 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       perspective.updateMatrixWorld()
       const { maxPx } = maxProjectedEmPx(host ?? null, labels, perspective, size, 0.78)
       if (maxPx > 1e-6) {
-        setFontSize(worldFontSizeFromProjectedEm(0.78, maxPx))
+        const next = worldFontSizeFromProjectedEm(0.78, maxPx)
+        if (fontSize <= 0 || Math.abs(next - fontSize) / Math.max(fontSize, 0.01) > 0.15) setFontSize(next)
+        sizedRef.current = true
+      } else if (settled) {
+        setFontSize((prev) => prev || 0.78)
         sizedRef.current = true
       }
       invalidate()
     }
+    window.__twinLabelBatchPresent = Boolean(api?.ready)
     if (!settled) {
       invalidate()
       return
@@ -518,7 +528,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       invalidate()
       return
     }
-    if (shouldPack && api?.ready) {
+    if (shouldPack && api?.ready && packStepRef.current === 'idle') {
+      const avoidStart = performance.now()
+      window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), packStep: 'avoid', avoidStartAt: avoidStart }
       host?.updateWorldMatrix(true, false)
       perspective.updateMatrixWorld()
       api.orientToCamera(perspective)
@@ -659,10 +671,13 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         }
       }
       layoutRef.current = { byId, clusters }
-      packRef.current = { byId, clusters }
+      packRef.current = hiddenLayout(labels)
       viewKeyRef.current = viewKey
       const needsFade = packedKeyRef.current !== viewKey
       packedKeyRef.current = viewKey
+      pendingFadeRef.current = needsFade
+      keepTier2Ref.current = keepTier2
+      packStepRef.current = 'sync'
       clusterSyncedRef.current = 'once'
       hoverIdRef.current = null
       window.__twinLabelPx = {
@@ -673,30 +688,58 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         distance: nearest,
       }
       targetFadesRef.current = fades.slice()
-      stripLiveOverlaps(perspective, size, keepTier2)
       stripRef.current = false
+      const avoidMs = performance.now() - avoidStart
       window.__twinLabelPhases = {
         ...(window.__twinLabelPhases ?? {}),
         restAt: window.__twinCameraRestAt,
         restReason: window.__twinCameraRestReason,
         flyPromiseAt: window.__twinFlyPromiseAt,
         packedAt: performance.now(),
-        syncAt: window.__twinLabelReadyAt,
+        avoidMs,
+        maxFrameAvoid: avoidMs,
+        packStep: 'sync',
       }
-      if (needsFade) {
-        fadeInRef.current = performance.now()
-        window.__twinLabelFading = true
-        for (let i = 0; i < fades.length; i += 1) fades[i] = 0
-      } else {
-        fadeInRef.current = 0
-        window.__twinLabelFading = false
-        const targets = targetFadesRef.current
-        for (let i = 0; i < fades.length; i += 1) fades[i] = targets[i] ?? 1
-      }
-      api.applyPack(packRef.current)
       invalidate()
       return
     }
+    if (packStepRef.current === 'sync' && packedRef.current && api?.ready) {
+      const syncStart = performance.now()
+      window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), packStep: 'sync', syncStartAt: syncStart }
+      packRef.current = layoutRef.current
+      const fades = fadesRef.current
+      const targets = targetFadesRef.current
+      for (let i = 0; i < Math.max(fades.length, targets.length, labels.length); i += 1) fades[i] = targets[i] ?? 1
+      stripLiveOverlaps(perspective, size, keepTier2Ref.current)
+      if (pendingFadeRef.current) {
+        for (let i = 0; i < fades.length; i += 1) fades[i] = 0
+        window.__twinLabelFading = true
+      } else {
+        fadeInRef.current = 0
+        window.__twinLabelFading = false
+      }
+      api.applyPack(packRef.current)
+      const syncMs = performance.now() - syncStart
+      window.__twinLabelPhases = {
+        ...(window.__twinLabelPhases ?? {}),
+        syncAt: window.__twinLabelReadyAt,
+        syncMs,
+        maxFrameSync: syncMs,
+        packStep: 'fade',
+      }
+      packStepRef.current = 'fade'
+      invalidate()
+      return
+    }
+    if (packStepRef.current === 'fade' && pendingFadeRef.current && fadeInRef.current === 0) {
+      fadeInRef.current = performance.now()
+      pendingFadeRef.current = false
+      window.__twinLabelFading = true
+      window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), fadeStartAt: fadeInRef.current, packStep: 'fade' }
+      invalidate()
+      return
+    }
+    if (packStepRef.current === 'fade' && fadeInRef.current === 0) packStepRef.current = 'idle'
     const writePackVisibility = (byId: LabelPackState['byId'], clusters: LabelPackState['clusters']) => {
       packRef.current = { byId, clusters }
       const packed = packedRef.current
@@ -783,7 +826,13 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       if (t >= 1) {
         fadeInRef.current = 0
         window.__twinLabelFading = false
-        window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), fadeDoneAt: performance.now() }
+        window.__twinLabelPhases = {
+          ...(window.__twinLabelPhases ?? {}),
+          fadeDoneAt: performance.now(),
+          maxFrameFade: FADE_IN_MS,
+          packStep: 'idle',
+        }
+        packStepRef.current = 'idle'
       } else {
         window.__twinLabelFading = true
         invalidate()

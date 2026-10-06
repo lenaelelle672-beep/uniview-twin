@@ -206,10 +206,29 @@ interface Window {
     restAt?: number
     restReason?: string
     flyPromiseAt?: number
+    avoidStartAt?: number
+    avoidMs?: number
     packedAt?: number
+    syncStartAt?: number
+    syncMs?: number
     syncAt?: number
+    fadeStartAt?: number
     fadeDoneAt?: number
+    packStep?: 'idle' | 'avoid' | 'sync' | 'fade'
+    maxFrameAvoid?: number
+    maxFrameSync?: number
+    maxFrameFade?: number
   }
+  __twinGlyphPreload?: {
+    batchSize: number
+    firstBatchSize: number
+    batches: Array<{ i: number; chars: number; ms: number; maxFrame: number; seen: number; floorId?: string }>
+    done: boolean
+    atlasGrows: Array<{ at: number; msg: string; floorId: string | null; seen: number }>
+    unique?: number
+    newOnEntry?: Record<string, number>
+  }
+  __twinLabelBatchPresent?: boolean
   __twinLabelOverlap?: {
     merged: number
     hidden: number

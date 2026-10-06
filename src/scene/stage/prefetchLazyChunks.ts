@@ -5,6 +5,9 @@ export function prefetchLazyChunks(): void {
   void import('./floorDecor')
   void import('./textRuntime')
   void import('../../blueprint/BlueprintView')
+  void import('./preloadFloorGlyphs').then((mod) => {
+    mod.scheduleGlyphPreload()
+  })
 }
 
 function waitUntil(ok: () => boolean): Promise<void> {
