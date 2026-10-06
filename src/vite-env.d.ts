@@ -142,6 +142,8 @@ interface Window {
   __twinFirstFrameUnixMs?: number
   __twinPrefetchAt?: number
   __twinPrefetchUnixMs?: number
+  __twinFirstPrefetchDone?: boolean
+  __twinFirstPrefetchDoneAt?: number
   __twinScene?: import('three').Scene
   __twinSelected?: string | null
   __twinView?: string

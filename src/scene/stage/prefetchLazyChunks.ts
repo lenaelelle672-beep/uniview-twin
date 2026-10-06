@@ -1,10 +1,39 @@
+let settleFirstPrefetch: () => void
+const firstPrefetch = new Promise<void>((resolve) => {
+  settleFirstPrefetch = resolve
+})
+let firstPrefetchSettled = false
+
+function markFirstPrefetchDone() {
+  if (firstPrefetchSettled) return
+  firstPrefetchSettled = true
+  if (typeof window !== 'undefined') {
+    window.__twinFirstPrefetchDone = true
+    window.__twinFirstPrefetchDoneAt = performance.now()
+  }
+  settleFirstPrefetch()
+}
+
+/** D195：IdlePrewarm / labels 等第一个 prefetch（textRuntime）的 import() 完成，不用定时器。 */
+export function waitFirstPrefetch(): Promise<void> {
+  return firstPrefetch
+}
+
+export function firstPrefetchDone(): boolean {
+  return firstPrefetchSettled
+}
+
 /** 总览空闲时预取三个按需包。必须在首帧之后，预取不算进首屏。 */
 export function prefetchLazyChunks(): void {
+  if (window.__twinPrefetchAt != null) return
   window.__twinPrefetchAt = performance.now()
   window.__twinPrefetchUnixMs = Date.now()
   void import('./floorDecor')
-  void import('./textRuntime')
   void import('../../blueprint/BlueprintView')
+  void import('./textRuntime').then(() => {
+    markFirstPrefetchDone()
+    void import('../labels/ProgressiveRoomLabels')
+  }, markFirstPrefetchDone)
 }
 
 function waitUntil(ok: () => boolean): Promise<void> {

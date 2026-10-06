@@ -2,7 +2,6 @@ import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
-import { PrewarmGate } from '../scene/prewarm/PrewarmGate'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
@@ -27,6 +26,7 @@ const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ d
 const FacadeSamples = lazy(() =>
   import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
 )
+const PrewarmGate = lazy(() => import('../scene/prewarm/PrewarmGate').then((mod) => ({ default: mod.PrewarmGate })))
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
@@ -64,18 +64,10 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
 
   useEffect(() => {
     let cancelled = false
-    const prefetchChunkStarted = () => {
-      const entries = performance.getEntriesByType('resource')
-      return ['floorDecor', 'textRuntime', 'BlueprintView'].every((name) =>
-        entries.some((entry) => entry.name.includes(name)),
-      )
-    }
     const tick = () => {
       if (cancelled) return
-      // __twinPrefetchAt 在 import() 之前就写入，不能当“预取已发出”。
-      // 等三个预取包都进 Resource Timing，再隔一帧才挂 FacadeSamples，
-      // 避免 MonitorSamples 和预取抢同一拍、夹到首帧和预取之间。
-      if (window.__twinPrefetchAt != null && prefetchChunkStarted()) {
+      // D195：等 textRuntime 预取 import() 完成，再挂 FacadeSamples / IdlePrewarm。
+      if (window.__twinFirstPrefetchDone) {
         requestAnimationFrame(() => {
           if (!cancelled) setPrefetchDone(true)
         })
@@ -141,7 +133,6 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         )}
         <ExplodedLayout />
         <FloorStage />
-        <PrewarmGate />
         <RenderProbe />
       </Suspense>
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
@@ -154,6 +145,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
       </Suspense>
       {prefetchDone && (
         <Suspense fallback={null}>
+          <PrewarmGate />
           <FacadeSamples />
         </Suspense>
       )}

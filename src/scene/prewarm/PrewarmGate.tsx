@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { waitFirstPrefetch } from '../stage/prefetchLazyChunks'
 
 const IdlePrewarm = lazy(async () => {
+  await waitFirstPrefetch()
   const mod = await import('./IdlePrewarm')
   return { default: mod.IdlePrewarm }
 })
