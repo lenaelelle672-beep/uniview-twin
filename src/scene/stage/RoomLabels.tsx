@@ -581,6 +581,19 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
           }
         }
         if (!found || !left || !right) break
+        if (
+          keepTier2 &&
+          left.text === right.text &&
+          !left.id.startsWith('cluster:') &&
+          !right.id.startsWith('cluster:')
+        ) {
+          const key = left.text
+          byId[left.id] = { ...byId[left.id]!, visible: false, cluster: key }
+          byId[right.id] = { ...byId[right.id]!, visible: false, cluster: key }
+          if (clusters[key]) clusters[key] = { ...clusters[key]!, visible: true }
+          live = live.filter((row) => row.id !== left.id && row.id !== right.id)
+          continue
+        }
         const drop = pickOverlapVictim(left, right, tierOf, keepTier2)
         if (keepTier2 && !drop.startsWith('cluster:') && tierOf(drop) === 2) break
         if (drop.startsWith('cluster:')) {

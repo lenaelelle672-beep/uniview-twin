@@ -321,7 +321,7 @@ function packLabels(items: readonly AvoidItem[], keepTier2 = false): Omit<AvoidR
   const clusters: AvoidCluster[] = []
   const claimed = new Set<string>()
 
-  const placeClusters = (candidates: AvoidItem[]) => {
+  const placeClusters = (candidates: AvoidItem[], force = false) => {
     const grouped = sameNameGroups(candidates)
       .map((group) => group.filter((row) => !row.locked && !claimed.has(row.id)))
       .filter((members) => members.length >= 2)
@@ -336,7 +336,7 @@ function packLabels(items: readonly AvoidItem[], keepTier2 = false): Omit<AvoidR
       const em = Math.max(14, Math.min(members[0]!.h, members[0]!.w / Math.max(members[0]!.text.length, 1)))
       const size = members[0]!.clusterBox ?? labelScreenBox(text, em)
       const dummy: AvoidItem = { ...members[0]!, id: `cluster:${key}`, x: cx, y: cy, w: size.w, h: size.h }
-      const fit = firstFree(dummy, occupied)
+      const fit = firstFree(dummy, occupied) ?? (force ? { box: boxAt(dummy, 0, 0), ox: 0, oy: 0 } : null)
       if (!fit) continue
       clusteredName.add(key)
       occupied.push(fit.box)
@@ -393,7 +393,7 @@ function packLabels(items: readonly AvoidItem[], keepTier2 = false): Omit<AvoidR
   const major = items.filter((item) => !item.locked && itemTier(item) === 2)
   const minor = items.filter((item) => !item.locked && itemTier(item) !== 2)
   placeItems(lockedItems, true)
-  placeClusters(major)
+  placeClusters(major, keepTier2)
   placeItems(major, keepTier2)
   placeClusters(minor)
   placeItems(minor, false)
