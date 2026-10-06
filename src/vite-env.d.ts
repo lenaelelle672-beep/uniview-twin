@@ -430,6 +430,14 @@ interface Window {
     view?: string
     floor?: string | null
   }>
+  __twinSetSize?: Array<{
+    at: number
+    w: number
+    h: number
+    updateStyle: boolean
+    view?: string
+    floor?: string | null
+  }>
   __twinWarmup?: {
     compileMs: number
     totalMs: number

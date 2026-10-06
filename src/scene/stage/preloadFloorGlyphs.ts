@@ -112,7 +112,12 @@ export function scheduleGlyphPreload(): () => void {
       paused: true,
     }
   }
-  void prefetchFontBytes()
+  const prefetchAfterTextRuntime = () => {
+    if (window.__twinTextRuntimeAt == null) return
+    void prefetchFontBytes()
+  }
+  if (window.__twinTextRuntimeAt != null) prefetchAfterTextRuntime()
+  else void import('./textRuntime').then(prefetchAfterTextRuntime)
   let cancelled = false
   let idleId = 0
   let remaining = ''

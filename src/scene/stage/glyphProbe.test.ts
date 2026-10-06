@@ -5,7 +5,7 @@ import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { roomLabelsFromPlan } from '../../floors/labels'
 import { clusterTemplates } from './labelAvoidance'
 import { roomLabelCharacters } from './roomLabels'
-import { GLYPH_BATCH, GLYPH_FIRST_BATCH, GLYPH_MS_PER, chunkGlyphs, takeGlyphBudget } from './glyphProbe'
+import { GLYPH_BATCH, GLYPH_FIRST_BATCH, GLYPH_MS_PER, chunkGlyphs, diffProgramCacheKeys, takeGlyphBudget } from './glyphProbe'
 import { GLYPH_PRELOAD_FLOORS, floorLabelCharacters } from './preloadFloorGlyphs'
 
 hydrateAllAboveGrade()
@@ -67,6 +67,8 @@ describe('D262/D264 字形预排', () => {
     expect(probe).toMatch(/uTroikaMatricesTexture/)
     expect(probe).not.toMatch(/new Scene\(/)
     expect(probe).toMatch(/return overviewIdleBlocked\(\)/)
+    expect(prefetch).toMatch(/import\('\.\/textRuntime'\)[\s\S]*NotoSansSC-Regular-subset\.woff/)
+    expect(prefetch.indexOf("import('./textRuntime')")).toBeLessThan(prefetch.indexOf('NotoSansSC-Regular-subset.woff'))
     expect(preload).toMatch(/glyphPreloadStartReady/)
     expect(preload).toMatch(/uploadSdfTexture/)
     expect(preload).toMatch(/overviewIdleBlocked/)
@@ -82,5 +84,14 @@ describe('D262/D264 字形预排', () => {
     const batch = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
     expect(batch).not.toMatch(/from 'troika-three-text'/)
     expect(batch).toMatch(/from '\.\/disableTroikaCdn'/)
+  })
+
+  it('program cacheKey 按字段对比新增项', () => {
+    const before = [{ name: 'standard', cacheKey: 'a,b,c' }]
+    const after = [
+      { name: 'standard', cacheKey: 'a,b,c' },
+      { name: 'standard', cacheKey: 'a,x,c' },
+    ]
+    expect(diffProgramCacheKeys(before, after)).toEqual([{ name: 'standard', cacheKey: 'a,x,c', changed: ['1:b→x'] }])
   })
 })

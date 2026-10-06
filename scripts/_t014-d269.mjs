@@ -44,7 +44,7 @@ const browser = await puppeteer.launch({
   ],
 })
 
-async function open(search = '?q=balanced') {
+async function open(search = '?q=perf') {
   const page = await browser.newPage()
   await page.setCacheEnabled(false)
   await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
@@ -224,6 +224,48 @@ function snapshotTex(page) {
   })
 }
 
+function programSnap(page) {
+  return page.evaluate(() => {
+    const programs = window.__twinRenderer?.info.programs ?? []
+    return programs.map((program) => ({
+      name: program.name ?? '',
+      cacheKey: String(program.cacheKey ?? ''),
+    }))
+  })
+}
+
+function diffCache(before, after) {
+  const prev = new Set(before.map((row) => row.cacheKey))
+  return after
+    .filter((row) => !prev.has(row.cacheKey))
+    .map((row) => {
+      const near = before.find((item) => item.name === row.name)
+      if (!near) return { ...row, changed: ['new-name'] }
+      const a = near.cacheKey.split(',')
+      const b = row.cacheKey.split(',')
+      const changed = []
+      const n = Math.max(a.length, b.length)
+      for (let i = 0; i < n; i += 1) {
+        if (a[i] !== b[i]) changed.push(`${i}:${a[i] ?? ''}→${b[i] ?? ''}`)
+      }
+      return { name: row.name, cacheKey: row.cacheKey, changed }
+    })
+}
+
+function setSizeSince(page, t0, t1) {
+  return page.evaluate(
+    (since, until) => {
+      const rows = (window.__twinSetSize ?? []).filter((row) => row.at >= since && (until == null || row.at <= until))
+      return {
+        count: rows.length,
+        rows: rows.map((row) => ({ at: Math.round(row.at), w: row.w, h: row.h, view: row.view, floor: row.floor })),
+      }
+    },
+    t0,
+    t1 ?? null,
+  )
+}
+
 function shadersSince(page, t0, t1) {
   return page.evaluate(
     (since, until) => {
@@ -401,6 +443,10 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       window.__twinCameraMoveAt = undefined
       return now
     })
+    const beforePrograms = await programSnap(page)
+    await page.evaluate(() => {
+      if (Array.isArray(window.__twinSetSize)) window.__twinSetSize.length = 0
+    })
     const clickAt = await enterFloor(page, floor)
     const rest = await page.evaluate((t0) => {
       return new Promise((resolve) => {
@@ -419,7 +465,9 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
         poll()
       })
     }, clickAt)
+    if (rest.restAt != null) await page.evaluate(() => new Promise((r) => setTimeout(r, 2000)))
     const row = await waitReady(page, clickAt)
+    const until = rest.restAt == null ? null : rest.restAt + 2000
     row.maxFrameClickToRest =
       rest.restAt == null
         ? null
@@ -434,8 +482,11 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
             rest.restAt,
           )
     row.clickToRest = rest.clickToRest
-    row.shaders = await shadersSince(page, clickAt, rest.restAt)
+    row.shaders = await shadersSince(page, clickAt, until)
     row.newPrograms = row.shaders.linkProgram
+    row.setSize = await setSizeSince(page, clickAt, until)
+    const afterPrograms = await programSnap(page)
+    row.programDiff = diffCache(beforePrograms, afterPrograms)
     row.tex = await snapshotTex(page)
     row.spaceDuringEntry = await page.evaluate((t0) => {
       const space = window.__twinGlyphPreload?.spaceCall
@@ -464,6 +515,8 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     medianLink: median(runs.map((row) => row.shaders?.linkProgram)),
     maxCompile: maxOf(runs.map((row) => row.shaders?.compileShader)),
     maxLink: maxOf(runs.map((row) => row.shaders?.linkProgram)),
+    medianSetSize: median(runs.map((row) => row.setSize?.count)),
+    programDiff: runs[0]?.programDiff ?? [],
   }
 }
 
@@ -486,7 +539,6 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     if (Array.isArray(window.__twinRafStamps)) window.__twinRafStamps.length = 0
     return performance.now()
   })
-  const before = await snapshotPrograms(page)
   const clickAt = await enterFloor(page, 'F2')
   const rest = await page.evaluate((t0) => {
     return new Promise((resolve) => {

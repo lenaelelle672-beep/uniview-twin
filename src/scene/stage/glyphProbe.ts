@@ -351,9 +351,61 @@ export function installShaderCompileHook(renderer?: WebGLRenderer | null) {
   }
 }
 
+export function snapshotProgramCache(renderer?: WebGLRenderer | null): Array<{ name: string; cacheKey: string }> {
+  const gl = renderer ?? window.__twinRenderer
+  const programs = gl?.info.programs ?? []
+  return programs.map((program) => ({
+    name: (program as { name?: string }).name ?? '',
+    cacheKey: String((program as { cacheKey?: string }).cacheKey ?? ''),
+  }))
+}
+
+export function diffProgramCacheKeys(
+  before: Array<{ name: string; cacheKey: string }>,
+  after: Array<{ name: string; cacheKey: string }>,
+): Array<{ name: string; cacheKey: string; changed?: string[] }> {
+  const prev = new Set(before.map((row) => row.cacheKey))
+  const added = after.filter((row) => !prev.has(row.cacheKey))
+  return added.map((row) => {
+    const near = before.find((item) => item.name === row.name)
+    if (!near) return row
+    const a = near.cacheKey.split(',')
+    const b = row.cacheKey.split(',')
+    const changed: string[] = []
+    const n = Math.max(a.length, b.length)
+    for (let i = 0; i < n; i += 1) {
+      if (a[i] !== b[i]) changed.push(`${i}:${a[i] ?? ''}→${b[i] ?? ''}`)
+    }
+    return { ...row, changed }
+  })
+}
+
+export function installSetSizeHook(renderer?: WebGLRenderer | null) {
+  const gl = renderer ?? window.__twinRenderer
+  if (!gl) return
+  const tagged = gl as WebGLRenderer & { __twinSetSizeHook?: boolean }
+  if (tagged.__twinSetSizeHook) return
+  tagged.__twinSetSizeHook = true
+  const orig = gl.setSize.bind(gl)
+  gl.setSize = ((width: number, height: number, updateStyle?: boolean) => {
+    const rows = (window.__twinSetSize ??= [])
+    rows.push({
+      at: performance.now(),
+      w: width,
+      h: height,
+      updateStyle: updateStyle !== false,
+      view: window.__twinView,
+      floor: window.__twinSelected ?? null,
+    })
+    if (rows.length > 40) rows.splice(0, rows.length - 40)
+    return orig(width, height, updateStyle)
+  }) as typeof gl.setSize
+}
+
 export function installTexImage2DHook(renderer?: WebGLRenderer | null) {
   const gl = renderer ?? window.__twinRenderer
   installShaderCompileHook(gl)
+  installSetSizeHook(gl)
   if (!gl || texHooked) return
   const ctx = gl.getContext() as WebGLRenderingContext & { __twinTexHook?: boolean; texImage2D: (...args: unknown[]) => void }
   if (!ctx || ctx.__twinTexHook) return

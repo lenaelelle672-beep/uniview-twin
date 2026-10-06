@@ -2,9 +2,10 @@
 export function prefetchLazyChunks(): void {
   window.__twinPrefetchAt = performance.now()
   window.__twinPrefetchUnixMs = Date.now()
-  void fetch('/fonts/NotoSansSC-Regular-subset.woff', { cache: 'force-cache' }).catch(() => {})
   void import('./floorDecor')
-  void import('./textRuntime')
+  void import('./textRuntime').then(() => {
+    void fetch('/fonts/NotoSansSC-Regular-subset.woff', { cache: 'force-cache' }).catch(() => {})
+  })
   void import('../../blueprint/BlueprintView')
   void import('./preloadFloorGlyphs').then((mod) => {
     mod.scheduleGlyphPreload()
