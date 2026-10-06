@@ -290,7 +290,21 @@ interface Window {
     sdfReady?: boolean
     spaceCall?: { at: number; ms: number; frameMs: number }
     upload?: { at: number; ms: number; frameMs: number }
-    compile?: { at: number; ms: number; frameMs: number }
+    compile?: {
+      at: number
+      ms: number
+      frameMs: number
+      programsBefore?: number
+      programsAfter?: number
+      target?: 'composer' | 'canvas'
+    }
+    interiorCompile?: {
+      at: number
+      ms: number
+      frameMs: number
+      programsBefore?: number
+      programsAfter?: number
+    }
   }
   __twinLabelBatchPresent?: boolean
   __twinLabelOverlap?: {
@@ -399,6 +413,21 @@ interface Window {
   }
   __twinBlitSites?: ReadonlyArray<{ file: string; fn: string; dest: string }>
   __twinComposerLive?: boolean
+  __twinComposerInput?: import('three').WebGLRenderTarget | null
+  __twinShaderCompiles?: Array<{
+    kind: 'compileShader' | 'linkProgram'
+    at: number
+    ms: number
+    view?: string
+    floor?: string | null
+  }>
+  __twinProgramLog?: Array<{
+    at: number
+    label: string
+    programs: number
+    view?: string
+    floor?: string | null
+  }>
   __twinWarmup?: {
     compileMs: number
     totalMs: number

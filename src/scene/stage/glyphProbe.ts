@@ -1,5 +1,15 @@
-import { DoubleSide, Scene, type Texture, type WebGLRenderer } from 'three'
-import { ROOM_LABEL_FONT } from './roomLabels'
+import {
+  BoxGeometry,
+  DoubleSide,
+  Group,
+  InstancedMesh,
+  Mesh,
+  type Camera,
+  type Scene,
+  type Texture,
+  type WebGLRenderer,
+} from 'three'
+import { ROOM_LABEL_FONT, roomLabelColors, roomLabelOutlineWidth } from './roomLabels'
 
 /** 首批小，字体解析已拆到 warmup。 */
 export const GLYPH_FIRST_BATCH = 4
@@ -169,9 +179,7 @@ export function installAtlasCanvasHook() {
 }
 
 export function glyphPreloadBlocked(): boolean {
-  if (pointerDown) return true
-  if (typeof window === 'undefined') return false
-  return window.__twinView === 'floor' && window.__twinCameraRested === false
+  return overviewIdleBlocked()
 }
 
 export function installGlyphPauseHooks() {
@@ -225,8 +233,92 @@ async function loadTroika() {
   batchedCtor = mod.BatchedText
 }
 
+function currentPrograms(renderer?: WebGLRenderer | null): number {
+  return renderer?.info.programs?.length ?? window.__twinMemory?.programs ?? 0
+}
+
+function noteProgramLog(label: string, renderer?: WebGLRenderer | null) {
+  if (typeof window === 'undefined') return currentPrograms(renderer)
+  const programs = currentPrograms(renderer)
+  const log = (window.__twinProgramLog ??= [])
+  log.push({
+    at: performance.now(),
+    label,
+    programs,
+    view: window.__twinView,
+    floor: window.__twinSelected ?? null,
+  })
+  if (log.length > 80) log.splice(0, log.length - 80)
+  return programs
+}
+
+function labelQuality(): 'perf' | 'balanced' {
+  return window.__twinGpu?.tier === 'performance' ? 'perf' : 'balanced'
+}
+
+async function compileWithScene(
+  renderer: WebGLRenderer,
+  object: Group | Mesh | InstancedMesh,
+  camera: Camera,
+  mainScene: Scene,
+): Promise<'composer' | 'canvas'> {
+  const previous = renderer.getRenderTarget()
+  const input = window.__twinComposerInput
+  const useComposer = Boolean(window.__twinComposerLive && input)
+  if (useComposer && input) renderer.setRenderTarget(input)
+  try {
+    const asyncCompile = renderer.compileAsync?.bind(renderer)
+    if (typeof asyncCompile === 'function') await asyncCompile(object, camera, mainScene)
+    else renderer.compile(object, camera, mainScene)
+  } finally {
+    renderer.setRenderTarget(previous)
+  }
+  return useComposer ? 'composer' : 'canvas'
+}
+
+export function installShaderCompileHook(renderer?: WebGLRenderer | null) {
+  const gl = renderer ?? window.__twinRenderer
+  if (!gl) return
+  const ctx = gl.getContext() as WebGLRenderingContext & {
+    __twinShaderHook?: boolean
+    compileShader: (shader: WebGLShader) => void
+    linkProgram: (program: WebGLProgram) => void
+  }
+  if (!ctx || ctx.__twinShaderHook) return
+  ctx.__twinShaderHook = true
+  const origCompile = ctx.compileShader.bind(ctx)
+  const origLink = ctx.linkProgram.bind(ctx)
+  ctx.compileShader = function (shader: WebGLShader) {
+    const started = performance.now()
+    origCompile(shader)
+    const rows = (window.__twinShaderCompiles ??= [])
+    rows.push({
+      kind: 'compileShader',
+      at: started,
+      ms: performance.now() - started,
+      view: window.__twinView,
+      floor: window.__twinSelected ?? null,
+    })
+    if (rows.length > 200) rows.splice(0, rows.length - 200)
+  }
+  ctx.linkProgram = function (program: WebGLProgram) {
+    const started = performance.now()
+    origLink(program)
+    const rows = (window.__twinShaderCompiles ??= [])
+    rows.push({
+      kind: 'linkProgram',
+      at: started,
+      ms: performance.now() - started,
+      view: window.__twinView,
+      floor: window.__twinSelected ?? null,
+    })
+    if (rows.length > 200) rows.splice(0, rows.length - 200)
+  }
+}
+
 export function installTexImage2DHook(renderer?: WebGLRenderer | null) {
   const gl = renderer ?? window.__twinRenderer
+  installShaderCompileHook(gl)
   if (!gl || texHooked) return
   const ctx = gl.getContext() as WebGLRenderingContext & { __twinTexHook?: boolean; texImage2D: (...args: unknown[]) => void }
   if (!ctx || ctx.__twinTexHook) return
@@ -296,10 +388,17 @@ export function startEntryFrameWatch() {
   requestAnimationFrame(tick)
 }
 
-export async function warmupFontParse(): Promise<{ ms: number; atlasHeight: number | null; glyphs: number }> {
+export async function warmupFontParse(): Promise<{
+  ms: number
+  atlasHeight: number | null
+  glyphs: number
+  deferred?: boolean
+}> {
+  if (glyphPreloadBlocked()) return { ms: 0, atlasHeight: null, glyphs: 0, deferred: true }
   installSdfAtlasHook()
   installAtlasCanvasHook()
   await loadTroika()
+  if (glyphPreloadBlocked()) return { ms: 0, atlasHeight: null, glyphs: 0, deferred: true }
   const started = performance.now()
   await new Promise<void>((resolve) => {
     preloadFontFn?.({ font: ROOM_LABEL_FONT, characters: GLYPH_WARMUP_SPACE }, (info) => {
@@ -323,6 +422,7 @@ export async function warmupFontParse(): Promise<{ ms: number; atlasHeight: numb
 }
 
 export async function uploadSdfTexture(): Promise<{ ms: number; frameMs: number } | null> {
+  if (glyphPreloadBlocked()) return null
   const renderer = window.__twinRenderer
   const tex = sdfTexture
   if (!renderer || !tex || window.__twinGlyphPreload?.uploaded) return null
@@ -349,19 +449,30 @@ export async function uploadSdfTexture(): Promise<{ ms: number; frameMs: number 
   return { ms, frameMs: frameMs || ms }
 }
 
-export async function compileDummyLabelMaterial(): Promise<{ ms: number; frameMs: number } | null> {
+export async function compileDummyLabelMaterial(): Promise<
+  NonNullable<Window['__twinGlyphPreload']>['compile'] | null
+> {
   const renderer = window.__twinRenderer
   const camera = window.__twinCamera
-  if (!renderer || !camera || window.__twinGlyphPreload?.compile) return window.__twinGlyphPreload?.compile ?? null
+  const mainScene = window.__twinScene
+  if (window.__twinGlyphPreload?.compile) return window.__twinGlyphPreload.compile
+  if (glyphPreloadBlocked()) return null
+  if (!renderer || !camera || !mainScene) return null
+  if (window.__twinComposerLive && !window.__twinComposerInput) return null
   await loadTroika()
   const Text = textCtor!
   const BatchedText = batchedCtor!
   const started = performance.now()
+  const palette = roomLabelColors(labelQuality())
+  const fontSize = 0.78
+  const outlineWidth = roomLabelOutlineWidth(fontSize)
   const text = new Text()
   text.font = ROOM_LABEL_FONT
   text.text = '字'
-  text.fontSize = 1
-  text.outlineWidth = 0.04
+  text.fontSize = fontSize
+  text.color = palette.color
+  text.outlineWidth = outlineWidth
+  text.outlineColor = palette.outline
   text.anchorX = 'center'
   text.anchorY = 'middle'
   try {
@@ -370,6 +481,9 @@ export async function compileDummyLabelMaterial(): Promise<{ ms: number; frameMs
     })
     const batch = new BatchedText()
     batch.font = ROOM_LABEL_FONT
+    batch.color = palette.color
+    batch.anchorX = 'center'
+    batch.anchorY = 'middle'
     batch.addText(text)
     await new Promise<void>((resolve) => {
       batch.sync(() => resolve())
@@ -380,20 +494,83 @@ export async function compileDummyLabelMaterial(): Promise<{ ms: number; frameMs
       material.side = DoubleSide
       material.toneMapped = false
     }
-    const scene = new Scene()
-    scene.add(batch)
-    renderer.compile(scene, camera)
-    scene.remove(batch)
+    installShaderCompileHook(renderer)
+    const programsBefore = noteProgramLog('label-compile:before', renderer)
+    const target = await compileWithScene(renderer, batch, camera, mainScene)
+    const programsAfter = noteProgramLog('label-compile:after', renderer)
     batch.dispose()
     text.dispose()
+    const ms = performance.now() - started
+    const row = {
+      at: started,
+      ms: Math.round(ms),
+      frameMs: Math.round(ms),
+      programsBefore,
+      programsAfter,
+      target,
+    }
+    if (window.__twinGlyphPreload) window.__twinGlyphPreload.compile = row
+    return row
   } catch {
     text.dispose()
     return null
   }
-  const ms = performance.now() - started
-  const row = { at: started, ms: Math.round(ms), frameMs: Math.round(ms) }
-  if (window.__twinGlyphPreload) window.__twinGlyphPreload.compile = row
-  return row
+}
+
+export async function compileInteriorMaterials(): Promise<
+  NonNullable<Window['__twinGlyphPreload']>['interiorCompile'] | null
+> {
+  const renderer = window.__twinRenderer
+  const camera = window.__twinCamera
+  const mainScene = window.__twinScene
+  if (window.__twinGlyphPreload?.interiorCompile) return window.__twinGlyphPreload.interiorCompile
+  if (glyphPreloadBlocked()) return null
+  if (!renderer || !camera || !mainScene) return null
+  if (window.__twinComposerLive && !window.__twinComposerInput) return null
+  const mats = await import('./materials')
+  const started = performance.now()
+  const geo = new BoxGeometry(1, 1, 1)
+  const group = new Group()
+  const meshes: Array<Mesh | InstancedMesh> = []
+  const shared = [
+    mats.slabMaterial,
+    mats.coreWallMaterial,
+    mats.columnMaterial,
+    mats.woodMaterial,
+    mats.deskMaterial,
+    mats.chairMaterial,
+    mats.ceilingMaterial,
+    mats.meetingGlassMaterial,
+    mats.monitorMaterial,
+  ]
+  try {
+    for (const material of shared) {
+      const mesh = new Mesh(geo, material)
+      const instanced = new InstancedMesh(geo, material, 1)
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      instanced.castShadow = true
+      instanced.receiveShadow = true
+      group.add(mesh, instanced)
+      meshes.push(mesh, instanced)
+    }
+    installShaderCompileHook(renderer)
+    const programsBefore = noteProgramLog('interior-compile:before', renderer)
+    await compileWithScene(renderer, group, camera, mainScene)
+    const programsAfter = noteProgramLog('interior-compile:after', renderer)
+    const ms = performance.now() - started
+    const row = { at: started, ms: Math.round(ms), frameMs: Math.round(ms), programsBefore, programsAfter }
+    if (window.__twinGlyphPreload) window.__twinGlyphPreload.interiorCompile = row
+    return row
+  } catch {
+    return null
+  } finally {
+    for (const mesh of meshes) {
+      group.remove(mesh)
+      if (mesh instanceof InstancedMesh) mesh.dispose()
+    }
+    geo.dispose()
+  }
 }
 
 export async function warmupTextMesh(): Promise<number> {
@@ -426,10 +603,12 @@ export async function warmupTextMesh(): Promise<number> {
 
 export async function preloadLabelChars(characters: string, source: string): Promise<number> {
   if (!characters) return 0
+  const neu = noteGlyphChars(source, characters)
+  if (glyphPreloadBlocked()) return neu
+  if (window.__twinGlyphPreload?.done) return neu
   installSdfAtlasHook()
   installAtlasCanvasHook()
   await loadTroika()
-  const neu = noteGlyphChars(source, characters)
   await new Promise<void>((resolve) => {
     preloadFontFn!({ font: ROOM_LABEL_FONT, characters }, () => resolve())
   })

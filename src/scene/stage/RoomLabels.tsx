@@ -379,7 +379,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
 
   useEffect(() => {
     sizedRef.current = false
-    setFontSize((prev) => prev || 0.78)
+    setFontSize(0)
     clusterSyncedRef.current = ''
     viewKeyRef.current = ''
     packedRef.current = null
@@ -550,7 +550,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     }
     if (dragging) idleRef.current = -1
     const framed = window.__twinCameraFramed === floorId || slabReady
-    if (framed) {
+    if (settled && framed) {
       host?.updateWorldMatrix(true, false)
       perspective.updateMatrixWorld()
       const { maxPx } = maxProjectedEmPx(host ?? null, labels, perspective, size, 0.78)
@@ -558,14 +558,13 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         const next = worldFontSizeFromProjectedEm(0.78, maxPx)
         if (fontSize <= 0 || Math.abs(next - fontSize) / Math.max(fontSize, 0.01) > 0.08) setFontSize(next)
         sizedRef.current = true
-      } else if (!sizedRef.current && settled && slabReady) {
+      } else if (!sizedRef.current && slabReady) {
         setFontSize((prev) => prev || 0.78)
         askFrame()
       }
     }
     window.__twinLabelBatchPresent = Boolean(api?.ready)
     if (!settled) {
-      askFrame()
       return
     }
     if (!sizedRef.current || fontSize <= 0) {

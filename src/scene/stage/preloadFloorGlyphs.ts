@@ -9,6 +9,7 @@ import {
   GLYPH_WARMUP_GLYPH,
   cancelIdleWork,
   compileDummyLabelMaterial,
+  compileInteriorMaterials,
   glyphPreloadBlocked,
   glyphPreloadStartReady,
   installAtlasCanvasHook,
@@ -121,6 +122,7 @@ export function scheduleGlyphPreload(): () => void {
   let warmedMesh = false
   let firstMain = true
   let uploaded = false
+  let compiled = false
 
   const tick = (deadline: { timeRemaining: () => number }) => {
     if (cancelled) return
@@ -145,6 +147,10 @@ export function scheduleGlyphPreload(): () => void {
       void watchMaxFrame(() =>
         warmupFontParse().then((row) => {
           if (cancelled) return
+          if (row.deferred) {
+            idleId = scheduleIdleWork(tick)
+            return
+          }
           const frameMs = Math.round(performance.now() - started)
           recordBatch({
             i: -2,
@@ -241,33 +247,50 @@ export function scheduleGlyphPreload(): () => void {
     }
     if (!remaining) {
       if (window.__twinGlyphPreload) window.__twinGlyphPreload.done = true
-      if (uploaded) return
+      if (uploaded && compiled) return
       if (overviewIdleBlocked() || !window.__twinRenderer) {
         idleId = scheduleIdleWork(tick)
         return
       }
-      uploaded = true
-      void watchMaxFrame(async () => {
-        try {
-          const row = await uploadSdfTexture()
-          if (cancelled) return
-          if (window.__twinGlyphPreload && row) {
-            window.__twinGlyphPreload.upload = {
-              at: performance.now() - row.ms,
-              ms: Math.round(row.ms),
-              frameMs: Math.round(row.frameMs),
+      if (!uploaded) {
+        uploaded = true
+        void watchMaxFrame(async () => {
+          try {
+            const row = await uploadSdfTexture()
+            if (cancelled) return
+            if (window.__twinGlyphPreload && row) {
+              window.__twinGlyphPreload.upload = {
+                at: performance.now() - row.ms,
+                ms: Math.round(row.ms),
+                frameMs: Math.round(row.frameMs),
+              }
             }
+          } catch {
+            uploaded = false
           }
-          await compileDummyLabelMaterial()
-        } catch {
-          uploaded = false
+        }).then(() => {
+          if (cancelled) return
+          if (!window.__twinGlyphPreload?.uploaded) {
+            uploaded = false
+          }
+          idleId = scheduleIdleWork(tick)
+        })
+        return
+      }
+      compiled = true
+      void watchMaxFrame(async () => {
+        const label = await compileDummyLabelMaterial()
+        if (cancelled) return
+        if (!label) {
+          compiled = false
+          return
         }
+        await compileInteriorMaterials()
       }).then(() => {
         if (cancelled) return
-        if (!window.__twinGlyphPreload?.uploaded) {
-          uploaded = false
+        if (!window.__twinGlyphPreload?.compile) {
+          compiled = false
           idleId = scheduleIdleWork(tick)
-          return
         }
       })
       return
