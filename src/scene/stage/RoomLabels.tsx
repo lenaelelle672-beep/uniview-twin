@@ -277,6 +277,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const packedRef = useRef<AvoidResult | null>(null)
   const idleRef = useRef(0)
   const stripRef = useRef(false)
+  const poseRef = useRef('')
+  const poseIdleRef = useRef(0)
   const itemsRef = useRef<AvoidItem[]>([])
   const hoverIdRef = useRef<string | null>(null)
   const cameraRef = useRef(camera)
@@ -304,7 +306,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     const strong = countOverlapKinds(live.map((row) => row.box)).strong
     if (strong === 0) {
       layoutRef.current = packRef.current
-      stripRef.current = false
       return true
     }
     const stripped = stripStrongOverlaps(live, packRef.current, tierOf, keepTier2)
@@ -312,8 +313,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     packRef.current = stripped.pack
     api.applyPack(stripped.pack)
     const after = api.measureVisible(perspective, viewport)
-    stripRef.current = countOverlapKinds(after.map((row) => row.box)).strong > 0
-    return true
+    return countOverlapKinds(after.map((row) => row.box)).strong === 0
   }
 
   useEffect(() => {
@@ -324,6 +324,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     packedRef.current = null
     layoutRef.current = { byId: {}, clusters: {} }
     stripRef.current = false
+    poseRef.current = ''
+    poseIdleRef.current = 0
     itemsRef.current = []
   }, [floorId])
 
@@ -407,6 +409,14 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     const api = measureRef.current
     const rig = window.__twinRig as (Window['__twinRig'] & { currentAction?: number }) | undefined
     const dragging = (rig?.currentAction ?? 0) !== 0
+    const poseKey = `${perspective.position.x.toFixed(1)}|${perspective.position.y.toFixed(1)}|${perspective.position.z.toFixed(1)}`
+    if (poseKey !== poseRef.current) {
+      poseRef.current = poseKey
+      poseIdleRef.current = 0
+      if (packedRef.current) stripRef.current = true
+    } else {
+      poseIdleRef.current += 1
+    }
     if (!sizedRef.current) {
       host?.updateWorldMatrix(true, false)
       perspective.updateMatrixWorld()
@@ -583,23 +593,15 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         maxPx: LABEL_MAX_PX,
         distance: nearest,
       }
-      stripRef.current = !stripLiveOverlaps(perspective, size, keepTier2)
+      stripRef.current = true
+      stripLiveOverlaps(perspective, size, keepTier2)
       invalidate()
-      const view = { width: size.width, height: size.height }
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (stripRef.current) stripLiveOverlaps(perspective, view, keepTier2)
-          invalidate()
-        })
-      })
       return
     }
     if (stripRef.current && !dragging && api?.ready && packedRef.current) {
       const keepTier2 = Math.max(size.width, window.innerWidth || 0) >= 1366
-      if (!stripLiveOverlaps(perspective, size, keepTier2)) {
-        invalidate()
-        return
-      }
+      const clear = stripLiveOverlaps(perspective, size, keepTier2)
+      if ((clear && poseIdleRef.current >= 2) || poseIdleRef.current >= 8) stripRef.current = false
       invalidate()
       return
     }
