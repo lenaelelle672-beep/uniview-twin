@@ -272,7 +272,9 @@ async function open(_browserOrSearch, searchOrViewport, maybeViewport) {
   })
   page.on('pageerror', (error) => consoles.push({ type: 'pageerror', text: error.message }))
   page.on('request', (request) => requests.push(request.url()))
-  await page.goto(`${baseUrl}/${search}`, { waitUntil: 'load' })
+  const keep = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+  keep.set('keepDrawingBuffer', '1')
+  await page.goto(`${baseUrl}/?${keep.toString()}`, { waitUntil: 'load' })
   await waitReady(page)
   return { page, consoles, requests }
 }
@@ -544,7 +546,7 @@ async function main() {
     }
     report.floorMarkers = { ...(report.floorMarkers ?? {}), clicks }
 
-    await page.goto(`${baseUrl}/?q=perf`, { waitUntil: 'networkidle0' })
+    await page.goto(`${baseUrl}/?q=perf&keepDrawingBuffer=1`, { waitUntil: 'networkidle0' })
     await waitReady(page)
     const tower = await page.evaluate(() => {
       const project = window.__twinProject
@@ -562,7 +564,7 @@ async function main() {
       chip: document.querySelector('.view-chip')?.textContent ?? '',
     }))
 
-    await page.goto(`${baseUrl}/?q=perf`, { waitUntil: 'networkidle0' })
+    await page.goto(`${baseUrl}/?q=perf&keepDrawingBuffer=1`, { waitUntil: 'networkidle0' })
     await waitReady(page)
     report.switches.push({ label: '性能(冷启动)', ...(await stats(page)), consoles: [] })
     const sequence = ['均衡', '性能', '均衡', '性能', '均衡', '性能', '均衡', '性能', '均衡']

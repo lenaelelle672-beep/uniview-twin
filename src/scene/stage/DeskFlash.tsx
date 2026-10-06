@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Color, InstancedMesh, Mesh } from 'three'
+import { retainFrameChannel } from '../frameSchedule'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
 import { ALARM_MARKER_ORDER } from '../overlayOrder'
@@ -56,6 +57,11 @@ export function DeskFlash({ floorId }: { floorId: string }) {
       if (window.__twinHighlight === deskId) delete window.__twinHighlight
     }
   }, [deskId, focusSeq])
+
+  useEffect(() => {
+    if (!alive) return
+    return retainFrameChannel('motion')
+  }, [alive])
 
   useEffect(() => {
     return () => restoreTint(tinted.current, tintedIndex.current)

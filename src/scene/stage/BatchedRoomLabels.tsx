@@ -10,6 +10,7 @@ import { ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_OPACITY, roomLabelColors, type Room
 
 disableTroikaCdnFallback()
 
+<<<<<<< HEAD
 export interface LabelBatchApi {
   ready: boolean
   measureVisible: (camera: Camera, size: { width: number; height: number }) => MeasuredLabelBox[]
@@ -24,6 +25,15 @@ export interface LabelBatchApi {
 
 function bumpSync(): void {
   window.__twinLabelSyncs = (window.__twinLabelSyncs ?? 0) + 1
+=======
+function syncText(text: Text, invalidate: () => void): Promise<void> {
+  return new Promise((resolve) => {
+    text.sync(() => {
+      invalidate()
+      resolve()
+    })
+  })
+>>>>>>> origin/integration
 }
 
 function applyMemberFades(members: Text[], fades: number[] | undefined) {
@@ -166,6 +176,7 @@ export function BatchedRoomLabels({
           batch.addText(text)
           members.push(text)
         }
+<<<<<<< HEAD
         for (const cluster of clusters) {
           const text = new Text()
           text.text = cluster.text
@@ -187,6 +198,10 @@ export function BatchedRoomLabels({
           batch.addText(text)
           clusterMembers.push(text)
         }
+=======
+        await Promise.all(members.map((text) => syncText(text, invalidate)))
+        if (cancelled) return
+>>>>>>> origin/integration
         await new Promise<void>((resolve) => {
           batch?.sync(() => {
             bumpSync()

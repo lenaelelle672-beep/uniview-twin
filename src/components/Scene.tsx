@@ -18,12 +18,40 @@ import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
+import { installInvalidateTrace } from '../scene/invalidateLog'
 
 const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
 const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.PostFX })))
 const FacadeSamples = lazy(() =>
   import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
 )
+const DemandLoop = lazy(() => import('./scene/DemandLoop'))
+
+const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render driver/i
+
+/** 只认启动 URL 的 `keepDrawingBuffer=1`。gl 属性在创建 context 时定死，必须是模块常量。 */
+const KEEP_DRAWING_BUFFER =
+  typeof location !== 'undefined' &&
+  new URLSearchParams(location.search.startsWith('?') ? location.search.slice(1) : location.search).get(
+    'keepDrawingBuffer',
+  ) === '1'
+
+const CANVAS_GL = {
+  antialias: true,
+  alpha: false,
+  preserveDrawingBuffer: KEEP_DRAWING_BUFFER,
+  toneMapping: AgXToneMapping,
+}
+
+function readGpuRenderer(gl: { getContext: () => WebGLRenderingContext | WebGL2RenderingContext }) {
+  const ctx = gl.getContext()
+  try {
+    const ext = ctx.getExtension('WEBGL_debug_renderer_info')
+    return String(ctx.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : ctx.RENDERER) ?? '')
+  } catch {
+    return ''
+  }
+}
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
@@ -34,7 +62,8 @@ function DayExposure({ mode }: { mode: SurfaceMode }) {
   return null
 }
 
-function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'balanced' | 'high' }) {
+function SceneBody({ mode }: { mode: SurfaceMode }) {
+  const quality = useTwinStore((state) => state.quality)
   const model = mode === 'model'
   const night = mode === 'night'
   const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
@@ -43,6 +72,8 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   const [keepFx, setKeepFx] = useState(false)
   const [prefetchDone, setPrefetchDone] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
+  const [loopOn, setLoopOn] = useState(false)
+  const view = useTwinStore((state) => state.view)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
@@ -69,6 +100,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
     }
     const tick = () => {
       if (cancelled) return
+      if (window.__twinFirstFrameAt != null) setLoopOn(true)
       // __twinPrefetchAt 在 import() 之前就写入，不能当“预取已发出”。
       // 等三个预取包都进 Resource Timing，再隔一帧才挂 FacadeSamples，
       // 避免 MonitorSamples 和预取抢同一拍、夹到首帧和预取之间。
@@ -78,6 +110,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         })
         return
       }
+      if (window.__twinFirstFrameAt != null && useTwinStore.getState().view !== 'building') return
       requestAnimationFrame(tick)
     }
     tick()
@@ -88,6 +121,11 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
 
   return (
     <>
+      {loopOn && (
+        <Suspense fallback={null}>
+          <DemandLoop />
+        </Suspense>
+      )}
       <color attach="background" args={[background]} />
       <EnablePickVolumeRaycast />
       <DayExposure mode={mode} />
@@ -138,6 +176,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         )}
         <ExplodedLayout />
         <FloorStage />
+        {view === 'building' && <BadgeHud />}
         <RenderProbe />
       </Suspense>
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景。 */}
@@ -160,9 +199,12 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
 export function SceneCanvas() {
   const dayNight = useTwinStore((state) => state.dayNight)
   const quality = useTwinStore((state) => state.quality)
+  const userPicked = useTwinStore((state) => state.qualityPinned || state.downgradeSuppressed)
   const presentation = useTwinStore((state) => state.presentation)
   const cam = useTwinStore((state) => state.cam)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
+  const [gpuReady, setGpuReady] = useState(false)
+  const [softwareAuto, setSoftwareAuto] = useState(false)
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
   const pose = cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview
   applySurfaceMode(mode)
@@ -171,19 +213,47 @@ export function SceneCanvas() {
     applySurfaceMode(mode)
   }, [mode])
 
+  useLayoutEffect(() => {
+    if (softwareAuto && userPicked) setSoftwareAuto(false)
+  }, [softwareAuto, userPicked])
+
   return (
-    <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={quality}>
+    <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={softwareAuto ? 'perf' : quality}>
       {/* 不按性能档重建画布。换档会新建 WebGLRenderer，three 按渲染器缓存的 PMREM 会再生成一次。dpr 和阴影在同一个画布上更新。 */}
       <Canvas
-        dpr={qualityDprRange(quality)}
-        shadows={quality === 'perf' ? false : 'percentage'}
+        frameloop="demand"
+        dpr={softwareAuto ? [0.75, 0.75] : qualityDprRange(quality)}
+        shadows={gpuReady && !softwareAuto && quality !== 'perf' ? 'percentage' : false}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
-        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, toneMapping: AgXToneMapping }}
+        gl={CANVAS_GL}
+        onCreated={(state) => {
+          if (import.meta.env.DEV) installInvalidateTrace(state)
+          const { gl, setDpr } = state
+          const renderer = readGpuRenderer(gl)
+          const software = SOFTWARE.test(renderer)
+          const auto = software && !useTwinStore.getState().qualityPinned
+          if (auto) {
+            useTwinStore.setState({ quality: 'perf' })
+            setSoftwareAuto(true)
+            setDpr(0.75)
+          }
+          const liveQuality = useTwinStore.getState().quality
+          window.__twinGpu = {
+            renderer,
+            software,
+            tier: auto || liveQuality === 'perf' ? 'performance' : liveQuality,
+            softwareAuto: auto,
+            preserveDrawingBuffer: KEEP_DRAWING_BUFFER,
+            dpr: auto ? 0.75 : undefined,
+          }
+          gl.shadowMap.autoUpdate = false
+          setGpuReady(true)
+        }}
         onPointerMissed={() => {
           setSelectedFloor(null)
         }}
       >
-        <SceneBody mode={mode} quality={quality} />
+        {gpuReady ? <SceneBody mode={mode} /> : null}
       </Canvas>
     </div>
   )
