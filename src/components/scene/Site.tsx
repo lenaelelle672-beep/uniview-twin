@@ -14,6 +14,7 @@ import {
   sidewalkMaterial,
   zebraMaterial,
 } from '../../scene/materials'
+import { useTwinStore } from '../../store/store'
 import {
   footprintOutline,
   PARCEL_WORLD,
@@ -25,15 +26,30 @@ import {
 } from '../../scene/siteGeometry'
 
 export function ParcelMesh() {
+  const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const court = useMemo(() => courtyardHole(), [])
   const parcel = useMemo(() => extrudeUp(PARCEL_WORLD, 0.1, [court]), [court])
-  return <mesh name="Parcel" geometry={parcel} material={pavingMaterial} position={[0, 0.04, 0]} receiveShadow />
+  return (
+    <mesh
+      name="Parcel"
+      geometry={parcel}
+      material={pavingMaterial}
+      position={[0, 0.04, 0]}
+      receiveShadow
+      onClick={(event) => {
+        if (event.delta > 2) return
+        event.stopPropagation()
+        setSelectedFloor(null)
+      }}
+    />
+  )
 }
 
+/** 东缘伸到 `?cam=east` 机位（x=280）背后，平视时画面底部仍落在草地上。 */
 const PARK: Array<[number, number]> = [
   [-240, -90],
-  [160, -90],
-  [160, 210],
+  [340, -90],
+  [340, 210],
   [-240, 210],
 ]
 
@@ -55,6 +71,7 @@ function ribbonGeometry(ribbons: Ribbon[], y: number) {
 }
 
 export function Site({ model, night, quality }: { model: boolean; night: boolean; quality: QualityTier }) {
+  const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const furniture = useMemo(() => placeStreetFurniture(), [])
   const court = useMemo(() => courtyardHole(), [])
   const park = useMemo(() => extrudeUp(PARK, 0.04, [court]), [court])
@@ -72,15 +89,22 @@ export function Site({ model, night, quality }: { model: boolean; night: boolean
     if (!merged) throw new Error('斑马线几何为空')
     return merged
   }, [])
-
   const trees = selectTreeModels(quality)
 
+  const clearSelection = (event: { delta: number; stopPropagation: () => void }) => {
+    if (event.delta > 2) return
+    event.stopPropagation()
+    setSelectedFloor(null)
+  }
+
   if (model) {
-    return <mesh geometry={plinth} material={plinthMaterial} receiveShadow position={[0, -0.2, 0]} />
+    return (
+      <mesh geometry={plinth} material={plinthMaterial} receiveShadow position={[0, -0.2, 0]} onClick={clearSelection} />
+    )
   }
 
   return (
-    <group>
+    <group onClick={clearSelection}>
       <mesh name="Park" geometry={park} material={grassMaterial} receiveShadow />
       <mesh geometry={sidewalk} material={sidewalkMaterial} receiveShadow />
       <mesh geometry={roads} material={roadMaterial} receiveShadow />

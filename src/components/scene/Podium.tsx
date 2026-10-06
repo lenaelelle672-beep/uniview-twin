@@ -3,7 +3,7 @@ import { BufferGeometry, Float32BufferAttribute } from 'three'
 import { COURT_DEPTH_M, COURT_SLOPE_M } from '../../scene/siteGeometry'
 import { extrudeUp } from '../../scene/extrude'
 import { courtyardHole, outset, podiumFrontArc, podiumFocus, podiumOutline, PODIUM_HEIGHT_M } from '../../scene/massing'
-import { courtWallMaterial, curtainMaterial, solidMaterial } from '../../scene/materials'
+import { courtWallMaterial, curtainMaterial, eaveMaterial, solidMaterial } from '../../scene/materials'
 import { FinRow } from './Fins'
 
 function insetToward(points: Array<[number, number]>, amount: number): Array<[number, number]> {
@@ -60,7 +60,7 @@ export function Podium({ model }: { model: boolean }) {
   return (
     <group name="Podium">
       <mesh geometry={shell} material={materials} castShadow receiveShadow />
-      <mesh geometry={band} material={solidMaterial} position={[0, 5.75, 0]} castShadow receiveShadow />
+      <mesh geometry={band} material={model ? solidMaterial : eaveMaterial} position={[0, 5.75, 0]} castShadow receiveShadow />
       <mesh name="CourtyardWall" geometry={basin} material={courtWallMaterial} receiveShadow />
       <FinRow points={arc} spacing={2.2} y={PODIUM_HEIGHT_M / 2} height={PODIUM_HEIGHT_M * 0.92} outwardFrom={focus} />
     </group>

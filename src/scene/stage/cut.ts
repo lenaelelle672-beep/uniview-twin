@@ -36,6 +36,21 @@ export function isRoofHidden(view: ViewMode, selectedFloor: string | null): bool
   return activeFloorId(view, selectedFloor) != null
 }
 
+/**
+ * 地上单层（F1–F22）不画地下室楼板。
+ * 总览和 B1 单层仍保留。裁切平面在楼板之上，藏不住这块板，必须直接隐藏。
+ */
+export function isBasementSlabHidden(view: ViewMode, selectedFloor: string | null): boolean {
+  const active = activeFloorId(view, selectedFloor)
+  if (!active) return false
+  return floorSpec(active).level > 0
+}
+
+/** 地上单层同时隐藏 B1 色块。条件与楼板相同。 */
+export function isBasementZonesHidden(view: ViewMode, selectedFloor: string | null): boolean {
+  return isBasementSlabHidden(view, selectedFloor)
+}
+
 /** 世界坐标切面高度：选中层楼板顶面。高于此的外壳被裁掉。 */
 export function cutElevation(view: ViewMode, selectedFloor: string | null): number | null {
   const active = activeFloorId(view, selectedFloor)

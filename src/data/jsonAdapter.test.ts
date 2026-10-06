@@ -72,6 +72,23 @@ describe('JsonAdapter', () => {
     expect(() => validateTwinData({ desks: [], devices: [], people: [], alarms: [] })).toThrow('数据格式不正确：floors 必须是数组')
     expect(() => validateTwinData({ floors: [{}], desks: [], devices: [], people: [], alarms: [] })).toThrow(/floors\[0\]\.id/)
 
+    const withoutCoordinates = {
+      ...sample,
+      desks: sample.desks.map((desk) => ({
+        id: desk.id,
+        floorId: desk.floorId,
+        index: desk.index,
+        zone: desk.zone,
+      })),
+    }
+    const loaded = validateTwinData(withoutCoordinates)
+    expect(loaded.desks.map((desk) => desk.id)).toEqual(['F1-1', 'F1-2', 'F2-1'])
+    expect(loaded.desks.every((desk) => desk.x === undefined && desk.y === undefined && desk.z === undefined)).toBe(true)
+
+    const kept = validateTwinData(sample)
+    expect(kept.desks.every((desk) => desk.x === undefined && desk.y === undefined && desk.z === undefined)).toBe(true)
+    expect(kept.devices.find((device) => device.id === 'F1-2-PC')?.status).toBe('alarm')
+
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     await expect(new JsonAdapter('https://example.com/a.json').load()).rejects.toThrow('数据地址必须是以 / 开头的站内路径')

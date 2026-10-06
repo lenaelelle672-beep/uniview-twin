@@ -2,12 +2,21 @@ import { useMemo } from 'react'
 import { BoxGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { listFloorSpecs, TOWER_ROOF_M } from '../../data/floors'
-import { curtainMaterial, grilleMaterial, jointMaterial, solidMaterial } from '../../scene/materials'
+import {
+  curtainMaterial,
+  grilleMaterial,
+  highlightCurtainMaterial,
+  highlightJointMaterial,
+  jointMaterial,
+  solidMaterial,
+} from '../../scene/materials'
 import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
 import { TOWER } from '../../scene/siteGeometry'
 import { createTowerGlass } from '../../scene/towerGlass'
 import { useTwinStore } from '../../store/store'
 import { RoofSign } from './InstancedProp'
+import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
+import { useFloorActions } from './floorPick'
 
 const BAND = 0.78
 const WIDTH = TOWER.maxX - TOWER.minX
@@ -39,18 +48,25 @@ function FloorShell({ id, elevation, height }: { id: string; elevation: number; 
   const band = useMemo(() => makeBand(elevation), [elevation])
   const hidden = useTwinStore((state) => isFloorShellHidden(state.view, state.selectedFloor, elevation))
   const opened = useTwinStore((state) => isFloorCurtainOpen(state.view, state.selectedFloor, id))
-  const enterFloor = useTwinStore((state) => state.enterFloor)
+  const selected = useTwinStore((state) => state.view === 'building' && state.selectedFloor === id)
+  const actions = useFloorActions(id)
   return (
-    <group
-      name={`FloorShell-${id}`}
-      visible={!hidden}
-      onDoubleClick={(event) => {
-        event.stopPropagation()
-        enterFloor(id)
-      }}
-    >
-      <mesh name={`FloorCurtain-${id}`} geometry={glass} material={curtainMaterial} visible={!opened} />
-      <mesh geometry={band} material={jointMaterial} castShadow receiveShadow />
+    <group name={`FloorShell-${id}`} visible={!hidden} {...actions}>
+      <mesh
+        name={`FloorCurtain-${id}`}
+        geometry={glass}
+        material={selected ? highlightCurtainMaterial : curtainMaterial}
+        visible={!opened}
+        renderOrder={selected ? BUILDING_HIGHLIGHT_ORDER : 0}
+      />
+      <mesh
+        name={`FloorBand-${id}`}
+        geometry={band}
+        material={selected ? highlightJointMaterial : jointMaterial}
+        castShadow
+        receiveShadow
+        renderOrder={selected ? BUILDING_HIGHLIGHT_ORDER : 0}
+      />
     </group>
   )
 }
@@ -79,6 +95,7 @@ export function Tower({ night }: { night: boolean }) {
     geometry.translate(0, TOWER_ROOF_M - 0.175, 0)
     return geometry
   }, [])
+  // v2 宽 15 m、高 3 m，局部底边 y=0、字面朝 +Z。贴南侧女儿墙外皮靠西端，底边与屋面齐平。
   const signZ = TOWER.maxZ + 0.1 + 0.36 + 0.03
   const signX = TOWER.minX + 7.5 + 1.4
 

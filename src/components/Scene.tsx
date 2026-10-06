@@ -1,24 +1,35 @@
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useThree } from '@react-three/fiber'
 import { Suspense, useCallback, useLayoutEffect, useRef, useState } from 'react'
-import { Group } from 'three'
+import { AgXToneMapping, Group } from 'three'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
 import { EastBlock } from './scene/EastBlock'
+import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
 import { RenderProbe } from './scene/RenderProbe'
 import { ParcelMesh, Site } from './scene/Site'
+import { ExplodedLayout } from './scene/ExplodedLayout'
 import { Tower } from './scene/Tower'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { useTwinStore } from '../store/store'
 
+function DayExposure({ mode }: { mode: SurfaceMode }) {
+  const gl = useThree((state) => state.gl)
+  useLayoutEffect(() => {
+    // AgX 中灰比 ACES 更沉，白天抬曝光，单层和 B1 才不会整层变暗。夜间和白模保持 1。
+    gl.toneMappingExposure = mode === 'day' ? 2 : 1
+  }, [gl, mode])
+  return null
+}
+
 function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'balanced' | 'high' }) {
   const model = mode === 'model'
   const night = mode === 'night'
-  const background = model ? '#050505' : night ? '#07111c' : '#c5d7ea'
+  const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
   const shadowSize = quality === 'high' ? 2048 : 1024
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
@@ -28,7 +39,8 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
   return (
     <>
       <color attach="background" args={[background]} />
-      <LocalEnvironment enabled={!model} />
+      <DayExposure mode={mode} />
+      <LocalEnvironment enabled={!model} night={night} />
       <hemisphereLight
         args={[
           model ? '#ffffff' : night ? '#243e68' : '#e7f1ff',
@@ -67,6 +79,8 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         <group visible={!openBasement}>
           <Site model={model} night={night} quality={quality} />
         </group>
+        <FloorBadges />
+        <ExplodedLayout />
         <FloorStage />
         <RenderProbe />
       </Suspense>
@@ -78,8 +92,10 @@ export function SceneCanvas() {
   const dayNight = useTwinStore((state) => state.dayNight)
   const quality = useTwinStore((state) => state.quality)
   const presentation = useTwinStore((state) => state.presentation)
+  const cam = useTwinStore((state) => state.cam)
+  const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
   const mode: SurfaceMode = presentation === 'model' ? 'model' : dayNight === 'night' ? 'night' : 'day'
-  const pose = CAMERA_POSES.overview
+  const pose = cam ? CAMERA_POSES[cam] : CAMERA_POSES.overview
   applySurfaceMode(mode)
 
   useLayoutEffect(() => {
@@ -88,12 +104,15 @@ export function SceneCanvas() {
 
   return (
     <div className="scene-root" data-day-night={dayNight} data-presentation={presentation} data-quality={quality}>
+      {/* 不按性能档重建画布。换档会新建 WebGLRenderer，three 按渲染器缓存的 PMREM 会再生成一次。dpr 和阴影在同一个画布上更新。 */}
       <Canvas
-        key={quality}
         dpr={qualityDprRange(quality)}
         shadows={quality === 'perf' ? false : 'percentage'}
-        camera={{ position: pose.position, fov: pose.fov, near: 0.45, far: 900 }}
-        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+        camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
+        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, toneMapping: AgXToneMapping }}
+        onPointerMissed={() => {
+          setSelectedFloor(null)
+        }}
       >
         <SceneBody mode={mode} quality={quality} />
       </Canvas>

@@ -26,6 +26,7 @@ describe('URL 解析与回写', () => {
 
   it('忽略非法取值', () => {
     expect(parseSearch('?view=orbit&floor=F23&floor=F0&pos=desk&cam=side&q=ultra')).toEqual({})
+    expect(parseSearch('?cam=east')).toEqual({ cam: 'east' })
     expect(parseSearch('')).toEqual({})
   })
 
@@ -98,6 +99,24 @@ describe('URL 解析与回写', () => {
     applySearchToStore('')
     expect(useTwinStore.getState().presentation).toBe('lit')
     expect(storeToSearch()).toBe('')
+  })
+
+  it('?pos= 进入对应楼层，非法编号只给出提示', () => {
+    applySearchToStore('?pos=F12-66&q=balanced')
+    const located = useTwinStore.getState()
+    expect(located.view).toBe('floor')
+    expect(located.selectedFloor).toBe('F12')
+    expect(located.focusedDeskId).toBe('F12-66')
+    expect(located.posNotice).toBeNull()
+    expect(located.focusSeq).toBe(1)
+    expect(storeToSearch()).toBe('?view=floor&floor=F12&pos=F12-66&q=balanced')
+
+    applySearchToStore('?pos=F99-1&q=balanced')
+    const missing = useTwinStore.getState()
+    expect(missing.view).toBe('building')
+    expect(missing.focusedDeskId).toBeNull()
+    expect(missing.posNotice).toContain('找不到工位 F99-1')
+    expect(missing.posNotice).toContain('F12-66')
   })
 
   it('外站 data 地址不作为可加载路径，但仍保留在地址栏', () => {
