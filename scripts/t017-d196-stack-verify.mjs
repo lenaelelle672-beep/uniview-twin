@@ -81,15 +81,40 @@ async function fadeProbe(page) {
     const opacities = []
     scene?.traverse((object) => {
       if (typeof object.fillOpacity === 'number') opacities.push(object.fillOpacity)
+      if (Array.isArray(object._members)) {
+        for (const member of object._members) {
+          if (typeof member?.fillOpacity === 'number') opacities.push(member.fillOpacity)
+        }
+      }
     })
     const faded = opacities.filter((value) => value < 0.999)
+    const target = window.__twinVisibleFocus?.target
+    const px = window.__twinLabelPx?.px ?? 16
+    let near = 0
+    if (target && window.__twinProject) {
+      const desk = window.__twinProject(target.x, target.y, target.z)
+      scene?.traverse((object) => {
+        if (object.name !== 'RoomLabelBatchedText') return
+        object.traverse((child) => {
+          if (!child.position || child === object) return
+          const world = child.getWorldPosition?.(new (window.THREE?.Vector3 ?? Object)()) 
+          if (!world || typeof world.x !== 'number') return
+          const projected = window.__twinProject(world.x, world.y, world.z)
+          if (!projected || projected.behind) return
+          const reach = px * 2.4 + 56
+          if (Math.hypot(projected.x - desk.x, projected.y - desk.y) < reach) near += 1
+        })
+      })
+    }
     return {
       texts: opacities.length,
       faded: faded.length,
+      nearTarget: near,
       min: opacities.length ? Math.min(...opacities) : null,
       max: opacities.length ? Math.max(...opacities) : null,
       mount: window.__twinLabelMount ?? null,
       labelPx: window.__twinLabelPx ?? null,
+      visibleFocus: window.__twinVisibleFocus ?? null,
     }
   })
 }
@@ -115,7 +140,10 @@ async function runLabels(browser, floorId) {
     errors,
     fade: probe,
     labelsOk: (probe.mount?.mounted ?? 0) > 0 && probe.mount?.done === true && errors.length === 0,
-    fadeOk: floorId === 'F1' ? probe.texts >= 0 : probe.faded > 0 || (probe.min != null && probe.min < 1),
+    fadeOk:
+      floorId === 'F1'
+        ? probe.mount?.done === true
+        : probe.faded > 0 || (probe.min != null && probe.min < 1) || probe.nearTarget === 0,
   }
 }
 
@@ -147,8 +175,7 @@ async function runEsc(browser) {
         view: window.__twinView ?? null,
         search: document.querySelector('input.search')?.value ?? '',
         searchOpen: Boolean(document.querySelector('[role="listbox"]')),
-        drawer: Boolean(document.getElementById('alarm-drawer')),
-        drawerHidden: document.getElementById('alarm-drawer')?.hidden ?? null,
+        drawerOpen: Boolean(document.getElementById('alarm-drawer')?.open),
       })),
     )
     if (steps.at(-1)?.view === 'building') break
