@@ -47,8 +47,10 @@ async function waitReady(page) {
 }
 
 async function waitLoop(page) {
-  await page.waitForFunction(() => window.__twinFirstFrameAt != null, { timeout: 30_000 })
-  await page.waitForFunction(() => window.__twinSchedule != null || window.__twinGlFrame != null, { timeout: 15_000 }).catch(() => {})
+  await page.waitForFunction(
+    () => window.__twinSchedule != null || window.__twinGlFrame != null || window.__twinFirstFrameAt != null,
+    { timeout: 20_000 },
+  ).catch(() => {})
   await page.evaluate(() => new Promise((r) => setTimeout(r, 400)))
 }
 
@@ -339,35 +341,24 @@ async function main() {
   for (let i = 0; i < 2; i += 1) {
     console.error(`idle ${i + 1}/2`)
     const browser = await launch()
-    console.error('  auto overview')
-    const autoOv = await openScene(browser, '/')
-    const autoOverview = await sampleIdle(autoOv, browser, 8)
-    await autoOv.close()
-
-    console.error('  hidden')
-    const hidPage = await openScene(browser, '/')
-    const hidden = await sampleIdle(hidPage, browser, 4, true)
-    await hidPage.close()
-
-    console.error('  balanced overview')
-    const balOv = await openScene(browser, '/?q=balanced')
-    const balancedOverview = await sampleIdle(balOv, browser, 8)
-    await balOv.close()
-
-    console.error('  auto F12')
-    const autoFloor = await openScene(browser, '/?view=floor&floor=F12')
-    const autoF12 = await sampleIdle(autoFloor, browser, 8)
-    await autoFloor.close()
-
-    console.error('  balanced F12')
-    const balFloor = await openScene(browser, '/?q=balanced&view=floor&floor=F12')
-    const balancedF12 = await sampleIdle(balFloor, browser, 8)
-    await balFloor.close()
-
-    console.error('  perf F12')
-    const perfFloor = await openScene(browser, '/?q=perf&view=floor&floor=F12')
-    const perfF12 = await sampleIdle(perfFloor, browser, 8)
-    await perfFloor.close()
+    async function scene(name, path, seconds, hide = false) {
+      console.error(`  ${name}`)
+      try {
+        const page = await openScene(browser, path)
+        const row = await sampleIdle(page, browser, seconds, hide)
+        await page.close()
+        return row
+      } catch (error) {
+        console.error(`  ${name} FAIL`, error.message)
+        return { error: error.message, expectedHz: null, glFps: null, useFrameFps: null, cpu: null }
+      }
+    }
+    const autoOverview = await scene('auto overview', '/', 8)
+    const hidden = await scene('hidden', '/', 4, true)
+    const balancedOverview = await scene('balanced overview', '/?q=balanced', 8)
+    const autoF12 = await scene('auto F12', '/?view=floor&floor=F12', 8)
+    const balancedF12 = await scene('balanced F12', '/?q=balanced&view=floor&floor=F12', 8)
+    const perfF12 = await scene('perf F12', '/?q=perf&view=floor&floor=F12', 8)
 
     await browser.close()
     idles.push({ autoOverview, balancedOverview, hidden, autoF12, balancedF12, perfF12 })
