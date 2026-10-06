@@ -264,7 +264,7 @@ function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, num
 }
 
 export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
-  const { camera, scene, size, pointer } = useThree()
+  const { camera, scene, size, pointer, invalidate } = useThree()
   const [fontSize, setFontSize] = useState(0)
   const sizedRef = useRef(false)
   const pxRef = useRef(0)
@@ -285,6 +285,63 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const points = labels.flatMap((label) => [label.anchor, label.label])
   cameraRef.current = camera
   sizeRef.current = size
+
+  const stripLiveOverlaps = (perspective: PerspectiveCamera, viewport: { width: number; height: number }, keepTier2: boolean) => {
+    const api = measureRef.current
+    if (!api?.ready || !packedRef.current) return false
+    let live = api.measureVisible(perspective, viewport)
+    if (live.length === 0) return false
+    const byId = { ...layoutRef.current.byId }
+    const clusters = { ...layoutRef.current.clusters }
+    const tierOf = (id: string) => {
+      if (id.startsWith('cluster:')) {
+        const key = id.slice('cluster:'.length)
+        const member = labels.find((label) => label.text === key)
+        return member ? classifyRoomLabel(member.sourceName ?? member.text, member.area ?? 0).tier : 3
+      }
+      const label = labels.find((item) => item.id === id)
+      return label ? classifyRoomLabel(label.sourceName ?? label.text, label.area ?? 0).tier : 3
+    }
+    for (let pass = 0; pass < 12; pass += 1) {
+      if (countOverlapKinds(live.map((row) => row.box)).strong === 0) break
+      let left = live[0]
+      let right = live[1]
+      let found = false
+      for (let i = 0; i < live.length && !found; i += 1) {
+        for (let j = i + 1; j < live.length; j += 1) {
+          const { ox, oy } = overlapDepth(live[i]!.box, live[j]!.box)
+          if (ox > 2 && oy > 2) {
+            left = live[i]
+            right = live[j]
+            found = true
+            break
+          }
+        }
+      }
+      if (!found || !left || !right) break
+      if (left.text === right.text && !left.id.startsWith('cluster:') && !right.id.startsWith('cluster:')) {
+        const key = left.text
+        byId[left.id] = { ...byId[left.id]!, visible: false, cluster: key }
+        byId[right.id] = { ...byId[right.id]!, visible: false, cluster: key }
+        if (clusters[key]) clusters[key] = { ...clusters[key]!, visible: true }
+        live = live.filter((row) => row.id !== left.id && row.id !== right.id)
+        continue
+      }
+      const drop = pickOverlapVictim(left, right, tierOf, keepTier2)
+      if (keepTier2 && !drop.startsWith('cluster:') && tierOf(drop) === 2) break
+      if (drop.startsWith('cluster:')) {
+        const key = drop.slice('cluster:'.length)
+        if (clusters[key]) clusters[key] = { ...clusters[key]!, visible: false }
+      } else if (byId[drop]) {
+        byId[drop] = { ...byId[drop]!, visible: false, cluster: null }
+      } else break
+      live = live.filter((row) => row.id !== drop)
+    }
+    layoutRef.current = { byId, clusters }
+    packRef.current = { byId, clusters }
+    stripRef.current = false
+    return true
+  }
 
   useEffect(() => {
     sizedRef.current = false
@@ -548,66 +605,23 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         maxPx: LABEL_MAX_PX,
         distance: nearest,
       }
+      invalidate()
+      const view = { width: size.width, height: size.height }
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          stripLiveOverlaps(perspective, view, keepTier2)
+          invalidate()
+        })
+      })
       return
     }
     if (stripRef.current && !dragging && api?.ready && packedRef.current) {
       const keepTier2 = Math.max(size.width, window.innerWidth || 0) >= 1366
-      let live = api.measureVisible(perspective, size)
-      if (live.length === 0) return
-      const byId = { ...layoutRef.current.byId }
-      const clusters = { ...layoutRef.current.clusters }
-      const tierOf = (id: string) => {
-        if (id.startsWith('cluster:')) {
-          const key = id.slice('cluster:'.length)
-          const member = labels.find((label) => label.text === key)
-          return member ? classifyRoomLabel(member.sourceName ?? member.text, member.area ?? 0).tier : 3
-        }
-        const label = labels.find((item) => item.id === id)
-        return label ? classifyRoomLabel(label.sourceName ?? label.text, label.area ?? 0).tier : 3
+      if (!stripLiveOverlaps(perspective, size, keepTier2)) {
+        invalidate()
+        return
       }
-      for (let pass = 0; pass < 12; pass += 1) {
-        if (countOverlapKinds(live.map((row) => row.box)).strong === 0) break
-        let left = live[0]
-        let right = live[1]
-        let found = false
-        for (let i = 0; i < live.length && !found; i += 1) {
-          for (let j = i + 1; j < live.length; j += 1) {
-            const { ox, oy } = overlapDepth(live[i]!.box, live[j]!.box)
-            if (ox > 2 && oy > 2) {
-              left = live[i]
-              right = live[j]
-              found = true
-              break
-            }
-          }
-        }
-        if (!found || !left || !right) break
-        if (
-          keepTier2 &&
-          left.text === right.text &&
-          !left.id.startsWith('cluster:') &&
-          !right.id.startsWith('cluster:')
-        ) {
-          const key = left.text
-          byId[left.id] = { ...byId[left.id]!, visible: false, cluster: key }
-          byId[right.id] = { ...byId[right.id]!, visible: false, cluster: key }
-          if (clusters[key]) clusters[key] = { ...clusters[key]!, visible: true }
-          live = live.filter((row) => row.id !== left.id && row.id !== right.id)
-          continue
-        }
-        const drop = pickOverlapVictim(left, right, tierOf, keepTier2)
-        if (keepTier2 && !drop.startsWith('cluster:') && tierOf(drop) === 2) break
-        if (drop.startsWith('cluster:')) {
-          const key = drop.slice('cluster:'.length)
-          if (clusters[key]) clusters[key] = { ...clusters[key]!, visible: false }
-        } else if (byId[drop]) {
-          byId[drop] = { ...byId[drop]!, visible: false, cluster: null }
-        } else break
-        live = live.filter((row) => row.id !== drop)
-      }
-      layoutRef.current = { byId, clusters }
-      packRef.current = { byId, clusters }
-      stripRef.current = false
+      invalidate()
       return
     }
     const pointerX = (pointer.x * 0.5 + 0.5) * size.width
