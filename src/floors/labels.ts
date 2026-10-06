@@ -1,4 +1,5 @@
 import type { RoomLabel } from '../scene/stage/roomLabels'
+import { listTier2Rooms, roomAreaM2 } from './labelTier'
 import type { FloorPlan, FloorRoom } from './types'
 
 const PRIORITY = [
@@ -108,6 +109,26 @@ export function roomLabelFilterStats(plan: FloorPlan): RoomLabelFilterStats {
   }
 }
 
+export function tier2RoomsFromPlan(plan: FloorPlan) {
+  return listTier2Rooms(roomNamesFromPlan(plan)).map((row) => ({
+    id: `${plan.floorId}:${row.id}`,
+    name: row.name,
+    area: row.area,
+    rule: row.rule,
+  }))
+}
+
+export const TIER2_REF_COUNTS: Record<string, number> = {
+  F1: 28,
+  F2: 35,
+  F3: 29,
+  F4: 24,
+  F5: 20,
+  F6: 17,
+  F7: 14,
+  F8: 4,
+}
+
 export function roomLabelsFromPlan(plan: FloorPlan): RoomLabel[] {
   const rooms = roomNamesFromPlan(plan)
   const used = new Set<string>()
@@ -119,9 +140,10 @@ export function roomLabelsFromPlan(plan: FloorPlan): RoomLabel[] {
     return {
       id,
       text: displayName(room.name),
+      sourceName: room.name,
       anchor: [x, 2.05, z] as [number, number, number],
       label: [x, 3.2, z] as [number, number, number],
-      area: ringArea(room.polygon),
+      area: roomAreaM2(room.name, ringArea(room.polygon), room.labelArea_m2),
       polygon: room.polygon,
     }
   })

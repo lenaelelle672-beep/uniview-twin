@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { getFloorPlan } from '../../floors/cache'
 import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
+import { classifyRoomLabel } from '../../floors/labelTier'
 import { displayName, roomLabelsFromPlan } from '../../floors/labels'
 import {
   LABEL_MAX_OFFSET,
@@ -8,6 +9,7 @@ import {
   clusterLabelText,
   clusterTemplates,
   labelScreenBox,
+  tier2Stats,
   zoomAvoidItems,
 } from './labelAvoidance'
 
@@ -23,7 +25,8 @@ function planItems(floorId: string, width = 1366, height = 768) {
   const maxZ = Math.max(...zs)
   const pad = 48
   return labels.map((label) => {
-    const box = labelScreenBox(label.text, 14)
+    const box = labelScreenBox(label.text, 16)
+    const cls = classifyRoomLabel(label.sourceName ?? label.text, label.area ?? 0)
     return {
       id: label.id,
       text: label.text,
@@ -31,9 +34,10 @@ function planItems(floorId: string, width = 1366, height = 768) {
       y: pad + ((label.label[2] - minZ) / (maxZ - minZ || 1)) * (height - pad * 2),
       w: box.w,
       h: box.h,
-      priority: 3,
+      priority: cls.tier,
       locked: false,
-      area: label.area ?? 0,
+      area: cls.area,
+      tier: cls.tier,
     }
   })
 }
@@ -45,7 +49,7 @@ describe('房间标签避让', () => {
     expect(displayName('会议室A1')).toBe('会议室A1')
     const box = labelScreenBox('丙类公共事务部礼品房', 13)
     expect(box.h).toBeGreaterThan(13)
-    expect(box.h).toBeLessThanOrEqual(13 * 1.2 * 2 + 16)
+    expect(box.h).toBeLessThanOrEqual(13 * 1.25 * 2 + 24)
   })
 
   it('同名先合并，拉开后拆回，合组用 ASCII x', () => {
@@ -116,6 +120,13 @@ describe('房间标签避让', () => {
         }
         for (const cluster of result.clusters) {
           expect(Math.hypot(cluster.offsetX, cluster.offsetY), cluster.key).toBeLessThanOrEqual(LABEL_MAX_OFFSET)
+        }
+        if (width >= 1366 && ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8'].includes(floorId)) {
+          const items = planItems(floorId, width)
+          const tier = tier2Stats(items, result)
+          const minorHidden = result.hidden - tier.hidden
+          expect(tier.visible, `${floorId}@${width} tier2`).toBeGreaterThan(0)
+          expect(minorHidden, `${floorId}@${width} hide minor first`).toBeGreaterThanOrEqual(tier.hidden)
         }
       }
     }

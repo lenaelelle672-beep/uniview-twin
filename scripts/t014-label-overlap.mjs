@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 /**
- * D245 / D246：
- * 1. F1–F8 × 1024/1366/1920 默认视角：overlapPairs=0，maxOffset≤48，hiddenAfterZoom=0。
- * 2. 截图：F3 1366 默认+拉近 × balanced/perf × 白天/夜间（8）+ F12 1366 默认。
- * 3. F1–F8、F14 两档 console / 外网。
+ * D247 / D248 / D249：
+ * 1. F1–F8 × 1024/1366/1920：独立测量 overlapPairs=0，maxOffset≤48，hiddenAfterZoom=0。
+ * 2. 1366/1920 第二级全可见；1024 报告隐藏数。
+ * 3. 拉近三档（默认/中间/最近）可见数递增。
+ * 4. 字高：1366/1920 = 16±1，1024 ≥15。
+ * 5. 进层 sync ≤2。截图 8 + 中间档 + F12。
  *
  * 用法：node scripts/t014-label-overlap.mjs [baseUrl]
  */
@@ -20,6 +22,11 @@ const WIDTHS = [1024, 1366, 1920]
 const OVERLAP_FLOORS = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']
 const CONSOLE_FLOORS = [...OVERLAP_FLOORS, 'F14']
 const MAX_OFFSET = 48
+const ZOOM_STEPS = [
+  { name: 'default', factor: 1 },
+  { name: 'mid', factor: 0.48 },
+  { name: 'close', factor: 0.18 },
+]
 
 function chromePath() {
   return (
@@ -56,11 +63,23 @@ async function waitOverlap(page) {
       window.__twinView === 'floor' &&
       window.__twinLabelOverlap &&
       typeof window.__twinLabelOverlap.overlapPairs === 'number' &&
-      typeof window.__twinLabelOverlap.maxOffset === 'number',
+      typeof window.__twinLabelOverlap.maxOffset === 'number' &&
+      window.__twinLabelOverlap.tier2,
     { timeout: 60_000 },
   )
-  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1000)))
-  return page.evaluate(() => structuredClone(window.__twinLabelOverlap))
+  await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 900)))
+  return page.evaluate(() =>
+    structuredClone({
+      overlap: window.__twinLabelOverlap,
+      px: window.__twinLabelPx,
+      syncs: window.__twinLabelSyncs ?? 0,
+      syncMs:
+        window.__twinLabelReadyAt && window.__twinLabelSyncStartedAt
+          ? window.__twinLabelReadyAt - window.__twinLabelSyncStartedAt
+          : window.__twinLabelPackMs ?? null,
+      distance: window.__twinRig?.distance ?? null,
+    }),
+  )
 }
 
 async function enterFloor(page, floorId) {
@@ -74,15 +93,15 @@ async function leaveFloor(page) {
   await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 240)))
 }
 
-async function zoomIn(page, factor = 0.18) {
+async function zoomTo(page, factor) {
   return page.evaluate((scale) => {
     const rig = window.__twinRig
     if (!rig) return { ok: false, reason: 'no __twinRig' }
-    const before = rig.distance
-    const next = Math.max(rig.minDistance || 8, before * scale)
+    if (!window.__twinDefaultDistance) window.__twinDefaultDistance = rig.distance
+    const next = Math.max(rig.minDistance || 8, window.__twinDefaultDistance * scale)
     void rig.dollyTo(next, false)
     rig.update(0)
-    return { ok: true, before, next, after: rig.distance }
+    return { ok: true, next, after: rig.distance, syncs: window.__twinLabelSyncs ?? 0 }
   }, factor)
 }
 
@@ -109,14 +128,27 @@ async function openPage(browser, quality, width) {
   return { page, consoles, external }
 }
 
-function summarize(def) {
+function summarize(bundle) {
+  const def = bundle.overlap
+  const tier = def.tier2 ?? { visible: 0, total: 0, hidden: 0 }
   return {
     overlapPairs: def.overlapPairs,
     maxOffset: Number(def.maxOffset?.toFixed?.(2) ?? def.maxOffset),
     merged: def.merged,
     hidden: def.hidden,
     hiddenAfterZoom: def.hiddenAfterZoom,
+    tier2Visible: tier.visible,
+    tier2Total: tier.total,
+    tier2Hidden: tier.hidden,
     visible: def.visible?.length ?? 0,
+    px: bundle.px?.px ?? null,
+    syncs: bundle.syncs,
+    syncMs: bundle.syncMs,
+    pairs: def.pairs ?? [],
+    region: (def.region ?? []).map((row) => ({
+      text: row.text,
+      box: row.box,
+    })),
   }
 }
 
@@ -125,18 +157,47 @@ async function main() {
   const browser = await launch()
   const report = {
     overlap: {},
+    zoomLadder: {},
+    fontPx: {},
+    syncs: {},
     shots: [],
     consoles: {},
     external: {},
+    regionF3: null,
   }
 
   for (const width of WIDTHS) {
     const { page, consoles, external } = await openPage(browser, 'balanced', width)
     report.overlap[width] = {}
+    report.zoomLadder[width] = {}
+    report.fontPx[width] = {}
+    report.syncs[width] = {}
     for (const floorId of OVERLAP_FLOORS) {
       await enterFloor(page, floorId)
-      const def = await waitOverlap(page)
-      report.overlap[width][floorId] = summarize(def)
+      await page.evaluate(() => {
+        window.__twinDefaultDistance = undefined
+      })
+      const ladder = []
+      for (const step of ZOOM_STEPS) {
+        if (step.factor !== 1) await zoomTo(page, step.factor)
+        const bundle = await waitOverlap(page)
+        const row = { ...summarize(bundle), step: step.name, factor: step.factor, distance: bundle.distance }
+        ladder.push(row)
+        if (step.name === 'default') {
+          report.overlap[width][floorId] = row
+          report.fontPx[width][floorId] = row.px
+          report.syncs[width][floorId] = { syncs: row.syncs, syncMs: row.syncMs }
+          if (width === 1366 && floorId === 'F3') report.regionF3 = { pairs: row.pairs, region: row.region }
+        }
+      }
+      report.zoomLadder[width][floorId] = ladder.map((row) => ({
+        step: row.step,
+        visible: row.visible,
+        hidden: row.hidden,
+        tier2Visible: row.tier2Visible,
+        tier2Total: row.tier2Total,
+        syncs: row.syncs,
+      }))
       await leaveFloor(page)
     }
     if (width === 1366) {
@@ -183,12 +244,24 @@ async function main() {
     await enterFloor(page, 'F3')
     await waitOverlap(page)
     if (spec.zoom) {
-      await zoomIn(page, 0.22)
+      await zoomTo(page, 0.22)
       await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)))
     }
     const path = resolve(outDir, `${spec.name}.png`)
     await page.screenshot({ path })
     report.shots.push(path)
+    await page.close()
+  }
+
+  {
+    const { page } = await openPage(browser, 'balanced', 1366)
+    await enterFloor(page, 'F3')
+    await waitOverlap(page)
+    await zoomTo(page, 0.48)
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 800)))
+    const mid = resolve(outDir, 'F3_1366_mid_balanced_day.png')
+    await page.screenshot({ path: mid })
+    report.shots.push(mid)
     await page.close()
   }
 
@@ -202,13 +275,42 @@ async function main() {
     await page.close()
   }
 
+  {
+    const { page } = await openPage(browser, 'balanced', 1366)
+    await enterFloor(page, 'F1')
+    await waitOverlap(page)
+    const before = await page.evaluate(() => window.__twinLabelSyncs ?? 0)
+    await zoomTo(page, 0.48)
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)))
+    await zoomTo(page, 0.18)
+    await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 400)))
+    const after = await page.evaluate(() => window.__twinLabelSyncs ?? 0)
+    report.f1ZoomSyncs = { before, after }
+    await page.close()
+  }
+
   const failed = []
   for (const width of WIDTHS) {
     for (const floorId of OVERLAP_FLOORS) {
       const row = report.overlap[width][floorId]
-      if (row.overlapPairs !== 0) failed.push(`${floorId}@${width} overlapPairs=${row.overlapPairs}`)
+      if (row.overlapPairs !== 0) failed.push(`${floorId}@${width} overlapPairs=${row.overlapPairs} ${JSON.stringify(row.pairs)}`)
       if (row.hiddenAfterZoom !== 0) failed.push(`${floorId}@${width} hiddenAfterZoom=${row.hiddenAfterZoom}`)
       if (row.maxOffset > MAX_OFFSET) failed.push(`${floorId}@${width} maxOffset=${row.maxOffset}`)
+      if (width >= 1366 && row.tier2Hidden > 0) {
+        failed.push(`${floorId}@${width} tier2 ${row.tier2Visible}/${row.tier2Total}`)
+      }
+      const px = row.px
+      if (typeof px === 'number') {
+        if (width === 1024 && px < 15) failed.push(`${floorId}@${width} px=${px}`)
+        if (width >= 1366 && (px < 15 || px > 17)) failed.push(`${floorId}@${width} px=${px}`)
+      }
+      if (row.syncs > 2) failed.push(`${floorId}@${width} syncs=${row.syncs}`)
+      const ladder = report.zoomLadder[width][floorId]
+      if (ladder && ladder.length === 3) {
+        if (ladder[1].visible < ladder[0].visible && ladder[2].visible < ladder[1].visible) {
+          failed.push(`${floorId}@${width} zoom not gradual ${ladder.map((item) => item.visible).join('>')}`)
+        }
+      }
     }
   }
   report.failed = failed
@@ -219,7 +321,25 @@ async function main() {
       {
         out,
         failed,
-        overlap: report.overlap,
+        overlap: Object.fromEntries(
+          WIDTHS.map((width) => [
+            width,
+            Object.fromEntries(
+              OVERLAP_FLOORS.map((floorId) => {
+                const row = report.overlap[width][floorId]
+                return [
+                  floorId,
+                  `${row.overlapPairs}/${row.maxOffset}/${row.merged}/${row.hidden}/${row.tier2Visible}/${row.tier2Total}/${row.hiddenAfterZoom}`,
+                ]
+              }),
+            ),
+          ]),
+        ),
+        zoomLadder: report.zoomLadder,
+        fontPx: report.fontPx,
+        syncs: report.syncs,
+        f1ZoomSyncs: report.f1ZoomSyncs,
+        regionF3: report.regionF3,
         shots: report.shots,
         consoles: Object.fromEntries(Object.entries(report.consoles).map(([key, rows]) => [key, rows.length])),
         external: Object.fromEntries(Object.entries(report.external).map(([key, rows]) => [key, rows.length])),

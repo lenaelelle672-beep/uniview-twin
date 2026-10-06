@@ -43,6 +43,10 @@ export interface AvoidItem {
   priority: number
   locked: boolean
   area: number
+  /** 楼层数据分级：2 主要房间，3 小房间/辅助用房。第一级只用 locked。 */
+  tier?: 2 | 3
+  /** 组标签若已有 troika 实测盒，优先用它。 */
+  clusterBox?: { w: number; h: number }
 }
 
 export interface AvoidBox {
@@ -108,20 +112,37 @@ export function clusterLabelText(name: string, count: number): string {
   return `${name} x${count}`
 }
 
-export function labelScreenBox(text: string, px: number): { w: number; h: number } {
-  const em = Math.max(px, 1)
+function wrapMetrics(text: string, em: number): { longest: number; lines: number } {
   const maxW = LABEL_MAX_EMS * em
   const parts = text.split('\n')
   let lines = 0
   let longest = 0
   for (const part of parts) {
-    const raw = Math.max(part.length, 1) * em * 1.05
+    const raw = Math.max(part.length, 1) * em * 1.12
     longest = Math.max(longest, Math.min(maxW, raw))
     lines += Math.min(2, Math.max(1, Math.ceil(raw / maxW)))
   }
-  lines = Math.min(2, Math.max(1, lines))
-  const grow = PAD + 3
-  return { w: longest + grow * 2, h: lines * em * 1.2 + grow * 2 }
+  return { longest, lines: Math.min(2, Math.max(1, lines)) }
+}
+
+export function labelScreenBox(text: string, px: number): { w: number; h: number } {
+  const em = Math.max(px, 1)
+  const { longest, lines } = wrapMetrics(text, em)
+  const outline = Math.max(0.5, em * 0.055)
+  const grow = PAD + 3 + outline
+  return { w: longest + grow * 2, h: lines * em * 1.25 + grow * 2 }
+}
+
+/** 与 troika 成员网格一致：XY 平面、居中锚点，含描边。单位与 fontSize 相同。 */
+export function labelWorldSize(text: string, fontSize: number, outlineWidth = 0): { w: number; h: number } {
+  const em = Math.max(fontSize, 1e-4)
+  const { longest, lines } = wrapMetrics(text, em)
+  return { w: longest + outlineWidth * 2, h: lines * em * 1.25 + outlineWidth * 2 }
+}
+
+export function itemTier(item: Pick<AvoidItem, 'tier' | 'priority' | 'locked'>): 2 | 3 {
+  if (item.tier === 2 || item.tier === 3) return item.tier
+  return item.priority <= 2 && !item.locked ? 2 : 3
 }
 
 export function countVisibleOverlapPairs(boxes: readonly AvoidBox[]): number {
@@ -264,75 +285,111 @@ export function zoomAvoidItems(items: readonly AvoidItem[], factor = LABEL_ZOOM_
     const [dx, dy] = ZOOM_DIRS[slot % 8]!
     return { ...item, x: item.x + dx * ring * 72, y: item.y + dy * ring * 72 }
   })
-  return separateZoomed(spread)
+  if (factor >= LABEL_ZOOM_FACTOR) return separateZoomed(spread)
+  return spread
+}
+
+function dropScore(
+  entry: { id: string; cluster: boolean },
+  locked: Set<string>,
+  byId: Map<string, AvoidItem>,
+  placements: AvoidPlacement[],
+): number {
+  if (!entry.cluster && locked.has(entry.id)) return -100
+  if (entry.cluster) {
+    const key = entry.id.slice('cluster:'.length)
+    const prios = placements.filter((row) => row.cluster === key).map((row) => byId.get(row.id)?.priority ?? itemTier(byId.get(row.id) ?? { priority: 3, locked: false }))
+    return Math.max(20, ...prios.map((prio) => (prio <= 1 ? 1 : prio === 2 ? 21 : 31)))
+  }
+  const item = byId.get(entry.id)
+  if (!item) return 30
+  if (item.locked) return -100
+  return itemTier(item) === 2 ? 20 : 30
 }
 
 function packLabels(items: readonly AvoidItem[]): Omit<AvoidResult, 'hiddenAfterZoom'> {
-  const sorted = items.slice().sort((a, b) => a.priority - b.priority || b.area - a.area || a.id.localeCompare(b.id))
+  const byId = new Map(items.map((item) => [item.id, item]))
   const placements: AvoidPlacement[] = []
   const occupied: AvoidBox[] = []
   const clusters: AvoidCluster[] = []
   const claimed = new Set<string>()
 
-  const grouped = sameNameGroups(sorted)
-    .map((group) => group.filter((row) => !row.locked && !claimed.has(row.id)))
-    .filter((members) => members.length >= 2)
-    .sort((a, b) => b.length - a.length || b[0]!.area - a[0]!.area)
-  const clusteredName = new Set<string>()
-  for (const members of grouped) {
-    const key = members[0]!.text
-    if (clusteredName.has(key)) continue
-    const cx = members.reduce((sum, row) => sum + row.x, 0) / members.length
-    const cy = members.reduce((sum, row) => sum + row.y, 0) / members.length
-    const text = clusterLabelText(key, members.length)
-    const size = labelScreenBox(text, Math.max(members[0]!.h, 14))
-    const dummy: AvoidItem = { ...members[0]!, id: `cluster:${key}`, x: cx, y: cy, w: size.w, h: size.h }
-    const fit = firstFree(dummy, occupied)
-    if (!fit) continue
-    clusteredName.add(key)
-    occupied.push(fit.box)
-    clusters.push({
-      key,
-      text,
-      ids: members.map((row) => row.id),
-      x: cx + fit.ox,
-      y: cy + fit.oy,
-      offsetX: fit.ox,
-      offsetY: fit.oy,
-      box: fit.box,
-    })
-    for (const row of members) {
-      claimed.add(row.id)
-      placements.push({
-        id: row.id,
-        visible: false,
-        cluster: key,
-        offsetX: 0,
-        offsetY: 0,
+  const placeClusters = (candidates: AvoidItem[]) => {
+    const grouped = sameNameGroups(candidates)
+      .map((group) => group.filter((row) => !row.locked && !claimed.has(row.id)))
+      .filter((members) => members.length >= 2)
+      .sort((a, b) => b.length - a.length || b[0]!.area - a[0]!.area)
+    const clusteredName = new Set<string>()
+    for (const members of grouped) {
+      const key = members[0]!.text
+      if (clusteredName.has(key)) continue
+      const cx = members.reduce((sum, row) => sum + row.x, 0) / members.length
+      const cy = members.reduce((sum, row) => sum + row.y, 0) / members.length
+      const text = clusterLabelText(key, members.length)
+      const em = Math.max(14, Math.min(members[0]!.h, members[0]!.w / Math.max(members[0]!.text.length, 1)))
+      const size = members[0]!.clusterBox ?? labelScreenBox(text, em)
+      const dummy: AvoidItem = { ...members[0]!, id: `cluster:${key}`, x: cx, y: cy, w: size.w, h: size.h }
+      const fit = firstFree(dummy, occupied)
+      if (!fit) continue
+      clusteredName.add(key)
+      occupied.push(fit.box)
+      clusters.push({
+        key,
+        text,
+        ids: members.map((row) => row.id),
+        x: cx + fit.ox,
+        y: cy + fit.oy,
+        offsetX: fit.ox,
+        offsetY: fit.oy,
         box: fit.box,
       })
+      for (const row of members) {
+        claimed.add(row.id)
+        placements.push({
+          id: row.id,
+          visible: false,
+          cluster: key,
+          offsetX: 0,
+          offsetY: 0,
+          box: fit.box,
+        })
+      }
     }
   }
 
-  for (const item of sorted) {
-    if (claimed.has(item.id)) continue
-    const fit = firstFree(item, occupied)
-    if (fit) {
+  const placeItems = (candidates: AvoidItem[], keep: boolean) => {
+    const sorted = candidates
+      .slice()
+      .sort((a, b) => a.priority - b.priority || b.area - a.area || a.id.localeCompare(b.id))
+    for (const item of sorted) {
+      if (claimed.has(item.id)) continue
+      const fit = firstFree(item, occupied)
+      if (fit) {
+        claimed.add(item.id)
+        occupied.push(fit.box)
+        placements.push({ id: item.id, visible: true, cluster: null, offsetX: fit.ox, offsetY: fit.oy, box: fit.box })
+        continue
+      }
+      if (keep || item.locked) {
+        const box = boxAt(item, 0, 0)
+        claimed.add(item.id)
+        occupied.push(box)
+        placements.push({ id: item.id, visible: true, cluster: null, offsetX: 0, offsetY: 0, box })
+        continue
+      }
       claimed.add(item.id)
-      occupied.push(fit.box)
-      placements.push({ id: item.id, visible: true, cluster: null, offsetX: fit.ox, offsetY: fit.oy, box: fit.box })
-      continue
+      placements.push({ id: item.id, visible: false, cluster: null, offsetX: 0, offsetY: 0, box: boxAt(item, 0, 0) })
     }
-    if (item.locked) {
-      const box = boxAt(item, 0, 0)
-      claimed.add(item.id)
-      occupied.push(box)
-      placements.push({ id: item.id, visible: true, cluster: null, offsetX: 0, offsetY: 0, box })
-      continue
-    }
-    claimed.add(item.id)
-    placements.push({ id: item.id, visible: false, cluster: null, offsetX: 0, offsetY: 0, box: boxAt(item, 0, 0) })
   }
+
+  const lockedItems = items.filter((item) => item.locked)
+  const major = items.filter((item) => !item.locked && itemTier(item) === 2)
+  const minor = items.filter((item) => !item.locked && itemTier(item) !== 2)
+  placeItems(lockedItems, true)
+  placeClusters(major)
+  placeItems(major, false)
+  placeClusters(minor)
+  placeItems(minor, false)
 
   const locked = new Set(items.filter((item) => item.locked).map((item) => item.id))
   const vis = () => [
@@ -342,29 +399,35 @@ function packLabels(items: readonly AvoidItem[]): Omit<AvoidResult, 'hiddenAfter
   for (let pass = 0; pass < 4; pass += 1) {
     const shown = vis()
     let changed = false
+    let worst: { entry: (typeof shown)[number]; score: number } | null = null
     for (let i = 0; i < shown.length; i += 1) {
       for (let j = i + 1; j < shown.length; j += 1) {
         if (!boxesOverlap(shown[i]!.box, shown[j]!.box, 0)) continue
-        const drop = !shown[j]!.cluster && !locked.has(shown[j]!.id) ? shown[j]! : !shown[i]!.cluster && !locked.has(shown[i]!.id) ? shown[i]! : shown[j]!.cluster ? shown[j]! : shown[i]!.cluster ? shown[i]! : null
-        if (!drop) continue
-        if (drop.cluster) {
-          const key = drop.id.slice('cluster:'.length)
-          const index = clusters.findIndex((row) => row.key === key)
-          if (index >= 0) clusters.splice(index, 1)
-          for (const row of placements) {
-            if (row.cluster === key) {
-              row.cluster = null
-              row.visible = false
-            }
-          }
-          changed = true
-          continue
-        }
-        const row = placements.find((item) => item.id === drop.id)
-        if (row && row.visible) {
+        const left = { id: shown[i]!.id, cluster: shown[i]!.cluster, score: dropScore(shown[i]!, locked, byId, placements) }
+        const right = { id: shown[j]!.id, cluster: shown[j]!.cluster, score: dropScore(shown[j]!, locked, byId, placements) }
+        const pick = left.score >= right.score ? left : right
+        if (pick.score < 0) continue
+        if (!worst || pick.score > worst.score) worst = { entry: pick.score === left.score ? shown[i]! : shown[j]!, score: pick.score }
+      }
+    }
+    if (!worst) break
+    const drop = worst.entry
+    if (drop.cluster) {
+      const key = drop.id.slice('cluster:'.length)
+      const index = clusters.findIndex((row) => row.key === key)
+      if (index >= 0) clusters.splice(index, 1)
+      for (const row of placements) {
+        if (row.cluster === key) {
+          row.cluster = null
           row.visible = false
-          changed = true
         }
+      }
+      changed = true
+    } else {
+      const row = placements.find((item) => item.id === drop.id)
+      if (row && row.visible) {
+        row.visible = false
+        changed = true
       }
     }
     if (!changed) break
@@ -381,10 +444,53 @@ function packLabels(items: readonly AvoidItem[]): Omit<AvoidResult, 'hiddenAfter
   return { placements, clusters, merged, hidden, overlapPairs, maxOffset }
 }
 
-export function avoidLabels(items: readonly AvoidItem[]): AvoidResult {
+export function avoidLabels(items: readonly AvoidItem[], clusterSizes?: Record<string, { w: number; h: number }>): AvoidResult {
+  if (clusterSizes) {
+    for (const item of items) {
+      const size = clusterSizes[item.text]
+      if (size) item.clusterBox = size
+    }
+  }
   const packed = packLabels(items)
   const zoomed = packLabels(zoomAvoidItems(items))
   return { ...packed, hiddenAfterZoom: zoomed.hidden }
+}
+
+export function tier2Stats(items: readonly AvoidItem[], result: Pick<AvoidResult, 'placements'>): { visible: number; total: number; hidden: number } {
+  let visible = 0
+  let total = 0
+  let hidden = 0
+  const byId = new Map(result.placements.map((row) => [row.id, row]))
+  for (const item of items) {
+    if (itemTier(item) !== 2) continue
+    total += 1
+    const row = byId.get(item.id)
+    if (row && (row.visible || row.cluster)) visible += 1
+    else hidden += 1
+  }
+  return { visible, total, hidden }
+}
+
+export const LABEL_ZOOM_STEPS = [
+  { name: 'default' as const, factor: 1 },
+  { name: 'mid' as const, factor: 2.4 },
+  { name: 'close' as const, factor: LABEL_ZOOM_FACTOR },
+]
+
+export function zoomVisibilityLadder(items: readonly AvoidItem[]) {
+  return LABEL_ZOOM_STEPS.map((step) => {
+    const packed = step.factor === 1 ? packLabels(items) : packLabels(zoomAvoidItems(items, step.factor))
+    const shown = packed.placements.filter((row) => row.visible).length + packed.clusters.length
+    const tier = tier2Stats(items, packed)
+    return {
+      name: step.name,
+      factor: step.factor,
+      visibleLabels: shown,
+      hidden: packed.hidden,
+      tier2Visible: tier.visible,
+      tier2Total: tier.total,
+    }
+  })
 }
 
 export function clusterTemplates(labels: ReadonlyArray<{ id: string; text: string; label: [number, number, number] }>) {

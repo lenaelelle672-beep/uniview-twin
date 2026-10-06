@@ -56,24 +56,24 @@ describe('房间引线标签', () => {
     expect(new Set(basement.map((label) => label.id)).size).toBe(basement.length)
   })
 
-  it('远机位把世界字号抬到至少 13 px', () => {
-    const far = worldFontSizeForDistance(180, 768, 48, 13)
-    const near = worldFontSizeForDistance(18, 768, 48, 13)
+  it('远机位把世界字号抬到至少 15 px', () => {
+    const far = worldFontSizeForDistance(180, 768, 48, 15)
+    const near = worldFontSizeForDistance(18, 768, 48, 15)
     const farPx = far / ((2 * Math.tan((48 * Math.PI) / 360) * 180) / 768)
     expect(far).toBeGreaterThan(near)
-    expect(farPx).toBeGreaterThanOrEqual(12.5)
+    expect(farPx).toBeGreaterThanOrEqual(14.5)
   })
 
-  it('特写时屏幕字号不超过 16 px，下限仍 ≥13 px', () => {
-    expect(LABEL_MAX_PX).toBe(16)
-    expect(LABEL_MIN_PX).toBe(13)
+  it('特写时屏幕字号不超过 17 px，下限仍 ≥15 px', () => {
+    expect(LABEL_MAX_PX).toBe(17)
+    expect(LABEL_MIN_PX).toBe(15)
     const close = worldFontSizeForDistance(8, 712, 42)
     const closePx = close / ((2 * Math.tan((42 * Math.PI) / 360) * 8) / 712)
-    expect(closePx).toBeLessThanOrEqual(16.05)
+    expect(closePx).toBeLessThanOrEqual(17.05)
     const mid = worldFontSizeForDistance(40, 768, 48)
     const midPx = mid / ((2 * Math.tan((48 * Math.PI) / 360) * 40) / 768)
-    expect(midPx).toBeGreaterThanOrEqual(12.5)
-    expect(midPx).toBeLessThanOrEqual(16.05)
+    expect(midPx).toBeGreaterThanOrEqual(14.5)
+    expect(midPx).toBeLessThanOrEqual(17.05)
   })
 
   it('目标附近的标签降透明度，远处保持不透明', () => {
@@ -86,7 +86,8 @@ describe('房间引线标签', () => {
     const frame = source.slice(source.lastIndexOf('useFrame'))
     expect(frame).toMatch(/applyMemberFades/)
     expect(frame).not.toMatch(/applyMemberFades[\s\S]{0,180}\.sync\(/)
-    expect(source.match(/batch\??\.sync/g)?.length).toBe(2)
+    expect(source.match(/\.sync\(/g)?.length).toBeGreaterThanOrEqual(1)
+    expect(source).toMatch(/bumpSync/)
   })
 
   it('换行用 maxWidth + break-word，不用 clipRect', () => {
@@ -105,17 +106,17 @@ describe('房间引线标签', () => {
       outline: ROOM_LABEL_OUTLINE_COLOR_BALANCED,
     })
     expect(roomLabelColors('high').color).toBe(ROOM_LABEL_COLOR_BALANCED)
-    expect(ROOM_LABEL_OUTLINE_EM).toBe(0.055)
-    expect(ROOM_LABEL_OUTLINE_MIN).toBe(0.035)
-    expect(ROOM_LABEL_OUTLINE_OPACITY).toBe(0.7)
-    expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.0429)
-    expect(roomLabelOutlineWidth(0.5)).toBe(0.035)
+    expect(ROOM_LABEL_OUTLINE_EM).toBe(0.045)
+    expect(ROOM_LABEL_OUTLINE_MIN).toBe(0.03)
+    expect(ROOM_LABEL_OUTLINE_OPACITY).toBe(0.78)
+    expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.0351)
+    expect(roomLabelOutlineWidth(0.5)).toBe(0.03)
     const source = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
     const members = source.split('new Text()')
     expect(members.length).toBeGreaterThanOrEqual(3)
-    expect(members[1]).toMatch(/outlineWidth = outlineRef.current/)
+    expect(members[1]).toMatch(/outlineWidth = outlineWidth/)
     expect(members[1]).toMatch(/outlineColor = paletteRef.current.outline/)
-    expect(members[2]).toMatch(/outlineWidth = outlineRef.current/)
+    expect(members[2]).toMatch(/outlineWidth = outlineWidth/)
     expect(members[2]).toMatch(/outlineColor = paletteRef.current.outline/)
     expect(source).toMatch(/material.toneMapped = false/)
     expect(source).toMatch(/ROOM_LABEL_OUTLINE_OPACITY/)

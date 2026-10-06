@@ -19,6 +19,7 @@ declare module 'troika-three-text' {
     whiteSpace?: 'normal' | 'nowrap'
     sync(callback?: () => void): void
     dispose(): void
+    textRenderInfo?: { blockBounds?: number[] } | null
   }
 
   export class BatchedText extends Text {

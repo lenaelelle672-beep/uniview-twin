@@ -1,19 +1,23 @@
 import { Line } from '@react-three/drei/core/Line'
 import { useFrame, useThree } from '@react-three/fiber'
-import { lazy, Suspense, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { PerspectiveCamera, Vector3, type Camera, type Object3D } from 'three'
 import { searchWorkstations } from '../../locate/search'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { pointInRing } from '../../floors/parsePlan'
 import { useTwinStore } from '../../store/store'
+import { classifyRoomLabel } from '../../floors/labelTier'
 import {
   avoidLabels,
   labelScreenBox,
+  tier2Stats,
   type AvoidItem,
   type AvoidPlacement,
   type AvoidResult,
   type LabelPackState,
 } from './labelAvoidance'
+import { countMeasuredOverlap, overlapPairNames } from './labelScreenMeasure'
+import type { LabelBatchApi } from './BatchedRoomLabels'
 import {
   LABEL_MAX_PX,
   LABEL_MIN_PX,
@@ -30,8 +34,7 @@ const BatchedRoomLabels = lazy(async () => {
 })
 
 /** 1366 单层目标屏上字高；全层最大夹在 LABEL_MIN/MAX。 */
-export const LABEL_TARGET_PX = 14
-const PX_EPS = 0.45
+export const LABEL_TARGET_PX = 16
 
 const sample = new Vector3()
 const deskSample = new Vector3()
@@ -233,12 +236,23 @@ function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, num
 
 export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
   const { camera, scene, size, pointer } = useThree()
-  const [fontSize, setFontSize] = useState(0.78)
+  const [fontSize, setFontSize] = useState(0)
+  const sizedRef = useRef(false)
   const pxRef = useRef(0)
   const fadesRef = useRef<number[]>([])
   const packRef = useRef<LabelPackState>({ byId: {}, clusters: {} })
+  const measureRef = useRef<LabelBatchApi | null>(null)
+  const viewKeyRef = useRef('')
+  const clusterSyncedRef = useRef('')
   const characters = roomLabelCharacters(labels)
   const points = labels.flatMap((label) => [label.anchor, label.label])
+
+  useEffect(() => {
+    sizedRef.current = false
+    setFontSize(0)
+    clusterSyncedRef.current = ''
+    viewKeyRef.current = ''
+  }, [floorId])
 
   useFrame(() => {
     if (labels.length === 0) return
@@ -247,10 +261,16 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     const host = scene.getObjectByName('RoomLabelBatch') ?? interior
     host?.updateWorldMatrix(true, false)
     perspective.updateMatrixWorld()
-    const { maxPx: currentMaxPx, nearest } = maxProjectedEmPx(host ?? null, labels, perspective, size, fontSize)
-    const next = worldFontSizeFromProjectedEm(fontSize, currentMaxPx)
-    if (currentMaxPx > 1e-6 && Math.abs(currentMaxPx - LABEL_TARGET_PX) > PX_EPS) setFontSize(next)
-    const px = currentMaxPx > 1e-6 ? next * (currentMaxPx / fontSize) : currentMaxPx
+    if (!sizedRef.current) {
+      const { maxPx } = maxProjectedEmPx(host ?? null, labels, perspective, size, 0.78)
+      if (maxPx > 1e-6) {
+        setFontSize(worldFontSizeFromProjectedEm(0.78, maxPx))
+        sizedRef.current = true
+      }
+      return
+    }
+    const { maxPx: currentMaxPx, nearest } = maxProjectedEmPx(host ?? null, labels, perspective, size, fontSize || 0.78)
+    const px = currentMaxPx > 1e-6 ? currentMaxPx : pxRef.current
     pxRef.current = px
     const state = useTwinStore.getState()
     const focused = state.focusedDeskId
@@ -283,9 +303,9 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     const alarmDesks = state.devices
       .filter((device) => device.floorId === floorId && device.status === 'alarm' && device.deskId)
       .map((device) => device.deskId as string)
-    const areas = labels.map((label) => label.area ?? 0).sort((a, b) => a - b)
-    const largeCut = areas[Math.floor(areas.length * 0.65)] ?? 0
     let hoverId: string | null = null
+    const api = measureRef.current
+    const measured = api?.ready ? api.measureForAvoid(perspective, size, labels) : null
     for (let i = 0; i < labels.length; i += 1) {
       const label = labels[i]
       if (!label) continue
@@ -308,28 +328,40 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       }
       const sx = (sample.x * 0.5 + 0.5) * size.width
       const sy = (-sample.y * 0.5 + 0.5) * size.height
-      const box = labelScreenBox(label.text, Math.max(px, LABEL_MIN_PX))
+      const found = measured?.get(label.id)
+      const box = found ?? labelScreenBox(label.text, Math.max(px, LABEL_MIN_PX))
       const alarm = alarmDesks.some((deskId) => deskInRoom(floorId, deskId, label.polygon))
       const selected = Boolean(focused && deskInRoom(floorId, focused, label.polygon))
       const searchHit =
         searchHits.some((hit) => deskInRoom(floorId, hit.deskId, label.polygon)) ||
         (state.searchQuery.trim() !== '' && label.text.toLowerCase().includes(state.searchQuery.trim().toLowerCase()))
-      const large = (label.area ?? 0) >= Math.max(largeCut, 12)
+      const cls = classifyRoomLabel(label.sourceName ?? label.text, label.area ?? 0)
       const locked = alarm || selected || searchHit
       if (Math.hypot(pointerX - sx, pointerY - sy) < Math.max(box.w, box.h) * 0.65 + 18) hoverId = label.id
       items.push({
         id: label.id,
         text: label.text,
-        x: sx,
-        y: sy,
+        x: found?.x ?? sx,
+        y: found?.y ?? sy,
         w: box.w,
         h: box.h,
-        priority: alarm ? 0 : locked ? 1 : large ? 2 : 3,
+        priority: alarm ? 0 : locked ? 1 : cls.tier,
         locked,
-        area: label.area ?? 0,
+        area: cls.area || (label.area ?? 0),
+        tier: cls.tier,
       })
     }
-    const avoided = avoidLabels(items)
+    const clusterSizes: Record<string, { w: number; h: number }> = {}
+    if (measured) {
+      for (const [id, box] of measured) {
+        if (!id.startsWith('cluster:')) continue
+        clusterSizes[id.slice('cluster:'.length)] = { w: box.w, h: box.h }
+      }
+    }
+    const viewKey = `${floorId}|${Math.round((window.__twinRig?.distance ?? 0) * 20)}|${alarmDesks.join(',')}|${focused ?? ''}|${state.searchQuery}|${size.width}`
+    const shouldPack = viewKey !== viewKeyRef.current || !packRef.current || items.length > 0
+    if (shouldPack) viewKeyRef.current = viewKey
+    const avoided = avoidLabels(items, clusterSizes)
     if (hoverId) {
       const row = avoided.placements.find((item) => item.id === hoverId)
       if (row && !row.visible) {
@@ -345,6 +377,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       byId[label.id] = { visible: false, cluster: null, offsetX: 0, offsetY: 0 }
     }
     for (const row of avoided.placements) byId[row.id] = row
+    const clusterTexts: Record<string, string> = {}
     for (const cluster of avoided.clusters) {
       const members = labels.filter((label) => cluster.ids.includes(label.id))
       if (members.length === 0) continue
@@ -359,20 +392,46 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         ],
         text: cluster.text,
       }
+      clusterTexts[cluster.key] = cluster.text
     }
     packRef.current = { byId, clusters }
+    const clusterSig = Object.entries(clusterTexts)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, text]) => `${key}:${text}`)
+      .join('|')
+    if (api && clusterSig && clusterSig !== clusterSyncedRef.current) {
+      clusterSyncedRef.current = clusterSig
+      void api.applyClusterTexts(clusterTexts)
+    }
+    const live = api?.ready ? api.measureVisible(perspective, size) : []
+    const measuredPairs = countMeasuredOverlap(live.map((row) => row.box))
+    const tier = tier2Stats(items, avoided)
+    if (!window.__twinLabelReadyAt && api?.ready && live.length + avoided.hidden >= 0) {
+      window.__twinLabelReadyAt = performance.now()
+    }
     window.__twinLabelOverlap = {
       merged: avoided.merged,
       hidden: avoided.hidden,
       hiddenAfterZoom: avoided.hiddenAfterZoom,
-      overlapPairs: avoided.overlapPairs,
+      overlapPairs: measuredPairs,
       maxOffset: avoided.maxOffset,
       visible: visibleOverlapBoxes(labels, items, avoided),
       d243: diagnoseRestCorridor(labels, items, avoided),
+      tier2: tier,
+      measured: live,
+      pairs: overlapPairNames(live),
+      region: live.filter((row) => {
+        const x0 = row.box.x
+        const y0 = row.box.y
+        const x1 = row.box.x + row.box.w
+        const y1 = row.box.y + row.box.h
+        return x0 < 620 && x1 > 500 && y0 < 360 && y1 > 280
+      }),
     }
+    const heights = live.filter((row) => !row.cluster && row.px > 4).map((row) => row.px)
     window.__twinLabelPx = {
-      fontSize: next,
-      px,
+      fontSize,
+      px: heights.length ? heights.reduce((sum, value) => sum + value, 0) / heights.length : px,
       minPx: LABEL_MIN_PX,
       maxPx: LABEL_MAX_PX,
       distance: nearest,
@@ -380,21 +439,24 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   })
 
   if (labels.length === 0) return null
-  const outline = roomLabelOutlineWidth(fontSize)
+  const outline = roomLabelOutlineWidth(fontSize || 0.78)
   return (
     <group name="RoomLabels">
       <Line points={points} segments color="#5c6b7c" lineWidth={1.5} />
-      <Suspense fallback={null}>
-        <BatchedRoomLabels
-          floorId={floorId}
-          labels={labels}
-          fontSize={fontSize}
-          outlineWidth={outline}
-          characters={characters}
-          fadesRef={fadesRef}
-          packRef={packRef}
-        />
-      </Suspense>
+      {fontSize > 0 ? (
+        <Suspense fallback={null}>
+          <BatchedRoomLabels
+            floorId={floorId}
+            labels={labels}
+            fontSize={fontSize}
+            outlineWidth={outline}
+            characters={characters}
+            fadesRef={fadesRef}
+            packRef={packRef}
+            measureRef={measureRef}
+          />
+        </Suspense>
+      ) : null}
     </group>
   )
 }

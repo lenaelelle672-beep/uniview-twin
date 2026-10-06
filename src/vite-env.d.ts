@@ -167,12 +167,19 @@ interface Window {
     renderedBeforeFirstFrame: boolean
     at: number
   }
+  __twinLabelSyncs?: number
+  __twinLabelSyncStartedAt?: number
+  __twinLabelReadyAt?: number
   __twinLabelOverlap?: {
     merged: number
     hidden: number
     hiddenAfterZoom: number
     overlapPairs: number
     maxOffset: number
+    tier2?: { visible: number; total: number; hidden: number }
+    measured?: Array<{ id: string; text: string; box: { x: number; y: number; w: number; h: number }; cluster: string | null; px: number }>
+    pairs?: Array<[string, string]>
+    region?: Array<{ id: string; text: string; box: { x: number; y: number; w: number; h: number }; cluster: string | null; px: number }>
     visible?: Array<{
       id: string
       text: string

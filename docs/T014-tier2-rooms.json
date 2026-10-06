@@ -1,0 +1,1059 @@
+{
+  "rules": {
+    "area": 40,
+    "counts": {
+      "F1": 28,
+      "F2": 35,
+      "F3": 29,
+      "F4": 24,
+      "F5": 20,
+      "F6": 17,
+      "F7": 14,
+      "F8": 4
+    }
+  },
+  "floors": {
+    "F1": [
+      {
+        "id": "F1:room-319",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-320",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-324",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-325",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-333",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-334",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-340",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-341",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-342",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-112",
+        "name": "大厅/中庭",
+        "area": 0,
+        "rule": "lobby"
+      },
+      {
+        "id": "F1:room-116",
+        "name": "大厅/中庭",
+        "area": 0,
+        "rule": "lobby"
+      },
+      {
+        "id": "F1:room-297",
+        "name": "大厅/中庭",
+        "area": 0,
+        "rule": "lobby"
+      },
+      {
+        "id": "F1:room-305",
+        "name": "公共事务部展厅",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F1:room-303",
+        "name": "贵宾会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F1:room-301",
+        "name": "接待",
+        "area": 0,
+        "rule": "reception"
+      },
+      {
+        "id": "F1:room-306",
+        "name": "接待值班工位",
+        "area": 0,
+        "rule": "reception"
+      },
+      {
+        "id": "F1:room-36",
+        "name": "开关站",
+        "area": 56.9,
+        "rule": "area"
+      },
+      {
+        "id": "F1:room-337",
+        "name": "科研入口大厅",
+        "area": 0,
+        "rule": "lobby"
+      },
+      {
+        "id": "F1:room-33",
+        "name": "门岗",
+        "area": 51.9,
+        "rule": "area"
+      },
+      {
+        "id": "F1:room-311",
+        "name": "门厅",
+        "area": 91.5,
+        "rule": "area"
+      },
+      {
+        "id": "F1:room-77",
+        "name": "面试前台",
+        "area": 0,
+        "rule": "front"
+      },
+      {
+        "id": "F1:room-17",
+        "name": "前台",
+        "area": 0,
+        "rule": "front"
+      },
+      {
+        "id": "F1:room-19",
+        "name": "生产大厅",
+        "area": 0,
+        "rule": "lobby"
+      },
+      {
+        "id": "F1:room-281",
+        "name": "实验车间",
+        "area": 73.5,
+        "rule": "area"
+      },
+      {
+        "id": "F1:room-282",
+        "name": "实验车间",
+        "area": 70,
+        "rule": "area"
+      },
+      {
+        "id": "F1:room-24",
+        "name": "收发室",
+        "area": 60,
+        "rule": "area"
+      },
+      {
+        "id": "F1:room-336",
+        "name": "展厅",
+        "area": 0,
+        "rule": "hall"
+      },
+      {
+        "id": "F1:room-43",
+        "name": "OAA实验车间",
+        "area": 43.2,
+        "rule": "area"
+      }
+    ],
+    "F2": [
+      {
+        "id": "F2:room-208",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-209",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-214",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-215",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-226",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-227",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-234",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-235",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-236",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-16",
+        "name": "办公区",
+        "area": 24,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-92",
+        "name": "丙类公共事务部礼品房",
+        "area": 39.9,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-145",
+        "name": "大会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-245",
+        "name": "高管会议室/接待室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-149",
+        "name": "公共事务部礼品仓库",
+        "area": 28.2,
+        "rule": "department"
+      },
+      {
+        "id": "F2:room-185",
+        "name": "贵宾会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-189",
+        "name": "贵宾接待室",
+        "area": 0,
+        "rule": "reception"
+      },
+      {
+        "id": "F2:room-220",
+        "name": "侯梯前厅",
+        "area": 276.1,
+        "rule": "area"
+      },
+      {
+        "id": "F2:room-192",
+        "name": "会议接待",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-136",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-138",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-144",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-151",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-152",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-167",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-169",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-172",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-176",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-171",
+        "name": "阶梯会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-72",
+        "name": "培训教室",
+        "area": 147,
+        "rule": "training"
+      },
+      {
+        "id": "F2:room-73",
+        "name": "培训教室",
+        "area": 147,
+        "rule": "training"
+      },
+      {
+        "id": "F2:room-88",
+        "name": "培训教室",
+        "area": 74,
+        "rule": "training"
+      },
+      {
+        "id": "F2:room-89",
+        "name": "培训教室",
+        "area": 111.2,
+        "rule": "training"
+      },
+      {
+        "id": "F2:room-90",
+        "name": "培训教室",
+        "area": 143.4,
+        "rule": "training"
+      },
+      {
+        "id": "F2:room-128",
+        "name": "培训室/大会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F2:room-213",
+        "name": "展厅",
+        "area": 0,
+        "rule": "hall"
+      }
+    ],
+    "F3": [
+      {
+        "id": "F3:room-220",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-221",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-226",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-227",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-238",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-239",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-243",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-244",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-249",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-56",
+        "name": "办公区",
+        "area": 17,
+        "rule": "department"
+      },
+      {
+        "id": "F3:room-202",
+        "name": "会议接待",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-150",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-157",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-159",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-163",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-166",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-170",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-173",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-178",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-189",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-196",
+        "name": "会议室",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F3:room-29",
+        "name": "技服培训室(120㎡）",
+        "area": 120,
+        "rule": "training"
+      },
+      {
+        "id": "F3:room-158",
+        "name": "技服培训室(180㎡）",
+        "area": 180,
+        "rule": "training"
+      },
+      {
+        "id": "F3:room-75",
+        "name": "培训教室",
+        "area": 166,
+        "rule": "training"
+      },
+      {
+        "id": "F3:room-76",
+        "name": "培训教室",
+        "area": 166,
+        "rule": "training"
+      },
+      {
+        "id": "F3:room-91",
+        "name": "培训教室",
+        "area": 96.4,
+        "rule": "training"
+      },
+      {
+        "id": "F3:room-92",
+        "name": "培训教室",
+        "area": 100.6,
+        "rule": "training"
+      },
+      {
+        "id": "F3:room-102",
+        "name": "物业培训室",
+        "area": 22.6,
+        "rule": "training"
+      },
+      {
+        "id": "F3:room-175",
+        "name": "UPS",
+        "area": 47.5,
+        "rule": "area"
+      }
+    ],
+    "F4": [
+      {
+        "id": "F4:room-179",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-180",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-187",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-188",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-195",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-196",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-210",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-211",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-216",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-71",
+        "name": "备用办公区",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-89",
+        "name": "备用办公区",
+        "area": 132.2,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-104",
+        "name": "丙类库房",
+        "area": 180,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-135",
+        "name": "丙类库房",
+        "area": 325,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-138",
+        "name": "丙类行政仓库",
+        "area": 62,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-95",
+        "name": "测试间",
+        "area": 40.5,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-161",
+        "name": "茶水",
+        "area": 87.1,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-52",
+        "name": "前台",
+        "area": 0,
+        "rule": "front"
+      },
+      {
+        "id": "F4:room-203",
+        "name": "速通门测试间",
+        "area": 88.3,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-225",
+        "name": "研发车间",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-145",
+        "name": "研发B区",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F4:room-32",
+        "name": "装备车间",
+        "area": 117.5,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-33",
+        "name": "装备车间",
+        "area": 135.2,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-34",
+        "name": "装备车间",
+        "area": 190.9,
+        "rule": "area"
+      },
+      {
+        "id": "F4:room-35",
+        "name": "装备车间",
+        "area": 104.6,
+        "rule": "area"
+      }
+    ],
+    "F5": [
+      {
+        "id": "F5:room-170",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-171",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-178",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-179",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-188",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-189",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-204",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-205",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-210",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-71",
+        "name": "备用办公区",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-88",
+        "name": "备用办公区",
+        "area": 133.3,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-152",
+        "name": "茶水",
+        "area": 96.1,
+        "rule": "area"
+      },
+      {
+        "id": "F5:room-153",
+        "name": "茶水",
+        "area": 98.1,
+        "rule": "area"
+      },
+      {
+        "id": "F5:room-117",
+        "name": "前段产品图像测试区",
+        "area": 320.2,
+        "rule": "area"
+      },
+      {
+        "id": "F5:room-51",
+        "name": "前台",
+        "area": 0,
+        "rule": "front"
+      },
+      {
+        "id": "F5:room-130",
+        "name": "图像测试区",
+        "area": 42.6,
+        "rule": "area"
+      },
+      {
+        "id": "F5:room-97",
+        "name": "图像测试区",
+        "area": 307.2,
+        "rule": "area"
+      },
+      {
+        "id": "F5:room-221",
+        "name": "研发车间",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F5:room-36",
+        "name": "瑜伽/舞蹈房",
+        "area": 104.6,
+        "rule": "area"
+      },
+      {
+        "id": "F5:room-23",
+        "name": "员工娱乐区",
+        "area": 117.5,
+        "rule": "area"
+      }
+    ],
+    "F6": [
+      {
+        "id": "F6:room-124",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-125",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-132",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-133",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-143",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-144",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-159",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-160",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-165",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-36",
+        "name": "备用办公区",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F6:room-106",
+        "name": "茶水台",
+        "area": 94.3,
+        "rule": "area"
+      },
+      {
+        "id": "F6:room-110",
+        "name": "大试验车间",
+        "area": 53.1,
+        "rule": "area"
+      },
+      {
+        "id": "F6:room-45",
+        "name": "分布式光度计暗室",
+        "area": 43.3,
+        "rule": "area"
+      },
+      {
+        "id": "F6:room-50",
+        "name": "光学实验室",
+        "area": 320,
+        "rule": "area"
+      },
+      {
+        "id": "F6:room-156",
+        "name": "会议桌",
+        "area": 0,
+        "rule": "meeting"
+      },
+      {
+        "id": "F6:room-84",
+        "name": "显控暗室",
+        "area": 116,
+        "rule": "area"
+      },
+      {
+        "id": "F6:room-173",
+        "name": "研发车间",
+        "area": 0,
+        "rule": "department"
+      }
+    ],
+    "F7": [
+      {
+        "id": "F7:room-118",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-119",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-126",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-127",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-136",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-137",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-150",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-151",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-156",
+        "name": "1350-研发",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-32",
+        "name": "备用办公区",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-78",
+        "name": "丙类库房",
+        "area": 62.4,
+        "rule": "area"
+      },
+      {
+        "id": "F7:room-104",
+        "name": "大试验车间",
+        "area": 53.1,
+        "rule": "area"
+      },
+      {
+        "id": "F7:room-166",
+        "name": "研发车间",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F7:room-52",
+        "name": "硬件实验室",
+        "area": 470,
+        "rule": "area"
+      }
+    ],
+    "F8": [
+      {
+        "id": "F8:room-16",
+        "name": "备用办公区",
+        "area": 0,
+        "rule": "department"
+      },
+      {
+        "id": "F8:room-54",
+        "name": "培训室",
+        "area": 185.5,
+        "rule": "training"
+      },
+      {
+        "id": "F8:room-63",
+        "name": "试验车间",
+        "area": 86.2,
+        "rule": "area"
+      },
+      {
+        "id": "F8:room-86",
+        "name": "硬件部实验室",
+        "area": 0,
+        "rule": "department"
+      }
+    ]
+  }
+}

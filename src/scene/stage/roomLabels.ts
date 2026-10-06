@@ -3,6 +3,7 @@ import { B1_CORE, CORE, KITCHEN, MEETINGS, PANTRY, RECEPTION, aabbCenter, cantee
 export interface RoomLabel {
   id: string
   text: string
+  sourceName?: string
   anchor: [number, number, number]
   label: [number, number, number]
   area?: number
@@ -10,8 +11,9 @@ export interface RoomLabel {
 }
 
 export const ROOM_LABEL_FONT = '/fonts/NotoSansSC-Regular-subset.woff'
-export const LABEL_MIN_PX = 13
-export const LABEL_MAX_PX = 16
+/** D249：1366/1920 目标 16±1，1024 ≥15。替代 D221 的 14 px。 */
+export const LABEL_MIN_PX = 15
+export const LABEL_MAX_PX = 17
 /** 深色字 + 浅色描边。perf 不走合成器，toneMapped=false 后就是这两个值。 */
 export const ROOM_LABEL_COLOR = '#17324d'
 export const ROOM_LABEL_OUTLINE_COLOR = '#ffffff'
@@ -21,10 +23,10 @@ export const ROOM_LABEL_OUTLINE_COLOR = '#ffffff'
  */
 export const ROOM_LABEL_COLOR_BALANCED = '#020910'
 export const ROOM_LABEL_OUTLINE_COLOR_BALANCED = '#d8e2ec'
-/** 0.12 em 会糊住笔画外沿；0.055 配 0.7 透明度只做细边。 */
-export const ROOM_LABEL_OUTLINE_EM = 0.055
-export const ROOM_LABEL_OUTLINE_MIN = 0.035
-export const ROOM_LABEL_OUTLINE_OPACITY = 0.7
+/** 字高提到 16px 后 0.055 em 晕圈又偏厚；0.045 + 0.78 只勾边，少挡笔画。 */
+export const ROOM_LABEL_OUTLINE_EM = 0.045
+export const ROOM_LABEL_OUTLINE_MIN = 0.03
+export const ROOM_LABEL_OUTLINE_OPACITY = 0.78
 
 export function roomLabelColors(quality: 'perf' | 'balanced' | 'high'): { color: string; outline: string } {
   if (quality === 'perf') return { color: ROOM_LABEL_COLOR, outline: ROOM_LABEL_OUTLINE_COLOR }

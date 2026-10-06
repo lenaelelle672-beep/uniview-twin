@@ -35,8 +35,8 @@ describe('单层房间标签射影字号', () => {
     expect(tilted).toBeGreaterThan(facingHeight * 0.4)
   })
 
-  it('按全层最大射影 em 把屏上字高夹到 13–16，目标 14', () => {
-    expect(LABEL_TARGET_PX).toBe(14)
+  it('按全层最大射影 em 把屏上字高夹到 15–17，目标 16', () => {
+    expect(LABEL_TARGET_PX).toBe(16)
     const camera = new PerspectiveCamera(48, 1366 / 768, 0.1, 2000)
     camera.position.set(12, 42, 38)
     camera.lookAt(0, 3, 0)
@@ -55,7 +55,7 @@ describe('单层房间标签射影字号', () => {
     expect(fontSize * (maxPx / seed)).toBeCloseTo(LABEL_TARGET_PX, 5)
   })
 
-  it('特写仍把最大屏上字高压在 16 px 内，并忽略相机背后的点', () => {
+  it('特写仍把最大屏上字高压在 17 px 内，并忽略相机背后的点', () => {
     const camera = new PerspectiveCamera(42, 1366 / 712, 0.1, 2000)
     camera.position.set(2.2, 6.4, 5.1)
     camera.lookAt(0, 1.2, 0)
@@ -86,7 +86,7 @@ describe('单层房间标签射影字号', () => {
     const source = readFileSync(new URL('./RoomLabels.tsx', import.meta.url), 'utf8')
     expect(source).toMatch(/projectedEmHeightPx/)
     expect(source).toMatch(/worldFontSizeFromProjectedEm/)
-    expect(source).toMatch(/PX_EPS/)
+    expect(source).toMatch(/sizedRef/)
     expect(source).not.toMatch(/ScreenSizer/)
     expect(source).not.toMatch(/worldFontSizeForDistance/)
   })
