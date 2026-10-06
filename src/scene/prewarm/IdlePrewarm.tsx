@@ -12,7 +12,7 @@ import {
 } from './characters'
 import { compilePeopleGroup, compileTroikaSample, peopleModelUrls } from './extraPrewarm'
 import { preloadLabelFont, textRuntimePrefetchDone, waitTextRuntimePrefetch } from './fontPrewarm'
-import { createYieldController, waitIdle } from './idleYield'
+import { createYieldController, waitIdle, waitPrewarmTurn } from './idleYield'
 import { programCount, snapshotPrograms } from './programSnapshot'
 import { SHADER_PREWARM_ENABLED } from './shaderPrewarmFlag'
 
@@ -40,22 +40,7 @@ export function IdlePrewarm() {
     let yielded = 0
 
     async function waitTurn() {
-      while (!cancelled) {
-        if (yieldCtl.consumeInterrupt() || yieldCtl.shouldPause(scene)) {
-          yielded += 1
-          await yieldCtl.waitQuiet()
-          if (cancelled) return
-          continue
-        }
-        await waitIdle()
-        if (cancelled) return
-        if (yieldCtl.consumeInterrupt() || yieldCtl.shouldPause(scene)) {
-          yielded += 1
-          await yieldCtl.waitQuiet()
-          continue
-        }
-        return
-      }
+      yielded += await waitPrewarmTurn(yieldCtl, scene, () => cancelled)
     }
 
     async function loadDemoPlans() {

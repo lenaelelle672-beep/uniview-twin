@@ -6,6 +6,11 @@ export type IdleHandle = number
 /** 用户输入后至少空闲这么久才继续预热。 */
 export const PREWARM_RESUME_IDLE_MS = 1000
 
+/** 飞行 / 定位 / FloorInterior 未挂上时，按这个间隔让出宏任务，禁止 0ms 空转。 */
+export const PREWARM_SCENE_PAUSE_POLL_MS = 100
+
+export type PrewarmPauseReason = 'input' | 'scene'
+
 export function scheduleIdle(callback: () => void, timeout = 800): IdleHandle {
   if (typeof requestIdleCallback === 'function') {
     return requestIdleCallback(callback, { timeout })
@@ -50,23 +55,28 @@ export function createYieldController() {
     onInterrupt()
   })
 
+  function pauseReason(scene?: Scene): PrewarmPauseReason | null {
+    if (interrupted) return 'input'
+    if (lastInputAt > 0 && performance.now() - lastInputAt < PREWARM_RESUME_IDLE_MS) return 'input'
+    const state = useTwinStore.getState()
+    if (state.view === 'floor' && state.floorFlyRequest) return 'scene'
+    const end = window.__twinFlyEnd
+    if (end && window.__twinLocate?.deskId !== end.deskId) return 'scene'
+    if (state.view === 'floor' && state.selectedFloor && scene && !scene.getObjectByName('FloorInterior')) {
+      return 'scene'
+    }
+    return null
+  }
+
   return {
     consumeInterrupt(): boolean {
       const hit = interrupted
       interrupted = false
       return hit
     },
+    pauseReason,
     shouldPause(scene?: Scene): boolean {
-      if (interrupted) return true
-      if (lastInputAt > 0 && performance.now() - lastInputAt < PREWARM_RESUME_IDLE_MS) return true
-      const state = useTwinStore.getState()
-      if (state.view === 'floor' && state.floorFlyRequest) return true
-      const end = window.__twinFlyEnd
-      if (end && window.__twinLocate?.deskId !== end.deskId) return true
-      if (state.view === 'floor' && state.selectedFloor && scene && !scene.getObjectByName('FloorInterior')) {
-        return true
-      }
-      return false
+      return pauseReason(scene) != null
     },
     waitQuiet(ms = PREWARM_RESUME_IDLE_MS): Promise<void> {
       return new Promise((resolve) => {
@@ -77,7 +87,14 @@ export function createYieldController() {
           }
           window.setTimeout(tick, 50)
         }
-        tick()
+        // 第一次检查也走宏任务，避免 Promise 构造里同步 resolve 只让出微任务。
+        window.setTimeout(tick, 0)
+      })
+    },
+    waitScenePause(ms = PREWARM_SCENE_PAUSE_POLL_MS): Promise<void> {
+      const delay = Math.max(PREWARM_SCENE_PAUSE_POLL_MS, ms)
+      return new Promise((resolve) => {
+        window.setTimeout(resolve, delay)
       })
     },
     dispose() {
@@ -87,6 +104,41 @@ export function createYieldController() {
       unsubFloor()
     },
   }
+}
+
+export type YieldController = ReturnType<typeof createYieldController>
+
+async function yieldAfterPause(yieldCtl: YieldController, scene?: Scene): Promise<void> {
+  if (yieldCtl.pauseReason(scene) === 'scene') {
+    await yieldCtl.waitScenePause()
+    return
+  }
+  await yieldCtl.waitQuiet()
+}
+
+/** IdlePrewarm.waitTurn：暂停时必须让出宏任务，scene 暂停至少隔 100ms。 */
+export async function waitPrewarmTurn(
+  yieldCtl: YieldController,
+  scene: Scene | undefined,
+  cancelled: () => boolean,
+): Promise<number> {
+  let yielded = 0
+  while (!cancelled()) {
+    if (yieldCtl.consumeInterrupt() || yieldCtl.shouldPause(scene)) {
+      yielded += 1
+      await yieldAfterPause(yieldCtl, scene)
+      continue
+    }
+    await waitIdle()
+    if (cancelled()) return yielded
+    if (yieldCtl.consumeInterrupt() || yieldCtl.shouldPause(scene)) {
+      yielded += 1
+      await yieldAfterPause(yieldCtl, scene)
+      continue
+    }
+    return yielded
+  }
+  return yielded
 }
 
 export async function waitUntil(ok: () => boolean, timeoutMs = 60_000): Promise<boolean> {
