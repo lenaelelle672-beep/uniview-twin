@@ -15,11 +15,38 @@ import {
 } from './roomLabels'
 import { workstationPosition } from './workstationPosition'
 
-const BatchedRoomLabels = lazy(async () => {
-  await waitFirstPrefetch()
-  const { ProgressiveRoomLabels } = await import('../labels/ProgressiveRoomLabels')
-  return { default: ProgressiveRoomLabels }
-})
+function waitFirstFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && window.__twinFirstFrameAt != null) {
+      resolve()
+      return
+    }
+    const tick = () => {
+      if (window.__twinFirstFrameAt != null) {
+        resolve()
+        return
+      }
+      window.requestAnimationFrame(tick)
+    }
+    window.requestAnimationFrame(tick)
+  })
+}
+
+/** D226：楼层视图首帧后直接拉标签包；总览仍等首次 prefetch，避免动首屏窗口。 */
+export async function loadRoomLabelChunk() {
+  if (useTwinStore.getState().view !== 'floor') {
+    await waitFirstPrefetch()
+  } else {
+    await waitFirstFrame()
+  }
+  const [progressive] = await Promise.all([
+    import('../labels/ProgressiveRoomLabels'),
+    import('./textRuntime'),
+  ])
+  return { default: progressive.ProgressiveRoomLabels }
+}
+
+const BatchedRoomLabels = lazy(loadRoomLabelChunk)
 
 const sample = new Vector3()
 const deskSample = new Vector3()
