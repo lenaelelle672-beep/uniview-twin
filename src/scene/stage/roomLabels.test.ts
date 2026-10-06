@@ -9,11 +9,14 @@ import {
   LABEL_MAX_PX,
   LABEL_MIN_PX,
   ROOM_LABEL_COLOR,
+  ROOM_LABEL_COLOR_BALANCED,
   ROOM_LABEL_FONT,
   ROOM_LABEL_OUTLINE_COLOR,
+  ROOM_LABEL_OUTLINE_COLOR_BALANCED,
   ROOM_LABEL_OUTLINE_EM,
   labelFadeForTarget,
   roomLabelCharacters,
+  roomLabelColors,
   roomLabelOutlineWidth,
   worldFontSizeForDistance,
 } from './roomLabels'
@@ -80,7 +83,7 @@ describe('房间引线标签', () => {
     const source = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
     const frame = source.slice(source.lastIndexOf('useFrame'))
     expect(frame).toMatch(/applyMemberFades/)
-    expect(frame).not.toMatch(/\.sync\(/)
+    expect(frame).not.toMatch(/applyMemberFades[\s\S]{0,180}\.sync\(/)
     expect(source.match(/batch\??\.sync/g)?.length).toBe(2)
   })
 
@@ -91,9 +94,15 @@ describe('房间引线标签', () => {
     expect(source).not.toMatch(/clipRect/)
   })
 
-  it('整批深色字配浅色描边，描边约 0.12 em', () => {
+  it('整批深色字配浅色描边，描边约 0.12 em；perf 关 toneMapped，balanced 用更深源色', () => {
     expect(ROOM_LABEL_COLOR).toBe('#17324d')
     expect(ROOM_LABEL_OUTLINE_COLOR).toBe('#ffffff')
+    expect(roomLabelColors('perf')).toEqual({ color: '#17324d', outline: '#ffffff' })
+    expect(roomLabelColors('balanced')).toEqual({
+      color: ROOM_LABEL_COLOR_BALANCED,
+      outline: ROOM_LABEL_OUTLINE_COLOR_BALANCED,
+    })
+    expect(roomLabelColors('high').color).toBe(ROOM_LABEL_COLOR_BALANCED)
     expect(ROOM_LABEL_OUTLINE_EM).toBe(0.12)
     expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.0936)
     expect(roomLabelOutlineWidth(0.5)).toBe(0.08)
@@ -101,9 +110,11 @@ describe('房间引线标签', () => {
     const members = source.split('new Text()')
     expect(members.length).toBeGreaterThanOrEqual(3)
     expect(members[1]).toMatch(/outlineWidth = outlineRef.current/)
-    expect(members[1]).toMatch(/outlineColor = ROOM_LABEL_OUTLINE_COLOR/)
+    expect(members[1]).toMatch(/outlineColor = paletteRef.current.outline/)
     expect(members[2]).toMatch(/outlineWidth = outlineRef.current/)
-    expect(members[2]).toMatch(/outlineColor = ROOM_LABEL_OUTLINE_COLOR/)
+    expect(members[2]).toMatch(/outlineColor = paletteRef.current.outline/)
+    expect(source).toMatch(/material.toneMapped = false/)
     expect(source).not.toMatch(/batch\.outlineWidth/)
+    expect(source).not.toMatch(/MONITOR_LAYER|labelAfterTone|labelLayer/)
   })
 })

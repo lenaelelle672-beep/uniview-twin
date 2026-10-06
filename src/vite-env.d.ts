@@ -34,6 +34,35 @@ interface TwinLabelPx {
   distance: number
 }
 
+interface TwinLabelD243Row {
+  id: string
+  text: string
+  wx: number
+  wz: number
+  sx: number
+  sy: number
+  w: number
+  h: number
+  offsetX: number
+  offsetY: number
+  offsetLen: number
+  visible: boolean
+  cluster: string | null
+}
+
+interface TwinLabelD243 {
+  rest: TwinLabelD243Row | null
+  corridors: TwinLabelD243Row[]
+  nearestWorldM: number | null
+  nearestAnchorPx: number | null
+  nearestPlacedPx: number | null
+  restBoxW: number | null
+  corridorBoxW: number | null
+  restOffsetLen: number | null
+  corridorOffsetLen: number | null
+  cause: string
+}
+
 interface TwinFloorProbe {
   floorId: string
   desks: Array<{ id: string; x: number; z: number; rot: number }>
@@ -130,6 +159,8 @@ interface Window {
   __twinDevices?: Array<{ id: string; deskId?: string; floorId: string; type: string; status: string }>
   __twinFocusDevice?: (target: { floor: string; deskId: string | null; deviceId?: string | null }) => void
   __twinSelectFloor?: (floorId: string | null) => void
+  __twinSetDayNight?: (dayNight: 'day' | 'night') => void
+  __twinSetQuality?: (quality: 'perf' | 'balanced' | 'high') => void
   __twinStats?: TwinRenderStats
   __twinFloorMarkers?: {
     count: number
@@ -140,6 +171,21 @@ interface Window {
     merged: number
     hidden: number
     hiddenAfterZoom: number
+    overlapPairs: number
+    visible?: Array<{
+      id: string
+      text: string
+      sx: number
+      sy: number
+      w: number
+      h: number
+      offsetX: number
+      offsetY: number
+      cluster: string | null
+      wx: number
+      wz: number
+    }>
+    d243?: TwinLabelD243
   }
   __twinBadgeCenters?: Array<{ id: string; x: number; y: number; z: number }>
   __twinFly?: { floorId: string; nonce: number } | null

@@ -12,10 +12,21 @@ export interface RoomLabel {
 export const ROOM_LABEL_FONT = '/fonts/NotoSansSC-Regular-subset.woff'
 export const LABEL_MIN_PX = 13
 export const LABEL_MAX_PX = 16
-/** 深色字 + 浅色描边：浅地靠填色，树/墙靠描边，拉近后描边仍够厚。 */
+/** 深色字 + 浅色描边。perf 不走合成器，toneMapped=false 后就是这两个值。 */
 export const ROOM_LABEL_COLOR = '#17324d'
 export const ROOM_LABEL_OUTLINE_COLOR = '#ffffff'
+/**
+ * balanced/high 主通道会进合成器 AgX（白天曝光 2）。#17324d 会被抬成浅灰蓝，
+ * 白描边发奶油色。源色压得更暗、描边略偏冷，过 AgX 之后仍读成深字浅边。
+ */
+export const ROOM_LABEL_COLOR_BALANCED = '#020910'
+export const ROOM_LABEL_OUTLINE_COLOR_BALANCED = '#d8e2ec'
 export const ROOM_LABEL_OUTLINE_EM = 0.12
+
+export function roomLabelColors(quality: 'perf' | 'balanced' | 'high'): { color: string; outline: string } {
+  if (quality === 'perf') return { color: ROOM_LABEL_COLOR, outline: ROOM_LABEL_OUTLINE_COLOR }
+  return { color: ROOM_LABEL_COLOR_BALANCED, outline: ROOM_LABEL_OUTLINE_COLOR_BALANCED }
+}
 
 export function roomLabelOutlineWidth(fontSize: number): number {
   return Math.max(0.08, fontSize * ROOM_LABEL_OUTLINE_EM)

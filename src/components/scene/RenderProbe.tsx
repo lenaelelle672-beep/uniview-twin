@@ -82,6 +82,8 @@ export function RenderProbe() {
     window.__twinDevices = useTwinStore.getState().devices
     window.__twinFocusDevice = (target) => useTwinStore.getState().focusDevice(target)
     window.__twinSelectFloor = (floorId) => useTwinStore.getState().setSelectedFloor(floorId)
+    window.__twinSetDayNight = (dayNight) => useTwinStore.getState().setDayNight(dayNight)
+    window.__twinSetQuality = (quality) => useTwinStore.getState().setQuality(quality)
     window.__twinSetExploded = (exploded) => useTwinStore.getState().setExploded(exploded)
     const unsubscribe = useTwinStore.subscribe((state) => {
       window.__twinFly = state.floorFlyRequest

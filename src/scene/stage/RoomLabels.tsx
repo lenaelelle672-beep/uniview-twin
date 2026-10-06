@@ -6,7 +6,14 @@ import { searchWorkstations } from '../../locate/search'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { pointInRing } from '../../floors/parsePlan'
 import { useTwinStore } from '../../store/store'
-import { avoidLabels, labelScreenBox, type AvoidItem, type LabelPackState } from './labelAvoidance'
+import {
+  avoidLabels,
+  labelScreenBox,
+  type AvoidItem,
+  type AvoidPlacement,
+  type AvoidResult,
+  type LabelPackState,
+} from './labelAvoidance'
 import {
   LABEL_MAX_PX,
   LABEL_MIN_PX,
@@ -91,6 +98,127 @@ export function worldFontSizeFromProjectedEm(
   if (!(currentMaxPx > 1e-6) || !(currentFontSize > 0)) return currentFontSize || 0.78
   const want = Math.min(maxPx, Math.max(minPx, targetPx))
   return currentFontSize * (want / currentMaxPx)
+}
+
+function placementRow(
+  label: RoomLabel,
+  item: AvoidItem | undefined,
+  place: AvoidPlacement | undefined,
+): TwinLabelD243Row {
+  const offsetX = place?.offsetX ?? 0
+  const offsetY = place?.offsetY ?? 0
+  return {
+    id: label.id,
+    text: label.text,
+    wx: label.label[0],
+    wz: label.label[2],
+    sx: item?.x ?? 0,
+    sy: item?.y ?? 0,
+    w: place?.box.w ?? item?.w ?? 0,
+    h: place?.box.h ?? item?.h ?? 0,
+    offsetX,
+    offsetY,
+    offsetLen: Math.hypot(offsetX, offsetY),
+    visible: Boolean(place?.visible),
+    cluster: place?.cluster ?? null,
+  }
+}
+
+function visibleOverlapBoxes(
+  labels: RoomLabel[],
+  items: AvoidItem[],
+  avoided: AvoidResult,
+): NonNullable<Window['__twinLabelOverlap']>['visible'] {
+  const byLabel = new Map(labels.map((label) => [label.id, label]))
+  const byItem = new Map(items.map((item) => [item.id, item]))
+  const visible: NonNullable<Window['__twinLabelOverlap']>['visible'] = []
+  for (const row of avoided.placements) {
+    if (!row.visible) continue
+    const label = byLabel.get(row.id)
+    const item = byItem.get(row.id)
+    if (!label || !item) continue
+    visible.push({
+      id: row.id,
+      text: label.text,
+      sx: row.box.x + row.box.w / 2,
+      sy: row.box.y + row.box.h / 2,
+      w: row.box.w,
+      h: row.box.h,
+      offsetX: row.offsetX,
+      offsetY: row.offsetY,
+      cluster: null,
+      wx: label.label[0],
+      wz: label.label[2],
+    })
+  }
+  for (const cluster of avoided.clusters) {
+    const members = cluster.ids.map((id) => byLabel.get(id)).filter((label): label is RoomLabel => Boolean(label))
+    visible.push({
+      id: `cluster:${cluster.key}`,
+      text: cluster.text,
+      sx: cluster.box.x + cluster.box.w / 2,
+      sy: cluster.box.y + cluster.box.h / 2,
+      w: cluster.box.w,
+      h: cluster.box.h,
+      offsetX: cluster.offsetX,
+      offsetY: cluster.offsetY,
+      cluster: cluster.key,
+      wx: members.length ? members.reduce((sum, label) => sum + label.label[0], 0) / members.length : 0,
+      wz: members.length ? members.reduce((sum, label) => sum + label.label[2], 0) / members.length : 0,
+    })
+  }
+  return visible
+}
+
+function diagnoseRestCorridor(labels: RoomLabel[], items: AvoidItem[], avoided: AvoidResult): TwinLabelD243 | undefined {
+  const restLabel = labels.find((label) => label.text === '客户休息室')
+  if (!restLabel) return undefined
+  const byItem = new Map(items.map((item) => [item.id, item]))
+  const byPlace = new Map(avoided.placements.map((row) => [row.id, row]))
+  const rest = placementRow(restLabel, byItem.get(restLabel.id), byPlace.get(restLabel.id))
+  const corridors = labels
+    .filter((label) => label.text === '外廊')
+    .map((label) => placementRow(label, byItem.get(label.id), byPlace.get(label.id)))
+  let nearestWorldM: number | null = null
+  let nearest: TwinLabelD243Row | null = null
+  for (const row of corridors) {
+    const worldM = Math.hypot(row.wx - rest.wx, row.wz - rest.wz)
+    if (nearestWorldM == null || worldM < nearestWorldM) {
+      nearestWorldM = worldM
+      nearest = row
+    }
+  }
+  const cluster = avoided.clusters.find((row) => row.key === '外廊')
+  const nearestAnchorPx = nearest ? Math.hypot(nearest.sx - rest.sx, nearest.sy - rest.sy) : null
+  const restPlacedX = rest.sx + rest.offsetX
+  const restPlacedY = rest.sy + rest.offsetY
+  const otherPlacedX = cluster ? cluster.x : nearest ? nearest.sx + nearest.offsetX : null
+  const otherPlacedY = cluster ? cluster.y : nearest ? nearest.sy + nearest.offsetY : null
+  const nearestPlacedPx =
+    otherPlacedX == null || otherPlacedY == null ? null : Math.hypot(otherPlacedX - restPlacedX, otherPlacedY - restPlacedY)
+  const restOffsetLen = rest.offsetLen
+  const corridorOffsetLen = nearest?.offsetLen ?? null
+  let cause = 'none'
+  if (nearest && nearestAnchorPx != null && nearestPlacedPx != null) {
+    if (cluster && Math.hypot(cluster.x - restPlacedX, cluster.y - restPlacedY) < 48) cause = 'cluster-centroid'
+    else if (Math.max(restOffsetLen, corridorOffsetLen ?? 0) > 40 && nearestPlacedPx < 36) cause = 'avoidance-offset'
+    else if (nearestAnchorPx < 48 && nearestWorldM != null && nearestWorldM > 10) cause = 'projection'
+    else if (rest.w / 2 + (nearest.w ?? 0) / 2 > (nearestPlacedPx || nearestAnchorPx)) cause = 'wide-box'
+    else if (nearestPlacedPx < 8) cause = 'stacked-other'
+    else cause = 'separated'
+  }
+  return {
+    rest,
+    corridors,
+    nearestWorldM,
+    nearestAnchorPx,
+    nearestPlacedPx,
+    restBoxW: rest.w,
+    corridorBoxW: nearest?.w ?? cluster?.box.w ?? null,
+    restOffsetLen,
+    corridorOffsetLen,
+    cause,
+  }
 }
 
 function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, number]> | null | undefined): boolean {
@@ -217,12 +345,29 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       byId[label.id] = { visible: false, cluster: null, offsetX: 0, offsetY: 0 }
     }
     for (const row of avoided.placements) byId[row.id] = row
-    for (const cluster of avoided.clusters) clusters[cluster.key] = true
+    for (const cluster of avoided.clusters) {
+      const members = labels.filter((label) => cluster.ids.includes(label.id))
+      if (members.length === 0) continue
+      clusters[cluster.key] = {
+        visible: true,
+        offsetX: cluster.offsetX,
+        offsetY: cluster.offsetY,
+        world: [
+          members.reduce((sum, label) => sum + label.label[0], 0) / members.length,
+          members.reduce((sum, label) => sum + label.label[1], 0) / members.length,
+          members.reduce((sum, label) => sum + label.label[2], 0) / members.length,
+        ],
+        text: cluster.text,
+      }
+    }
     packRef.current = { byId, clusters }
     window.__twinLabelOverlap = {
       merged: avoided.merged,
       hidden: avoided.hidden,
       hiddenAfterZoom: avoided.hiddenAfterZoom,
+      overlapPairs: avoided.overlapPairs,
+      visible: visibleOverlapBoxes(labels, items, avoided),
+      d243: diagnoseRestCorridor(labels, items, avoided),
     }
     window.__twinLabelPx = {
       fontSize: next,

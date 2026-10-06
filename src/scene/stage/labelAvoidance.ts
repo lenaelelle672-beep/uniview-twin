@@ -59,6 +59,8 @@ export interface AvoidCluster {
   ids: string[]
   x: number
   y: number
+  offsetX: number
+  offsetY: number
   box: AvoidBox
 }
 
@@ -68,6 +70,8 @@ export interface AvoidResult {
   merged: number
   hidden: number
   hiddenAfterZoom: number
+  /** 当前可见标签（单体 + 组）屏幕 AABB 开区间相交的对数，边相贴不算。 */
+  overlapPairs: number
 }
 
 export interface LabelPlacementState {
@@ -77,9 +81,17 @@ export interface LabelPlacementState {
   offsetY: number
 }
 
+export interface LabelClusterState {
+  visible: boolean
+  offsetX: number
+  offsetY: number
+  world: [number, number, number]
+  text: string
+}
+
 export interface LabelPackState {
   byId: Record<string, LabelPlacementState>
-  clusters: Record<string, boolean>
+  clusters: Record<string, LabelClusterState>
 }
 
 export function clusterLabelText(name: string, count: number): string {
@@ -89,10 +101,27 @@ export function clusterLabelText(name: string, count: number): string {
 export function labelScreenBox(text: string, px: number): { w: number; h: number } {
   const em = Math.max(px, 1)
   const maxW = LABEL_MAX_EMS * em
-  const raw = Math.max(text.length, 1) * em * 1.05
-  const w = Math.min(maxW, raw) + PAD * 2
-  const lines = Math.min(2, Math.max(1, Math.ceil(raw / maxW)))
-  return { w, h: lines * em * 1.2 + PAD * 2 }
+  const parts = text.split('\n')
+  let lines = 0
+  let longest = 0
+  for (const part of parts) {
+    const raw = Math.max(part.length, 1) * em * 1.05
+    longest = Math.max(longest, Math.min(maxW, raw))
+    lines += Math.min(2, Math.max(1, Math.ceil(raw / maxW)))
+  }
+  lines = Math.min(2, Math.max(1, lines))
+  const grow = PAD + 3
+  return { w: longest + grow * 2, h: lines * em * 1.2 + grow * 2 }
+}
+
+export function countVisibleOverlapPairs(boxes: readonly AvoidBox[]): number {
+  let pairs = 0
+  for (let i = 0; i < boxes.length; i += 1) {
+    for (let j = i + 1; j < boxes.length; j += 1) {
+      if (boxesOverlap(boxes[i]!, boxes[j]!, 0)) pairs += 1
+    }
+  }
+  return pairs
 }
 
 export function boxesOverlap(a: AvoidBox, b: AvoidBox, pad = PAD): boolean {
@@ -198,23 +227,31 @@ function packLabels(items: readonly AvoidItem[]): Omit<AvoidResult, 'hiddenAfter
   const clusters: AvoidCluster[] = []
   const claimed = new Set<string>()
 
-  for (const group of sameNameGroups(sorted)) {
-    const members = group.filter((row) => !row.locked && !claimed.has(row.id))
-    if (members.length < 2) continue
+  const grouped = sameNameGroups(sorted)
+    .map((group) => group.filter((row) => !row.locked && !claimed.has(row.id)))
+    .filter((members) => members.length >= 2)
+    .sort((a, b) => b.length - a.length || b[0]!.area - a[0]!.area)
+  const clusteredName = new Set<string>()
+  for (const members of grouped) {
+    const key = members[0]!.text
+    if (clusteredName.has(key)) continue
     const cx = members.reduce((sum, row) => sum + row.x, 0) / members.length
     const cy = members.reduce((sum, row) => sum + row.y, 0) / members.length
-    const text = clusterLabelText(members[0]!.text, members.length)
+    const text = clusterLabelText(key, members.length)
     const size = labelScreenBox(text, Math.max(members[0]!.h, 14))
-    const dummy: AvoidItem = { ...members[0]!, id: `cluster:${members[0]!.text}`, x: cx, y: cy, w: size.w, h: size.h }
-    const fit = firstFree(dummy, occupied) ?? { box: boxAt(dummy, 0, 0), ox: 0, oy: 0 }
+    const dummy: AvoidItem = { ...members[0]!, id: `cluster:${key}`, x: cx, y: cy, w: size.w, h: size.h }
+    const fit = firstFree(dummy, occupied)
+    if (!fit) continue
+    clusteredName.add(key)
     occupied.push(fit.box)
-    const key = members[0]!.text
     clusters.push({
       key,
       text,
       ids: members.map((row) => row.id),
       x: cx + fit.ox,
       y: cy + fit.oy,
+      offsetX: fit.ox,
+      offsetY: fit.oy,
       box: fit.box,
     })
     for (const row of members) {
@@ -261,8 +298,21 @@ function packLabels(items: readonly AvoidItem[]): Omit<AvoidResult, 'hiddenAfter
     for (let i = 0; i < shown.length; i += 1) {
       for (let j = i + 1; j < shown.length; j += 1) {
         if (!boxesOverlap(shown[i]!.box, shown[j]!.box, 0)) continue
-        const drop = !shown[j]!.cluster && !locked.has(shown[j]!.id) ? shown[j]! : !shown[i]!.cluster && !locked.has(shown[i]!.id) ? shown[i]! : null
-        if (!drop || drop.cluster) continue
+        const drop = !shown[j]!.cluster && !locked.has(shown[j]!.id) ? shown[j]! : !shown[i]!.cluster && !locked.has(shown[i]!.id) ? shown[i]! : shown[j]!.cluster ? shown[j]! : shown[i]!.cluster ? shown[i]! : null
+        if (!drop) continue
+        if (drop.cluster) {
+          const key = drop.id.slice('cluster:'.length)
+          const index = clusters.findIndex((row) => row.key === key)
+          if (index >= 0) clusters.splice(index, 1)
+          for (const row of placements) {
+            if (row.cluster === key) {
+              row.cluster = null
+              row.visible = false
+            }
+          }
+          changed = true
+          continue
+        }
         const row = placements.find((item) => item.id === drop.id)
         if (row && row.visible) {
           row.visible = false
@@ -275,7 +325,8 @@ function packLabels(items: readonly AvoidItem[]): Omit<AvoidResult, 'hiddenAfter
 
   const merged = placements.filter((row) => row.cluster).length
   const hidden = placements.filter((row) => !row.visible && !row.cluster).length
-  return { placements, clusters, merged, hidden }
+  const overlapPairs = countVisibleOverlapPairs(vis().map((row) => row.box))
+  return { placements, clusters, merged, hidden, overlapPairs }
 }
 
 export function avoidLabels(items: readonly AvoidItem[]): AvoidResult {

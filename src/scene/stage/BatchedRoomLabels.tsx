@@ -4,7 +4,8 @@ import { DoubleSide, Group, Vector3, type Camera } from 'three'
 import { disableTroikaCdnFallback } from './disableTroikaCdn'
 import { BatchedText, Text, preloadFont } from 'troika-three-text'
 import { clusterTemplates, LABEL_MAX_EMS, type LabelPackState, type LabelPlacementState } from './labelAvoidance'
-import { ROOM_LABEL_COLOR, ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_COLOR, type RoomLabel } from './roomLabels'
+import { useTwinStore } from '../../store/store'
+import { ROOM_LABEL_FONT, roomLabelColors, type RoomLabel } from './roomLabels'
 
 disableTroikaCdnFallback()
 
@@ -97,6 +98,10 @@ export function BatchedRoomLabels({
   const [packGen, setPackGen] = useState(0)
   const scene = useThree((state) => state.scene)
   const invalidate = useThree((state) => state.invalidate)
+  const quality = useTwinStore((state) => state.quality)
+  const palette = roomLabelColors(quality)
+  const paletteRef = useRef(palette)
+  paletteRef.current = palette
   const signature = labels.map((label) => `${label.id}|${label.text}|${label.label.join(',')}`).join(';')
   const clusters = clusterTemplates(labels)
 
@@ -140,7 +145,7 @@ export function BatchedRoomLabels({
         batch = new BatchedText()
         batch.name = 'RoomLabelBatchedText'
         batch.font = ROOM_LABEL_FONT
-        batch.color = ROOM_LABEL_COLOR
+        batch.color = paletteRef.current.color
         batch.anchorX = 'center'
         batch.anchorY = 'middle'
         batch.renderOrder = 3
@@ -152,9 +157,9 @@ export function BatchedRoomLabels({
           text.text = label.text
           text.font = ROOM_LABEL_FONT
           text.fontSize = fontSizeRef.current
-          text.color = ROOM_LABEL_COLOR
+          text.color = paletteRef.current.color
           text.outlineWidth = outlineRef.current
-          text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
+          text.outlineColor = paletteRef.current.outline
           text.anchorX = 'center'
           text.anchorY = 'middle'
           text.characters = characters
@@ -169,9 +174,9 @@ export function BatchedRoomLabels({
           text.text = cluster.text
           text.font = ROOM_LABEL_FONT
           text.fontSize = fontSizeRef.current
-          text.color = ROOM_LABEL_COLOR
+          text.color = paletteRef.current.color
           text.outlineWidth = outlineRef.current
-          text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
+          text.outlineColor = paletteRef.current.outline
           text.anchorX = 'center'
           text.anchorY = 'middle'
           text.characters = characters
@@ -190,12 +195,15 @@ export function BatchedRoomLabels({
         if (cancelled || !batch) return
         const materials = Array.isArray(batch.material) ? batch.material : [batch.material]
         for (const material of materials) {
-          if (material) material.side = DoubleSide
+          if (!material) continue
+          material.side = DoubleSide
+          material.toneMapped = false
         }
         for (const text of [...members, ...clusterMembers]) {
           text.fontSize = fontSizeRef.current
+          text.color = paletteRef.current.color
           text.outlineWidth = outlineRef.current
-          text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
+          text.outlineColor = paletteRef.current.outline
           applyWrap(text, fontSizeRef.current)
         }
         applyMemberFades(members, fadesRef.current)
@@ -233,13 +241,14 @@ export function BatchedRoomLabels({
     if (!batch || members.length === 0) return
     for (const text of [...members, ...clusterMembers]) {
       text.fontSize = fontSize
+      text.color = palette.color
       text.outlineWidth = outlineWidth
-      text.outlineColor = ROOM_LABEL_OUTLINE_COLOR
+      text.outlineColor = palette.outline
       applyWrap(text, fontSize)
     }
     applyMemberFades(members, fadesRef.current)
     batch.sync(() => invalidate())
-  }, [fadesRef, fontSize, invalidate, outlineWidth, packGen])
+  }, [fadesRef, fontSize, invalidate, outlineWidth, packGen, palette.color, palette.outline])
 
   useFrame(({ camera, size }) => {
     const members = membersRef.current
@@ -258,17 +267,23 @@ export function BatchedRoomLabels({
       const cluster = clusters[i]
       const text = clustersRef.current[i]
       if (!cluster || !text) continue
-      const show = Boolean(pack.clusters[cluster.key])
+      const state = pack.clusters[cluster.key]
+      const show = Boolean(state?.visible)
+      const base = state?.world ?? cluster.label
       applyPlacement(
         text,
-        cluster.label,
-        { visible: show, cluster: cluster.key, offsetX: 0, offsetY: 0 },
+        base,
+        { visible: show, cluster: cluster.key, offsetX: state?.offsetX ?? 0, offsetY: state?.offsetY ?? 0 },
         1,
         host,
         camera,
         size,
         show,
       )
+      if (show && state?.text && text.text !== state.text) {
+        text.text = state.text
+        text.sync(() => invalidate())
+      }
     }
   })
 

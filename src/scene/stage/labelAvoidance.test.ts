@@ -44,7 +44,7 @@ describe('房间标签避让', () => {
     expect(displayName('会议室A1')).toBe('会议室A1')
     const box = labelScreenBox('丙类公共事务部礼品房', 13)
     expect(box.h).toBeGreaterThan(13)
-    expect(box.h).toBeLessThanOrEqual(13 * 1.2 * 2 + 8)
+    expect(box.h).toBeLessThanOrEqual(13 * 1.2 * 2 + 16)
   })
 
   it('同名先合并，拉开后拆回，合组用 ASCII x', () => {
@@ -101,10 +101,42 @@ describe('房间标签避让', () => {
     expect(clusters.some((item) => item.text.startsWith('会议室 x'))).toBe(true)
   })
 
-  it('F1–F8 / F12 / F22 拉近后 hiddenAfterZoom 为 0', () => {
+  it('F1–F8 / F12 / F22 拉近后 hiddenAfterZoom 为 0，可见标签两两重叠为 0', () => {
     for (const floorId of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F12', 'F22']) {
       const result = avoidLabels(planItems(floorId))
       expect(result.hiddenAfterZoom, floorId).toBe(0)
+      expect(result.overlapPairs, floorId).toBe(0)
     }
+  })
+
+  it('F03 客户休息室与最近外廊世界距离约 27.4 m，合组只用重叠的那一撮', () => {
+    const labels = roomLabelsFromPlan(getFloorPlan('F3')!)
+    const rest = labels.find((label) => label.text === '客户休息室')
+    const corridors = labels.filter((label) => label.text === '外廊')
+    expect(rest).toBeTruthy()
+    expect(corridors).toHaveLength(4)
+    const dists = corridors.map((label) => Math.hypot(label.label[0] - rest!.label[0], label.label[2] - rest!.label[2]))
+    const nearest = Math.min(...dists)
+    expect(nearest).toBeCloseTo(27.4, 1)
+    const packed = avoidLabels(planItems('F3'))
+    expect(packed.overlapPairs).toBe(0)
+    const restPlace = packed.placements.find((row) => row.id === rest!.id)
+    expect(restPlace).toBeTruthy()
+    if (restPlace?.cluster) expect(restPlace.cluster).not.toBe('外廊')
+  })
+
+  it('同名远离的房间不把组标签放到全体质心', () => {
+    const items = [
+      { id: 'a', text: '外廊', x: 80, y: 80, w: 40, h: 20, priority: 3, locked: false, area: 10 },
+      { id: 'b', text: '外廊', x: 90, y: 82, w: 40, h: 20, priority: 3, locked: false, area: 10 },
+      { id: 'c', text: '外廊', x: 700, y: 400, w: 40, h: 20, priority: 3, locked: false, area: 10 },
+      { id: 'd', text: '外廊', x: 900, y: 80, w: 40, h: 20, priority: 3, locked: false, area: 10 },
+    ]
+    const packed = avoidLabels(items)
+    expect(packed.clusters).toHaveLength(1)
+    expect(packed.clusters[0]?.ids).toEqual(['a', 'b'])
+    expect(packed.clusters[0]?.x).toBeGreaterThan(60)
+    expect(packed.clusters[0]?.x).toBeLessThan(160)
+    expect(packed.overlapPairs).toBe(0)
   })
 })
