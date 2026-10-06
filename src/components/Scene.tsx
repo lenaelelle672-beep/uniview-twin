@@ -2,12 +2,9 @@ import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
-import { bindTwinInvalidate } from '../scene/demandInvalidate'
-import { detectSoftwareRenderer, gpuTierLabel } from '../scene/gpuDetect'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
-import { DemandLoop } from './scene/DemandLoop'
 import { EastBlock } from './scene/EastBlock'
 import { FloorBadges } from './scene/FloorBadges'
 import { LocalEnvironment } from './scene/LocalEnvironment'
@@ -29,6 +26,7 @@ const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ d
 const FacadeSamples = lazy(() =>
   import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
 )
+const DemandLoop = lazy(() => import('./scene/DemandLoop').then((mod) => ({ default: mod.DemandLoop })))
 
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
@@ -49,6 +47,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const [keepFx, setKeepFx] = useState(false)
   const [prefetchDone, setPrefetchDone] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
+  const [loopOn, setLoopOn] = useState(false)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
@@ -75,6 +74,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
     }
     const tick = () => {
       if (cancelled) return
+      if (window.__twinFirstFrameAt != null) setLoopOn(true)
       // __twinPrefetchAt 在 import() 之前就写入，不能当“预取已发出”。
       // 等三个预取包都进 Resource Timing，再隔一帧才挂 FacadeSamples，
       // 避免 MonitorSamples 和预取抢同一拍、夹到首帧和预取之间。
@@ -84,6 +84,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         })
         return
       }
+      if (window.__twinFirstFrameAt != null && useTwinStore.getState().view !== 'building') return
       requestAnimationFrame(tick)
     }
     tick()
@@ -94,7 +95,11 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
 
   return (
     <>
-      <DemandLoop />
+      {loopOn && (
+        <Suspense fallback={null}>
+          <DemandLoop />
+        </Suspense>
+      )}
       <color attach="background" args={[background]} />
       <EnablePickVolumeRaycast />
       <DayExposure mode={mode} />
@@ -189,22 +194,23 @@ export function SceneCanvas() {
       {/* 不按性能档重建画布。换档会新建 WebGLRenderer，three 按渲染器缓存的 PMREM 会再生成一次。dpr 和阴影在同一个画布上更新。 */}
       <Canvas
         frameloop="demand"
-        dpr={gpuReady ? qualityDprRange(quality) : ([1, 1] as [number, number])}
+        dpr={qualityDprRange(quality)}
         shadows={gpuReady && quality !== 'perf' ? 'percentage' : false}
-        performance={{ min: quality === 'perf' ? 0.5 : 1, max: 1, debounce: 200 }}
         camera={{ position: pose.position, fov: pose.fov, near: 0.35, far: 2400 }}
         gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true, toneMapping: AgXToneMapping }}
-        onCreated={({ gl, invalidate }) => {
-          const detected = detectSoftwareRenderer(gl.getContext())
-          const pinned = useTwinStore.getState().qualityPinned
-          if (detected.software && !pinned) useTwinStore.setState({ quality: 'perf' })
-          const tier = useTwinStore.getState().quality
-          window.__twinGpu = {
-            renderer: detected.renderer,
-            software: detected.software,
-            tier: gpuTierLabel(tier),
-          }
-          bindTwinInvalidate(invalidate)
+        onCreated={({ gl }) => {
+          const ctx = gl.getContext()
+          let renderer = ''
+          let software = false
+          try {
+            const ext = ctx.getExtension('WEBGL_debug_renderer_info')
+            renderer = String(ctx.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : ctx.RENDERER) ?? '')
+            software = /swiftshader|llvmpipe|softpipe|software|basic render driver/i.test(renderer)
+          } catch {}
+          if (software && !useTwinStore.getState().qualityPinned) useTwinStore.setState({ quality: 'perf' })
+          const q = useTwinStore.getState().quality
+          window.__twinGpu = { renderer, software, tier: q === 'perf' ? 'performance' : q }
+          gl.shadowMap.autoUpdate = false
           setGpuReady(true)
         }}
         onPointerMissed={() => {

@@ -7,13 +7,6 @@ describe('URL 解析与回写', () => {
     resetTwinStore()
   })
 
-  it('?q=performance 与 ?q=perf 同义，显式覆盖优先', () => {
-    expect(parseSearch('?q=performance')).toEqual({ q: 'perf' })
-    applySearchToStore('?q=performance')
-    expect(useTwinStore.getState().quality).toBe('perf')
-    expect(useTwinStore.getState().qualityPinned).toBe(true)
-  })
-
   it('解析 view、floor、pos、cam、data、q', () => {
     expect(parseSearch('?view=floor&floor=F12&pos=F12-66&cam=p2f000&data=/sample.json&q=perf')).toEqual({
       view: 'floor',

@@ -76,10 +76,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
     if (next !== quality) set({ quality: next })
   },
   setSelectedFloor: (selectedFloor) => set({ selectedFloor }),
-  setHoveredFloor: (hoveredFloor) => {
-    if (get().hoveredFloor === hoveredFloor) return
-    set({ hoveredFloor })
-  },
+  setHoveredFloor: (hoveredFloor) => set({ hoveredFloor }),
   setFocusedDeskId: (focusedDeskId) => set({ focusedDeskId }),
   selectDesk: (deskId) => {
     const splitAt = deskId.lastIndexOf('-')

@@ -48,8 +48,7 @@ export function parseSearch(search: string): UrlState {
   if (data) result.data = data
 
   const quality = params.get('q')
-  if (quality === 'performance') result.q = 'perf'
-  else if (quality && isQuality(quality)) result.q = quality
+  if (quality && isQuality(quality)) result.q = quality
 
   if (params.get('style') === 'model') result.style = 'model'
 

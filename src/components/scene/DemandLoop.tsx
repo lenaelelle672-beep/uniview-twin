@@ -1,5 +1,6 @@
 import { AdaptiveDpr } from '@react-three/drei/core/AdaptiveDpr'
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
+import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import {
   emptyChannelClock,
@@ -7,7 +8,6 @@ import {
   retainFrameChannel,
   soonestWakeMs,
 } from '../../scene/frameSchedule'
-import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import { useTwinStore } from '../../store/store'
 
 /**
@@ -36,9 +36,7 @@ export function DemandLoop() {
   }, [exploded, gl, quality, selectedFloor, view])
 
   useEffect(() => {
-    const unsubAfter = addAfterEffect(() => {
-      flushTwinInvalidate()
-    })
+    const unsubAfter = addAfterEffect(() => flushTwinInvalidate())
     const unsubStore = useTwinStore.subscribe(() => {
       if (document.visibilityState === 'hidden') return
       invalidate()

@@ -21,8 +21,6 @@ export function RenderProbe() {
   const invalidate = useThree((state) => state.invalidate)
 
   useEffect(() => {
-    gl.shadowMap.autoUpdate = false
-    if (useTwinStore.getState().quality !== 'perf') gl.shadowMap.needsUpdate = true
     invalidate()
     markSuspenseReady()
     window.__twinScene = scene
