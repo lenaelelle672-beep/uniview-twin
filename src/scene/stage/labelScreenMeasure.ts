@@ -1,5 +1,5 @@
 import { Matrix4, Vector3, type Camera, type Object3D } from 'three'
-import { type AvoidBox } from './labelAvoidance'
+import { type AvoidBox, type LabelPackState } from './labelAvoidance'
 
 /** 两向都大于此值才算重叠；擦边只计数。 */
 export const OVERLAP_STRONG_PX = 2
@@ -137,6 +137,71 @@ export function pickOverlapVictim(
     return tier === 2 ? 20 : 30
   }
   return score(left.id) >= score(right.id) ? left.id : right.id
+}
+
+export function clusterBaseName(text: string): string {
+  return text.replace(/ x\d+$/, '')
+}
+
+function hidePackEntry(pack: LabelPackState, id: string, cluster: string | null): void {
+  if (id.startsWith('cluster:')) {
+    const key = id.slice('cluster:'.length)
+    if (pack.clusters[key]) pack.clusters[key] = { ...pack.clusters[key]!, visible: false }
+    return
+  }
+  if (pack.byId[id]) pack.byId[id] = { ...pack.byId[id]!, visible: false, cluster }
+}
+
+/** 按独立口径清掉两向都 >2 px 的叠字。同名单体并进合组；1366+ 不藏第二级单体，改藏第三级或合组。 */
+export function stripStrongOverlaps(
+  live: readonly MeasuredLabelBox[],
+  pack: LabelPackState,
+  tierOf: (id: string) => number,
+  keepTier2: boolean,
+): { pack: LabelPackState; remaining: MeasuredLabelBox[] } {
+  const next: LabelPackState = {
+    byId: { ...pack.byId },
+    clusters: { ...pack.clusters },
+  }
+  let remaining = live.slice()
+  for (let pass = 0; pass < 16; pass += 1) {
+    if (countOverlapKinds(remaining.map((row) => row.box)).strong === 0) break
+    let resolved = false
+    pairLoop: for (let i = 0; i < remaining.length; i += 1) {
+      for (let j = i + 1; j < remaining.length; j += 1) {
+        const left = remaining[i]!
+        const right = remaining[j]!
+        const { ox, oy } = overlapDepth(left.box, right.box)
+        if (ox <= OVERLAP_STRONG_PX || oy <= OVERLAP_STRONG_PX) continue
+        if (left.text === right.text && !left.id.startsWith('cluster:') && !right.id.startsWith('cluster:')) {
+          hidePackEntry(next, left.id, left.text)
+          hidePackEntry(next, right.id, right.text)
+          if (next.clusters[left.text]) next.clusters[left.text] = { ...next.clusters[left.text]!, visible: true }
+          remaining = remaining.filter((row) => row.id !== left.id && row.id !== right.id)
+          resolved = true
+          break pairLoop
+        }
+        if (
+          clusterBaseName(left.text) === clusterBaseName(right.text) &&
+          left.id.startsWith('cluster:') !== right.id.startsWith('cluster:')
+        ) {
+          const single = left.id.startsWith('cluster:') ? right : left
+          hidePackEntry(next, single.id, clusterBaseName(single.text))
+          remaining = remaining.filter((row) => row.id !== single.id)
+          resolved = true
+          break pairLoop
+        }
+        const drop = pickOverlapVictim(left, right, tierOf, keepTier2)
+        if (keepTier2 && !drop.startsWith('cluster:') && tierOf(drop) === 2) continue
+        hidePackEntry(next, drop, drop.startsWith('cluster:') ? null : null)
+        remaining = remaining.filter((row) => row.id !== drop)
+        resolved = true
+        break pairLoop
+      }
+    }
+    if (!resolved) break
+  }
+  return { pack: next, remaining }
 }
 
 export function visibilityMismatch(expected: ReadonlySet<string>, actual: ReadonlySet<string>): string[] {

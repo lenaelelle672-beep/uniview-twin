@@ -138,6 +138,27 @@ describe('房间标签避让', () => {
     expect(tier2Stats(items, result).hidden).toBe(0)
   })
 
+  it('keepTier2 把叠在合组上的同名单体收进组，24 格估算强重叠为 0', () => {
+    const leftover = [
+      { id: 'a', text: '会议室', x: 100, y: 100, w: 80, h: 28, priority: 2, locked: false, area: 50, tier: 2 as const },
+      { id: 'b', text: '会议室', x: 104, y: 102, w: 80, h: 28, priority: 2, locked: false, area: 50, tier: 2 as const },
+      { id: 'c', text: '会议室', x: 200, y: 108, w: 80, h: 28, priority: 2, locked: false, area: 50, tier: 2 as const },
+    ]
+    const packed = avoidLabels(leftover, undefined, true)
+    expect(packed.overlapPairs).toBe(0)
+    expect(tier2Stats(leftover, packed).hidden).toBe(0)
+    expect(packed.clusters[0]?.key).toBe('会议室')
+    const visibleSingles = packed.placements.filter((row) => row.visible)
+    expect(visibleSingles.every((row) => row.id === 'c' || row.cluster === '会议室')).toBe(true)
+    for (const width of [1366, 1920]) {
+      for (const floorId of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
+        const items = planItems(floorId, width)
+        const result = avoidLabels(items, undefined, true)
+        expect(tier2Stats(items, result).hidden, `${floorId}@${width} tier2`).toBe(0)
+      }
+    }
+  })
+
   it('可见标签挪位不超过 48 px，48 内放不下就隐藏', () => {
     const crowd = Array.from({ length: 20 }, (_, index) => ({
       id: `n${index}`,

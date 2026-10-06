@@ -314,6 +314,25 @@ function dropScore(
   return 30
 }
 
+/** 合组已上屏时，把叠在合组盒上的同名单体收进组里，避免「会议室」和「会议室 xN」叠字。 */
+function absorbOverlappingSameName(
+  placements: AvoidPlacement[],
+  clusters: AvoidCluster[],
+  byId: Map<string, AvoidItem>,
+): void {
+  for (const cluster of clusters) {
+    for (const row of placements) {
+      if (!row.visible) continue
+      const item = byId.get(row.id)
+      if (!item || item.text !== cluster.key) continue
+      if (!boxesOverlap(row.box, cluster.box, 0)) continue
+      row.visible = false
+      row.cluster = cluster.key
+      if (!cluster.ids.includes(row.id)) cluster.ids.push(row.id)
+    }
+  }
+}
+
 function packLabels(items: readonly AvoidItem[], keepTier2 = false): Omit<AvoidResult, 'hiddenAfterZoom'> {
   const byId = new Map(items.map((item) => [item.id, item]))
   const placements: AvoidPlacement[] = []
@@ -403,42 +422,45 @@ function packLabels(items: readonly AvoidItem[], keepTier2 = false): Omit<AvoidR
     ...placements.filter((row) => row.visible).map((row) => ({ id: row.id, box: row.box, cluster: false })),
     ...clusters.map((row) => ({ id: `cluster:${row.key}`, box: row.box, cluster: true })),
   ]
-  for (let pass = 0; pass < 8; pass += 1) {
-    const shown = vis()
-    let changed = false
-    let worst: { entry: (typeof shown)[number]; score: number } | null = null
-    for (let i = 0; i < shown.length; i += 1) {
-      for (let j = i + 1; j < shown.length; j += 1) {
-        if (!boxesOverlap(shown[i]!.box, shown[j]!.box, 0)) continue
-        const left = { id: shown[i]!.id, cluster: shown[i]!.cluster, score: dropScore(shown[i]!, locked, byId, placements, keepTier2) }
-        const right = { id: shown[j]!.id, cluster: shown[j]!.cluster, score: dropScore(shown[j]!, locked, byId, placements, keepTier2) }
-        const pick = left.score >= right.score ? left : right
-        if (pick.score < 0) continue
-        if (!worst || pick.score > worst.score) worst = { entry: pick.score === left.score ? shown[i]! : shown[j]!, score: pick.score }
-      }
-    }
-    if (!worst) break
-    const drop = worst.entry
-    if (drop.cluster) {
-      const key = drop.id.slice('cluster:'.length)
-      const index = clusters.findIndex((row) => row.key === key)
-      if (index >= 0) clusters.splice(index, 1)
-      for (const row of placements) {
-        if (row.cluster === key) {
-          row.cluster = null
-          row.visible = false
+  const sweep = () => {
+    for (let pass = 0; pass < 8; pass += 1) {
+      const shown = vis()
+      let changed = false
+      let worst: { entry: (typeof shown)[number]; score: number } | null = null
+      for (let i = 0; i < shown.length; i += 1) {
+        for (let j = i + 1; j < shown.length; j += 1) {
+          if (!boxesOverlap(shown[i]!.box, shown[j]!.box, 0)) continue
+          const left = { id: shown[i]!.id, cluster: shown[i]!.cluster, score: dropScore(shown[i]!, locked, byId, placements, keepTier2) }
+          const right = { id: shown[j]!.id, cluster: shown[j]!.cluster, score: dropScore(shown[j]!, locked, byId, placements, keepTier2) }
+          const pick = left.score >= right.score ? left : right
+          if (pick.score < 0) continue
+          if (!worst || pick.score > worst.score) worst = { entry: pick.score === left.score ? shown[i]! : shown[j]!, score: pick.score }
         }
       }
-      changed = true
-    } else {
-      const row = placements.find((item) => item.id === drop.id)
-      if (row && row.visible) {
-        row.visible = false
+      if (!worst) break
+      const drop = worst.entry
+      if (drop.cluster) {
+        const key = drop.id.slice('cluster:'.length)
+        const index = clusters.findIndex((row) => row.key === key)
+        if (index >= 0) clusters.splice(index, 1)
+        for (const row of placements) {
+          if (row.cluster === key) {
+            row.cluster = null
+            row.visible = false
+          }
+        }
         changed = true
+      } else {
+        const row = placements.find((item) => item.id === drop.id)
+        if (row && row.visible) {
+          row.visible = false
+          changed = true
+        }
       }
+      if (!changed) break
     }
-    if (!changed) break
   }
+  sweep()
 
   if (keepTier2) {
     const liveKeys = new Set(clusters.map((row) => row.key))
@@ -447,6 +469,13 @@ function packLabels(items: readonly AvoidItem[], keepTier2 = false): Omit<AvoidR
       const row = placements.find((place) => place.id === item.id)
       if (!row || row.visible) continue
       if (row.cluster && liveKeys.has(row.cluster)) continue
+      const same = clusters.find((cluster) => cluster.key === item.text)
+      if (same && boxesOverlap(boxAt(item, 0, 0), same.box, 0)) {
+        row.visible = false
+        row.cluster = item.text
+        if (!same.ids.includes(item.id)) same.ids.push(item.id)
+        continue
+      }
       row.visible = true
       row.cluster = null
       row.offsetX = 0
@@ -454,6 +483,9 @@ function packLabels(items: readonly AvoidItem[], keepTier2 = false): Omit<AvoidR
       row.box = boxAt(item, 0, 0)
     }
   }
+
+  absorbOverlappingSameName(placements, clusters, byId)
+  sweep()
 
   const merged = placements.filter((row) => row.cluster).length
   const hidden = placements.filter((row) => !row.visible && !row.cluster).length

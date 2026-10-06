@@ -6,6 +6,7 @@ import {
   overlapDepth,
   overlapPairNames,
   pickOverlapVictim,
+  stripStrongOverlaps,
   visibilityMismatch,
 } from './labelScreenMeasure'
 
@@ -37,6 +38,45 @@ describe('独立重叠口径 / 合组可见集合', () => {
     const tierOf = (id: string) => (id.includes('L2') || id.includes('部') ? 2 : 3)
     expect(pickOverlapVictim({ id: 'aL3', text: 'x' }, { id: 'bL2部', text: 'y' }, tierOf, false)).toBe('aL3')
     expect(pickOverlapVictim({ id: 'aL3', text: 'x' }, { id: 'bL2部', text: 'y' }, tierOf, true)).toBe('aL3')
+  })
+
+  it('实测叠字：同名单体并进合组，1366 不藏第二级单体', () => {
+    const clusterBox = { x: 0, y: 0, w: 80, h: 18 }
+    const singleBox = { x: 10, y: 2, w: 50, h: 16 }
+    const otherBox = { x: 12, y: 3, w: 60, h: 16 }
+    const pack = {
+      byId: {
+        meet: { visible: true, cluster: null, offsetX: 0, offsetY: 0 },
+        guest: { visible: true, cluster: null, offsetX: 0, offsetY: 0 },
+      },
+      clusters: {
+        会议室: { visible: true, offsetX: 0, offsetY: 0, world: [0, 0, 0] as [number, number, number], text: '会议室 x14' },
+      },
+    }
+    const tierOf = (id: string) => (id === 'guest' || id === 'meet' || id.startsWith('cluster:') ? 2 : 3)
+    const sameName = stripStrongOverlaps(
+      [
+        { id: 'meet', text: '会议室', box: singleBox, cluster: null, px: 16 },
+        { id: 'cluster:会议室', text: '会议室 x14', box: clusterBox, cluster: '会议室', px: 16 },
+      ],
+      pack,
+      tierOf,
+      true,
+    )
+    expect(sameName.pack.byId.meet?.visible).toBe(false)
+    expect(sameName.pack.byId.meet?.cluster).toBe('会议室')
+    expect(sameName.pack.clusters['会议室']?.visible).toBe(true)
+    const keepL2 = stripStrongOverlaps(
+      [
+        { id: 'meet', text: '会议室', box: singleBox, cluster: null, px: 16 },
+        { id: 'guest', text: '贵宾接待室', box: otherBox, cluster: null, px: 16 },
+      ],
+      pack,
+      tierOf,
+      true,
+    )
+    expect(keepL2.pack.byId.meet?.visible).toBe(true)
+    expect(keepL2.pack.byId.guest?.visible).toBe(true)
   })
 
   it('转正 yaw 让字面朝向相机，俯视 -Z 时为 0', () => {

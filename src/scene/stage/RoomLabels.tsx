@@ -9,6 +9,7 @@ import { useTwinStore } from '../../store/store'
 import { classifyRoomLabel } from '../../floors/labelTier'
 import {
   avoidLabels,
+  boxesOverlap,
   labelScreenBox,
   tier2Stats,
   type AvoidItem,
@@ -21,9 +22,8 @@ import {
   countOverlapKinds,
   findRoomLabelBatch,
   isDrawnText,
-  overlapDepth,
   overlapPairNames,
-  pickOverlapVictim,
+  stripStrongOverlaps,
   visibilityMismatch,
 } from './labelScreenMeasure'
 import type { LabelBatchApi } from './BatchedRoomLabels'
@@ -289,10 +289,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const stripLiveOverlaps = (perspective: PerspectiveCamera, viewport: { width: number; height: number }, keepTier2: boolean) => {
     const api = measureRef.current
     if (!api?.ready || !packedRef.current) return false
-    let live = api.measureVisible(perspective, viewport)
+    const live = api.measureVisible(perspective, viewport)
     if (live.length === 0) return false
-    const byId = { ...layoutRef.current.byId }
-    const clusters = { ...layoutRef.current.clusters }
     const tierOf = (id: string) => {
       if (id.startsWith('cluster:')) {
         const key = id.slice('cluster:'.length)
@@ -302,44 +300,16 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       const label = labels.find((item) => item.id === id)
       return label ? classifyRoomLabel(label.sourceName ?? label.text, label.area ?? 0).tier : 3
     }
-    for (let pass = 0; pass < 12; pass += 1) {
-      if (countOverlapKinds(live.map((row) => row.box)).strong === 0) break
-      let left = live[0]
-      let right = live[1]
-      let found = false
-      for (let i = 0; i < live.length && !found; i += 1) {
-        for (let j = i + 1; j < live.length; j += 1) {
-          const { ox, oy } = overlapDepth(live[i]!.box, live[j]!.box)
-          if (ox > 2 && oy > 2) {
-            left = live[i]
-            right = live[j]
-            found = true
-            break
-          }
-        }
-      }
-      if (!found || !left || !right) break
-      if (left.text === right.text && !left.id.startsWith('cluster:') && !right.id.startsWith('cluster:')) {
-        const key = left.text
-        byId[left.id] = { ...byId[left.id]!, visible: false, cluster: key }
-        byId[right.id] = { ...byId[right.id]!, visible: false, cluster: key }
-        if (clusters[key]) clusters[key] = { ...clusters[key]!, visible: true }
-        live = live.filter((row) => row.id !== left.id && row.id !== right.id)
-        continue
-      }
-      const drop = pickOverlapVictim(left, right, tierOf, keepTier2)
-      if (keepTier2 && !drop.startsWith('cluster:') && tierOf(drop) === 2) break
-      if (drop.startsWith('cluster:')) {
-        const key = drop.slice('cluster:'.length)
-        if (clusters[key]) clusters[key] = { ...clusters[key]!, visible: false }
-      } else if (byId[drop]) {
-        byId[drop] = { ...byId[drop]!, visible: false, cluster: null }
-      } else break
-      live = live.filter((row) => row.id !== drop)
+    const strong = countOverlapKinds(live.map((row) => row.box)).strong
+    if (strong === 0) {
+      layoutRef.current = packRef.current
+      stripRef.current = false
+      return true
     }
-    layoutRef.current = { byId, clusters }
-    packRef.current = { byId, clusters }
-    stripRef.current = false
+    const stripped = stripStrongOverlaps(live, packRef.current, tierOf, keepTier2)
+    layoutRef.current = stripped.pack
+    packRef.current = stripped.pack
+    stripRef.current = countOverlapKinds(stripped.remaining.map((row) => row.box)).strong > 0
     return true
   }
 
@@ -582,13 +552,19 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
         for (const item of items) {
           if (item.tier !== 2) continue
           const state = byId[item.id]
-          if (state && !state.visible && !state.cluster) {
-            state.visible = true
-            const row = avoided.placements.find((place) => place.id === item.id)
-            if (row) {
-              row.visible = true
-              row.cluster = null
-            }
+          if (!state || state.visible || state.cluster) continue
+          const cluster = clusters[item.text]
+          const clusterBox = avoided.clusters.find((row) => row.key === item.text)?.box
+          const itemBox = { x: item.x - item.w / 2, y: item.y - item.h / 2, w: item.w, h: item.h }
+          if (cluster?.visible && clusterBox && boxesOverlap(itemBox, clusterBox, 0)) {
+            state.cluster = item.text
+            continue
+          }
+          state.visible = true
+          const row = avoided.placements.find((place) => place.id === item.id)
+          if (row) {
+            row.visible = true
+            row.cluster = null
           }
         }
       }

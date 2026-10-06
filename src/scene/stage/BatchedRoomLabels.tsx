@@ -391,6 +391,7 @@ export function BatchedRoomLabels({
         show,
       )
     }
+    invalidate()
   })
 
   return <group ref={groupRef} name="RoomLabelBatch" />
