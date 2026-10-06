@@ -13,7 +13,15 @@ export interface UrlState {
   data?: string
   q?: QualityTier
   style?: Presentation
+  keepDrawingBuffer?: boolean
 }
+
+function keepDrawingBufferFromSearch(search: string): boolean {
+  return new URLSearchParams(search.startsWith('?') ? search.slice(1) : search).get('keepDrawingBuffer') === '1'
+}
+
+/** 地址栏往返保留测试参数；不进 store，避免和画质/机位挂钩。 */
+let keepDrawingBufferFlag = typeof location !== 'undefined' && keepDrawingBufferFromSearch(location.search)
 
 function isViewMode(value: string): value is ViewMode {
   return (VIEW_MODES as readonly string[]).includes(value)
@@ -52,6 +60,8 @@ export function parseSearch(search: string): UrlState {
 
   if (params.get('style') === 'model') result.style = 'model'
 
+  if (keepDrawingBufferFromSearch(search)) result.keepDrawingBuffer = true
+
   return result
 }
 
@@ -64,6 +74,7 @@ export function serializeUrl(state: UrlState): string {
     ['data', state.data],
     ['q', state.q],
     ['style', state.style === 'model' ? 'model' : undefined],
+    ['keepDrawingBuffer', state.keepDrawingBuffer ? '1' : undefined],
   ]
   const query = parts
     .filter((entry): entry is [string, string] => Boolean(entry[1]))
@@ -82,6 +93,7 @@ export function storeToSearch(): string {
     data: state.dataUrl ?? undefined,
     q: state.urlQuality ?? undefined,
     style: state.presentation === 'model' ? 'model' : undefined,
+    keepDrawingBuffer: keepDrawingBufferFlag || undefined,
   })
 }
 
@@ -93,6 +105,7 @@ function rawParam(search: string, key: string): string | null {
 }
 
 export function applySearchToStore(search: string) {
+  keepDrawingBufferFlag = keepDrawingBufferFromSearch(search)
   const parsed = parseSearch(search)
   const dataUrl = parsed.data ?? null
   const rawPos = rawParam(search, 'pos')
