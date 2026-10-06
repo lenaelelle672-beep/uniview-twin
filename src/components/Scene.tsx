@@ -2,6 +2,7 @@ import { Hud } from '@react-three/drei/core/Hud'
 import { Canvas, useThree } from '@react-three/fiber'
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AgXToneMapping, Group } from 'three'
+import { PrewarmGate } from '../scene/prewarm/PrewarmGate'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
@@ -140,6 +141,7 @@ function SceneBody({ mode, quality }: { mode: SurfaceMode; quality: 'perf' | 'ba
         )}
         <ExplodedLayout />
         <FloorStage />
+        <PrewarmGate />
         <RenderProbe />
       </Suspense>
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
