@@ -69,9 +69,6 @@ function installConsoleHooks() {
         })
       }
       wrap('info')
-      wrap('warn')
-      wrap('error')
-      wrap('log')
     })()
   `
 }
@@ -277,11 +274,10 @@ async function findPrinter(page) {
 
 async function runPack(browser, quality, pathKind) {
   const { page, consoleSink, session } = await openPage(browser, quality)
-  await page.waitForFunction(() => window.__twinReady === true, { timeout: 60_000 })
-  await page.evaluate(() => {
-    window.__twinLabelPackMs = { sdf: 0, layout: 0, sync: 0, total: 0 }
-    window.__twinBeginLabelPack?.()
+  await page.waitForFunction(() => window.__twinReady === true && window.__twinFirstFrameAt != null, {
+    timeout: 60_000,
   })
+  await page.waitForFunction(() => window.__twinFirstPrefetchDone === true, { timeout: 60_000 })
   const printer = await findPrinter(page)
   if (pathKind === 'alarm') {
     await page.evaluate((target) => {
@@ -297,18 +293,26 @@ async function runPack(browser, quality, pathKind) {
       window.__twinFocusDevice?.({ floor: 'F1', deskId: null, deviceId: null })
     })
   }
-  await page
-    .waitForFunction(
+  try {
+    await page.waitForFunction(
       () => window.__twinView === 'floor' && window.__twinSelected === 'F1' && window.__twinInterior?.floorId === 'F1',
       { timeout: 90_000 },
     )
-    .catch(() => {})
-  await page
-    .waitForFunction(() => {
+    await page.waitForFunction(() => {
       const pack = window.__twinLabelPackMs
-      return (pack && typeof pack === 'object' && pack.total > 0) || window.__twinLabelMount?.done === true
-    }, { timeout: 45_000 })
-    .catch(() => {})
+      return Boolean(pack && typeof pack === 'object' && pack.total > 0)
+    }, { timeout: 60_000 })
+  } catch (error) {
+    const dump = await page.evaluate(() => ({
+      view: window.__twinView ?? null,
+      floor: window.__twinSelected ?? null,
+      interior: window.__twinInterior ?? null,
+      pack: window.__twinLabelPackMs ?? null,
+      mount: window.__twinLabelMount ?? null,
+      prefetchDone: window.__twinFirstPrefetchDone === true,
+    }))
+    throw new Error(`F1 ${quality}/${pathKind} 进层失败：${error.message} ${JSON.stringify(dump)}`)
+  }
   await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 1500)))
   const probe = await page.evaluate(() => ({
     pack: window.__twinLabelPackMs ?? null,
@@ -361,14 +365,18 @@ async function main() {
     pack: [],
   }
   try {
-    for (const quality of ['balanced', 'perf']) {
-      for (let round = 1; round <= 3; round += 1) {
-        report.timeline.push(await runTimeline(browser, quality, round))
+    if (process.env.PACK_ONLY !== '1') {
+      for (const quality of ['balanced', 'perf']) {
+        for (let round = 1; round <= 3; round += 1) {
+          report.timeline.push(await runTimeline(browser, quality, round))
+        }
       }
     }
-    for (const quality of ['balanced', 'perf']) {
-      for (const pathKind of ['alarm', 'list']) {
-        report.pack.push(await runPack(browser, quality, pathKind))
+    if (process.env.TIMELINE_ONLY !== '1') {
+      for (const quality of ['balanced', 'perf']) {
+        for (const pathKind of ['alarm', 'list']) {
+          report.pack.push(await runPack(browser, quality, pathKind))
+        }
       }
     }
   } finally {
