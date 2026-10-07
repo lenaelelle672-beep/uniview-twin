@@ -18,7 +18,7 @@ export function FloorList({ open }: FloorListProps) {
   const setHoveredFloor = useTwinStore((state) => state.setHoveredFloor)
   const listRef = useRef<HTMLDivElement>(null)
   const strip = !open
-  // 总览 compact / 单层全宽只改 overlay，不占 flex 宽，进层和 Esc 都不会 setSize（D272）。
+  // 总览 compact / 单层全宽只改 overlay；宽由 .floor-rail 固定，进层不 setSize（D272/D273）。
   const compact = view === 'building' && open
   const rows = useMemo(() => overviewFloorRows(floors), [floors])
   const shown = strip ? stripFloorRows(rows) : rows

@@ -7,7 +7,7 @@ declare module 'troika-three-text' {
     useWorker?: boolean
   }): void
   export function preloadFont(
-    options: { font?: string; characters?: string },
+    options: { font?: string; characters?: string; sdfGlyphSize?: number },
     callback: (info?: { sdfTexture?: import('three').Texture }) => void,
   ): void
   export function getTextRenderInfo(
@@ -278,6 +278,8 @@ interface Window {
     atlasHeight?: number | null
     atlasWidth?: number | null
     paused?: boolean
+    pauseReason?: 'pointer' | 'motion' | 'floor' | null
+    pauseCounts?: { pointer: number; motion: number; floor: number }
     warmup?: Array<{ kind: string; ms: number; maxFrame: number; atlasHeight?: number | null }>
     startedAt?: number
     gate?: {
@@ -288,7 +290,7 @@ interface Window {
     }
     uploaded?: boolean
     sdfReady?: boolean
-    spaceCall?: { at: number; ms: number; frameMs: number }
+    spaceCall?: { at: number; ms: number; frameMs: number; fetchMs?: number; parseMs?: number }
     upload?: { at: number; ms: number; frameMs: number }
     compile?: {
       at: number

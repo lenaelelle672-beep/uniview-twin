@@ -35,7 +35,7 @@ let pauseHooked = false
 let pointerDown = false
 type SdfTexture = Texture
 type PreloadCb = (info?: { sdfTexture?: Texture }) => void
-let preloadFontFn: ((options: { font?: string; characters?: string }, cb: PreloadCb) => void) | null = null
+let preloadFontFn: ((options: { font?: string; characters?: string; sdfGlyphSize?: number }, cb: PreloadCb) => void) | null = null
 let sdfTexture: Texture | null = null
 let texHooked = false
 
@@ -121,6 +121,33 @@ export function overviewIdleBlocked(): boolean {
   const moved = window.__twinCameraMoveAt
   if (typeof moved === 'number' && performance.now() - moved < 240) return true
   return false
+}
+
+export function preloadPauseReason(): 'pointer' | 'motion' | 'floor' | null {
+  if (!overviewIdleBlocked()) return null
+  if (pointerDown) return 'pointer'
+  if (typeof window !== 'undefined' && window.__twinView !== 'building') return 'floor'
+  return 'motion'
+}
+
+export function notePreloadPause() {
+  if (typeof window === 'undefined') return
+  const reason = preloadPauseReason()
+  const prev = window.__twinGlyphPreload?.pauseCounts ?? { pointer: 0, motion: 0, floor: 0 }
+  const next = { ...prev }
+  if (reason) next[reason] += 1
+  window.__twinGlyphPreload = {
+    ...(window.__twinGlyphPreload ?? {
+      batchSize: GLYPH_BATCH,
+      firstBatchSize: GLYPH_FIRST_BATCH,
+      batches: [],
+      done: false,
+      atlasGrows: [],
+    }),
+    paused: Boolean(reason),
+    pauseReason: reason,
+    pauseCounts: next,
+  }
 }
 
 export function getSdfTexture(): SdfTexture | null {
@@ -498,9 +525,19 @@ export async function warmupFontParse(): Promise<{
   installAtlasCanvasHook()
   await loadTroika()
   if (glyphPreloadBlocked()) return { ms: 0, atlasHeight: null, glyphs: 0, deferred: true }
+  try {
+    if (typeof FontFace !== 'undefined') {
+      const face = new FontFace('twin-label-pre', `url(${ROOM_LABEL_FONT})`)
+      await face.load()
+    }
+  } catch {
+    // troika 仍走自己的 typr 解析；这里只是先把解码放进 document.fonts。
+  }
+  if (glyphPreloadBlocked()) return { ms: 0, atlasHeight: null, glyphs: 0, deferred: true }
   const started = performance.now()
   await new Promise<void>((resolve) => {
-    preloadFontFn?.({ font: ROOM_LABEL_FONT, characters: GLYPH_WARMUP_SPACE }, (info) => {
+    // 空格只要把字体解析走完；sdf 8 避免第一次就建 2048×256 图集（D274 spaceCall ≤60）。
+    preloadFontFn?.({ font: ROOM_LABEL_FONT, characters: GLYPH_WARMUP_SPACE, sdfGlyphSize: 8 }, (info) => {
       noteSdfTexture(info?.sdfTexture)
       resolve()
     })
@@ -511,6 +548,7 @@ export async function warmupFontParse(): Promise<{
       ...(window.__twinGlyphPreload.spaceCall ?? { at: started, ms: 0, frameMs: 0 }),
       at: started,
       ms: Math.round(performance.now() - started),
+      parseMs: Math.round(performance.now() - started),
     }
   }
   return {

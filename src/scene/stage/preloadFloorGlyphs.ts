@@ -16,6 +16,7 @@ import {
   installGlyphPauseHooks,
   installSdfAtlasHook,
   installTexImage2DHook,
+  notePreloadPause,
   overviewIdleBlocked,
   preloadLabelChars,
   scheduleIdleWork,
@@ -128,6 +129,7 @@ export function scheduleGlyphPreload(): () => void {
   let firstMain = true
   let uploaded = false
   let compiled = false
+  let fontPrefetch: 'idle' | 'wait' | 'done' = 'idle'
 
   const tick = (deadline: { timeRemaining: () => number }) => {
     if (cancelled) return
@@ -137,8 +139,25 @@ export function scheduleGlyphPreload(): () => void {
       return
     }
     if (glyphPreloadBlocked()) {
-      if (window.__twinGlyphPreload) window.__twinGlyphPreload.paused = true
+      notePreloadPause()
       idleId = scheduleIdleWork(tick)
+      return
+    }
+    if (fontPrefetch !== 'done') {
+      if (fontPrefetch === 'idle') {
+        fontPrefetch = 'wait'
+        const fetchAt = performance.now()
+        void prefetchFontBytes().then(() => {
+          fontPrefetch = 'done'
+          if (window.__twinGlyphPreload) {
+            window.__twinGlyphPreload.spaceCall = {
+              ...(window.__twinGlyphPreload.spaceCall ?? { at: fetchAt, ms: 0, frameMs: 0 }),
+              fetchMs: Math.round(performance.now() - fetchAt),
+            }
+          }
+          idleId = scheduleIdleWork(tick)
+        })
+      }
       return
     }
     if (window.__twinGlyphPreload) window.__twinGlyphPreload.paused = false
@@ -172,9 +191,11 @@ export function scheduleGlyphPreload(): () => void {
             ]
             window.__twinGlyphPreload.atlasHeight = row.atlasHeight ?? window.__twinGlyphPreload.atlasHeight
             window.__twinGlyphPreload.spaceCall = {
+              ...(window.__twinGlyphPreload.spaceCall ?? {}),
               at: started,
               ms: Math.round(row.ms),
               frameMs,
+              parseMs: Math.round(row.ms),
             }
           }
           warmedFont = true

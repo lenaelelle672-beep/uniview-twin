@@ -201,6 +201,17 @@ button {
   display: flex;
 }
 
+/* D273：栏位始终占 232px，compact/全宽只改 overlay，进层不 setSize，画布与 fb2 一样 886。 */
+.floor-rail {
+  position: relative;
+  z-index: 4;
+  flex: none;
+  width: 232px;
+  align-self: stretch;
+  min-height: 0;
+  background: #fff;
+}
+
 .floor-panel,
 .detail-panel {
   background: #fff;
@@ -655,6 +666,10 @@ button {
 }
 
 @media (max-width: 1280px) {
+  .floor-rail {
+    width: 208px;
+  }
+
   .floor-panel {
     width: 208px;
   }
@@ -677,10 +692,10 @@ button {
 }
 
 @media (max-width: 1100px) {
-  .app:has(.floor-panel.is-overview-compact) .alarm-drawer:not(.is-floor-collapsed) {
-    left: 88px;
-    inset-inline-start: 88px;
-    width: min(560px, calc(100vw - 88px - 220px - 12px));
+  .app:has(.floor-rail) .alarm-drawer:not(.is-floor-collapsed) {
+    left: 208px;
+    inset-inline-start: 208px;
+    width: min(560px, calc(100vw - 208px - 220px - 12px));
   }
 
   .topbar {
