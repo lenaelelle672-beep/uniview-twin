@@ -150,9 +150,12 @@ export function scheduleGlyphPreload(): () => void {
         void prefetchFontBytes().then(() => {
           fontPrefetch = 'done'
           if (window.__twinGlyphPreload) {
-            window.__twinGlyphPreload.spaceCall = {
-              ...(window.__twinGlyphPreload.spaceCall ?? { at: fetchAt, ms: 0, frameMs: 0 }),
-              fetchMs: Math.round(performance.now() - fetchAt),
+            window.__twinGlyphPreload.spaceFetchMs = Math.round(performance.now() - fetchAt)
+            if (window.__twinGlyphPreload.spaceCall) {
+              window.__twinGlyphPreload.spaceCall = {
+                ...window.__twinGlyphPreload.spaceCall,
+                fetchMs: window.__twinGlyphPreload.spaceFetchMs,
+              }
             }
           }
           idleId = scheduleIdleWork(tick)
@@ -192,10 +195,15 @@ export function scheduleGlyphPreload(): () => void {
             window.__twinGlyphPreload.atlasHeight = row.atlasHeight ?? window.__twinGlyphPreload.atlasHeight
             window.__twinGlyphPreload.spaceCall = {
               ...(window.__twinGlyphPreload.spaceCall ?? {}),
-              at: started,
+              at: window.__twinGlyphPreload.spaceCall?.at ?? started,
               ms: Math.round(row.ms),
               frameMs,
-              parseMs: Math.round(row.ms),
+              fetchMs: window.__twinGlyphPreload.spaceFetchMs ?? window.__twinGlyphPreload.spaceCall?.fetchMs,
+              atlasMs: window.__twinGlyphPreload.spaceCall?.atlasMs,
+              parseMs: window.__twinGlyphPreload.spaceCall?.parseMs,
+              canvasMs: window.__twinGlyphPreload.spaceCall?.canvasMs,
+              sdfMs: window.__twinGlyphPreload.spaceCall?.sdfMs,
+              compileCount: window.__twinGlyphPreload.spaceCall?.compileCount,
             }
           }
           warmedFont = true

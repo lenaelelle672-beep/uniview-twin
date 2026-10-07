@@ -290,6 +290,7 @@ interface Window {
     }
     uploaded?: boolean
     sdfReady?: boolean
+    spaceFetchMs?: number
     spaceCall?: {
       at: number
       ms: number
