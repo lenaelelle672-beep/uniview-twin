@@ -20,6 +20,22 @@ function stubTroikaUnicodeResolver(): Plugin {
   }
 }
 
+function cacheWoffFonts(): Plugin {
+  const apply = (server: { middlewares: { use: (fn: (req: { url?: string }, res: { setHeader: (k: string, v: string) => void }, next: () => void) => void) => void } }) => {
+    server.middlewares.use((req, res, next) => {
+      if (typeof req.url === 'string' && /\.woff2?(\?|$)/i.test(req.url)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable')
+      }
+      next()
+    })
+  }
+  return {
+    name: 'cache-woff-fonts',
+    configureServer: apply,
+    configurePreviewServer: apply,
+  }
+}
+
 function stripJsdelivr(): Plugin {
   const pattern = /https?:\/\/cdn\.jsdelivr\.net[^"'`\s]*/g
   const leftover = /https?:\/\/\/?gh\/lojjic\/[^"'`\s]*/g
@@ -38,7 +54,7 @@ function stripJsdelivr(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), stubTroikaUnicodeResolver(), stripJsdelivr()],
+  plugins: [react(), stubTroikaUnicodeResolver(), stripJsdelivr(), cacheWoffFonts()],
   resolve: {
     alias: [
       {

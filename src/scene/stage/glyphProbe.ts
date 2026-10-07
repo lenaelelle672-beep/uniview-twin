@@ -597,7 +597,7 @@ export async function warmupFontParse(): Promise<{
           longTasks.push({ start: entry.startTime, dur: entry.duration, name: entry.name })
         }
       })
-      observer.observe({ type: 'longtask', buffered: true })
+      observer.observe({ type: 'longtask', buffered: false })
     } catch {
       observer = null
     }
@@ -628,16 +628,21 @@ export async function warmupFontParse(): Promise<{
   })
   await Promise.resolve()
   afterMicro = performance.now()
+  atlasFrameMs = Math.max(atlasFrameMs, afterMicro - lastRaf, afterMicro - started)
   phase = 'b'
   const atlasMs = afterMicro - started
   await done
+  const parseMs = performance.now() - afterMicro
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+  })
+  await new Promise((resolve) => setTimeout(resolve, 0))
   phase = 'done'
   rafAlive = false
   observer?.disconnect()
-  const parseMs = performance.now() - afterMicro
   const hookSnap = hooks.finish()
-  const atlasLong = longTasks.filter((row) => row.start < afterMicro && row.start + row.dur >= started)
-  const parseLong = longTasks.filter((row) => row.start + row.dur > afterMicro && row.start < afterMicro + parseMs)
+  const atlasLong = longTasks.filter((row) => row.start >= started - 8 && row.start < afterMicro)
+  const parseLong = longTasks.filter((row) => row.start >= afterMicro - 8 && row.start <= afterMicro + parseMs + 8)
   noteGlyphChars('warmup:space', GLYPH_WARMUP_SPACE)
   if (window.__twinGlyphPreload) {
     window.__twinGlyphPreload.spaceCall = {
