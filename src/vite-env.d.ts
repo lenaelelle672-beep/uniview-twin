@@ -290,7 +290,17 @@ interface Window {
     }
     uploaded?: boolean
     sdfReady?: boolean
-    spaceCall?: { at: number; ms: number; frameMs: number; fetchMs?: number; parseMs?: number }
+    spaceCall?: {
+      at: number
+      ms: number
+      frameMs: number
+      fetchMs?: number
+      atlasMs?: number
+      parseMs?: number
+      canvasMs?: number
+      sdfMs?: number
+      compileCount?: number
+    }
     upload?: { at: number; ms: number; frameMs: number }
     compile?: {
       at: number

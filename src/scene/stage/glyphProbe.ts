@@ -165,6 +165,58 @@ function noteSdfTexture(tex: Texture | undefined) {
   }
 }
 
+function installSpaceSplitHooks() {
+  let canvasMs = 0
+  let sdfMs = 0
+  let compileCount = 0
+  const doc = typeof document !== 'undefined' ? document : null
+  const origCreate = doc?.createElement.bind(document)
+  const proto = typeof HTMLCanvasElement !== 'undefined' ? HTMLCanvasElement.prototype : null
+  const origGet = proto?.getContext
+  if (doc && origCreate) {
+    document.createElement = ((tag: string, options?: ElementCreationOptions) => {
+      const el = origCreate(tag, options)
+      if (String(tag).toLowerCase() === 'canvas') {
+        const t0 = performance.now()
+        queueMicrotask(() => {
+          const canvas = el as HTMLCanvasElement
+          if (canvas.width === 2048) canvasMs = Math.round(performance.now() - t0)
+        })
+      }
+      return el
+    }) as typeof document.createElement
+  }
+  if (proto && origGet) {
+    proto.getContext = function (this: HTMLCanvasElement, type: string, attrs?: unknown) {
+      const t0 = performance.now()
+      const ctx = origGet.call(this, type, attrs as never)
+      if (type === 'webgl' || type === 'webgl2' || type === 'experimental-webgl') {
+        sdfMs += performance.now() - t0
+        const gl = ctx as WebGLRenderingContext | null
+        if (gl && !(gl as WebGLRenderingContext & { __twinSpaceHook?: boolean }).__twinSpaceHook) {
+          ;(gl as WebGLRenderingContext & { __twinSpaceHook?: boolean }).__twinSpaceHook = true
+          const origC = gl.compileShader.bind(gl)
+          gl.compileShader = (shader) => {
+            compileCount += 1
+            const c0 = performance.now()
+            const result = origC(shader)
+            sdfMs += performance.now() - c0
+            return result
+          }
+        }
+      }
+      return ctx
+    } as typeof proto.getContext
+  }
+  return {
+    finish() {
+      if (doc && origCreate) document.createElement = origCreate
+      if (proto && origGet) proto.getContext = origGet
+      return { canvasMs, sdfMs: Math.round(sdfMs), compileCount }
+    },
+  }
+}
+
 export function installSdfAtlasHook() {
   if (hookInstalled || typeof console === 'undefined') return
   hookInstalled = true
@@ -525,30 +577,33 @@ export async function warmupFontParse(): Promise<{
   installAtlasCanvasHook()
   await loadTroika()
   if (glyphPreloadBlocked()) return { ms: 0, atlasHeight: null, glyphs: 0, deferred: true }
-  try {
-    if (typeof FontFace !== 'undefined') {
-      const face = new FontFace('twin-label-pre', `url(${ROOM_LABEL_FONT})`)
-      await face.load()
-    }
-  } catch {
-    // troika 仍走自己的 typr 解析；这里只是先把解码放进 document.fonts。
-  }
-  if (glyphPreloadBlocked()) return { ms: 0, atlasHeight: null, glyphs: 0, deferred: true }
+  const hooks = installSpaceSplitHooks()
   const started = performance.now()
-  await new Promise<void>((resolve) => {
-    // 空格只要把字体解析走完；sdf 8 避免第一次就建 2048×256 图集（D274 spaceCall ≤60）。
-    preloadFontFn?.({ font: ROOM_LABEL_FONT, characters: GLYPH_WARMUP_SPACE, sdfGlyphSize: 8 }, (info) => {
+  let afterMicro = 0
+  const done = new Promise<void>((resolve) => {
+    // 既定路线：preloadFont(' ')，不改 sdfGlyphSize。微任务里走 (a) atlas+isSupported；woff 回调走 (b) woff2otf+Typr。
+    preloadFontFn?.({ font: ROOM_LABEL_FONT, characters: GLYPH_WARMUP_SPACE }, (info) => {
       noteSdfTexture(info?.sdfTexture)
       resolve()
     })
   })
+  await Promise.resolve()
+  afterMicro = performance.now()
+  const atlasMs = afterMicro - started
+  await done
+  const parseMs = performance.now() - afterMicro
+  const hookSnap = hooks.finish()
   noteGlyphChars('warmup:space', GLYPH_WARMUP_SPACE)
   if (window.__twinGlyphPreload) {
     window.__twinGlyphPreload.spaceCall = {
       ...(window.__twinGlyphPreload.spaceCall ?? { at: started, ms: 0, frameMs: 0 }),
       at: started,
       ms: Math.round(performance.now() - started),
-      parseMs: Math.round(performance.now() - started),
+      atlasMs: Math.round(atlasMs),
+      parseMs: Math.round(parseMs),
+      canvasMs: hookSnap.canvasMs,
+      sdfMs: hookSnap.sdfMs,
+      compileCount: hookSnap.compileCount,
     }
   }
   return {
