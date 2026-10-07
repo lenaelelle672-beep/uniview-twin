@@ -99,6 +99,10 @@ export function resetGlyphProbe() {
   writeProbe()
 }
 
+export function setGlyphPointerDown(next: boolean) {
+  pointerDown = next
+}
+
 export function postfxCompiled(): boolean {
   if (typeof window === 'undefined') return false
   if (window.__twinGpu?.tier === 'performance') return true
@@ -163,6 +167,12 @@ function noteSdfTexture(tex: Texture | undefined) {
     if (typeof img?.width === 'number') window.__twinGlyphPreload.atlasWidth = img.width
     window.__twinGlyphPreload.sdfReady = true
   }
+}
+
+/** 与其它 __twin 探针一样：只认启动 URL 的 keepDrawingBuffer=1（或 probe=1）。默认页不改 prototype。 */
+export function glyphTimingProbeEnabled(search = typeof location === 'undefined' ? '' : location.search): boolean {
+  const params = new URLSearchParams(search.startsWith('?') ? search.slice(1) : search)
+  return params.get('keepDrawingBuffer') === '1' || params.get('probe') === '1'
 }
 
 function installSpaceSplitHooks() {
@@ -577,11 +587,40 @@ export async function warmupFontParse(): Promise<{
   installAtlasCanvasHook()
   await loadTroika()
   if (glyphPreloadBlocked()) return { ms: 0, atlasHeight: null, glyphs: 0, deferred: true }
-  const hooks = installSpaceSplitHooks()
+  const hooks = glyphTimingProbeEnabled() ? installSpaceSplitHooks() : { finish: () => ({ canvasMs: 0, sdfMs: 0, compileCount: 0 }) }
+  const longTasks: Array<{ start: number; dur: number; name: string }> = []
+  let observer: PerformanceObserver | null = null
+  if (typeof PerformanceObserver !== 'undefined') {
+    try {
+      observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          longTasks.push({ start: entry.startTime, dur: entry.duration, name: entry.name })
+        }
+      })
+      observer.observe({ type: 'longtask', buffered: true })
+    } catch {
+      observer = null
+    }
+  }
+  let lastRaf = performance.now()
+  let atlasFrameMs = 0
+  let parseFrameMs = 0
+  let phase: 'a' | 'b' | 'done' = 'a'
+  let rafAlive = true
+  const rafTick = () => {
+    if (!rafAlive) return
+    const now = performance.now()
+    const dt = now - lastRaf
+    lastRaf = now
+    if (phase === 'a') atlasFrameMs = Math.max(atlasFrameMs, dt)
+    else if (phase === 'b') parseFrameMs = Math.max(parseFrameMs, dt)
+    requestAnimationFrame(rafTick)
+  }
+  requestAnimationFrame(rafTick)
   const started = performance.now()
   let afterMicro = 0
   const done = new Promise<void>((resolve) => {
-    // 既定路线：preloadFont(' ')，不改 sdfGlyphSize。微任务里走 (a) atlas+isSupported；woff 回调走 (b) woff2otf+Typr。
+    // 既定路线：preloadFont(' ')。(a) 微任务 / (b) XHR onload 本就是两段任务，不拆。
     preloadFontFn?.({ font: ROOM_LABEL_FONT, characters: GLYPH_WARMUP_SPACE }, (info) => {
       noteSdfTexture(info?.sdfTexture)
       resolve()
@@ -589,10 +628,16 @@ export async function warmupFontParse(): Promise<{
   })
   await Promise.resolve()
   afterMicro = performance.now()
+  phase = 'b'
   const atlasMs = afterMicro - started
   await done
+  phase = 'done'
+  rafAlive = false
+  observer?.disconnect()
   const parseMs = performance.now() - afterMicro
   const hookSnap = hooks.finish()
+  const atlasLong = longTasks.filter((row) => row.start < afterMicro && row.start + row.dur >= started)
+  const parseLong = longTasks.filter((row) => row.start + row.dur > afterMicro && row.start < afterMicro + parseMs)
   noteGlyphChars('warmup:space', GLYPH_WARMUP_SPACE)
   if (window.__twinGlyphPreload) {
     window.__twinGlyphPreload.spaceCall = {
@@ -601,6 +646,11 @@ export async function warmupFontParse(): Promise<{
       ms: Math.round(performance.now() - started),
       atlasMs: Math.round(atlasMs),
       parseMs: Math.round(parseMs),
+      atlasFrameMs: Math.round(atlasFrameMs),
+      parseFrameMs: Math.round(parseFrameMs),
+      atlasLongTaskMs: atlasLong.length ? Math.round(Math.max(...atlasLong.map((row) => row.dur))) : 0,
+      parseLongTaskMs: parseLong.length ? Math.round(Math.max(...parseLong.map((row) => row.dur))) : 0,
+      longTasks: longTasks.map((row) => ({ start: Math.round(row.start), dur: Math.round(row.dur), name: row.name })),
       canvasMs: hookSnap.canvasMs,
       sdfMs: hookSnap.sdfMs,
       compileCount: hookSnap.compileCount,

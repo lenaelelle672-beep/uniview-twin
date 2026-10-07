@@ -151,6 +151,7 @@ interface TwinEnvMaterial {
 interface Window {
   __twinReady?: boolean
   __twinReadyAt?: number
+  __twinNotePreloadPause?: () => void
   __twinGpu?: {
     renderer: string
     software: boolean
@@ -291,6 +292,13 @@ interface Window {
     uploaded?: boolean
     sdfReady?: boolean
     spaceFetchMs?: number
+    fontPrefetch?: {
+      at: number
+      ms: number
+      bytes: number
+      afterFirstMs: number | null
+      longTaskMs: number
+    }
     spaceCall?: {
       at: number
       ms: number
@@ -298,6 +306,11 @@ interface Window {
       fetchMs?: number
       atlasMs?: number
       parseMs?: number
+      atlasFrameMs?: number
+      parseFrameMs?: number
+      atlasLongTaskMs?: number
+      parseLongTaskMs?: number
+      longTasks?: Array<{ start: number; dur: number; name: string }>
       canvasMs?: number
       sdfMs?: number
       compileCount?: number

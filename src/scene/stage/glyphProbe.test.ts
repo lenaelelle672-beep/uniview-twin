@@ -5,7 +5,18 @@ import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { roomLabelsFromPlan } from '../../floors/labels'
 import { clusterTemplates } from './labelAvoidance'
 import { roomLabelCharacters } from './roomLabels'
-import { GLYPH_BATCH, GLYPH_FIRST_BATCH, GLYPH_MS_PER, chunkGlyphs, diffProgramCacheKeys, takeGlyphBudget } from './glyphProbe'
+import {
+  GLYPH_BATCH,
+  GLYPH_FIRST_BATCH,
+  GLYPH_MS_PER,
+  chunkGlyphs,
+  diffProgramCacheKeys,
+  glyphTimingProbeEnabled,
+  notePreloadPause,
+  resetGlyphProbe,
+  setGlyphPointerDown,
+  takeGlyphBudget,
+} from './glyphProbe'
 import { GLYPH_PRELOAD_FLOORS, floorLabelCharacters } from './preloadFloorGlyphs'
 
 hydrateAllAboveGrade()
@@ -72,13 +83,24 @@ describe('D262/D264 字形预排', () => {
     expect(probe).not.toMatch(/new Scene\(/)
     expect(probe).toMatch(/return overviewIdleBlocked\(\)/)
     expect(probe).toMatch(/installSpaceSplitHooks/)
+    expect(probe).toMatch(/glyphTimingProbeEnabled/)
+    expect(probe).toMatch(/keepDrawingBuffer/)
+    expect(probe).toMatch(/PerformanceObserver/)
+    expect(probe).toMatch(/longtask/)
+    expect(probe).toMatch(/atlasFrameMs/)
+    expect(probe).toMatch(/parseFrameMs/)
     expect(probe).toMatch(/atlasMs/)
     expect(probe).toMatch(/parseMs/)
     expect(probe).toMatch(/GLYPH_WARMUP_SPACE/)
     expect(probe).not.toMatch(/sdfGlyphSize:\s*8/)
-    expect(prefetch).toMatch(/import\('\.\/textRuntime'\)[\s\S]*NotoSansSC-Regular-subset\.woff/)
-    expect(prefetch.indexOf("import('./textRuntime')")).toBeLessThan(prefetch.indexOf('NotoSansSC-Regular-subset.woff'))
+    expect(prefetch).toMatch(/import\('\.\/textRuntime'\)/)
+    expect(prefetch).not.toMatch(/NotoSansSC-Regular-subset\.woff/)
+    expect(prefetch.indexOf("import('./textRuntime')")).toBeLessThan(prefetch.indexOf("import('./preloadFloorGlyphs')"))
+    expect(preload).toMatch(/arrayBuffer\(\)/)
+    expect(preload).toMatch(/buf = null/)
+    expect(preload).toMatch(/fontPrefetch/)
     expect(preload).toMatch(/glyphPreloadStartReady/)
+    expect(preload).toMatch(/__twinNotePreloadPause/)
     expect(preload).toMatch(/uploadSdfTexture/)
     expect(preload).toMatch(/overviewIdleBlocked/)
     expect(preload).toMatch(/compileDummyLabelMaterial/)
@@ -102,5 +124,37 @@ describe('D262/D264 字形预排', () => {
       { name: 'standard', cacheKey: 'a,x,c' },
     ]
     expect(diffProgramCacheKeys(before, after)).toEqual([{ name: 'standard', cacheKey: 'a,x,c', changed: ['1:b→x'] }])
+  })
+
+  it('createElement/getContext hook 只在 keepDrawingBuffer=1 或 probe=1 打开', () => {
+    expect(glyphTimingProbeEnabled('')).toBe(false)
+    expect(glyphTimingProbeEnabled('?q=perf')).toBe(false)
+    expect(glyphTimingProbeEnabled('?keepDrawingBuffer=1')).toBe(true)
+    expect(glyphTimingProbeEnabled('?q=perf&probe=1')).toBe(true)
+  })
+
+  it('pauseCounts 分别累加 pointer / motion / floor', () => {
+    const root = globalThis as typeof globalThis & Window
+    if (typeof (globalThis as { window?: unknown }).window === 'undefined') {
+      Object.defineProperty(globalThis, 'window', { value: root, configurable: true })
+    }
+    resetGlyphProbe()
+    root.__twinView = 'building'
+    root.__twinCameraMoveAt = undefined
+    root.__twinSchedule = undefined
+    setGlyphPointerDown(true)
+    notePreloadPause()
+    expect(root.__twinGlyphPreload?.pauseReason).toBe('pointer')
+    expect(root.__twinGlyphPreload?.pauseCounts?.pointer).toBeGreaterThan(0)
+    setGlyphPointerDown(false)
+    root.__twinView = 'floor'
+    notePreloadPause()
+    expect(root.__twinGlyphPreload?.pauseReason).toBe('floor')
+    expect(root.__twinGlyphPreload?.pauseCounts?.floor).toBeGreaterThan(0)
+    root.__twinView = 'building'
+    root.__twinCameraMoveAt = performance.now()
+    notePreloadPause()
+    expect(root.__twinGlyphPreload?.pauseReason).toBe('motion')
+    expect(root.__twinGlyphPreload?.pauseCounts?.motion).toBeGreaterThan(0)
   })
 })

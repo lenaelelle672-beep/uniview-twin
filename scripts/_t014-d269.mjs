@@ -49,7 +49,7 @@ const browser = await puppeteer.launch({
   ],
 })
 
-async function open(search = '?q=perf') {
+async function open(search = '?q=perf&keepDrawingBuffer=1') {
   const page = await browser.newPage()
   await page.setCacheEnabled(false)
   await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
@@ -407,6 +407,18 @@ const out = {
       atlasGrows: g?.atlasGrows ?? [],
       atlasHeight: g?.atlasHeight ?? null,
       spaceCall: g?.spaceCall ?? null,
+      fontPrefetch: g?.fontPrefetch ?? null,
+      woffs: performance.getEntriesByType('resource')
+        .filter((entry) => /\.woff2?(\?|$)/i.test(entry.name))
+        .map((entry) => ({
+          name: entry.name.replace(location.origin, ''),
+          startTime: Math.round(entry.startTime),
+          duration: Math.round(entry.duration),
+          transferSize: entry.transferSize,
+          encodedBodySize: entry.encodedBodySize,
+          decodedBodySize: entry.decodedBodySize,
+          initiatorType: entry.initiatorType,
+        })),
       upload: g?.upload ?? null,
       compile: g?.compile ?? null,
       interiorCompile: g?.interiorCompile ?? null,
@@ -415,6 +427,10 @@ const out = {
     }
   }, idleStart)
   out.idle.tex = await snapshotTex(page)
+  out.idle.pauseCounts = await page.evaluate(() => {
+    const g = window.__twinGlyphPreload
+    return { paused: g?.paused ?? false, reason: g?.pauseReason ?? null, counts: g?.pauseCounts ?? null }
+  })
   out.idle.d263 = await page.evaluate(() => {
     const first = window.__twinFirstFrameAt
     const stamps = window.__twinRafStamps ?? []

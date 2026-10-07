@@ -12,6 +12,7 @@ import {
   compileInteriorMaterials,
   glyphPreloadBlocked,
   glyphPreloadStartReady,
+  glyphTimingProbeEnabled,
   installAtlasCanvasHook,
   installGlyphPauseHooks,
   installSdfAtlasHook,
@@ -82,10 +83,38 @@ function watchMaxFrame(during: () => Promise<void>): Promise<number> {
 }
 
 async function prefetchFontBytes() {
+  const started = performance.now()
+  const longTasks: number[] = []
+  let observer: PerformanceObserver | null = null
+  if (typeof PerformanceObserver !== 'undefined') {
+    try {
+      observer = new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) longTasks.push(entry.duration)
+      })
+      observer.observe({ type: 'longtask', buffered: false })
+    } catch {
+      observer = null
+    }
+  }
   try {
-    await fetch(ROOM_LABEL_FONT, { cache: 'force-cache' })
+    const res = await fetch(ROOM_LABEL_FONT, { cache: 'force-cache' })
+    let buf: ArrayBuffer | null = await res.arrayBuffer()
+    const bytes = buf.byteLength
+    buf = null
+    if (window.__twinGlyphPreload) {
+      window.__twinGlyphPreload.fontPrefetch = {
+        at: started,
+        ms: Math.round(performance.now() - started),
+        bytes,
+        afterFirstMs:
+          window.__twinFirstFrameAt != null ? Math.round(started - window.__twinFirstFrameAt) : null,
+        longTaskMs: longTasks.length ? Math.round(Math.max(...longTasks)) : 0,
+      }
+    }
   } catch {
     // 解析仍走 troika；这里只是提前把 woff 放进 HTTP 缓存。
+  } finally {
+    observer?.disconnect()
   }
 }
 
@@ -101,6 +130,7 @@ export function scheduleGlyphPreload(): () => void {
   installGlyphPauseHooks()
   installTexImage2DHook()
   startEntryFrameWatch()
+  if (glyphTimingProbeEnabled()) window.__twinNotePreloadPause = notePreloadPause
   if (window.__twinGlyphPreload == null) {
     window.__twinGlyphPreload = {
       batchSize: GLYPH_BATCH,
@@ -113,12 +143,7 @@ export function scheduleGlyphPreload(): () => void {
       paused: true,
     }
   }
-  const prefetchAfterTextRuntime = () => {
-    if (window.__twinTextRuntimeAt == null) return
-    void prefetchFontBytes()
-  }
-  if (window.__twinTextRuntimeAt != null) prefetchAfterTextRuntime()
-  else void import('./textRuntime').then(prefetchAfterTextRuntime)
+  if (window.__twinTextRuntimeAt == null) void import('./textRuntime')
   let cancelled = false
   let idleId = 0
   let remaining = ''

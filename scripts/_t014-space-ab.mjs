@@ -26,7 +26,7 @@ const runs = []
 for (let i = 0; i < 3; i += 1) {
   const page = await browser.newPage()
   await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
-  await page.goto(`${baseUrl}/?q=perf`, { waitUntil: 'load', timeout: 90_000 })
+  await page.goto(`${baseUrl}/?q=perf&keepDrawingBuffer=1`, { waitUntil: 'load', timeout: 90_000 })
   await page.waitForFunction(() => window.__twinReady === true, { timeout: 90_000 })
   await page
     .waitForFunction(
