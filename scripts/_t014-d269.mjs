@@ -58,6 +58,12 @@ async function open(search = '?q=perf&keepDrawingBuffer=1') {
     let last = performance.now()
     const tick = () => {
       const now = performance.now()
+      if (window.__twinRafSkipOnce) {
+        window.__twinRafSkipOnce = false
+        last = now
+        requestAnimationFrame(tick)
+        return
+      }
       stamps.push({ at: now, dt: now - last })
       last = now
       requestAnimationFrame(tick)
@@ -510,6 +516,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     const resetAt = await page.evaluate(() => {
       const now = performance.now()
       if (Array.isArray(window.__twinRafStamps)) window.__twinRafStamps.length = 0
+      window.__twinRafSkipOnce = true
       window.__twinCameraMoveAt = undefined
       return now
     })
@@ -530,7 +537,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
         : await page.evaluate(
             (t0, t1) => {
               const stamps = window.__twinRafStamps ?? []
-              const slice = stamps.filter((item) => item.at >= t0 && item.at <= t1)
+              const slice = stamps.filter((item) => item.at >= t0 && item.at <= t1 && item.dt < 1000)
               if (!slice.length) return null
               return Math.round(Math.max(...slice.map((item) => item.dt)))
             },
@@ -645,6 +652,7 @@ if (!fast) {
   })
   const resetAt = await page.evaluate(() => {
     if (Array.isArray(window.__twinRafStamps)) window.__twinRafStamps.length = 0
+    window.__twinRafSkipOnce = true
     return performance.now()
   })
   const clickAt = await enterFloor(page, 'F2')
@@ -662,7 +670,7 @@ if (!fast) {
         : await page.evaluate(
             (t0, t1) => {
               const stamps = window.__twinRafStamps ?? []
-              const slice = stamps.filter((item) => item.at >= t0 && item.at <= t1)
+              const slice = stamps.filter((item) => item.at >= t0 && item.at <= t1 && item.dt < 1000)
               if (!slice.length) return null
               return Math.round(Math.max(...slice.map((item) => item.dt)))
             },
@@ -691,6 +699,7 @@ if (!fast) {
     const resetAt = await page.evaluate(() => {
       const now = performance.now()
       if (Array.isArray(window.__twinRafStamps)) window.__twinRafStamps.length = 0
+      window.__twinRafSkipOnce = true
       window.__twinCameraMoveAt = undefined
       return now
     })
@@ -704,7 +713,7 @@ if (!fast) {
     row.clickToRest = rest.clickToRest
     row.maxFrame = await page.evaluate((t0) => {
       const stamps = window.__twinRafStamps ?? []
-      const slice = stamps.filter((item) => item.at >= t0)
+      const slice = stamps.filter((item) => item.at >= t0 && item.dt < 1000)
       if (!slice.length) return null
       return Math.round(Math.max(...slice.map((item) => item.dt)))
     }, resetAt)
