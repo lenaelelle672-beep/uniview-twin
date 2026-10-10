@@ -3,7 +3,10 @@ import {
   DoubleSide,
   Group,
   InstancedMesh,
+  Material,
   Mesh,
+  Plane,
+  Vector3,
   type Camera,
   type Scene,
   type Texture,
@@ -816,6 +819,70 @@ export async function compileInteriorMaterials(): Promise<
       group.remove(mesh)
       if (mesh instanceof InstancedMesh) mesh.dispose()
     }
+    geo.dispose()
+  }
+}
+
+/** 进层会给外壳材质挂一个裁切平面，着色器要重编。空闲时先编好，点击时直接复用。 */
+export async function compileClippedShellMaterials(): Promise<boolean> {
+  const renderer = window.__twinRenderer
+  const camera = window.__twinCamera
+  const mainScene = window.__twinScene
+  if (glyphPreloadBlocked()) return false
+  if (!renderer || !camera || !mainScene) return false
+  const shell = await import('../materials')
+  const plane = new Plane(new Vector3(0, -1, 0), 1)
+  const planes = [plane]
+  const mats: Material[] = [
+    shell.curtainMaterial,
+    shell.jointMaterial,
+    shell.solidMaterial,
+    shell.grilleMaterial,
+    shell.finMaterial,
+    shell.stoneMaterial,
+    shell.eaveMaterial,
+    shell.baseMaterial,
+  ]
+  mainScene.traverse((object) => {
+    const mesh = object as Mesh & { customDepthMaterial?: Material }
+    const list = mesh.material ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) : []
+    if (!list.some((item) => item?.name === 'east_grille')) return
+    for (const item of list) if (item) mats.push(item)
+    if (mesh.customDepthMaterial) mats.push(mesh.customDepthMaterial)
+  })
+  const unique = [...new Set(mats)]
+  const saved = unique.map((material) => ({
+    planes: material.clippingPlanes,
+    clipShadows: material.clipShadows,
+  }))
+  const clippingWas = renderer.localClippingEnabled
+  const geo = new BoxGeometry(1, 1, 1)
+  const group = new Group()
+  const meshes: Mesh[] = []
+  try {
+    for (const material of unique) {
+      material.clippingPlanes = planes
+      material.clipShadows = true
+      material.needsUpdate = true
+      const mesh = new Mesh(geo, material)
+      mesh.castShadow = true
+      mesh.receiveShadow = true
+      group.add(mesh)
+      meshes.push(mesh)
+    }
+    renderer.localClippingEnabled = true
+    renderer.compile(group, camera, mainScene)
+    if (window.__twinGlyphPreload) window.__twinGlyphPreload.shellClip = true
+    return true
+  } finally {
+    renderer.localClippingEnabled = clippingWas
+    unique.forEach((material, index) => {
+      const prev = saved[index]
+      material.clippingPlanes = prev?.planes ?? null
+      material.clipShadows = prev?.clipShadows ?? false
+      material.needsUpdate = true
+    })
+    for (const mesh of meshes) group.remove(mesh)
     geo.dispose()
   }
 }

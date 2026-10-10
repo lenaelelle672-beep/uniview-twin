@@ -8,6 +8,7 @@ import {
   GLYPH_FIRST_BATCH,
   GLYPH_WARMUP_GLYPH,
   cancelIdleWork,
+  compileClippedShellMaterials,
   compileDummyLabelMaterial,
   compileInteriorMaterials,
   glyphPreloadBlocked,
@@ -345,6 +346,7 @@ export function scheduleGlyphPreload(): () => void {
           return
         }
         await compileInteriorMaterials()
+        if (!cancelled && !glyphPreloadBlocked()) await compileClippedShellMaterials()
       }).then(() => {
         if (cancelled) return
         if (!window.__twinGlyphPreload?.compile) {

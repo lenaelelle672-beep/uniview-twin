@@ -227,6 +227,8 @@ export function SceneCanvas() {
         onCreated={(state) => {
           if (import.meta.env.DEV) installInvalidateTrace(state)
           const { gl, setDpr } = state
+          // 生产构建不在首次用到材质时同步读 shader 日志。SwiftShader 上这次读取会把进层卡住一两秒。
+          if (!import.meta.env.DEV) gl.debug.checkShaderErrors = false
           const renderer = readGpuRenderer(gl)
           const software = SOFTWARE.test(renderer)
           const auto = software && !useTwinStore.getState().qualityPinned

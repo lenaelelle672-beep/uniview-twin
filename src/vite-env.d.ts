@@ -331,6 +331,7 @@ interface Window {
       programsBefore?: number
       programsAfter?: number
     }
+    shellClip?: boolean
   }
   __twinLabelBatchPresent?: boolean
   __twinLabelOverlap?: {
