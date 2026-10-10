@@ -110,6 +110,8 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/preloadLabelChars/)
     expect(source).not.toMatch(/applyClusterTexts/)
     expect(source).toMatch(/defineProperty\(window, '__twinLabelOverlap'/)
+    expect(source).toMatch(/packStepRef\.current !== 'idle'/)
+    expect(source).toMatch(/__twinLabelFading === true/)
     expect(source).toMatch(/isCameraRested/)
     expect(source).not.toMatch(/SETTLE_FRAMES/)
     expect(source).toMatch(/item\.locked/)

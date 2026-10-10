@@ -423,7 +423,8 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   useEffect(() => {
     const read = () => {
       const packed = packedRef.current
-      if (!packed) return undefined
+      // 避让刚算完、合批或淡入还没结束时，屏上盒和 pack 对不上。等停稳再给探针。
+      if (!packed || packStepRef.current !== 'idle' || window.__twinLabelFading === true) return undefined
       const perspective = cameraRef.current as PerspectiveCamera
       const viewport = sizeRef.current
       const api = measureRef.current
