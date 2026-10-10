@@ -17,6 +17,7 @@ export function FloorList({ open }: FloorListProps) {
   const emitFloorFly = useTwinStore((state) => state.emitFloorFly)
   const setHoveredFloor = useTwinStore((state) => state.setHoveredFloor)
   const listRef = useRef<HTMLDivElement>(null)
+  const pendingSelect = useRef<ReturnType<typeof setTimeout> | null>(null)
   const strip = !open
   // 总览 compact / 单层全宽只改 overlay；宽由 .floor-rail 固定，进层不 setSize（D272/D273）。
   const compact = view === 'building' && open
@@ -26,6 +27,12 @@ export function FloorList({ open }: FloorListProps) {
   useLayoutEffect(() => {
     writeFloorMarkerProbe(shown.length)
   }, [shown.length])
+
+  useLayoutEffect(() => {
+    return () => {
+      if (pendingSelect.current != null) clearTimeout(pendingSelect.current)
+    }
+  }, [])
 
   useLayoutEffect(() => {
     if (!open || !selectedFloor || !listRef.current) return
@@ -54,11 +61,19 @@ export function FloorList({ open }: FloorListProps) {
               aria-label={`${floor.id} ${floor.name}，告警 ${floor.alarmCount}，离线 ${floor.offlineCount}`}
               aria-pressed={selected}
               onClick={() => {
-                // fb2 bf5479e / D253：单击只选中，双击进层。
-                setSelectedFloor(floor.id)
+                // D253：单击只选中。双击的第一下先不画总览高亮，避免挡住进层。
                 if (floor.id !== 'B1') void loadFloorPlan(floor.id)
+                if (pendingSelect.current != null) clearTimeout(pendingSelect.current)
+                pendingSelect.current = setTimeout(() => {
+                  pendingSelect.current = null
+                  setSelectedFloor(floor.id)
+                }, 280)
               }}
               onDoubleClick={() => {
+                if (pendingSelect.current != null) {
+                  clearTimeout(pendingSelect.current)
+                  pendingSelect.current = null
+                }
                 emitFloorFly(floor.id)
                 enterFloor(floor.id)
                 if (floor.id !== 'B1') void loadFloorPlan(floor.id)
