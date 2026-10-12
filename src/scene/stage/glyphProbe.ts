@@ -27,8 +27,6 @@ export const GLYPH_WARMUP_SPACE = ' '
 export const GLYPH_WARMUP_GLYPH = 'x'
 /** D266.1：第一次 preloadFont 不早于首帧 + 5s。 */
 export const GLYPH_PRELOAD_AFTER_FIRST_MS = 5000
-/** 楼层页提前排字体时每帧最多这么多字，把 SDF 拆开，避免一次堵住进层。 */
-export const ENTRY_FONT_CHUNK = 20
 /** 总览空闲豁免：空格回调所在帧。 */
 export const GLYPH_SPACE_FRAME_MAX_MS = 60
 /** 总览空闲豁免：initTexture 所在帧。 */
@@ -962,17 +960,12 @@ async function pumpEntryFont(characters: string): Promise<void> {
   installSdfAtlasHook()
   installAtlasCanvasHook()
   await loadTroika()
-  const chunks = chunkGlyphs(characters, GLYPH_FIRST_BATCH, ENTRY_FONT_CHUNK)
-  for (const chunk of chunks) {
-    await new Promise<void>((resolve) => {
-      preloadFontFn!({ font: ROOM_LABEL_FONT, characters: chunk }, () => resolve())
-    })
-    noteGlyphChars('entry', chunk)
-    window.__twinFloorFontChunks = (window.__twinFloorFontChunks ?? 0) + 1
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => resolve())
-    })
-  }
+  // 一次排完。拆批会让 SDF 图集反复放大，SwiftShader 上每一放大都是一段长任务。
+  await new Promise<void>((resolve) => {
+    preloadFontFn!({ font: ROOM_LABEL_FONT, characters }, () => resolve())
+  })
+  noteGlyphChars('entry', characters)
+  window.__twinFloorFontChunks = (window.__twinFloorFontChunks ?? 0) + 1
 }
 
 /** 楼层页一拿到标签字符就排进字体，和相机飞入、室内几何重叠。总览空闲预排的暂停不适用于这里。 */

@@ -13,12 +13,19 @@ import { DeskFlash } from '../scene/stage/DeskFlash'
 import { FloorDecor } from '../scene/stage/lazyFloorDecor'
 import { MonitorDepthProxies } from '../scene/stage/MonitorDepthProxies'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
+import { roomLabelCharacters } from '../scene/stage/roomLabels'
 import { loadFloorPlan, peekFloorPlan } from './loadFloor'
 import { INTERIOR_WALL_H } from './interiorWall'
 import { roomLabelsFromPlan } from './labels'
 import type { FloorPlan, FloorWall } from './types'
 
 const WALL_H = INTERIOR_WALL_H
+
+function warmFloorLabelFont(plan: FloorPlan) {
+  const characters = roomLabelCharacters(roomLabelsFromPlan(plan))
+  if (!characters) return
+  void import('../scene/stage/glyphProbe').then((mod) => mod.preloadFloorEntryFont(characters))
+}
 const wallBoxGeometry = new BoxGeometry(1, WALL_H, 1)
 wallBoxGeometry.translate(0, WALL_H / 2, 0)
 
@@ -201,11 +208,16 @@ export function JsonFloorInterior({
   useEffect(() => {
     let cancelled = false
     const cached = peekFloorPlan(spec.id)
-    if (cached) setPlan(cached)
+    if (cached) {
+      setPlan(cached)
+      warmFloorLabelFont(cached)
+    }
     setError(null)
     void loadFloorPlan(spec.id)
       .then((next) => {
-        if (!cancelled) setPlan(next)
+        if (cancelled) return
+        setPlan(next)
+        warmFloorLabelFont(next)
       })
       .catch((reason: unknown) => {
         if (!cancelled) setError(reason instanceof Error ? reason.message : `无法加载楼层图纸：${spec.id}`)
