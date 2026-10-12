@@ -126,25 +126,13 @@ export function FloorStage() {
       setHydratedFloor(null)
       return
     }
-    let cancelled = false
-    const fontReady = import('./preloadFloorGlyphs')
-    const warmEntryFont = () => {
-      void fontReady.then((mod) => {
-        if (cancelled) return
-        const chars = mod.floorLabelCharacters(active)
-        if (chars) void mod.preloadFloorEntryFont(chars)
-      })
-    }
     if (isFloorHydrated(active)) {
       setHydratedFloor(active)
-      warmEntryFont()
-      return () => {
-        cancelled = true
-      }
+      return
     }
+    let cancelled = false
     void loadFloorPlan(active).then((plan) => {
       if (!cancelled) setHydratedFloor(plan.floorId)
-      warmEntryFont()
     })
     return () => {
       cancelled = true

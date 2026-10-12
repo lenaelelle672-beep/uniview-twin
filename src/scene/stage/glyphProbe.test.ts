@@ -91,7 +91,7 @@ describe('D262/D264 字形预排', () => {
     expect(pump).not.toMatch(/chunkGlyphs/)
     expect(pump).not.toMatch(/glyphPreloadBlocked/)
     const room = readFileSync(new URL('./RoomLabels.tsx', import.meta.url), 'utf8')
-    expect(room).toMatch(/preloadFloorEntryFont\(characters\)/)
+    expect(room).toMatch(/preloadFloorEntryFont\(`\$\{characters\} `\)/)
     expect(room).toMatch(/preloadLabelChars/)
     const interior = readFileSync(new URL('../../floors/JsonFloorInterior.tsx', import.meta.url), 'utf8')
     expect(interior).toMatch(/preloadFloorEntryFont/)

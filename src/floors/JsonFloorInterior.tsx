@@ -22,8 +22,9 @@ import type { FloorPlan, FloorWall } from './types'
 const WALL_H = INTERIOR_WALL_H
 
 function warmFloorLabelFont(plan: FloorPlan) {
-  const characters = roomLabelCharacters(roomLabelsFromPlan(plan))
-  if (!characters) return
+  // 合组文案是「名称 x数量」，空格不在房间名里，要和房间字一起排。
+  const characters = `${roomLabelCharacters(roomLabelsFromPlan(plan))} `
+  if (characters.trim().length === 0) return
   void import('../scene/stage/glyphProbe').then((mod) => mod.preloadFloorEntryFont(characters))
 }
 const wallBoxGeometry = new BoxGeometry(1, WALL_H, 1)
