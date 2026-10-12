@@ -853,7 +853,7 @@ async function compileClippedShellMaterialsNow(): Promise<boolean> {
   const renderer = window.__twinRenderer
   const camera = window.__twinCamera
   const mainScene = window.__twinScene
-  if (!renderer || !camera || !mainScene) {
+  if (!renderer || !camera || !mainScene || window.__twinView === 'floor') {
     shellClipTask = null
     return false
   }

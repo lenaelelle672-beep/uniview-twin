@@ -19,6 +19,14 @@ export function RenderProbe() {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const invalidate = useThree((state) => state.invalidate)
+  const view = useTwinStore((state) => state.view)
+
+  useEffect(() => {
+    if (view !== 'building' || window.__twinFirstFrameAt == null) return
+    void import('../../scene/stage/glyphProbe').then((mod) => {
+      void mod.compileClippedShellMaterials()
+    })
+  }, [view])
 
   useEffect(() => {
     void import('../../scene/stage/glyphProbe')
@@ -115,6 +123,7 @@ export function RenderProbe() {
       window.__twinFirstFrameAt = performance.now()
       window.__twinFirstFrameUnixMs = Date.now()
       void import('../../scene/stage/glyphProbe').then((mod) => {
+        if (window.__twinView === 'floor') return
         void mod.compileClippedShellMaterials()
       })
     }
