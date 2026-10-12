@@ -20,6 +20,7 @@ import {
   installTexImage2DHook,
   notePreloadPause,
   overviewIdleBlocked,
+  preloadFloorEntryFont,
   preloadLabelChars,
   scheduleIdleWork,
   startEntryFrameWatch,
@@ -29,6 +30,8 @@ import {
   warmupFontParse,
   warmupTextMesh,
 } from './glyphProbe'
+
+export { preloadFloorEntryFont }
 
 export const GLYPH_PRELOAD_FLOORS = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8'] as const
 

@@ -235,6 +235,9 @@ interface Window {
   __twinLabelSyncs?: number
   __twinLabelSyncStartedAt?: number
   __twinLabelReadyAt?: number
+  __twinFloorFontStartedAt?: number
+  __twinFloorFontReadyAt?: number
+  __twinFloorFontChunks?: number
   __twinLabelFading?: boolean
   __twinCameraRested?: boolean
   __twinCameraRestReason?: string

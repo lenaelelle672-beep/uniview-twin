@@ -1,7 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef, useState, type MutableRefObject } from 'react'
 import { DoubleSide, Group, type Camera } from 'three'
-import { BatchedText, disableTroikaCdnFallback, preloadFont, Text } from './disableTroikaCdn'
+import { BatchedText, disableTroikaCdnFallback, Text } from './disableTroikaCdn'
+import { preloadFloorEntryFont } from './glyphProbe'
 import { clusterTemplates, LABEL_MAX_EMS, type LabelPackState, type LabelPlacementState } from './labelAvoidance'
 import { cameraLookYaw, isDrawnText, measureTextBox, type MeasuredLabelBox } from './labelScreenMeasure'
 import { useTwinStore } from '../../store/store'
@@ -196,11 +197,7 @@ export function BatchedRoomLabels({
     window.__twinLabelSyncStartedAt = started
     window.__twinLabelReadyAt = undefined
 
-    void (window.__twinGlyphPreload?.done
-      ? Promise.resolve()
-      : new Promise<void>((resolve) => {
-          preloadFont({ font: ROOM_LABEL_FONT, characters }, () => resolve())
-        }))
+    void preloadFloorEntryFont(characters)
       .then(async () => {
         if (cancelled) return
         batch = new BatchedText()

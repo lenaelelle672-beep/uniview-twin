@@ -27,6 +27,8 @@ export const GLYPH_WARMUP_SPACE = ' '
 export const GLYPH_WARMUP_GLYPH = 'x'
 /** D266.1：第一次 preloadFont 不早于首帧 + 5s。 */
 export const GLYPH_PRELOAD_AFTER_FIRST_MS = 5000
+/** 楼层页提前排字体时每帧最多这么多字，把 SDF 拆开，避免一次堵住进层。 */
+export const ENTRY_FONT_CHUNK = 20
 /** 总览空闲豁免：空格回调所在帧。 */
 export const GLYPH_SPACE_FRAME_MAX_MS = 60
 /** 总览空闲豁免：initTexture 所在帧。 */
@@ -97,6 +99,8 @@ export function glyphSeenCount(): number {
 export function resetGlyphProbe() {
   seen.clear()
   for (const key of Object.keys(newOnEntry)) delete newOnEntry[key]
+  entryFontQueued.clear()
+  entryFontChain = Promise.resolve()
   hookInstalled = false
   pointerDown = false
   sdfTexture = null
@@ -316,6 +320,8 @@ function writeProbe() {
 
 let textCtor: (typeof import('./disableTroikaCdn'))['Text'] | null = null
 let batchedCtor: (typeof import('./disableTroikaCdn'))['BatchedText'] | null = null
+const entryFontQueued = new Set<string>()
+let entryFontChain: Promise<void> = Promise.resolve()
 
 async function loadTroika() {
   if (preloadFontFn && textCtor && batchedCtor) return
@@ -929,6 +935,61 @@ export async function warmupTextMesh(): Promise<number> {
     })
   })
   return performance.now() - started
+}
+
+function claimEntryFontChars(characters: string): string {
+  const extra: string[] = []
+  for (const char of characters) {
+    if (!char || entryFontQueued.has(char)) continue
+    entryFontQueued.add(char)
+    extra.push(char)
+  }
+  return extra.join('')
+}
+
+function releaseEntryFontChars(characters: string) {
+  for (const char of characters) entryFontQueued.delete(char)
+}
+
+async function pumpEntryFont(characters: string): Promise<void> {
+  if (typeof window === 'undefined') return
+  if (window.__twinFloorFontStartedAt == null) window.__twinFloorFontStartedAt = performance.now()
+  while (window.__twinFirstFrameAt == null) {
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve())
+    })
+  }
+  installSdfAtlasHook()
+  installAtlasCanvasHook()
+  await loadTroika()
+  const chunks = chunkGlyphs(characters, GLYPH_FIRST_BATCH, ENTRY_FONT_CHUNK)
+  for (const chunk of chunks) {
+    await new Promise<void>((resolve) => {
+      preloadFontFn!({ font: ROOM_LABEL_FONT, characters: chunk }, () => resolve())
+    })
+    noteGlyphChars('entry', chunk)
+    window.__twinFloorFontChunks = (window.__twinFloorFontChunks ?? 0) + 1
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve())
+    })
+  }
+}
+
+/** 楼层页一拿到标签字符就排进字体，和相机飞入、室内几何重叠。总览空闲预排的暂停不适用于这里。 */
+export function preloadFloorEntryFont(characters: string): Promise<void> {
+  const pending = claimEntryFontChars(characters)
+  if (!pending) return entryFontChain
+  const job = entryFontChain.then(() => pumpEntryFont(pending)).catch((error: unknown) => {
+    releaseEntryFontChars(pending)
+    throw error
+  })
+  entryFontChain = job.then(
+    () => {
+      if (typeof window !== 'undefined') window.__twinFloorFontReadyAt = performance.now()
+    },
+    () => undefined,
+  )
+  return job
 }
 
 export async function preloadLabelChars(characters: string, source: string): Promise<number> {

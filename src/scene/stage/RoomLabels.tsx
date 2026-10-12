@@ -31,7 +31,7 @@ import {
   type MeasuredLabelBox,
 } from './labelScreenMeasure'
 import { isCameraRested } from './cameraRest'
-import { preloadLabelChars } from './glyphProbe'
+import { preloadFloorEntryFont, preloadLabelChars } from './glyphProbe'
 import type { LabelBatchApi } from './BatchedRoomLabels'
 import {
   LABEL_MAX_PX,
@@ -407,6 +407,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     packRef.current = hiddenLayout(labels)
     layoutRef.current = packRef.current
     stopFadeLoop()
+    void preloadFloorEntryFont(characters)
     void preloadLabelChars(characters, `entry:${floorId}`)
   }, [floorId, labels, characters])
 
