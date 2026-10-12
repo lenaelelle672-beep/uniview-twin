@@ -55,4 +55,12 @@ describe('总览楼层标记', () => {
     expect(source).toMatch(/onDoubleClick/)
     expect(source).toMatch(/enterFloor\(floor\.id\)/)
   })
+
+  it('楼层引线只在相机或爆炸还在动时续帧', () => {
+    const source = readFileSync(new URL('../components/FloorLeader.tsx', import.meta.url), 'utf8')
+    expect(source).toMatch(/__twinCameraRested === false/)
+    expect(source).toMatch(/pointerdown/)
+    expect(source).toMatch(/wheel/)
+    expect(source).not.toMatch(/frame = requestAnimationFrame\(tick\)\s+const svg/)
+  })
 })

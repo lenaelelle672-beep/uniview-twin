@@ -13,8 +13,7 @@ export function FloorLeader() {
   useEffect(() => {
     if (view !== 'building') return
     let frame = 0
-    const tick = () => {
-      frame = requestAnimationFrame(tick)
+    const draw = () => {
       const svg = svgRef.current
       const path = pathRef.current
       if (!svg || !path) return
@@ -55,9 +54,30 @@ export function FloorLeader() {
       path.setAttribute('d', `M ${x1} ${y1} L ${x2} ${y2}`)
       svg.dataset.active = id
     }
-    frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
-  }, [view])
+    const moving = () => {
+      if (window.__twinCameraRested === false) return true
+      const progress = window.__twinExplode?.progress
+      return typeof progress === 'number' && progress > 0 && progress < 1
+    }
+    const tick = () => {
+      draw()
+      frame = moving() ? requestAnimationFrame(tick) : 0
+    }
+    const wake = () => {
+      if (frame) return
+      frame = requestAnimationFrame(tick)
+    }
+    wake()
+    window.addEventListener('pointerdown', wake)
+    window.addEventListener('wheel', wake, { passive: true })
+    window.addEventListener('resize', wake)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('pointerdown', wake)
+      window.removeEventListener('wheel', wake)
+      window.removeEventListener('resize', wake)
+    }
+  }, [view, hoveredFloor, selectedFloor])
 
   if (view !== 'building') return null
   return (
