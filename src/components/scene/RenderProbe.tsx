@@ -21,6 +21,7 @@ export function RenderProbe() {
   const invalidate = useThree((state) => state.invalidate)
 
   useEffect(() => {
+    void import('../../scene/stage/glyphProbe')
     invalidate()
     markSuspenseReady()
     window.__twinScene = scene
@@ -113,6 +114,9 @@ export function RenderProbe() {
     if (window.__twinReadyAt != null && window.__twinFirstFrameAt == null) {
       window.__twinFirstFrameAt = performance.now()
       window.__twinFirstFrameUnixMs = Date.now()
+      void import('../../scene/stage/glyphProbe').then((mod) => {
+        void mod.compileClippedShellMaterials()
+      })
     }
     window.__twinStats = {
       calls: gl.info.render.calls,

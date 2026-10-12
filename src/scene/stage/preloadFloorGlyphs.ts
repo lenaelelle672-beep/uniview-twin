@@ -144,6 +144,9 @@ export function scheduleGlyphPreload(): () => void {
       paused: true,
     }
   }
+  void compileClippedShellMaterials().then((ok) => {
+    if (ok && window.__twinGlyphPreload) window.__twinGlyphPreload.shellClip = true
+  })
   if (window.__twinTextRuntimeAt == null) void import('./textRuntime')
   let cancelled = false
   let idleId = 0

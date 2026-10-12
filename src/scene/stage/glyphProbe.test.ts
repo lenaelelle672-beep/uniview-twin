@@ -107,6 +107,7 @@ describe('D262/D264 字形预排', () => {
     expect(preload).toMatch(/compileInteriorMaterials/)
     expect(preload).toMatch(/compileClippedShellMaterials/)
     expect(probe).toMatch(/localClippingEnabled = clippingWas/)
+    expect(probe).toMatch(/retainedClipObjects/)
     expect(preload).not.toMatch(/textureWidth:\s*4096/)
     expect(probe).not.toMatch(/from 'troika-three-text'/)
     expect(probe).not.toMatch(/import\('troika-three-text'\)/)

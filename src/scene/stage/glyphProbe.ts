@@ -8,6 +8,7 @@ import {
   Plane,
   Vector3,
   type Camera,
+  type Object3D,
   type Scene,
   type Texture,
   type WebGLRenderer,
@@ -823,17 +824,43 @@ export async function compileInteriorMaterials(): Promise<
   }
 }
 
-/** 进层会给外壳材质挂一个裁切平面，着色器要重编。空闲时先编好，点击时直接复用。 */
-export async function compileClippedShellMaterials(): Promise<boolean> {
+const retainedClipObjects: Object3D[] = []
+let shellClipTask: Promise<boolean> | null = null
+let shellClipDone = false
+
+function markShellClip() {
+  shellClipDone = true
+  if (window.__twinGlyphPreload) window.__twinGlyphPreload.shellClip = true
+}
+
+/**
+ * 进层会给外壳挂一个裁切平面，铝翅这类标准材质要另编一套程序。
+ * 编完如果把材质改回去，three 会把这套程序释放掉，点击时还得再链一次。
+ * 这里用克隆材质留住程序，并在首帧后马上做完，躲开总览空闲的计帧窗口。
+ */
+export function compileClippedShellMaterials(): Promise<boolean> {
+  if (shellClipDone || window.__twinGlyphPreload?.shellClip) return Promise.resolve(true)
+  if (!shellClipTask) {
+    shellClipTask = compileClippedShellMaterialsNow().catch(() => {
+      shellClipTask = null
+      return false
+    })
+  }
+  return shellClipTask
+}
+
+async function compileClippedShellMaterialsNow(): Promise<boolean> {
   const renderer = window.__twinRenderer
   const camera = window.__twinCamera
   const mainScene = window.__twinScene
-  if (glyphPreloadBlocked()) return false
-  if (!renderer || !camera || !mainScene) return false
+  if (!renderer || !camera || !mainScene) {
+    shellClipTask = null
+    return false
+  }
   const shell = await import('../materials')
   const plane = new Plane(new Vector3(0, -1, 0), 1)
   const planes = [plane]
-  const mats: Material[] = [
+  const sources: Material[] = [
     shell.curtainMaterial,
     shell.jointMaterial,
     shell.solidMaterial,
@@ -847,43 +874,32 @@ export async function compileClippedShellMaterials(): Promise<boolean> {
     const mesh = object as Mesh & { customDepthMaterial?: Material }
     const list = mesh.material ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) : []
     if (!list.some((item) => item?.name === 'east_grille')) return
-    for (const item of list) if (item) mats.push(item)
-    if (mesh.customDepthMaterial) mats.push(mesh.customDepthMaterial)
+    for (const item of list) if (item) sources.push(item)
+    if (mesh.customDepthMaterial) sources.push(mesh.customDepthMaterial)
   })
-  const unique = [...new Set(mats)]
-  const saved = unique.map((material) => ({
-    planes: material.clippingPlanes,
-    clipShadows: material.clipShadows,
-  }))
   const clippingWas = renderer.localClippingEnabled
   const geo = new BoxGeometry(1, 1, 1)
   const group = new Group()
-  const meshes: Mesh[] = []
   try {
-    for (const material of unique) {
+    renderer.localClippingEnabled = true
+    for (const source of new Set(sources)) {
+      const material = source.clone()
+      material.name = source.name
       material.clippingPlanes = planes
       material.clipShadows = true
       material.needsUpdate = true
       const mesh = new Mesh(geo, material)
       mesh.castShadow = true
       mesh.receiveShadow = true
+      mesh.frustumCulled = false
       group.add(mesh)
-      meshes.push(mesh)
+      retainedClipObjects.push(mesh)
     }
-    renderer.localClippingEnabled = true
     renderer.compile(group, camera, mainScene)
-    if (window.__twinGlyphPreload) window.__twinGlyphPreload.shellClip = true
+    markShellClip()
     return true
   } finally {
     renderer.localClippingEnabled = clippingWas
-    unique.forEach((material, index) => {
-      const prev = saved[index]
-      material.clippingPlanes = prev?.planes ?? null
-      material.clipShadows = prev?.clipShadows ?? false
-      material.needsUpdate = true
-    })
-    for (const mesh of meshes) group.remove(mesh)
-    geo.dispose()
   }
 }
 
