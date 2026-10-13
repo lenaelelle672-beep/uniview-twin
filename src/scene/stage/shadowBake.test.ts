@@ -120,11 +120,11 @@ describe('shadowBake', () => {
     expect(labelWindowClosed(1399)).toBe(false)
     expect(labelWindowClosed(1400)).toBe(true)
     noteLabelHarnessReady(900)
-    expect(labelWindowAnchor()).toBe(900)
-    expect(labelWindowClosed(1899)).toBe(false)
-    expect(labelWindowClosed(1900)).toBe(true)
+    expect(labelWindowAnchor()).toBe(400)
+    expect((globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt).toBe(400)
     noteLabelHarnessReady(4000)
-    expect(labelWindowAnchor()).toBe(900)
+    expect(labelWindowAnchor()).toBe(400)
+    expect((globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt).toBe(400)
   })
 
   it('离开单层立即烘，并取消飞入推迟', () => {
@@ -152,6 +152,7 @@ describe('shadowBake', () => {
     const bake = readFileSync(new URL('./shadowBake.ts', import.meta.url), 'utf8')
     const labels = readFileSync(new URL('./RoomLabels.tsx', import.meta.url), 'utf8')
     expect(bake).toMatch(/__twinLabelReadyAt/)
+    expect(bake).not.toMatch(/__twinLabelReadyAt\s*=/)
     expect(bake).toMatch(/labelWindowAnchor/)
     expect(bake).toMatch(/noteLabelHarnessReady/)
     expect(labels).toMatch(/noteLabelHarnessReady/)

@@ -1,9 +1,9 @@
 type Phase = 'idle' | 'wait' | 'hold'
 
 /**
- * 锁机 D261 窗是点击到 QA 出齐后再加 1 秒。
- * 出齐锚点是 max(本地三帧 shownAt, __twinLabelReadyAt)。
- * shownAt 往往早于 harness 读完重叠探针的时刻，只用 shownAt 会把烘烤留在 ready+1s 内侧。
+ * 锁机 D261 窗是点击到出齐后再加 1 秒。
+ * 出齐锚点只读 max(本地三帧 shownAt, __twinLabelReadyAt)。
+ * 这个戳只由标签侧第一次写入，这里不赋值、不抬高。
  */
 export const LABEL_WINDOW_MS = 1000
 /** 定时器再让出一截，避免关窗那一帧的起点仍被算进闭区间。 */
@@ -28,7 +28,6 @@ let phase: Phase = 'idle'
 let reason = ''
 let entryMark = 0
 let shownAt: number | null = null
-let harnessReadyAt: number | null = null
 let armedAnchor = Number.NaN
 let shownVis = -1
 let shownStable = 0
@@ -43,14 +42,12 @@ function readLabelReadyAt(): number | null {
   return value
 }
 
-/** 关窗锚点。没有本地出齐时刻时不拿更早的上屏时间单独关窗。 */
+/** 关窗锚点。只读标签侧已写下的 ReadyAt，不在这里改它。没有三帧出齐时窗还开着。 */
 export function labelWindowAnchor(): number | null {
   if (shownAt == null) return null
-  let anchor = shownAt
   const readyAt = readLabelReadyAt()
-  if (readyAt != null) anchor = Math.max(anchor, readyAt)
-  if (harnessReadyAt != null && harnessReadyAt >= entryMark) anchor = Math.max(anchor, harnessReadyAt)
-  return anchor
+  if (readyAt == null) return shownAt
+  return Math.max(shownAt, readyAt)
 }
 
 function clearLabelTimers() {
@@ -73,7 +70,6 @@ export function resetShadowBake() {
   reason = ''
   entryMark = 0
   shownAt = null
-  harnessReadyAt = null
   armedAnchor = Number.NaN
   shownVis = -1
   shownStable = 0
@@ -101,7 +97,6 @@ export function labelWindowClosed(now = performance.now()): boolean {
 export function markShadowEntry(now = performance.now()) {
   entryMark = now
   shownAt = null
-  harnessReadyAt = null
   armedAnchor = Number.NaN
   shownVis = -1
   shownStable = 0
@@ -145,15 +140,10 @@ function armWindowTimer(anchor: number) {
 }
 
 /**
- * QA 读完重叠探针后的同戳。微任务里调用，晚于 harness 在 getter 返回后写下的 ready。
- * 只认进层后的第一次，避免之后的悬停读取把烘烤一直往后推。
+ * 重叠探针读完后叫醒关窗定时器。不写、不抬高 __twinLabelReadyAt。
  */
 export function noteLabelHarnessReady(now = performance.now()): void {
-  if (harnessReadyAt != null || now < entryMark) return
-  harnessReadyAt = now
-  const host = globalThis as { __twinLabelReadyAt?: number }
-  const prev = host.__twinLabelReadyAt
-  if (typeof prev !== 'number' || prev < entryMark || now > prev) host.__twinLabelReadyAt = now
+  if (now < entryMark) return
   const anchor = labelWindowAnchor()
   if (anchor != null) armWindowTimer(anchor)
 }

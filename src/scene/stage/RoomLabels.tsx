@@ -492,7 +492,6 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
           .filter((row): row is NonNullable<typeof row> => Boolean(row)),
       }
       queueMicrotask(() => {
-        // 微任务晚于 harness 在 getter 返回后写下的 ready。只认第一次，悬停再读不能把烘烤往后推。
         noteLabelHarnessReady(performance.now())
       })
       return value
