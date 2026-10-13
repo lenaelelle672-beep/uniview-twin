@@ -609,6 +609,12 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
         phase,
         interior: window.__twinInteriorPrewarm?.mount ?? null,
         prewarmDone: window.__twinInteriorPrewarm?.done ?? false,
+        restAt: t1,
+        shadowAt: window.__twinShadowBake?.at ?? null,
+        shadowReason: window.__twinShadowBake?.reason ?? null,
+        shadowDeferred: window.__twinShadowBake?.deferred ?? null,
+        shadowVsLongest:
+          window.__twinShadowBake?.at != null && longest ? Math.round(window.__twinShadowBake.at - longest.at) : null,
         shellPlanes: window.__twinInteriorPrewarm?.shell?.planes ?? null,
         bufferCalls: buffers.length,
         bufferBytes,

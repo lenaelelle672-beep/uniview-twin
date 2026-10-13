@@ -10,13 +10,23 @@ type RestRig = {
 let generation = 0
 let rested = false
 let cleanup: (() => void) | null = null
+const listeners = new Set<() => void>()
 
 function write(restedNow: boolean, reason: string) {
   rested = restedNow
-  if (typeof window === 'undefined') return
-  window.__twinCameraRested = restedNow
-  window.__twinCameraRestReason = reason
-  if (restedNow) window.__twinCameraRestAt = performance.now()
+  if (typeof window !== 'undefined') {
+    window.__twinCameraRested = restedNow
+    window.__twinCameraRestReason = reason
+    if (restedNow) window.__twinCameraRestAt = performance.now()
+  }
+  for (const listener of listeners) listener()
+}
+
+export function subscribeCameraRest(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => {
+    listeners.delete(listener)
+  }
 }
 
 export function isCameraRested(): boolean {

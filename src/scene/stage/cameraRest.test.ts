@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { beginCameraMove, isCameraRested, markCameraRested, watchCameraRest } from './cameraRest'
+import { beginCameraMove, isCameraRested, markCameraRested, subscribeCameraRest, watchCameraRest } from './cameraRest'
 
 describe('cameraRest', () => {
   afterEach(() => {
@@ -41,6 +41,16 @@ describe('cameraRest', () => {
     expect(rest).toMatch(/timeout-1500/)
     expect(rest).toMatch(/CAMERA_REST_TIMEOUT_MS = 1500/)
     expect(rest).toMatch(/addEventListener\?\.\('rest'/)
+  })
+
+  it('订阅者在开移和停稳时收到通知', () => {
+    const seen: boolean[] = []
+    const unsubscribe = subscribeCameraRest(() => seen.push(isCameraRested()))
+    beginCameraMove('fly')
+    markCameraRested('setLookAt')
+    unsubscribe()
+    beginCameraMove('after')
+    expect(seen).toEqual([false, true])
   })
 
   it('已经停稳时不再重开一轮等待', () => {

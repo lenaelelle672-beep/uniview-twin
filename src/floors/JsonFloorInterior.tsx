@@ -6,20 +6,47 @@ import type { Device } from '../types'
 import { extrudeUp } from '../scene/extrude'
 import { SLAB_M } from '../scene/stage/cut'
 import { COLUMN_SIZE_M, columnGeometry, officeDeskGeometry } from '../scene/stage/geometry'
-import type { Slot } from '../scene/stage/layout'
+import type { Point, Slot } from '../scene/stage/layout'
 import { columnMaterial, coreWallMaterial, meetingGlassMaterial, slabMaterial, woodMaterial } from '../scene/stage/materials'
 import { Ceiling } from '../scene/stage/Ceiling'
 import { DeskFlash } from '../scene/stage/DeskFlash'
+import { useFloorExtrasReady } from '../scene/stage/floorExtrasGate'
 import { FloorDecor } from '../scene/stage/lazyFloorDecor'
 import { MonitorDepthProxies } from '../scene/stage/MonitorDepthProxies'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
 import { glyphTimingProbeEnabled } from '../scene/stage/glyphProbe'
-import { roomLabelCharacters } from '../scene/stage/roomLabels'
+import { roomLabelCharacters, type RoomLabel } from '../scene/stage/roomLabels'
 import { paintMonitorColors, peekPrebuiltInterior, type PrebuiltInterior } from './floorInteriorMesh'
 import { loadFloorPlan, peekFloorPlan } from './loadFloor'
 import { INTERIOR_WALL_H } from './interiorWall'
 import { roomLabelsFromPlan } from './labels'
 import type { FloorPlan, FloorWall } from './types'
+
+function RestedFloorExtras({
+  floorId,
+  devices,
+  labels,
+  showPeople,
+  paths,
+  ceiling,
+}: {
+  floorId: string
+  devices: Device[]
+  labels: RoomLabel[]
+  showPeople: boolean
+  paths: Point[][]
+  ceiling: { width: number; depth: number; x: number; z: number; y: number }
+}) {
+  const extrasReady = useFloorExtrasReady(floorId)
+  if (!extrasReady) return null
+  return (
+    <>
+      <DeskFlash floorId={floorId} />
+      <FloorDecor floorId={floorId} devices={devices} labels={labels} showPeople={showPeople} paths={paths} />
+      <Ceiling width={ceiling.width} depth={ceiling.depth} x={ceiling.x} z={ceiling.z} y={ceiling.y} />
+    </>
+  )
+}
 
 const WALL_H = INTERIOR_WALL_H
 
@@ -189,14 +216,19 @@ function JsonFloorReady({
       <Workstations slots={slots} colors={colors} />
       <InstancedSlots name="OfficeDesks" geometry={officeDeskGeometry} material={woodMaterial} slots={officeSlots} />
       {showPeople ? <MonitorDepthProxies /> : null}
-      <DeskFlash floorId={spec.id} />
-      <FloorDecor floorId={spec.id} devices={devices} labels={labels} showPeople={showPeople} paths={peoplePaths} />
-      <Ceiling
-        width={Math.max(bounds.w, 8)}
-        depth={Math.max(bounds.d, 8)}
-        x={bounds.cx}
-        z={bounds.cz}
-        y={spec.height - SLAB_M - 0.06}
+      <RestedFloorExtras
+        floorId={spec.id}
+        devices={devices}
+        labels={labels}
+        showPeople={showPeople}
+        paths={peoplePaths}
+        ceiling={{
+          width: Math.max(bounds.w, 8),
+          depth: Math.max(bounds.d, 8),
+          x: bounds.cx,
+          z: bounds.cz,
+          y: spec.height - SLAB_M - 0.06,
+        }}
       />
     </group>
   )
@@ -338,14 +370,19 @@ function PrebuiltFloorInterior({
     >
       <primitive object={prebuilt.content} dispose={null} />
       {showPeople ? <MonitorDepthProxies /> : null}
-      <DeskFlash floorId={spec.id} />
-      <FloorDecor floorId={spec.id} devices={devices} labels={labels} showPeople={showPeople} paths={peoplePaths} />
-      <Ceiling
-        width={Math.max(bounds.w, 8)}
-        depth={Math.max(bounds.d, 8)}
-        x={bounds.cx}
-        z={bounds.cz}
-        y={spec.height - SLAB_M - 0.06}
+      <RestedFloorExtras
+        floorId={spec.id}
+        devices={devices}
+        labels={labels}
+        showPeople={showPeople}
+        paths={peoplePaths}
+        ceiling={{
+          width: Math.max(bounds.w, 8),
+          depth: Math.max(bounds.d, 8),
+          x: bounds.cx,
+          z: bounds.cz,
+          y: spec.height - SLAB_M - 0.06,
+        }}
       />
     </group>
   )
