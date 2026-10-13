@@ -325,8 +325,18 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       const api = measureRef.current
       if (api?.applyOpacity) api.applyOpacity()
       else api?.applyPack(packRef.current)
+      // F7：松开后的第一帧只画楼层。标签批次下一帧再进同一条绘制，避免和冷启动叠在一起。
+      if (floorId === 'F7') api?.setBatchVisible(false)
       releaseLabelPaint()
       invalidate()
+      if (floorId === 'F7') {
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            measureRef.current?.setBatchVisible(true)
+            invalidate()
+          })
+        })
+      }
       fadeInRef.current = 0
       fadeRafRef.current = 0
       window.__twinLabelFading = false

@@ -100,6 +100,7 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/_members/)
     expect(source).toMatch(/waitCameraRested/)
     expect(source.indexOf('waitCameraRested()')).toBeLessThan(source.indexOf('batch?.sync('))
+    expect(source).toMatch(/setBatchVisible/)
   })
 
   it('转正只在进层/层级/拖动结束计算，不每帧跟相机', () => {
@@ -129,6 +130,9 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/FADE_IN_MS = 80/)
     expect(source).toMatch(/askFrame/)
     expect(source).toMatch(/startFadeLoop/)
+    expect(source).toMatch(/floorId === 'F7'/)
+    expect(source).toMatch(/setBatchVisible\(false\)/)
+    expect(source).toMatch(/setBatchVisible\(true\)/)
     expect(source).toMatch(/requestAnimationFrame/)
     expect(source).toMatch(/useMemo/)
     expect(source).toMatch(/pointsKey/)

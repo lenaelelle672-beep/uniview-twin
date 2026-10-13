@@ -29,6 +29,8 @@ export interface LabelBatchApi {
   applyPack: (pack: LabelPackState) => void
   /** 淡入只改透明度。位置和矩阵在上屏那一帧已经写过。 */
   applyOpacity: () => void
+  /** F7：先让楼层单独画一帧，下一帧再把批次算进同一次绘制。 */
+  setBatchVisible: (visible: boolean) => void
 }
 
 function bumpSync(): void {
@@ -461,6 +463,10 @@ export function BatchedRoomLabels({
           text.fillOpacity = fade
           text.outlineOpacity = fade * ROOM_LABEL_OUTLINE_OPACITY
         }
+      },
+      setBatchVisible(visible) {
+        const batch = batchRef.current
+        if (batch) batch.visible = visible
       },
     }
     return () => {
