@@ -5,6 +5,8 @@ export function prefetchLazyChunks(): void {
   void import('./floorDecor')
   void import('./textRuntime')
   void import('../../blueprint/BlueprintView')
+  void import('./FloorStageCamera')
+  void import('../../floors/JsonFloorInterior')
   void import('./preloadFloorGlyphs').then((mod) => {
     mod.scheduleGlyphPreload()
   })

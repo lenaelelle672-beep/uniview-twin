@@ -960,6 +960,14 @@ async function pumpEntryFont(characters: string): Promise<void> {
   installSdfAtlasHook()
   installAtlasCanvasHook()
   await loadTroika()
+  if (window.__twinView === 'floor' && window.__twinCameraMoveAt == null) {
+    const begin = performance.now()
+    while (window.__twinCameraMoveAt == null && performance.now() - begin < 2000) {
+      await new Promise<void>((resolve) => {
+        requestAnimationFrame(() => resolve())
+      })
+    }
+  }
   // 一次排完。拆批会让 SDF 图集反复放大，SwiftShader 上每一放大都是一段长任务。
   await new Promise<void>((resolve) => {
     preloadFontFn!({ font: ROOM_LABEL_FONT, characters }, () => resolve())
