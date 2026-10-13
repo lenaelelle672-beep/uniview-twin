@@ -54,6 +54,28 @@ function nextFrame(): Promise<void> {
   })
 }
 
+/** 飞入窗口禁止 batch.sync / 首次上屏。停稳后再排，避免和相机、室内几何叠在同一帧。 */
+async function waitCameraRested(): Promise<void> {
+  if (typeof window === 'undefined') return
+  if (window.__twinView !== 'floor') {
+    const begin = performance.now()
+    while (window.__twinView !== 'floor' && performance.now() - begin < 2000) {
+      await nextFrame()
+    }
+  }
+  if (window.__twinView === 'floor' && window.__twinCameraMoveAt == null) {
+    const begin = performance.now()
+    while (window.__twinCameraMoveAt == null && performance.now() - begin < 2000) {
+      await nextFrame()
+    }
+  }
+  const restBegin = performance.now()
+  while (window.__twinCameraRested !== true && performance.now() - restBegin < 4000) {
+    await nextFrame()
+  }
+  await nextFrame()
+}
+
 function applyWrap(text: Text, fontSize: number) {
   text.maxWidth = fontSize * LABEL_MAX_EMS
   text.overflowWrap = 'break-word'
@@ -200,6 +222,8 @@ export function BatchedRoomLabels({
     void preloadFloorEntryFont(characters)
       .then(async () => {
         if (cancelled) return
+        await waitCameraRested()
+        if (cancelled) return
         batch = new BatchedText()
         batch.name = 'RoomLabelBatchedText' // QA 独立脚本读 window.__twinScene 里这个名字和 batch._members
         batch.font = ROOM_LABEL_FONT
@@ -258,9 +282,11 @@ export function BatchedRoomLabels({
         }
         await nextFrame()
         if (cancelled) return
+        window.__twinLabelBatchSyncStartedAt = performance.now()
         await new Promise<void>((resolve) => {
           batch?.sync(() => {
             bumpSync()
+            window.__twinLabelBatchSyncAt = performance.now()
             resolve()
           })
         })
@@ -279,6 +305,7 @@ export function BatchedRoomLabels({
         clustersRef.current = clusterMembers
         clusterKeysRef.current = clusters.map((item) => item.key)
         window.__twinLabelPackMs = performance.now() - started
+        window.__twinLabelPaintAt = performance.now()
         if (!window.__twinLabelReadyAt) window.__twinLabelReadyAt = performance.now()
         setPackGen((value) => value + 1)
         invalidate()

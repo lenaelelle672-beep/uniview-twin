@@ -143,6 +143,10 @@ describe('D262/D264 字形预排', () => {
     expect(batch).not.toMatch(/from 'troika-three-text'/)
     expect(batch).toMatch(/from '\.\/disableTroikaCdn'/)
     expect(batch).toMatch(/preloadFloorEntryFont\(characters\)/)
+    expect(batch).toMatch(/waitCameraRested/)
+    expect(batch).toMatch(/__twinCameraRested/)
+    expect(batch).toMatch(/__twinLabelBatchSyncAt/)
+    expect(batch.indexOf('waitCameraRested()')).toBeLessThan(batch.indexOf('batch?.sync('))
     expect(batch).not.toMatch(/__twinGlyphPreload\?\.done/)
   })
 

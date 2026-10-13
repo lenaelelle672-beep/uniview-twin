@@ -98,6 +98,8 @@ describe('房间引线标签', () => {
     expect(source).toMatch(/orientToCamera/)
     expect(source).toMatch(/RoomLabelBatchedText/)
     expect(source).toMatch(/_members/)
+    expect(source).toMatch(/waitCameraRested/)
+    expect(source.indexOf('waitCameraRested()')).toBeLessThan(source.indexOf('batch?.sync('))
   })
 
   it('转正只在进层/层级/拖动结束计算，不每帧跟相机', () => {

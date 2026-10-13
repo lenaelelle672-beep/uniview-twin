@@ -568,6 +568,29 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       unique: window.__twinGlyphPreload?.unique ?? null,
       done: window.__twinGlyphPreload?.done ?? null,
     }))
+    row.framePhase = await page.evaluate((t0, t1) => {
+      const stamps = (window.__twinRafStamps ?? []).filter((item) => item.at >= t0 && item.at <= t1 && item.dt < 1000)
+      const longest = stamps.reduce((best, item) => (!best || item.dt > best.dt ? item : best), null)
+      const readyAt = window.__twinFloorFontReadyAt ?? null
+      const syncAt = window.__twinLabelBatchSyncAt ?? window.__twinLabelPhases?.syncStartAt ?? null
+      const paintAt = window.__twinLabelPaintAt ?? window.__twinLabelReadyAt ?? null
+      let phase = 'unknown'
+      if (longest) {
+        if (readyAt != null && longest.at < readyAt) phase = 'before-ReadyAt'
+        else if (syncAt != null && longest.at < syncAt) phase = readyAt == null ? 'before-sync-no-ReadyAt' : 'after-ReadyAt-before-sync'
+        else if (syncAt != null && longest.at >= syncAt) phase = 'after-sync'
+        else if (readyAt == null) phase = 'no-ReadyAt'
+      }
+      return {
+        longestAt: longest ? Math.round(longest.at) : null,
+        longestDt: longest ? Math.round(longest.dt) : null,
+        readyAt,
+        syncAt,
+        paintAt,
+        syncStartedAt: window.__twinLabelBatchSyncStartedAt ?? null,
+        phase,
+      }
+    }, resetAt, rest.restAt ?? resetAt + 12_000)
     log(`${label} ${floor}#${i} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink} setSize=${row.setSize?.count} dpr=${row.setPixelRatio?.count} maxFrame=${row.maxFrameClickToRest}`)
     runs.push(row)
     await page.close()

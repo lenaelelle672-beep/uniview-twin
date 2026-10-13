@@ -234,6 +234,9 @@ interface Window {
   }
   __twinLabelSyncs?: number
   __twinLabelSyncStartedAt?: number
+  __twinLabelBatchSyncStartedAt?: number
+  __twinLabelBatchSyncAt?: number
+  __twinLabelPaintAt?: number
   __twinLabelReadyAt?: number
   __twinFloorFontStartedAt?: number
   __twinFloorFontReadyAt?: number
