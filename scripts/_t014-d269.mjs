@@ -165,6 +165,8 @@ async function waitReady(page, started) {
     }
     let lastSig = ''
     let stable = 0
+    let gateBucket = null
+    const GAP_MS = 100
     const fadeStillOpen = () => {
       if (window.__twinLabelFading === true) return true
       const phases = window.__twinLabelPhases
@@ -175,64 +177,70 @@ async function waitReady(page, started) {
     }
     const begin = performance.now()
     while (performance.now() - begin < 25_000) {
+      const now = performance.now()
       const batch = find()
       const members = batch?._members
-      if (members && members.size && !fadeStillOpen()) {
-        let vis = 0
-        let fo = 0
-        let scale = 0
-        let missing = false
-        let count = 0
-        for (const text of members.keys()) {
-          count += 1
-          if (!text.textRenderInfo) missing = true
-          const sx = text.scale?.x ?? 0
-          const opacity = text.fillOpacity ?? 0
-          fo += opacity
-          scale += sx
-          if (sx > 0.05) vis += 1
-        }
-        const sig = `${vis}|${Math.round(fo * 1000)}|${Math.round(scale * 1000)}`
-        if (!missing && count > 0 && vis > 0) {
-          if (sig === lastSig) stable += 1
-          else {
-            lastSig = sig
-            stable = 1
-          }
-          if (stable >= 3) {
-            const o = window.__twinLabelOverlap
-            const p = window.__twinLabelPhases ?? {}
-            return {
-              ms: Math.round(performance.now() - t0),
-              at: performance.now(),
-              vis,
-              syncs: window.__twinLabelSyncs ?? 0,
-              batch: true,
-              overlap: o?.overlapPairs ?? null,
-              mismatch: o?.mismatch ?? null,
-              hidden: o?.hidden ?? null,
-              restReason: window.__twinCameraRestReason ?? p.restReason ?? null,
-              clickToRest: p.restAt != null ? Math.round(p.restAt - t0) : null,
-              clickToMove:
-                window.__twinCameraMoveAt != null ? Math.round(window.__twinCameraMoveAt - t0) : null,
-              avoidMs: p.avoidMs ?? null,
-              syncMs: p.syncMs ?? null,
-              fadeMs:
-                p.fadeMs ??
-                (p.fadeDoneAt != null && p.fadeStartAt != null ? Math.round(p.fadeDoneAt - p.fadeStartAt) : null),
-              fadeStartAt: p.fadeStartAt ?? null,
-              fadeDoneAt: p.fadeDoneAt ?? null,
-              packStep: p.packStep ?? null,
-              atlasHeight: window.__twinGlyphPreload?.atlasHeight ?? null,
-            }
-          }
-        } else {
+      const frames = window.__twinFrames
+      if (!members || !members.size || fadeStillOpen() || typeof frames !== 'number') {
+        if (fadeStillOpen() || !members || !members.size || typeof frames !== 'number') {
           lastSig = ''
           stable = 0
         }
-      } else if (fadeStillOpen()) {
-        lastSig = ''
-        stable = 0
+      } else {
+        const bucket = Math.floor(now / GAP_MS)
+        if (gateBucket !== bucket) {
+          gateBucket = bucket
+          let vis = 0
+          let fo = 0
+          let scale = 0
+          let missing = false
+          for (const text of members.keys()) {
+            const extent = Math.max(Math.abs(text.scale?.x ?? 0), Math.abs(text.scale?.y ?? 0))
+            if (!(extent > 0.05)) continue
+            vis += 1
+            if (!text.textRenderInfo) missing = true
+            fo += text.fillOpacity ?? 0
+            scale += extent
+          }
+          const sig = `${vis}|${Math.round(fo * 1000)}|${Math.round(scale * 1000)}`
+          if (!missing && vis > 0) {
+            if (sig === lastSig) stable += 1
+            else {
+              lastSig = sig
+              stable = 1
+            }
+            if (stable >= 3) {
+              const o = window.__twinLabelOverlap
+              const p = window.__twinLabelPhases ?? {}
+              return {
+                ms: Math.round(performance.now() - t0),
+                at: performance.now(),
+                vis,
+                syncs: window.__twinLabelSyncs ?? 0,
+                batch: true,
+                overlap: o?.overlapPairs ?? null,
+                mismatch: o?.mismatch ?? null,
+                hidden: o?.hidden ?? null,
+                restReason: window.__twinCameraRestReason ?? p.restReason ?? null,
+                clickToRest: p.restAt != null ? Math.round(p.restAt - t0) : null,
+                clickToMove:
+                  window.__twinCameraMoveAt != null ? Math.round(window.__twinCameraMoveAt - t0) : null,
+                avoidMs: p.avoidMs ?? null,
+                syncMs: p.syncMs ?? null,
+                fadeMs:
+                  p.fadeMs ??
+                  (p.fadeDoneAt != null && p.fadeStartAt != null ? Math.round(p.fadeDoneAt - p.fadeStartAt) : null),
+                fadeStartAt: p.fadeStartAt ?? null,
+                fadeDoneAt: p.fadeDoneAt ?? null,
+                packStep: p.packStep ?? null,
+                atlasHeight: window.__twinGlyphPreload?.atlasHeight ?? null,
+              }
+            }
+          } else {
+            lastSig = ''
+            stable = 0
+          }
+        }
       }
       if (window.__twinGlyphPreload == null && !find() && performance.now() - begin > 2_500) {
         return { ms: Math.round(performance.now() - t0), vis: 0, syncs: window.__twinLabelSyncs ?? 0, batch: false }

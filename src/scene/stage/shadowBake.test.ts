@@ -20,7 +20,14 @@ describe('shadowBake', () => {
   afterEach(() => {
     resetShadowBake()
     delete (globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt
+    delete (globalThis as { __twinFrames?: number }).__twinFrames
+    delete (globalThis as { __twinFloorReadyAt?: number }).__twinFloorReadyAt
   })
+
+  function sample(members: Parameters<typeof observeLabelMembers>[0], now: number, fading = false, frame = now) {
+    ;(globalThis as { __twinFrames?: number }).__twinFrames = frame
+    return observeLabelMembers(members, fading, now)
+  }
 
   it('进层推迟，标签窗没关时不烘，关上后空过一帧再烘', () => {
     expect(shouldDeferShadowBake({ reason: 'floor', view: 'floor', rested: true, labelWindowClosed: true })).toBe(true)
@@ -94,61 +101,71 @@ describe('shadowBake', () => {
     expect(stepShadowBake(closed)).toBe('surface:lit:night')
   })
 
-  it('连续三帧出齐后再过 1 秒才算窗关，淡入中重计', () => {
+  it('连续三次合格采样后再过 1 秒才算窗关，淡入中重计', () => {
     markShadowEntry(0)
-    const member = { scale: { x: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
-    expect(observeLabelMembers([member], false, 10)).toBeNull()
-    expect(observeLabelMembers([member], true, 20)).toBeNull()
-    expect(observeLabelMembers([member], false, 30)).toBeNull()
-    expect(observeLabelMembers([member], false, 40)).toBeNull()
-    expect(observeLabelMembers([member], false, 50)).toBe(50)
-    expect(labelShownAt()).toBe(50)
-    expect(labelWindowAnchor()).toBe(50)
-    expect(labelWindowClosed(1049)).toBe(false)
-    expect(labelWindowClosed(1050)).toBe(true)
+    const member = { scale: { x: 1, y: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    expect(sample([member], 0)).toBeNull()
+    expect(sample([member], 20, true)).toBeNull()
+    expect(sample([member], 100)).toBeNull()
+    expect(sample([member], 200)).toBeNull()
+    expect(sample([member], 300)).toBe(400)
+    expect(labelShownAt()).toBe(400)
+    expect(labelWindowAnchor()).toBe(400)
+    expect((globalThis as { __twinFloorReadyAt?: number }).__twinFloorReadyAt).toBe(400)
+    expect(labelWindowClosed(1399)).toBe(false)
+    expect(labelWindowClosed(1400)).toBe(true)
   })
 
-  it('关窗跟 poller 第三次稳定采样，首绘 ReadyAt 不能提前关窗', () => {
+  it('同帧或间隔不足 100ms 不算新采样，首绘 ReadyAt 不能提前关窗', () => {
     markShadowEntry(0)
     ;(globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt = 5
     expect(labelWindowClosed(5000)).toBe(false)
-    const member = { scale: { x: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
-    expect(observeLabelMembers([member], false, 10)).toBeNull()
-    expect(observeLabelMembers([member], false, 20)).toBeNull()
-    expect(observeLabelMembers([member], false, 30)).toBe(30)
-    expect(labelWindowAnchor()).toBe(30)
-    expect(labelWindowClosed(1029)).toBe(false)
-    expect(labelWindowClosed(1030)).toBe(true)
+    const member = { scale: { x: 1, y: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    expect(sample([member], 0, false, 1)).toBeNull()
+    expect(sample([member], 16, false, 2)).toBeNull()
+    expect(sample([member], 32, false, 3)).toBeNull()
+    expect(sample([member], 200, false, 3)).toBeNull()
+    expect(labelShownAt()).toBeNull()
+    expect(sample([member], 200, false, 4)).toBeNull()
+    expect(sample([member], 300, false, 5)).toBe(400)
+    expect(labelWindowAnchor()).toBe(400)
+    expect(labelWindowClosed(1399)).toBe(false)
+    expect(labelWindowClosed(1400)).toBe(true)
     noteLabelHarnessReady(900)
-    expect(labelWindowAnchor()).toBe(30)
+    expect(labelWindowAnchor()).toBe(400)
     expect((globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt).toBe(5)
     noteLabelHarnessReady(4000)
-    expect(labelWindowAnchor()).toBe(30)
+    expect(labelWindowAnchor()).toBe(400)
     expect((globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt).toBe(5)
   })
 
-  it('缺 textRenderInfo 或 ΣfillOpacity / Σscale 还在变时重计', () => {
+  it('可见过滤用 max(|x|,|y|)，隐藏成员和缺字形的可见成员按 poller 处理', () => {
     markShadowEntry(0)
-    const ready = { scale: { x: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
-    const bare = { scale: { x: 1 }, fillOpacity: 1 }
-    expect(observeLabelMembers([ready, bare], false, 10)).toBeNull()
-    expect(observeLabelMembers([ready, bare], false, 20)).toBeNull()
-    expect(observeLabelMembers([ready, bare], false, 30)).toBeNull()
+    const ready = { scale: { x: 1, y: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    const bare = { scale: { x: 1, y: 1 }, fillOpacity: 1 }
+    expect(sample([ready, bare], 0)).toBeNull()
+    expect(sample([ready, bare], 100)).toBeNull()
+    expect(sample([ready, bare], 200)).toBeNull()
     expect(labelShownAt()).toBeNull()
-    const fadingOpacity = { scale: { x: 1 }, fillOpacity: 0.5, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
-    expect(observeLabelMembers([fadingOpacity], false, 40)).toBeNull()
-    expect(observeLabelMembers([fadingOpacity], false, 50)).toBeNull()
-    expect(observeLabelMembers([ready], false, 60)).toBeNull()
-    expect(observeLabelMembers([ready], false, 70)).toBeNull()
-    expect(observeLabelMembers([ready], false, 80)).toBe(80)
-    const scaled = { scale: { x: 1.2 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    const hidden = { scale: { x: 0.001, y: 0.001 }, fillOpacity: 0.2 }
+    expect(sample([ready, { ...hidden, fillOpacity: 0.4 }], 300)).toBeNull()
+    expect(sample([ready, { ...hidden, fillOpacity: 0.8 }], 400)).toBeNull()
+    expect(sample([ready, hidden], 500)).toBe(600)
+    const tall = { scale: { x: 0.2, y: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    const tallerX = { scale: { x: 0.4, y: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
     resetShadowBake()
     markShadowEntry(0)
-    expect(observeLabelMembers([ready], false, 10)).toBeNull()
-    expect(observeLabelMembers([ready], false, 20)).toBeNull()
-    expect(observeLabelMembers([scaled], false, 30)).toBeNull()
-    expect(observeLabelMembers([scaled], false, 40)).toBeNull()
-    expect(observeLabelMembers([scaled], false, 50)).toBe(50)
+    expect(sample([tall], 0)).toBeNull()
+    expect(sample([tallerX], 100)).toBeNull()
+    expect(sample([tall], 200)).toBe(300)
+    const scaled = { scale: { x: 1, y: 1.2 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    resetShadowBake()
+    markShadowEntry(0)
+    expect(sample([ready], 0)).toBeNull()
+    expect(sample([ready], 100)).toBeNull()
+    expect(sample([scaled], 200)).toBeNull()
+    expect(sample([scaled], 300)).toBeNull()
+    expect(sample([scaled], 400)).toBe(500)
   })
 
   it('离开单层立即烘，并取消飞入推迟', () => {
@@ -174,9 +191,18 @@ describe('shadowBake', () => {
     expect(loop).toMatch(/ensureLabelWatch/)
     expect(loop).toMatch(/labelWindowClosed/)
     const bake = readFileSync(new URL('./shadowBake.ts', import.meta.url), 'utf8')
+    const d269 = readFileSync(new URL('../../../scripts/_t014-d269.mjs', import.meta.url), 'utf8')
     const labels = readFileSync(new URL('./RoomLabels.tsx', import.meta.url), 'utf8')
     expect(bake).toMatch(/__twinLabelReadyAt/)
     expect(bake).not.toMatch(/__twinLabelReadyAt\s*=/)
+    expect(bake).toMatch(/__twinFloorReadyAt/)
+    const poller = readFileSync(new URL('./floorReadyPoller.ts', import.meta.url), 'utf8')
+    expect(poller).toMatch(/Math\.floor\(now \/ FLOOR_READY_GAP_MS\)/)
+    expect(poller).toMatch(/FLOOR_READY_GAP_MS = 100/)
+    expect(poller).toMatch(/Math\.max/)
+    expect(d269).toMatch(/Math\.floor\(now \/ GAP_MS\)/)
+    expect(d269).toMatch(/GAP_MS = 100/)
+    expect(d269).toMatch(/Math\.max\(Math\.abs/)
     expect(bake).toMatch(/labelWindowAnchor/)
     expect(bake).toMatch(/noteLabelHarnessReady/)
     expect(labels).toMatch(/noteLabelHarnessReady/)

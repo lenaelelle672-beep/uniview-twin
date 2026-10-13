@@ -167,6 +167,8 @@ interface Window {
   __twinInvalidateCounts?: Record<string, number>
   __twinFrameCount?: number
   __twinFrames?: number
+  /** floorReadyPoller 第三次稳定采样。shadowBake 只读它关窗。 */
+  __twinFloorReadyAt?: number
   __twinGlDebug?: boolean
   __twinLastFrameAt?: number
   __twinGlFrame?: number

@@ -1,8 +1,10 @@
+import { emptyFloorReadyGate, pollFloorReady, type FloorReadyGate, type FloorReadyMember } from './floorReadyPoller'
+
 type Phase = 'idle' | 'wait' | 'hold'
 
 /**
  * 锁机 D261 窗是 floorReadyPoller 出齐后再加 1 秒。
- * 出齐口径：淡入已结束、成员都有 textRenderInfo，且可见数|ΣfillOpacity|Σscale 连续 3 次不变。
+ * 出齐戳是 __twinFloorReadyAt：__twinFrames 存在后按 100ms 桶采样，只累计可见成员，尺度用 max(|x|,|y|)。
  * __twinLabelReadyAt 是首绘戳，只读、不拿来关窗，这里不赋值、不抬高。
  */
 export const LABEL_WINDOW_MS = 1000
@@ -16,11 +18,7 @@ function shadowProbeEnabled(): boolean {
   return params.get('keepDrawingBuffer') === '1' || params.get('probe') === '1'
 }
 
-type LabelMember = {
-  scale?: { x?: number }
-  fillOpacity?: number
-  textRenderInfo?: { blockBounds?: unknown }
-}
+type LabelMember = FloorReadyMember
 
 type SceneLike = { getObjectByName: (name: string) => unknown }
 
@@ -29,8 +27,7 @@ let reason = ''
 let entryMark = 0
 let shownAt: number | null = null
 let armedAnchor = Number.NaN
-let shownSig = ''
-let shownStable = 0
+let gate: FloorReadyGate = emptyFloorReadyGate()
 let watchRaf = 0
 let windowTimer: ReturnType<typeof setTimeout> | 0 = 0
 let fallbackTimer: ReturnType<typeof setTimeout> | 0 = 0
@@ -43,17 +40,28 @@ function readLabelReadyAt(): number | null {
 }
 
 /**
- * 关窗锚点是 poller 第三次稳定采样的时刻。
+ * 关窗锚点只读 poller 公布的 __twinFloorReadyAt。
  * 首绘 __twinLabelReadyAt 更早，读出来只为探针，不能把窗提前关上。
  */
 export function labelWindowAnchor(): number | null {
   void readLabelReadyAt()
-  return shownAt
+  const published = (globalThis as { __twinFloorReadyAt?: number }).__twinFloorReadyAt
+  if (typeof published !== 'number' || !Number.isFinite(published) || published < entryMark) return null
+  return published
 }
 
 function resetPoller() {
-  shownSig = ''
-  shownStable = 0
+  gate = emptyFloorReadyGate()
+}
+
+function publishShown(at: number) {
+  shownAt = at
+  ;(globalThis as { __twinFloorReadyAt?: number }).__twinFloorReadyAt = at
+}
+
+function clearShown() {
+  shownAt = null
+  delete (globalThis as { __twinFloorReadyAt?: number }).__twinFloorReadyAt
 }
 
 /** 淡入还没结束时不能记出齐。没有淡入计划（没有 fadeStartAt）则不挡。 */
@@ -86,7 +94,7 @@ export function resetShadowBake() {
   phase = 'idle'
   reason = ''
   entryMark = 0
-  shownAt = null
+  clearShown()
   armedAnchor = Number.NaN
   resetPoller()
   clearLabelTimers()
@@ -112,7 +120,7 @@ export function labelWindowClosed(now = performance.now()): boolean {
  */
 export function markShadowEntry(now = performance.now()) {
   entryMark = now
-  shownAt = null
+  clearShown()
   armedAnchor = Number.NaN
   resetPoller()
   clearLabelTimers()
@@ -121,7 +129,7 @@ export function markShadowEntry(now = performance.now()) {
   fallbackTimer = setTimeout(() => {
     fallbackTimer = 0
     if (entryMark !== mark || shownAt != null) return
-    shownAt = performance.now() - LABEL_WINDOW_MS
+    publishShown(performance.now() - LABEL_WINDOW_MS)
     const anchor = labelWindowAnchor()
     if (anchor != null) armWindowTimer(anchor)
   }, LABEL_FALLBACK_MS)
@@ -170,9 +178,14 @@ function labelStampAfterEntry(): boolean {
   return stamps.some((value) => typeof value === 'number' && value >= entryMark)
 }
 
+function readTwinFrames(): number | null {
+  const value = (globalThis as { __twinFrames?: number }).__twinFrames
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null
+  return value
+}
+
 /**
- * 与锁机 floorReadyPoller 同一口径。
- * 淡入结束、每个成员都有 textRenderInfo，且「可见数|ΣfillOpacity|Σscale」连续 3 次采样不变，才记下出齐时刻。
+ * 采样逻辑在 pollFloorReady。出齐时写下 __twinFloorReadyAt，关窗只读这一个戳。
  */
 export function observeLabelMembers(
   members: Iterable<LabelMember> | null | undefined,
@@ -180,39 +193,10 @@ export function observeLabelMembers(
   now: number,
 ): number | null {
   if (shownAt != null) return shownAt
-  if (fading || fadeStillOpen() || !members) {
-    resetPoller()
-    return null
-  }
-  let count = 0
-  let vis = 0
-  let fo = 0
-  let scale = 0
-  let missingInfo = false
-  for (const text of members) {
-    count += 1
-    if (!text.textRenderInfo) missingInfo = true
-    const sx = text.scale?.x ?? 0
-    const opacity = text.fillOpacity ?? 0
-    fo += opacity
-    scale += sx
-    if (sx > 0.05) vis += 1
-  }
-  if (missingInfo || count === 0 || vis === 0) {
-    resetPoller()
-    return null
-  }
-  const sig = `${vis}|${Math.round(fo * 1000)}|${Math.round(scale * 1000)}`
-  if (sig === shownSig) shownStable += 1
-  else {
-    shownSig = sig
-    shownStable = 1
-  }
-  if (shownStable >= 3) {
-    shownAt = now
-    return shownAt
-  }
-  return null
+  const readyAt = pollFloorReady(gate, members, fading || fadeStillOpen(), now, readTwinFrames())
+  if (readyAt == null) return null
+  publishShown(readyAt)
+  return shownAt
 }
 
 function readLabelMembers(scene: SceneLike): Iterable<LabelMember> | null {
@@ -230,7 +214,7 @@ function clearPrematureShown() {
   if (typeof fadeStart !== 'number' || fadeStart < entryMark) return
   const fadeDone = phases?.fadeDoneAt
   if (typeof fadeDone === 'number' && fadeDone >= entryMark && shownAt >= fadeDone) return
-  shownAt = null
+  clearShown()
   resetPoller()
   armedAnchor = Number.NaN
   if (windowTimer) {
