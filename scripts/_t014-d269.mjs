@@ -560,6 +560,14 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     row.entryLong = await page.evaluate((t0) =>
       (window.__twinEntryFrames ?? []).filter((item) => item.at >= t0 && item.dt >= 48).slice(-16),
     resetAt)
+    row.font = await page.evaluate(() => ({
+      moveAt: window.__twinCameraMoveAt ?? null,
+      startedAt: window.__twinFloorFontStartedAt ?? null,
+      readyAt: window.__twinFloorFontReadyAt ?? null,
+      chunks: window.__twinFloorFontChunks ?? null,
+      unique: window.__twinGlyphPreload?.unique ?? null,
+      done: window.__twinGlyphPreload?.done ?? null,
+    }))
     log(`${label} ${floor}#${i} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink} setSize=${row.setSize?.count} dpr=${row.setPixelRatio?.count} maxFrame=${row.maxFrameClickToRest}`)
     runs.push(row)
     await page.close()

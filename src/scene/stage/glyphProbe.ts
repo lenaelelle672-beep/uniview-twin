@@ -935,10 +935,17 @@ export async function warmupTextMesh(): Promise<number> {
   return performance.now() - started
 }
 
-function claimEntryFontChars(characters: string): string {
+function waitRaf(): Promise<void> {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+}
+
+/** 入场只认总览 idle 尚未写入 seen / 图集的字。已在图集里的字不得再 preloadFont。 */
+export function claimEntryFontChars(characters: string): string {
   const extra: string[] = []
   for (const char of characters) {
-    if (!char || entryFontQueued.has(char)) continue
+    if (!char || seen.has(char) || entryFontQueued.has(char)) continue
     entryFontQueued.add(char)
     extra.push(char)
   }
@@ -951,32 +958,44 @@ function releaseEntryFontChars(characters: string) {
 
 async function pumpEntryFont(characters: string): Promise<void> {
   if (typeof window === 'undefined') return
-  if (window.__twinFloorFontStartedAt == null) window.__twinFloorFontStartedAt = performance.now()
   while (window.__twinFirstFrameAt == null) {
-    await new Promise<void>((resolve) => {
-      requestAnimationFrame(() => resolve())
-    })
+    await waitRaf()
   }
+  // 飞入窗口禁止 preloadFont。整层已被 seen 覆盖则直接返回；有缺口等相机停稳再补。
+  if (window.__twinView !== 'floor') {
+    const begin = performance.now()
+    while (window.__twinView !== 'floor' && performance.now() - begin < 2000) {
+      await waitRaf()
+    }
+  }
+  if (window.__twinView === 'floor') {
+    if (window.__twinCameraMoveAt == null) {
+      const begin = performance.now()
+      while (window.__twinCameraMoveAt == null && performance.now() - begin < 2000) {
+        await waitRaf()
+      }
+    }
+    const restBegin = performance.now()
+    while (window.__twinCameraRested !== true && performance.now() - restBegin < 4000) {
+      await waitRaf()
+    }
+  }
+  const gap = unseenGlyphs(characters)
+  if (!gap) return
+  if (window.__twinFloorFontStartedAt == null) window.__twinFloorFontStartedAt = performance.now()
   installSdfAtlasHook()
   installAtlasCanvasHook()
   await loadTroika()
-  if (window.__twinView === 'floor' && window.__twinCameraMoveAt == null) {
-    const begin = performance.now()
-    while (window.__twinCameraMoveAt == null && performance.now() - begin < 2000) {
-      await new Promise<void>((resolve) => {
-        requestAnimationFrame(() => resolve())
-      })
-    }
-  }
-  // 一次排完。拆批会让 SDF 图集反复放大，SwiftShader 上每一放大都是一段长任务。
+  // 一次只排缺口。拆批会让 SDF 图集反复放大，SwiftShader 上每一放大都是一段长任务。
   await new Promise<void>((resolve) => {
-    preloadFontFn!({ font: ROOM_LABEL_FONT, characters }, () => resolve())
+    preloadFontFn!({ font: ROOM_LABEL_FONT, characters: gap }, () => resolve())
   })
-  noteGlyphChars('entry', characters)
+  noteGlyphChars('entry', gap)
   window.__twinFloorFontChunks = (window.__twinFloorFontChunks ?? 0) + 1
+  window.__twinFloorFontReadyAt = performance.now()
 }
 
-/** 楼层页一拿到标签字符就排进字体，和相机飞入、室内几何重叠。总览空闲预排的暂停不适用于这里。 */
+/** 楼层入场只补总览 idle 没进图集的字。整层已覆盖则不调用 preloadFont，ReadyAt 保持 undefined。 */
 export function preloadFloorEntryFont(characters: string): Promise<void> {
   const pending = claimEntryFontChars(characters)
   if (!pending) return entryFontChain
@@ -985,9 +1004,7 @@ export function preloadFloorEntryFont(characters: string): Promise<void> {
     throw error
   })
   entryFontChain = job.then(
-    () => {
-      if (typeof window !== 'undefined') window.__twinFloorFontReadyAt = performance.now()
-    },
+    () => undefined,
     () => undefined,
   )
   return job
@@ -995,6 +1012,8 @@ export function preloadFloorEntryFont(characters: string): Promise<void> {
 
 export async function preloadLabelChars(characters: string, source: string): Promise<number> {
   if (!characters) return 0
+  // 入场字形由 preloadFloorEntryFont 在停稳后只补缺口；这里再 preloadFont 会在飞入窗口重排已在图集里的字。
+  if (source.startsWith('entry:')) return 0
   const neu = noteGlyphChars(source, characters)
   if (glyphPreloadBlocked()) return neu
   if (window.__twinGlyphPreload?.done) return neu

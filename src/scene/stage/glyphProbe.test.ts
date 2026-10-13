@@ -9,9 +9,11 @@ import {
   GLYPH_BATCH,
   GLYPH_FIRST_BATCH,
   GLYPH_MS_PER,
+  claimEntryFontChars,
   chunkGlyphs,
   diffProgramCacheKeys,
   glyphTimingProbeEnabled,
+  noteGlyphChars,
   notePreloadPause,
   resetGlyphProbe,
   setGlyphPointerDown,
@@ -85,6 +87,7 @@ describe('D262/D264 字形预排', () => {
     const entryFont = probe.slice(probe.indexOf('export function preloadFloorEntryFont'))
     expect(entryFont.startsWith('export function preloadFloorEntryFont')).toBe(true)
     expect(entryFont.slice(0, entryFont.indexOf('export async function preloadLabelChars'))).not.toMatch(/glyphPreloadBlocked/)
+    expect(entryFont.slice(0, entryFont.indexOf('export async function preloadLabelChars'))).not.toMatch(/__twinFloorFontReadyAt/)
     expect(probe).toMatch(/__twinFirstFrameAt == null/)
     const pump = probe.slice(probe.indexOf('async function pumpEntryFont'), probe.indexOf('export function preloadFloorEntryFont'))
     expect(pump).toMatch(/preloadFontFn/)
@@ -108,11 +111,15 @@ describe('D262/D264 字形预排', () => {
     expect(probe).toMatch(/GLYPH_WARMUP_SPACE/)
     expect(probe).not.toMatch(/sdfGlyphSize:\s*8/)
     expect(prefetch).toMatch(/import\('\.\/textRuntime'\)/)
+    expect(prefetch).toMatch(/prefetchClickChunks/)
     expect(prefetch).toMatch(/import\('\.\/FloorStageCamera'\)/)
     expect(prefetch).toMatch(/import\('\.\.\/\.\.\/floors\/JsonFloorInterior'\)/)
     expect(prefetch).not.toMatch(/NotoSansSC-Regular-subset\.woff/)
     expect(prefetch.indexOf("import('./textRuntime')")).toBeLessThan(prefetch.indexOf("import('./preloadFloorGlyphs')"))
     expect(pump).toMatch(/__twinCameraMoveAt/)
+    expect(pump).toMatch(/__twinCameraRested/)
+    expect(pump).toMatch(/unseenGlyphs/)
+    expect(probe).toMatch(/source\.startsWith\('entry:'\)/)
     expect(preload).toMatch(/arrayBuffer\(\)/)
     expect(preload).toMatch(/buf = null/)
     expect(preload).toMatch(/fontPrefetch/)
@@ -137,6 +144,16 @@ describe('D262/D264 字形预排', () => {
     expect(batch).toMatch(/from '\.\/disableTroikaCdn'/)
     expect(batch).toMatch(/preloadFloorEntryFont\(characters\)/)
     expect(batch).not.toMatch(/__twinGlyphPreload\?\.done/)
+  })
+
+  it('claimEntryFontChars 跳过总览 idle 已入 seen 的字，整层覆盖则空串', () => {
+    resetGlyphProbe()
+    expect(claimEntryFontChars('会议室')).toBe('会议室')
+    resetGlyphProbe()
+    noteGlyphChars('idle', '会议室')
+    expect(claimEntryFontChars('会议室')).toBe('')
+    expect(claimEntryFontChars('会议室A')).toBe('A')
+    expect(claimEntryFontChars('会议室A')).toBe('')
   })
 
   it('program cacheKey 按字段对比新增项', () => {

@@ -1,3 +1,14 @@
+/** 点击进层用的包。首帧后立刻评完，躲开 D263 first+2s 空闲计帧窗口。 */
+async function prefetchClickChunks(): Promise<void> {
+  const camera = import('./FloorStageCamera')
+  const interior = import('../../floors/JsonFloorInterior')
+  await camera
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+  await interior
+}
+
 /** 总览空闲时预取三个按需包。必须在首帧之后，预取不算进首屏。 */
 export function prefetchLazyChunks(): void {
   window.__twinPrefetchAt = performance.now()
@@ -5,8 +16,6 @@ export function prefetchLazyChunks(): void {
   void import('./floorDecor')
   void import('./textRuntime')
   void import('../../blueprint/BlueprintView')
-  void import('./FloorStageCamera')
-  void import('../../floors/JsonFloorInterior')
   void import('./preloadFloorGlyphs').then((mod) => {
     mod.scheduleGlyphPreload()
   })
@@ -50,6 +59,11 @@ export function schedulePrefetchAfterFirstFrame(): () => void {
     if (cancelled) return
     await nextFrame()
     if (cancelled) return
+    await prefetchClickChunks()
+    if (cancelled) return
+    void import('./glyphProbe').then((mod) => {
+      void mod.compileClippedShellMaterials()
+    })
     const go = () => {
       if (cancelled) return
       prefetchLazyChunks()
