@@ -466,10 +466,13 @@ const out = {
     const after = first == null ? [] : stamps.filter((row) => row.at >= first + 2000 && row.at !== first)
     const counted = after.filter((row) => !exempt(row))
     const list = counted.map((row) => Math.round(row.dt))
+    const worst = counted.reduce((best, row) => (!best || row.dt > best.dt ? row : best), null)
     return {
       firstFrameAt: first ?? null,
       count: list.length,
       max: list.length ? Math.max(...list) : null,
+      maxAt: worst ? Math.round(worst.at) : null,
+      maxFromFirst: worst && first != null ? Math.round(worst.at - first) : null,
       ceilingMs: 33,
       spaceCall: space ?? null,
       upload: window.__twinGlyphPreload?.upload ?? null,
@@ -556,7 +559,8 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       }))
       if (balanced) {
         await page.evaluate(async (readyAt) => {
-          const end = readyAt + 1000
+          const labelReady = window.__twinLabelReadyAt
+          const end = Math.max(readyAt, typeof labelReady === 'number' ? labelReady : readyAt) + 1000
           const deadline = end + 4000
           while (performance.now() < deadline) {
             const bake = window.__twinShadowBake
@@ -566,7 +570,9 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
         }, row.at)
       }
       row.d261 = await page.evaluate((t0, readyAt) => {
+        const labelReady = window.__twinLabelReadyAt ?? null
         const end = readyAt + 1000
+        const labelEnd = typeof labelReady === 'number' ? labelReady + 1000 : null
         const stamps = (window.__twinRafStamps ?? []).filter((item) => item.at >= t0 && item.at <= end && item.dt < 8000)
         const longest = stamps.reduce((best, item) => (!best || item.dt > best.dt ? item : best), null)
         const bake = window.__twinShadowBake
@@ -574,12 +580,15 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
           longestDt: longest ? Math.round(longest.dt) : null,
           longestAt: longest ? Math.round(longest.at) : null,
           readyAt,
+          labelReadyAt: labelReady,
           windowEnd: end,
           shadowAt: bake?.at ?? null,
           shadowReason: bake?.reason ?? null,
           shadowDeferred: bake?.deferred ?? null,
           labelShownAt: bake?.labelShownAt ?? null,
+          labelAnchorAt: bake?.labelAnchorAt ?? null,
           shadowVsWindowEnd: bake?.at != null ? Math.round(bake.at - end) : null,
+          shadowVsLabelReady: bake?.at != null && labelEnd != null ? Math.round(bake.at - labelEnd) : null,
           ceiling: Boolean(window.__twinScene?.getObjectByName('FloorCeiling')),
           badges: Boolean(window.__twinScene?.getObjectByName('DeviceBadges')),
         }
@@ -664,7 +673,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       }
     }, resetAt, rest.restAt ?? resetAt + 12_000)
     log(
-      `${label} ${floor}#${i} q=${quality} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink} setSize=${row.setSize?.count} dpr=${row.setPixelRatio?.count} maxFrameRest=${row.maxFrameClickToRest} d261=${row.d261?.longestDt} shadowVs=${row.d261?.shadowVsWindowEnd} ready=${row.ms}`,
+      `${label} ${floor}#${i} q=${quality} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink} setSize=${row.setSize?.count} dpr=${row.setPixelRatio?.count} maxFrameRest=${row.maxFrameClickToRest} d261=${row.d261?.longestDt} shadowVs=${row.d261?.shadowVsWindowEnd} vsReadyAt=${row.d261?.shadowVsLabelReady} ready=${row.ms} fade=${row.fadeMs} sync=${row.syncMs}`,
     )
     runs.push(row)
     await page.close()

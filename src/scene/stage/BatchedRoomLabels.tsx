@@ -13,7 +13,11 @@ disableTroikaCdnFallback()
 
 export interface LabelBatchApi {
   ready: boolean
-  measureVisible: (camera: Camera, size: { width: number; height: number }) => MeasuredLabelBox[]
+  measureVisible: (
+    camera: Camera,
+    size: { width: number; height: number },
+    opts?: { drawn?: 'opacity' | 'scale' },
+  ) => MeasuredLabelBox[]
   measureForAvoid: (
     camera: Camera,
     size: { width: number; height: number },
@@ -22,6 +26,8 @@ export interface LabelBatchApi {
   applyClusterTexts: (next: Record<string, string>) => Promise<boolean>
   orientToCamera: (camera: Camera) => number
   applyPack: (pack: LabelPackState) => void
+  /** 淡入只改透明度。位置和矩阵在上屏那一帧已经写过。 */
+  applyOpacity: () => void
 }
 
 function bumpSync(): void {
@@ -281,7 +287,7 @@ export function BatchedRoomLabels({
           clusterMembers.push(text)
         }
         await nextFrame()
-        if (cancelled) return
+        if (cancelled || !batch) return
         window.__twinLabelBatchSyncStartedAt = performance.now()
         await new Promise<void>((resolve) => {
           batch?.sync(() => {
@@ -290,6 +296,8 @@ export function BatchedRoomLabels({
             resolve()
           })
         })
+        if (cancelled || !batch) return
+        await nextFrame()
         if (cancelled || !batch) return
         const materials = Array.isArray(batch.material) ? batch.material : [batch.material]
         for (const material of materials) {
@@ -343,15 +351,19 @@ export function BatchedRoomLabels({
   useLayoutEffect(() => {
     measureRef.current = {
       ready: Boolean(batchRef.current && membersRef.current.length),
-      measureVisible(camera, size) {
+      measureVisible(camera, size, opts) {
         const batch = batchRef.current
         if (!batch) return []
         batch.updateMatrixWorld(true)
+        const scaleOnly = opts?.drawn === 'scale'
         const out: MeasuredLabelBox[] = []
         for (let i = 0; i < membersRef.current.length; i += 1) {
           const text = membersRef.current[i]
           const label = labels[i]
-          if (!text || !label || !isDrawnText(text)) continue
+          if (!text || !label) continue
+          if (scaleOnly) {
+            if (text.scale.x <= 0.05) continue
+          } else if (!isDrawnText(text)) continue
           const box = measureTextBox(text, batch.matrixWorld, camera, size, true)
           if (!box) continue
           out.push({ id: label.id, text: label.text, box, cluster: null, px: box.h })
@@ -359,7 +371,10 @@ export function BatchedRoomLabels({
         for (let i = 0; i < clustersRef.current.length; i += 1) {
           const text = clustersRef.current[i]
           const key = clusterKeysRef.current[i]
-          if (!text || !key || !isDrawnText(text)) continue
+          if (!text || !key) continue
+          if (scaleOnly) {
+            if (text.scale.x <= 0.05) continue
+          } else if (!isDrawnText(text)) continue
           const box = measureTextBox(text, batch.matrixWorld, camera, size, true)
           if (!box) continue
           out.push({ id: `cluster:${key}`, text: text.text, box, cluster: key, px: box.h })
@@ -432,6 +447,16 @@ export function BatchedRoomLabels({
       },
       applyPack(pack) {
         writePack(pack)
+      },
+      applyOpacity() {
+        const fades = fadesRef.current
+        for (let i = 0; i < membersRef.current.length; i += 1) {
+          const text = membersRef.current[i]
+          if (!text || text.scale.x <= 0.05) continue
+          const fade = fades[i] ?? 1
+          text.fillOpacity = fade
+          text.outlineOpacity = fade * ROOM_LABEL_OUTLINE_OPACITY
+        }
       },
     }
     return () => {

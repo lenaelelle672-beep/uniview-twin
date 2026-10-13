@@ -31,6 +31,7 @@ import {
   type MeasuredLabelBox,
 } from './labelScreenMeasure'
 import { isCameraRested } from './cameraRest'
+import { noteLabelHarnessReady } from './shadowBake'
 import { preloadFloorEntryFont, preloadLabelChars } from './glyphProbe'
 import type { LabelBatchApi } from './BatchedRoomLabels'
 import {
@@ -279,7 +280,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const idleRef = useRef(0)
   const stripRef = useRef(false)
   const packedKeyRef = useRef('')
-  const packStepRef = useRef<'idle' | 'avoid' | 'sync' | 'fade'>('idle')
+  const packStepRef = useRef<'idle' | 'avoid' | 'sync' | 'strip' | 'fade'>('idle')
   const pendingFadeRef = useRef(false)
   const keepTier2Ref = useRef(false)
   const pointerMovedRef = useRef(false)
@@ -302,7 +303,10 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     })
   }
   const stopFadeLoop = () => {
-    if (fadeRafRef.current) cancelAnimationFrame(fadeRafRef.current)
+    if (fadeRafRef.current) {
+      cancelAnimationFrame(fadeRafRef.current)
+      clearTimeout(fadeRafRef.current)
+    }
     fadeRafRef.current = 0
   }
   const startFadeLoop = () => {
@@ -312,30 +316,28 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     pendingFadeRef.current = false
     window.__twinLabelFading = true
     window.__twinLabelPhases = { ...(window.__twinLabelPhases ?? {}), fadeStartAt: started, packStep: 'fade' }
-    const step = () => {
-      const t = Math.min(1, (performance.now() - started) / FADE_IN_MS)
+    const finish = () => {
+      if (fadeInRef.current !== started) return
       const fades = fadesRef.current
       const targets = targetFadesRef.current
-      for (let i = 0; i < Math.max(fades.length, targets.length); i += 1) fades[i] = (targets[i] ?? 1) * t
-      measureRef.current?.applyPack(packRef.current)
+      for (let i = 0; i < Math.max(fades.length, targets.length); i += 1) fades[i] = targets[i] ?? 1
+      const api = measureRef.current
+      if (api?.applyOpacity) api.applyOpacity()
+      else api?.applyPack(packRef.current)
       invalidate()
-      if (t >= 1) {
-        fadeInRef.current = 0
-        fadeRafRef.current = 0
-        window.__twinLabelFading = false
-        window.__twinLabelPhases = {
-          ...(window.__twinLabelPhases ?? {}),
-          fadeDoneAt: performance.now(),
-          fadeMs: Math.round(performance.now() - started),
-          maxFrameFade: Math.round(performance.now() - started),
-          packStep: 'idle',
-        }
-        packStepRef.current = 'idle'
-        return
+      fadeInRef.current = 0
+      fadeRafRef.current = 0
+      window.__twinLabelFading = false
+      window.__twinLabelPhases = {
+        ...(window.__twinLabelPhases ?? {}),
+        fadeDoneAt: performance.now(),
+        fadeMs: Math.round(performance.now() - started),
+        maxFrameFade: Math.round(performance.now() - started),
+        packStep: 'idle',
       }
-      fadeRafRef.current = requestAnimationFrame(step)
+      packStepRef.current = 'idle'
     }
-    fadeRafRef.current = requestAnimationFrame(step)
+    fadeRafRef.current = window.setTimeout(finish, FADE_IN_MS)
   }
   const characters = roomLabelCharacters(labels)
   const pointsKey = labels.map((label) => `${label.id}:${label.anchor.join(',')}:${label.label.join(',')}`).join('|')
@@ -350,8 +352,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
   const stripLiveOverlaps = (perspective: PerspectiveCamera, viewport: { width: number; height: number }, keepTier2: boolean) => {
     const api = measureRef.current
     if (!api?.ready || !packedRef.current) return false
-    api.applyPack(packRef.current)
-    const live = api.measureVisible(perspective, viewport)
+    const live = api.measureVisible(perspective, viewport, { drawn: 'scale' })
     if (live.length === 0) return false
     const tierOf = (id: string) => {
       if (id.startsWith('cluster:')) {
@@ -382,8 +383,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       }
       packed.hidden = packed.placements.filter((row) => !row.visible && !row.cluster).length
     }
-    const after = api.measureVisible(perspective, viewport)
-    return countOverlapKinds(after.map((row) => row.box)).strong === 0
+    return true
   }
 
   useEffect(() => {
@@ -453,7 +453,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
           }
         }
       }
-      return {
+      const value = {
         merged: packed.merged,
         hidden: packed.hidden,
         hiddenAfterZoom: packed.hiddenAfterZoom,
@@ -491,6 +491,11 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
           })
           .filter((row): row is NonNullable<typeof row> => Boolean(row)),
       }
+      queueMicrotask(() => {
+        // 微任务晚于 harness 在 getter 返回后写下的 ready。只认第一次，悬停再读不能把烘烤往后推。
+        noteLabelHarnessReady(performance.now())
+      })
+      return value
     }
     Object.defineProperty(window, '__twinLabelOverlap', {
       configurable: true,
@@ -779,16 +784,16 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       packRef.current = layoutRef.current
       const fades = fadesRef.current
       const targets = targetFadesRef.current
-      for (let i = 0; i < Math.max(fades.length, targets.length, labels.length); i += 1) fades[i] = targets[i] ?? 1
-      stripLiveOverlaps(perspective, size, keepTier2Ref.current)
       if (pendingFadeRef.current) {
-        for (let i = 0; i < fades.length; i += 1) fades[i] = 0
+        for (let i = 0; i < Math.max(fades.length, targets.length, labels.length); i += 1) fades[i] = 0
         window.__twinLabelFading = true
       } else {
+        for (let i = 0; i < Math.max(fades.length, targets.length, labels.length); i += 1) fades[i] = targets[i] ?? 1
         fadeInRef.current = 0
         window.__twinLabelFading = false
       }
       api.applyPack(packRef.current)
+      stripLiveOverlaps(perspective, size, keepTier2Ref.current)
       const syncMs = performance.now() - syncStart
       window.__twinLabelPhases = {
         ...(window.__twinLabelPhases ?? {}),

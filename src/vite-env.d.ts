@@ -254,6 +254,8 @@ interface Window {
     interior: boolean
     deferred: boolean
     labelShownAt: number | null
+    labelReadyAt?: number | null
+    labelAnchorAt?: number | null
   }
   __twinShadowBakeLog?: Array<{
     at: number
@@ -281,7 +283,12 @@ interface Window {
         uploaded: boolean
       }
     >
-    shell?: { planes: number; at: number; scene: boolean }
+    shell?: {
+      planes: number
+      at: number
+      scene: boolean
+      timing?: { slot: string; start: number; rows: Array<{ name: string; at: number; ms: number }> }
+    }
     mount?: { floorId: string; at: number; reused: boolean; uploaded: boolean }
   }
   __twinCameraFramed?: string
@@ -298,7 +305,8 @@ interface Window {
     fadeStartAt?: number
     fadeDoneAt?: number
     fadeMs?: number
-    packStep?: 'idle' | 'avoid' | 'sync' | 'fade'
+    packStep?: 'idle' | 'avoid' | 'sync' | 'strip' | 'fade'
+    syncWaves?: number
     maxFrameAvoid?: number
     maxFrameSync?: number
     maxFrameFade?: number

@@ -3,8 +3,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   commitShadowBake,
   labelShownAt,
+  labelWindowAnchor,
   labelWindowClosed,
   markShadowEntry,
+  noteLabelHarnessReady,
   observeLabelMembers,
   requestShadowBake,
   resetShadowBake,
@@ -17,6 +19,7 @@ import {
 describe('shadowBake', () => {
   afterEach(() => {
     resetShadowBake()
+    delete (globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt
   })
 
   it('进层推迟，标签窗没关时不烘，关上后空过一帧再烘', () => {
@@ -100,8 +103,28 @@ describe('shadowBake', () => {
     expect(observeLabelMembers([member], false, 40)).toBeNull()
     expect(observeLabelMembers([member], false, 50)).toBe(50)
     expect(labelShownAt()).toBe(50)
+    expect(labelWindowAnchor()).toBe(50)
     expect(labelWindowClosed(1049)).toBe(false)
     expect(labelWindowClosed(1050)).toBe(true)
+  })
+
+  it('关窗锚点取 shownAt 与 QA ready 的较晚者，上屏时间单独不能关窗', () => {
+    markShadowEntry(0)
+    ;(globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt = 400
+    expect(labelWindowClosed(5000)).toBe(false)
+    const member = { scale: { x: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    expect(observeLabelMembers([member], false, 10)).toBeNull()
+    expect(observeLabelMembers([member], false, 20)).toBeNull()
+    expect(observeLabelMembers([member], false, 30)).toBe(30)
+    expect(labelWindowAnchor()).toBe(400)
+    expect(labelWindowClosed(1399)).toBe(false)
+    expect(labelWindowClosed(1400)).toBe(true)
+    noteLabelHarnessReady(900)
+    expect(labelWindowAnchor()).toBe(900)
+    expect(labelWindowClosed(1899)).toBe(false)
+    expect(labelWindowClosed(1900)).toBe(true)
+    noteLabelHarnessReady(4000)
+    expect(labelWindowAnchor()).toBe(900)
   })
 
   it('离开单层立即烘，并取消飞入推迟', () => {
@@ -126,6 +149,14 @@ describe('shadowBake', () => {
     expect(loop).toMatch(/markShadowEntry/)
     expect(loop).toMatch(/ensureLabelWatch/)
     expect(loop).toMatch(/labelWindowClosed/)
+    const bake = readFileSync(new URL('./shadowBake.ts', import.meta.url), 'utf8')
+    const labels = readFileSync(new URL('./RoomLabels.tsx', import.meta.url), 'utf8')
+    expect(bake).toMatch(/__twinLabelReadyAt/)
+    expect(bake).toMatch(/labelWindowAnchor/)
+    expect(bake).toMatch(/noteLabelHarnessReady/)
+    expect(labels).toMatch(/noteLabelHarnessReady/)
+    expect(labels).toMatch(/applyOpacity/)
+    expect(labels).toMatch(/queueMicrotask/)
     expect(loop).toMatch(/subscribeLabelWindowOpen/)
     expect(interior).toMatch(/useAfterInteriorPaint/)
     expect(interior).toMatch(/useAfterLabelWindow/)

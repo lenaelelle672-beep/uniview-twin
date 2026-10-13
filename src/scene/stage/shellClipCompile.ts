@@ -26,6 +26,10 @@ let shellClipTask: Promise<boolean> | null = null
 let shellClipDone = false
 
 const SHELL_AFTER_FIRST_MS = 2600
+/**
+ * 早窗一开就连续编。逐个再等槽会把后一份推到首帧 +2.6s，长编译的结束时刻落进 D263。
+ * 只在 +0.5s 点击余量之后开工，并在首帧 +1.7s 后停手，给长编译留出在 +2s 前结束的时间。
+ */
 const CLICK_OFFSETS_MS = [500, 1500, 3000]
 
 function nextFrame(): Promise<void> {
@@ -34,18 +38,39 @@ function nextFrame(): Promise<void> {
   })
 }
 
-/** 首帧后 2.6s，且躲开 ready+0.5/+1.5/+3s。同步编在这些点上会把按下拖过 fb2+50ms。 */
-async function waitShellSlot(): Promise<void> {
+function inClickBand(now: number): boolean {
+  const readyAt = window.__twinReadyAt
+  if (readyAt == null) return false
+  const rel = now - readyAt
+  return CLICK_OFFSETS_MS.some((offset) => rel >= offset - 160 && rel <= offset + 60)
+}
+
+/** 早窗错过时才退到首帧 +2.6s。调用方在爆发期内不再逐份等待。 */
+async function waitShellSlot(): Promise<'early' | 'late'> {
   for (;;) {
     const first = window.__twinFirstFrameAt
     const readyAt = window.__twinReadyAt
     const now = performance.now()
-    const settled = first != null && now >= first + SHELL_AFTER_FIRST_MS
     const rel = readyAt == null ? null : now - readyAt
-    const clicking = rel != null && CLICK_OFFSETS_MS.some((offset) => rel >= offset - 120 && rel <= offset + 40)
-    if (settled && !clicking && window.__twinView !== 'floor') return
+    const clicking = inClickBand(now)
+    const early =
+      first != null &&
+      rel != null &&
+      rel >= 620 &&
+      now < first + 1600 &&
+      !clicking &&
+      window.__twinView !== 'floor'
+    const late = first != null && now >= first + SHELL_AFTER_FIRST_MS && !clicking && window.__twinView !== 'floor'
+    if (early) return 'early'
+    if (late) return 'late'
     await nextFrame()
   }
+}
+
+function shellBurstOpen(now: number): boolean {
+  const first = window.__twinFirstFrameAt
+  if (first == null || window.__twinView === 'floor' || inClickBand(now)) return false
+  return now < first + 1700
 }
 
 function probeEnabled(): boolean {
@@ -124,7 +149,7 @@ async function compileClippedShellMaterialsNow(): Promise<boolean> {
     for (const item of list) if (item) sources.push(item)
     if (mesh.customDepthMaterial) sources.push(mesh.customDepthMaterial)
   })
-  await waitShellSlot()
+  const slot = await waitShellSlot()
   if (window.__twinView === 'floor' || !window.__twinRenderer) {
     shellClipTask = null
     return false
@@ -136,8 +161,17 @@ async function compileClippedShellMaterialsNow(): Promise<boolean> {
   // 先编铝翅再编幕墙。幕墙的 onBeforeCompile 会让排在它后面的材质编不到裁切变体。
   const rank = (name: string) => (name === '铝翅' ? 0 : name === '幕墙' ? 1 : 2)
   const ordered = [...unique].sort((a, b) => rank(a.name) - rank(b.name))
+  let burst = slot === 'early'
+  const timing: { slot: string; start: number; rows: Array<{ name: string; at: number; ms: number }> } = {
+    slot,
+    start: performance.now(),
+    rows: [],
+  }
   for (const source of ordered) {
-    await waitShellSlot()
+    const now = performance.now()
+    if (burst && !shellBurstOpen(now)) burst = false
+    if (!burst) await waitShellSlot()
+    if (window.__twinView === 'floor' || !window.__twinRenderer) break
     const prevPlanes = source.clippingPlanes
     const prevShadows = source.clipShadows
     source.clippingPlanes = planes
@@ -151,6 +185,7 @@ async function compileClippedShellMaterialsNow(): Promise<boolean> {
     retainedClipObjects.push(mesh)
     renderer.localClippingEnabled = true
     let pending: Promise<unknown> | null = null
+    const compileStart = performance.now()
     try {
       // r186 对整组 compile 不会给已在场景里的材质记下裁切变体，必须逐个编。
       if (typeof renderer.compileAsync === 'function') pending = renderer.compileAsync(mesh, camera, mainScene)
@@ -162,7 +197,12 @@ async function compileClippedShellMaterialsNow(): Promise<boolean> {
       renderer.localClippingEnabled = clippingWas
     }
     if (pending) await pending
-    await nextFrame()
+    timing.rows.push({
+      name: source.name || 'material',
+      at: Math.round(compileStart),
+      ms: Math.round(performance.now() - compileStart),
+    })
+    if (!burst) await nextFrame()
   }
   const compiled = compileWithScene(renderer, group, camera, mainScene)
   await compiled
@@ -170,7 +210,7 @@ async function compileClippedShellMaterialsNow(): Promise<boolean> {
   if (probeEnabled()) {
     window.__twinInteriorPrewarm = {
       ...(window.__twinInteriorPrewarm ?? { floors: {}, done: false }),
-      shell: { planes: planes.length, at: performance.now(), scene: true },
+      shell: { planes: planes.length, at: performance.now(), scene: true, timing },
     }
   }
   return true

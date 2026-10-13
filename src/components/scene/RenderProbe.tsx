@@ -5,6 +5,8 @@ import { markSuspenseReady, resetOverviewReadyMarks } from '../../scene/overview
 import { PICK_VOLUME_LAYER } from '../../scene/pickLayers'
 import { useTwinStore } from '../../store/store'
 
+const shellClipPromise = import('../../scene/stage/shellClipCompile')
+
 const projected = new Vector3()
 const grilleBox = new Box3()
 const raycaster = new Raycaster()
@@ -113,7 +115,7 @@ export function RenderProbe() {
       window.__twinFirstFrameAt = performance.now()
       window.__twinFirstFrameUnixMs = Date.now()
       if (window.__twinView !== 'floor') {
-        void import('../../scene/stage/shellClipCompile').then((mod) => {
+        void shellClipPromise.then((mod) => {
           void mod.compileClippedShellMaterials()
         })
       }

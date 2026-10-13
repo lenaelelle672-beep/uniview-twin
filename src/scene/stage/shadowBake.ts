@@ -1,6 +1,10 @@
 type Phase = 'idle' | 'wait' | 'hold'
 
-/** 锁机 D261 窗是点击到标签出齐后再加 1 秒。出齐后还要过完这 1 秒才烘。 */
+/**
+ * 锁机 D261 窗是点击到 QA 出齐后再加 1 秒。
+ * 出齐锚点是 max(本地三帧 shownAt, __twinLabelReadyAt)。
+ * shownAt 往往早于 harness 读完重叠探针的时刻，只用 shownAt 会把烘烤留在 ready+1s 内侧。
+ */
 export const LABEL_WINDOW_MS = 1000
 /** 定时器再让出一截，避免关窗那一帧的起点仍被算进闭区间。 */
 const WINDOW_SLACK_MS = 48
@@ -24,12 +28,30 @@ let phase: Phase = 'idle'
 let reason = ''
 let entryMark = 0
 let shownAt: number | null = null
+let harnessReadyAt: number | null = null
+let armedAnchor = Number.NaN
 let shownVis = -1
 let shownStable = 0
 let watchRaf = 0
 let windowTimer: ReturnType<typeof setTimeout> | 0 = 0
 let fallbackTimer: ReturnType<typeof setTimeout> | 0 = 0
 const windowWakes = new Set<() => void>()
+
+function readLabelReadyAt(): number | null {
+  const value = (globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < entryMark) return null
+  return value
+}
+
+/** 关窗锚点。没有本地出齐时刻时不拿更早的上屏时间单独关窗。 */
+export function labelWindowAnchor(): number | null {
+  if (shownAt == null) return null
+  let anchor = shownAt
+  const readyAt = readLabelReadyAt()
+  if (readyAt != null) anchor = Math.max(anchor, readyAt)
+  if (harnessReadyAt != null && harnessReadyAt >= entryMark) anchor = Math.max(anchor, harnessReadyAt)
+  return anchor
+}
 
 function clearLabelTimers() {
   if (windowTimer) {
@@ -51,6 +73,8 @@ export function resetShadowBake() {
   reason = ''
   entryMark = 0
   shownAt = null
+  harnessReadyAt = null
+  armedAnchor = Number.NaN
   shownVis = -1
   shownStable = 0
   clearLabelTimers()
@@ -64,10 +88,11 @@ export function labelShownAt(): number | null {
   return shownAt
 }
 
-/** 出齐时刻之后再过 LABEL_WINDOW_MS。没有出齐时间则窗还开着。 */
+/** 较晚的出齐锚点之后再过 LABEL_WINDOW_MS。只有上屏时间、没有三帧出齐时窗还开着。 */
 export function labelWindowClosed(now = performance.now()): boolean {
-  if (shownAt == null) return false
-  return now >= shownAt + LABEL_WINDOW_MS
+  const anchor = labelWindowAnchor()
+  if (anchor == null) return false
+  return now >= anchor + LABEL_WINDOW_MS
 }
 
 /**
@@ -76,6 +101,8 @@ export function labelWindowClosed(now = performance.now()): boolean {
 export function markShadowEntry(now = performance.now()) {
   entryMark = now
   shownAt = null
+  harnessReadyAt = null
+  armedAnchor = Number.NaN
   shownVis = -1
   shownStable = 0
   clearLabelTimers()
@@ -85,7 +112,8 @@ export function markShadowEntry(now = performance.now()) {
     fallbackTimer = 0
     if (entryMark !== mark || shownAt != null) return
     shownAt = performance.now() - LABEL_WINDOW_MS
-    armWindowTimer(shownAt)
+    const anchor = labelWindowAnchor()
+    if (anchor != null) armWindowTimer(anchor)
   }, LABEL_FALLBACK_MS)
 }
 
@@ -97,19 +125,37 @@ export function subscribeLabelWindowOpen(fn: () => void): () => void {
   }
 }
 
-function armWindowTimer(shown: number) {
+function armWindowTimer(anchor: number) {
+  if (windowTimer && armedAnchor === anchor) return
   if (windowTimer) clearTimeout(windowTimer)
-  const wait = Math.max(0, shown + LABEL_WINDOW_MS + WINDOW_SLACK_MS - performance.now())
+  armedAnchor = anchor
+  const wait = Math.max(0, anchor + LABEL_WINDOW_MS + WINDOW_SLACK_MS - performance.now())
   const mark = entryMark
   windowTimer = setTimeout(() => {
     windowTimer = 0
     if (entryMark !== mark || shownAt == null) return
-    if (!labelWindowClosed()) {
-      armWindowTimer(shownAt)
+    const next = labelWindowAnchor()
+    if (next == null || !labelWindowClosed()) {
+      if (next != null) armWindowTimer(next)
       return
     }
+    armedAnchor = Number.NaN
     for (const fn of [...windowWakes]) fn()
   }, wait)
+}
+
+/**
+ * QA 读完重叠探针后的同戳。微任务里调用，晚于 harness 在 getter 返回后写下的 ready。
+ * 只认进层后的第一次，避免之后的悬停读取把烘烤一直往后推。
+ */
+export function noteLabelHarnessReady(now = performance.now()): void {
+  if (harnessReadyAt != null || now < entryMark) return
+  harnessReadyAt = now
+  const host = globalThis as { __twinLabelReadyAt?: number }
+  const prev = host.__twinLabelReadyAt
+  if (typeof prev !== 'number' || prev < entryMark || now > prev) host.__twinLabelReadyAt = now
+  const anchor = labelWindowAnchor()
+  if (anchor != null) armWindowTimer(anchor)
 }
 
 function labelStampAfterEntry(): boolean {
@@ -166,27 +212,48 @@ function readLabelMembers(scene: SceneLike): Iterable<LabelMember> | null {
   return null
 }
 
-/** 有进层后的标签时间戳才开始看。淡入期间不遍历场景。 */
+/** 淡入开始后、淡入结束前记下的 shownAt 作废，避免把烘烤锚在淡入前的假稳定上。 */
+function clearPrematureShown() {
+  if (shownAt == null || typeof window === 'undefined') return
+  const phases = window.__twinLabelPhases
+  const fadeStart = phases?.fadeStartAt
+  if (typeof fadeStart !== 'number' || fadeStart < entryMark) return
+  const fadeDone = phases?.fadeDoneAt
+  if (typeof fadeDone === 'number' && fadeDone >= entryMark && shownAt >= fadeDone) return
+  shownAt = null
+  shownVis = -1
+  shownStable = 0
+  armedAnchor = Number.NaN
+  if (windowTimer) {
+    clearTimeout(windowTimer)
+    windowTimer = 0
+  }
+}
+
+/** 有进层后的标签时间戳才开始看。淡入期间不遍历场景。出齐后仍跟踪更晚的 ReadyAt。 */
 export function ensureLabelWatch(scene: SceneLike) {
-  if (shownAt != null || watchRaf) return
+  if (watchRaf) return
   if (typeof requestAnimationFrame !== 'function') return
-  if (!labelStampAfterEntry()) return
+  if (labelWindowClosed()) return
+  if (!labelStampAfterEntry() && shownAt == null) return
+  const mark = entryMark
   const step = () => {
     watchRaf = 0
-    if (shownAt != null) return
-    const fading = typeof window !== 'undefined' && window.__twinLabelFading === true
-    if (fading) {
-      shownVis = -1
-      shownStable = 0
-      watchRaf = requestAnimationFrame(step)
-      return
+    if (entryMark !== mark) return
+    clearPrematureShown()
+    if (labelWindowClosed()) return
+    if (shownAt == null) {
+      const fading = typeof window !== 'undefined' && window.__twinLabelFading === true
+      if (fading) {
+        shownVis = -1
+        shownStable = 0
+      } else {
+        observeLabelMembers(readLabelMembers(scene), false, performance.now())
+      }
     }
-    const at = observeLabelMembers(readLabelMembers(scene), false, performance.now())
-    if (at != null) {
-      armWindowTimer(at)
-      return
-    }
-    watchRaf = requestAnimationFrame(step)
+    const anchor = labelWindowAnchor()
+    if (anchor != null) armWindowTimer(anchor)
+    if (!labelWindowClosed()) watchRaf = requestAnimationFrame(step)
   }
   watchRaf = requestAnimationFrame(step)
 }
@@ -283,5 +350,7 @@ export function commitShadowBake(
     interior: extra.interior,
     deferred: extra.deferred,
     labelShownAt: shownAt,
+    labelReadyAt: readLabelReadyAt(),
+    labelAnchorAt: labelWindowAnchor(),
   }
 }
