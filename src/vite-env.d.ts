@@ -246,13 +246,14 @@ interface Window {
   __twinCameraRestReason?: string
   __twinCameraRestAt?: number
   __twinCameraMoveAt?: number
-  /** D286：仅 keepDrawingBuffer=1 / probe=1 时写入。阴影贴图补烘。 */
+  /** D288：仅 keepDrawingBuffer=1 / probe=1 时写入。阴影贴图补烘。labelShownAt 是出齐时刻。 */
   __twinShadowBake?: {
     at: number
     reason: string
     rested: boolean
     interior: boolean
     deferred: boolean
+    labelShownAt: number | null
   }
   __twinShadowBakeLog?: Array<{
     at: number
@@ -263,6 +264,7 @@ interface Window {
     interior: boolean
     cutActive: boolean
     clipping: boolean
+    windowClosed?: boolean
   }>
   __twinFlyPromiseAt?: number
   /** D283：仅 keepDrawingBuffer=1 / probe=1 时写入。各层室内几何预热。 */

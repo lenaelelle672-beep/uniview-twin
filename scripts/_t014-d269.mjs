@@ -6,6 +6,8 @@ const require = createRequire(import.meta.url)
 const baseUrl = (process.argv[2] ?? 'http://127.0.0.1:5190').replace(/\/$/, '')
 const label = process.argv[3] ?? 'head'
 const fast = process.argv.includes('fast')
+const balanced = process.argv.includes('balanced')
+const quality = balanced ? 'balanced' : 'perf'
 const puppeteer = require('puppeteer-core')
 
 function log(...args) {
@@ -49,7 +51,7 @@ const browser = await puppeteer.launch({
   ],
 })
 
-async function open(search = '?q=perf&keepDrawingBuffer=1') {
+async function open(search = `?q=${quality}&keepDrawingBuffer=1`) {
   const page = await browser.newPage()
   await page.setCacheEnabled(false)
   await page.setViewport({ width: 1366, height: 768, deviceScaleFactor: 1 })
@@ -187,6 +189,7 @@ async function waitReady(page, started) {
             const p = window.__twinLabelPhases ?? {}
             return {
               ms: Math.round(performance.now() - t0),
+              at: performance.now(),
               vis,
               syncs: window.__twinLabelSyncs ?? 0,
               batch: true,
@@ -402,6 +405,7 @@ async function waitRest(page, clickAt) {
 const out = {
   label,
   baseUrl,
+  quality,
   idle: null,
   clickToMove: {},
   floors: {},
@@ -543,6 +547,44 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     const row = fast
       ? { ms: rest.clickToRest, vis: null, syncs: 0, batch: false, fadeMs: null }
       : await waitReady(page, clickAt)
+    if (!fast && row.at != null) {
+      row.atReadyScene = await page.evaluate(() => ({
+        ceiling: Boolean(window.__twinScene?.getObjectByName('FloorCeiling')),
+        labels: Boolean(window.__twinScene?.getObjectByName('RoomLabels')),
+        badges: Boolean(window.__twinScene?.getObjectByName('DeviceBadges')),
+        fading: window.__twinLabelFading === true,
+      }))
+      if (balanced) {
+        await page.evaluate(async (readyAt) => {
+          const end = readyAt + 1000
+          const deadline = end + 4000
+          while (performance.now() < deadline) {
+            const bake = window.__twinShadowBake
+            if (bake && typeof bake.at === 'number' && bake.at >= end - 30) return
+            await new Promise((r) => setTimeout(r, 40))
+          }
+        }, row.at)
+      }
+      row.d261 = await page.evaluate((t0, readyAt) => {
+        const end = readyAt + 1000
+        const stamps = (window.__twinRafStamps ?? []).filter((item) => item.at >= t0 && item.at <= end && item.dt < 8000)
+        const longest = stamps.reduce((best, item) => (!best || item.dt > best.dt ? item : best), null)
+        const bake = window.__twinShadowBake
+        return {
+          longestDt: longest ? Math.round(longest.dt) : null,
+          longestAt: longest ? Math.round(longest.at) : null,
+          readyAt,
+          windowEnd: end,
+          shadowAt: bake?.at ?? null,
+          shadowReason: bake?.reason ?? null,
+          shadowDeferred: bake?.deferred ?? null,
+          labelShownAt: bake?.labelShownAt ?? null,
+          shadowVsWindowEnd: bake?.at != null ? Math.round(bake.at - end) : null,
+          ceiling: Boolean(window.__twinScene?.getObjectByName('FloorCeiling')),
+          badges: Boolean(window.__twinScene?.getObjectByName('DeviceBadges')),
+        }
+      }, clickAt, row.at)
+    }
     const until = rest.restAt == null ? null : rest.restAt + 2000
     row.maxFrameClickToRest =
       rest.restAt == null
@@ -621,12 +663,16 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
         bufferMax: buffers.length ? Math.max(...buffers.map((item) => item.bytes)) : 0,
       }
     }, resetAt, rest.restAt ?? resetAt + 12_000)
-    log(`${label} ${floor}#${i} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink} setSize=${row.setSize?.count} dpr=${row.setPixelRatio?.count} maxFrame=${row.maxFrameClickToRest}`)
+    log(
+      `${label} ${floor}#${i} q=${quality} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink} setSize=${row.setSize?.count} dpr=${row.setPixelRatio?.count} maxFrameRest=${row.maxFrameClickToRest} d261=${row.d261?.longestDt} shadowVs=${row.d261?.shadowVsWindowEnd} ready=${row.ms}`,
+    )
     runs.push(row)
     await page.close()
   }
   const complete = runs.map((row) => row.ms)
   const restFrames = runs.map((row) => row.maxFrameClickToRest)
+  const d261Frames = runs.map((row) => row.d261?.longestDt)
+  const shadowVs = runs.map((row) => row.d261?.shadowVsWindowEnd)
   const fades = runs.map((row) => row.fadeMs)
   out.floors[floor] = {
     runs,
@@ -634,6 +680,12 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     maxMs: maxOf(complete),
     medianMaxFrameClickToRest: median(restFrames),
     maxMaxFrameClickToRest: maxOf(restFrames),
+    medianD261: median(d261Frames),
+    maxD261: maxOf(d261Frames),
+    medianShadowVsWindowEnd: median(shadowVs),
+    minShadowVsWindowEnd: shadowVs.filter((n) => typeof n === 'number').length
+      ? Math.min(...shadowVs.filter((n) => typeof n === 'number'))
+      : null,
     medianFadeMs: median(fades),
     medianLabelCompile: median(runs.map((row) => row.shaders?.labelCompile)),
     medianLabelLink: median(runs.map((row) => row.shaders?.labelLink)),

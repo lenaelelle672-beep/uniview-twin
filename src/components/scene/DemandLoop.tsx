@@ -6,12 +6,16 @@ import { isCameraRested } from '../../scene/stage/cameraRest'
 import { cutElevation } from '../../scene/stage/cut'
 import {
   commitShadowBake,
+  ensureLabelWatch,
+  labelWindowClosed,
+  markShadowEntry,
   noteShadowBakeFrame,
   requestShadowBake,
   shadowBakePending,
   shadowSceneReady,
   shouldDeferShadowBake,
   stepShadowBake,
+  subscribeLabelWindowOpen,
 } from '../../scene/stage/shadowBake'
 import {
   bumpTwinFrames,
@@ -76,7 +80,12 @@ export function DemandLoop() {
       return
     }
     const live = useTwinStore.getState()
-    const defer = shouldDeferShadowBake({ reason: 'quality', view: live.view, rested: isCameraRested() })
+    const defer = shouldDeferShadowBake({
+      reason: 'quality',
+      view: live.view,
+      rested: isCameraRested(),
+      labelWindowClosed: live.view !== 'floor' || labelWindowClosed(),
+    })
     if (requestShadowBake('quality', defer) === 'bake-now') {
       commitShadowBake(gl, 'quality', { rested: isCameraRested(), interior: false, deferred: false })
     }
@@ -85,7 +94,12 @@ export function DemandLoop() {
   useLayoutEffect(() => {
     if (quality === 'perf') return
     const live = useTwinStore.getState()
-    const defer = shouldDeferShadowBake({ reason: 'explode', view: live.view, rested: isCameraRested() })
+    const defer = shouldDeferShadowBake({
+      reason: 'explode',
+      view: live.view,
+      rested: isCameraRested(),
+      labelWindowClosed: live.view !== 'floor' || labelWindowClosed(),
+    })
     if (requestShadowBake(exploded ? 'explode' : 'collapse', defer) === 'bake-now') {
       commitShadowBake(gl, exploded ? 'explode' : 'collapse', { rested: isCameraRested(), interior: false, deferred: false })
     }
@@ -94,7 +108,12 @@ export function DemandLoop() {
   useLayoutEffect(() => {
     if (quality === 'perf') return
     const live = useTwinStore.getState()
-    const defer = shouldDeferShadowBake({ reason: 'day-night', view: live.view, rested: isCameraRested() })
+    const defer = shouldDeferShadowBake({
+      reason: 'day-night',
+      view: live.view,
+      rested: isCameraRested(),
+      labelWindowClosed: live.view !== 'floor' || labelWindowClosed(),
+    })
     const bakeReason = `surface:${presentation}:${dayNight}`
     if (requestShadowBake(bakeReason, defer) === 'bake-now') {
       commitShadowBake(gl, bakeReason, { rested: isCameraRested(), interior: false, deferred: false })
@@ -103,18 +122,23 @@ export function DemandLoop() {
 
   // 放在最后：同一提交里昼夜/爆炸若先打了 needsUpdate，进层要清掉，飞入帧不烘。
   // 不依赖 quality，避免换档时把已经该烘的影子清掉。
+  // 性能档也要记下进层时刻，否则上一层的出齐时间会把吊顶提前挂回来。
   useLayoutEffect(() => {
-    if (useTwinStore.getState().quality === 'perf') return
     if (view === 'floor') {
+      markShadowEntry()
+      if (useTwinStore.getState().quality === 'perf') return
       requestShadowBake(`floor:${selectedFloor ?? ''}`, true)
       gl.shadowMap.needsUpdate = false
       gl.shadowMap.autoUpdate = false
       return
     }
+    if (useTwinStore.getState().quality === 'perf') return
     if (requestShadowBake(`view:${view}`, false) === 'bake-now') {
       commitShadowBake(gl, `view:${view}`, { rested: isCameraRested(), interior: false, deferred: false })
     }
   }, [gl, selectedFloor, view])
+
+  useEffect(() => subscribeLabelWindowOpen(() => rawRef.current()), [])
 
   useEffect(() => {
     const rig = controls as { addEventListener?: (type: string, fn: () => void) => void; removeEventListener?: (type: string, fn: () => void) => void } | null
@@ -169,15 +193,18 @@ export function DemandLoop() {
 
   useFrame(({ clock, scene }) => {
     const { exploded: boom, view: liveView, quality: liveQuality, selectedFloor: liveFloor } = useTwinStore.getState()
+    if (liveView === 'floor') ensureLabelWatch(scene)
     if (liveQuality !== 'perf' && document.visibilityState !== 'hidden' && shadowBakePending()) {
       const cutActive = cutElevation(liveView, liveFloor) != null
       const interiorMounted = liveView !== 'floor' || scene.getObjectByName('FloorInterior') != null
+      const windowClosed = liveView !== 'floor' || labelWindowClosed()
       const ready = shadowSceneReady({
         view: liveView,
         rested: isCameraRested(),
         interiorMounted,
         cutActive,
         clippingEnabled: gl.localClippingEnabled,
+        labelWindowClosed: windowClosed,
       })
       noteShadowBakeFrame({
         ready,
@@ -185,12 +212,13 @@ export function DemandLoop() {
         interior: interiorMounted,
         cutActive,
         clipping: gl.localClippingEnabled,
+        windowClosed,
       })
       const baked = stepShadowBake(ready)
       if (baked) {
         commitShadowBake(gl, baked, { rested: isCameraRested(), interior: interiorMounted, deferred: true })
       } else if (ready) {
-        // 单层没有人物/告警时调度是 0Hz。hold 之后再要一帧，否则影子要等下一次别的 invalidate。
+        // 单层没有人物/告警时调度是 0Hz。窗关上的 hold 帧再要一帧，阴影 pass 才落在窗后。
         rawRef.current()
       }
     }

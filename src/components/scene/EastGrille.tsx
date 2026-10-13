@@ -57,7 +57,7 @@ function bakeGrilleShadow(
   gl: { shadowMap: { autoUpdate: boolean; needsUpdate: boolean; enabled: boolean } },
   reason: string,
 ) {
-  // 飞入推迟期间不烘。停稳且没有挂起的进层烘烤时再补，hi 切换和昼夜仍更新影子。
+  // 进层烘烤挂起时不另烘，包含出齐后的 D261 窗。窗关上且没有挂起时，hi 切换和昼夜再补。
   if (!gl.shadowMap.enabled || !isCameraRested() || shadowBakePending()) return
   commitShadowBake(gl, reason, { rested: true, interior: true, deferred: false })
 }

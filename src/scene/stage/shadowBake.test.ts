@@ -2,6 +2,10 @@ import { readFileSync } from 'node:fs'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   commitShadowBake,
+  labelShownAt,
+  labelWindowClosed,
+  markShadowEntry,
+  observeLabelMembers,
   requestShadowBake,
   resetShadowBake,
   shadowBakePending,
@@ -15,8 +19,8 @@ describe('shadowBake', () => {
     resetShadowBake()
   })
 
-  it('进层推迟，停稳且室内与剖切就绪后空过一帧再烘', () => {
-    expect(shouldDeferShadowBake({ reason: 'floor', view: 'floor', rested: true })).toBe(true)
+  it('进层推迟，标签窗没关时不烘，关上后空过一帧再烘', () => {
+    expect(shouldDeferShadowBake({ reason: 'floor', view: 'floor', rested: true, labelWindowClosed: true })).toBe(true)
     expect(requestShadowBake('floor:F2', true)).toBe('defer')
     expect(shadowBakePending()).toBe(true)
     const flying = shadowSceneReady({
@@ -25,15 +29,28 @@ describe('shadowBake', () => {
       interiorMounted: true,
       cutActive: true,
       clippingEnabled: true,
+      labelWindowClosed: true,
     })
     expect(flying).toBe(false)
     expect(stepShadowBake(flying)).toBeNull()
+    const sceneOnly = shadowSceneReady({
+      view: 'floor',
+      rested: true,
+      interiorMounted: true,
+      cutActive: true,
+      clippingEnabled: true,
+      labelWindowClosed: false,
+    })
+    expect(sceneOnly).toBe(false)
+    expect(stepShadowBake(sceneOnly)).toBeNull()
+    expect(shadowBakePending()).toBe(true)
     const ready = shadowSceneReady({
       view: 'floor',
       rested: true,
       interiorMounted: true,
       cutActive: true,
       clippingEnabled: true,
+      labelWindowClosed: true,
     })
     expect(stepShadowBake(ready)).toBeNull()
     expect(shadowBakePending()).toBe(true)
@@ -54,35 +71,37 @@ describe('shadowBake', () => {
     expect(shadowBakePending()).toBe(true)
   })
 
-  it('总览昼夜立即烘，飞入中的昼夜推迟到停稳', () => {
+  it('总览昼夜立即烘，单层窗开着时昼夜继续推迟', () => {
     expect(shouldDeferShadowBake({ reason: 'day-night', view: 'building', rested: true })).toBe(false)
     expect(requestShadowBake('surface:lit:night', false)).toBe('bake-now')
     expect(shadowBakePending()).toBe(false)
 
-    expect(shouldDeferShadowBake({ reason: 'day-night', view: 'floor', rested: false })).toBe(true)
+    expect(shouldDeferShadowBake({ reason: 'day-night', view: 'floor', rested: true, labelWindowClosed: false })).toBe(true)
+    expect(shouldDeferShadowBake({ reason: 'day-night', view: 'floor', rested: true, labelWindowClosed: true })).toBe(false)
     expect(requestShadowBake('surface:lit:night', true)).toBe('defer')
-    expect(
-      stepShadowBake(
-        shadowSceneReady({
-          view: 'floor',
-          rested: true,
-          interiorMounted: true,
-          cutActive: true,
-          clippingEnabled: true,
-        }),
-      ),
-    ).toBeNull()
-    expect(
-      stepShadowBake(
-        shadowSceneReady({
-          view: 'floor',
-          rested: true,
-          interiorMounted: true,
-          cutActive: true,
-          clippingEnabled: true,
-        }),
-      ),
-    ).toBe('surface:lit:night')
+    const closed = shadowSceneReady({
+      view: 'floor',
+      rested: true,
+      interiorMounted: true,
+      cutActive: true,
+      clippingEnabled: true,
+      labelWindowClosed: true,
+    })
+    expect(stepShadowBake(closed)).toBeNull()
+    expect(stepShadowBake(closed)).toBe('surface:lit:night')
+  })
+
+  it('连续三帧出齐后再过 1 秒才算窗关，淡入中重计', () => {
+    markShadowEntry(0)
+    const member = { scale: { x: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    expect(observeLabelMembers([member], false, 10)).toBeNull()
+    expect(observeLabelMembers([member], true, 20)).toBeNull()
+    expect(observeLabelMembers([member], false, 30)).toBeNull()
+    expect(observeLabelMembers([member], false, 40)).toBeNull()
+    expect(observeLabelMembers([member], false, 50)).toBe(50)
+    expect(labelShownAt()).toBe(50)
+    expect(labelWindowClosed(1049)).toBe(false)
+    expect(labelWindowClosed(1050)).toBe(true)
   })
 
   it('离开单层立即烘，并取消飞入推迟', () => {
@@ -104,8 +123,15 @@ describe('shadowBake', () => {
     expect(loop).toMatch(/needsUpdate = false/)
     expect(loop).toMatch(/else if \(ready\)/)
     expect(loop).not.toMatch(/\[exploded, gl, quality, selectedFloor, view\]/)
-    expect(interior).toMatch(/useFloorExtrasReady/)
-    expect(interior).toMatch(/RestedFloorExtras/)
+    expect(loop).toMatch(/markShadowEntry/)
+    expect(loop).toMatch(/ensureLabelWatch/)
+    expect(loop).toMatch(/labelWindowClosed/)
+    expect(loop).toMatch(/subscribeLabelWindowOpen/)
+    expect(interior).toMatch(/useAfterInteriorPaint/)
+    expect(interior).toMatch(/useAfterLabelWindow/)
+    expect(interior).toMatch(/FloorLabels/)
+    expect(interior).toMatch(/FloorHeavy/)
+    expect(interior).not.toMatch(/useFloorExtrasReady/)
     expect(grille).toMatch(/clipShadows/)
     expect(grille).toMatch(/shadowBakePending/)
   })

@@ -10,8 +10,8 @@ import type { Point, Slot } from '../scene/stage/layout'
 import { columnMaterial, coreWallMaterial, meetingGlassMaterial, slabMaterial, woodMaterial } from '../scene/stage/materials'
 import { Ceiling } from '../scene/stage/Ceiling'
 import { DeskFlash } from '../scene/stage/DeskFlash'
-import { useFloorExtrasReady } from '../scene/stage/floorExtrasGate'
-import { FloorDecor } from '../scene/stage/lazyFloorDecor'
+import { useAfterInteriorPaint, useAfterLabelWindow } from '../scene/stage/floorExtrasGate'
+import { FloorHeavy, FloorLabels } from '../scene/stage/lazyFloorDecor'
 import { MonitorDepthProxies } from '../scene/stage/MonitorDepthProxies'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
 import { glyphTimingProbeEnabled } from '../scene/stage/glyphProbe'
@@ -22,7 +22,7 @@ import { INTERIOR_WALL_H } from './interiorWall'
 import { roomLabelsFromPlan } from './labels'
 import type { FloorPlan, FloorWall } from './types'
 
-function RestedFloorExtras({
+function StagedFloorExtras({
   floorId,
   devices,
   labels,
@@ -37,13 +37,18 @@ function RestedFloorExtras({
   paths: Point[][]
   ceiling: { width: number; depth: number; x: number; z: number; y: number }
 }) {
-  const extrasReady = useFloorExtrasReady(floorId)
-  if (!extrasReady) return null
+  const labelsOn = useAfterInteriorPaint(floorId)
+  const heavyOn = useAfterLabelWindow(floorId)
   return (
     <>
-      <DeskFlash floorId={floorId} />
-      <FloorDecor floorId={floorId} devices={devices} labels={labels} showPeople={showPeople} paths={paths} />
-      <Ceiling width={ceiling.width} depth={ceiling.depth} x={ceiling.x} z={ceiling.z} y={ceiling.y} />
+      {labelsOn ? <FloorLabels floorId={floorId} labels={labels} /> : null}
+      {heavyOn ? (
+        <>
+          <DeskFlash floorId={floorId} />
+          <FloorHeavy floorId={floorId} devices={devices} showPeople={showPeople} paths={paths} />
+          <Ceiling width={ceiling.width} depth={ceiling.depth} x={ceiling.x} z={ceiling.z} y={ceiling.y} />
+        </>
+      ) : null}
     </>
   )
 }
@@ -216,7 +221,7 @@ function JsonFloorReady({
       <Workstations slots={slots} colors={colors} />
       <InstancedSlots name="OfficeDesks" geometry={officeDeskGeometry} material={woodMaterial} slots={officeSlots} />
       {showPeople ? <MonitorDepthProxies /> : null}
-      <RestedFloorExtras
+      <StagedFloorExtras
         floorId={spec.id}
         devices={devices}
         labels={labels}
@@ -370,7 +375,7 @@ function PrebuiltFloorInterior({
     >
       <primitive object={prebuilt.content} dispose={null} />
       {showPeople ? <MonitorDepthProxies /> : null}
-      <RestedFloorExtras
+      <StagedFloorExtras
         floorId={spec.id}
         devices={devices}
         labels={labels}
