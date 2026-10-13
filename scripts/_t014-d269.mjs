@@ -163,25 +163,40 @@ async function waitReady(page, started) {
       })
       return batch
     }
-    let last = -1
+    let lastSig = ''
     let stable = 0
+    const fadeStillOpen = () => {
+      if (window.__twinLabelFading === true) return true
+      const phases = window.__twinLabelPhases
+      const start = phases?.fadeStartAt
+      if (typeof start !== 'number') return false
+      const done = phases?.fadeDoneAt
+      return typeof done !== 'number' || done < start
+    }
     const begin = performance.now()
     while (performance.now() - begin < 25_000) {
       const batch = find()
       const members = batch?._members
-      if (members && members.size && window.__twinLabelFading !== true) {
+      if (members && members.size && !fadeStillOpen()) {
         let vis = 0
-        let ready = 0
+        let fo = 0
+        let scale = 0
+        let missing = false
+        let count = 0
         for (const text of members.keys()) {
-          if (text.scale?.x > 0.05 && (text.fillOpacity ?? 0) >= 0.98) {
-            vis += 1
-            if (text.textRenderInfo?.blockBounds) ready += 1
-          }
+          count += 1
+          if (!text.textRenderInfo) missing = true
+          const sx = text.scale?.x ?? 0
+          const opacity = text.fillOpacity ?? 0
+          fo += opacity
+          scale += sx
+          if (sx > 0.05) vis += 1
         }
-        if (vis > 0 && vis === ready) {
-          if (vis === last) stable += 1
+        const sig = `${vis}|${Math.round(fo * 1000)}|${Math.round(scale * 1000)}`
+        if (!missing && count > 0 && vis > 0) {
+          if (sig === lastSig) stable += 1
           else {
-            last = vis
+            lastSig = sig
             stable = 1
           }
           if (stable >= 3) {
@@ -212,16 +227,19 @@ async function waitReady(page, started) {
             }
           }
         } else {
-          last = -1
+          lastSig = ''
           stable = 0
         }
+      } else if (fadeStillOpen()) {
+        lastSig = ''
+        stable = 0
       }
       if (window.__twinGlyphPreload == null && !find() && performance.now() - begin > 2_500) {
         return { ms: Math.round(performance.now() - t0), vis: 0, syncs: window.__twinLabelSyncs ?? 0, batch: false }
       }
       await new Promise((r) => requestAnimationFrame(r))
     }
-    return { ms: null, vis: last, syncs: window.__twinLabelSyncs ?? 0, batch: Boolean(find()) }
+    return { ms: null, vis: 0, syncs: window.__twinLabelSyncs ?? 0, batch: Boolean(find()) }
   }, started)
 }
 

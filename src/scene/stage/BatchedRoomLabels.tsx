@@ -8,6 +8,7 @@ import { cameraLookYaw, isDrawnText, measureTextBox, type MeasuredLabelBox } fro
 import { useTwinStore } from '../../store/store'
 import { ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_OPACITY, roomLabelColors, type RoomLabel } from './roomLabels'
 import { labelLiftY } from '../../floors/interiorWall'
+import { holdLabelPaint, releaseLabelPaint } from './labelPaintHold'
 
 disableTroikaCdnFallback()
 
@@ -137,6 +138,7 @@ export function BatchedRoomLabels({
   outlineRef.current = outlineWidth
   const [packGen, setPackGen] = useState(0)
   const scene = useThree((state) => state.scene)
+  const gl = useThree((state) => state.gl)
   const invalidate = useThree((state) => state.invalidate)
   const quality = useTwinStore((state) => state.quality)
   const palette = roomLabelColors(quality)
@@ -260,7 +262,7 @@ export function BatchedRoomLabels({
           text.frustumCulled = false
           batch.addText(text)
           members.push(text)
-          if (i > 0 && i % 10 === 0) {
+          if (i > 0 && i % 40 === 0) {
             await nextFrame()
             if (cancelled) return
           }
@@ -306,6 +308,7 @@ export function BatchedRoomLabels({
           material.toneMapped = false
         }
         applyMemberFades(members, fadesRef.current)
+        holdLabelPaint(gl)
         batch.visible = true
         group.add(batch)
         batchRef.current = batch
@@ -332,8 +335,9 @@ export function BatchedRoomLabels({
         batch.dispose()
       }
       for (const text of [...members, ...clusterMembers]) text.dispose()
+      releaseLabelPaint()
     }
-  }, [characters, fontSize, outlineWidth, invalidate, signature])
+  }, [characters, fontSize, gl, outlineWidth, invalidate, signature])
 
   useLayoutEffect(() => {
     const batch = batchRef.current

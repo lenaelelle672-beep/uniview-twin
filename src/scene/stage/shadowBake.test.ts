@@ -108,23 +108,47 @@ describe('shadowBake', () => {
     expect(labelWindowClosed(1050)).toBe(true)
   })
 
-  it('关窗锚点取 shownAt 与 QA ready 的较晚者，上屏时间单独不能关窗', () => {
+  it('关窗跟 poller 第三次稳定采样，首绘 ReadyAt 不能提前关窗', () => {
     markShadowEntry(0)
-    ;(globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt = 400
+    ;(globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt = 5
     expect(labelWindowClosed(5000)).toBe(false)
     const member = { scale: { x: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
     expect(observeLabelMembers([member], false, 10)).toBeNull()
     expect(observeLabelMembers([member], false, 20)).toBeNull()
     expect(observeLabelMembers([member], false, 30)).toBe(30)
-    expect(labelWindowAnchor()).toBe(400)
-    expect(labelWindowClosed(1399)).toBe(false)
-    expect(labelWindowClosed(1400)).toBe(true)
+    expect(labelWindowAnchor()).toBe(30)
+    expect(labelWindowClosed(1029)).toBe(false)
+    expect(labelWindowClosed(1030)).toBe(true)
     noteLabelHarnessReady(900)
-    expect(labelWindowAnchor()).toBe(400)
-    expect((globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt).toBe(400)
+    expect(labelWindowAnchor()).toBe(30)
+    expect((globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt).toBe(5)
     noteLabelHarnessReady(4000)
-    expect(labelWindowAnchor()).toBe(400)
-    expect((globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt).toBe(400)
+    expect(labelWindowAnchor()).toBe(30)
+    expect((globalThis as { __twinLabelReadyAt?: number }).__twinLabelReadyAt).toBe(5)
+  })
+
+  it('缺 textRenderInfo 或 ΣfillOpacity / Σscale 还在变时重计', () => {
+    markShadowEntry(0)
+    const ready = { scale: { x: 1 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    const bare = { scale: { x: 1 }, fillOpacity: 1 }
+    expect(observeLabelMembers([ready, bare], false, 10)).toBeNull()
+    expect(observeLabelMembers([ready, bare], false, 20)).toBeNull()
+    expect(observeLabelMembers([ready, bare], false, 30)).toBeNull()
+    expect(labelShownAt()).toBeNull()
+    const fadingOpacity = { scale: { x: 1 }, fillOpacity: 0.5, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    expect(observeLabelMembers([fadingOpacity], false, 40)).toBeNull()
+    expect(observeLabelMembers([fadingOpacity], false, 50)).toBeNull()
+    expect(observeLabelMembers([ready], false, 60)).toBeNull()
+    expect(observeLabelMembers([ready], false, 70)).toBeNull()
+    expect(observeLabelMembers([ready], false, 80)).toBe(80)
+    const scaled = { scale: { x: 1.2 }, fillOpacity: 1, textRenderInfo: { blockBounds: [0, 0, 1, 1] } }
+    resetShadowBake()
+    markShadowEntry(0)
+    expect(observeLabelMembers([ready], false, 10)).toBeNull()
+    expect(observeLabelMembers([ready], false, 20)).toBeNull()
+    expect(observeLabelMembers([scaled], false, 30)).toBeNull()
+    expect(observeLabelMembers([scaled], false, 40)).toBeNull()
+    expect(observeLabelMembers([scaled], false, 50)).toBe(50)
   })
 
   it('离开单层立即烘，并取消飞入推迟', () => {

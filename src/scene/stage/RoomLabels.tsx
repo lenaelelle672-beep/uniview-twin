@@ -31,6 +31,7 @@ import {
   type MeasuredLabelBox,
 } from './labelScreenMeasure'
 import { isCameraRested } from './cameraRest'
+import { releaseLabelPaint } from './labelPaintHold'
 import { noteLabelHarnessReady } from './shadowBake'
 import { preloadFloorEntryFont, preloadLabelChars } from './glyphProbe'
 import type { LabelBatchApi } from './BatchedRoomLabels'
@@ -324,6 +325,7 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       const api = measureRef.current
       if (api?.applyOpacity) api.applyOpacity()
       else api?.applyPack(packRef.current)
+      releaseLabelPaint()
       invalidate()
       fadeInRef.current = 0
       fadeRafRef.current = 0
@@ -808,7 +810,10 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
     if (packStepRef.current === 'fade' && pendingFadeRef.current && fadeInRef.current === 0) {
       startFadeLoop()
     }
-    if (packStepRef.current === 'fade' && fadeInRef.current === 0) packStepRef.current = 'idle'
+    if (packStepRef.current === 'fade' && fadeInRef.current === 0) {
+      packStepRef.current = 'idle'
+      releaseLabelPaint()
+    }
     const writePackVisibility = (byId: LabelPackState['byId'], clusters: LabelPackState['clusters']) => {
       packRef.current = { byId, clusters }
       const packed = packedRef.current

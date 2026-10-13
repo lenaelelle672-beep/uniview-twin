@@ -1,5 +1,5 @@
 diff --git a/node_modules/troika-three-text/dist/troika-three-text.esm.js b/node_modules/troika-three-text/dist/troika-three-text.esm.js
-index e38143f..8fe2f03 100644
+index e38143f..80a6301 100644
 --- a/node_modules/troika-three-text/dist/troika-three-text.esm.js
 +++ b/node_modules/troika-three-text/dist/troika-three-text.esm.js
 @@ -1921,7 +1921,7 @@ function getTextRenderInfo(args, callback) {
@@ -11,6 +11,68 @@ index e38143f..8fe2f03 100644
      atlas = atlases[sdfGlyphSize] = {
        glyphCount: 0,
        sdfGlyphSize,
+@@ -2420,7 +2420,11 @@ class GlyphsGeometry extends InstancedBufferGeometry {
+    * @param {Vector4} clipRect
+    */
+   applyClipRect(clipRect) {
+-    let count = this.getAttribute(glyphIndexAttrName).count;
++    // Batch members skip updateGlyphs, so this attribute is absent. Their mesh is not drawn;
++    // BatchedText still calls _prepareForRender to copy uniforms. Missing index must not throw.
++    const indexAttr = this.getAttribute(glyphIndexAttrName);
++    if (!indexAttr) return;
++    let count = indexAttr.count;
+     let chunks = this._chunkedBounds;
+     if (chunks) {
+       for (let i = chunks.length; i--;) {
+@@ -3170,7 +3174,7 @@ class Text extends Mesh {
+           anchorY: this.anchorY,
+           color: this.color,
+           styleRanges: this.styleRanges, // TODO sanitize
+-          includeCaretPositions: true, //TODO parameterize
++          includeCaretPositions: !this._troikaBatchMember,
+           sdfGlyphSize: this.sdfGlyphSize,
+           gpuAccelerateSDF: this.gpuAccelerateSDF,
+           unicodeFontsURL: this.unicodeFontsURL,
+@@ -3180,14 +3184,23 @@ class Text extends Mesh {
+           // Save result for later use in onBeforeRender
+           this._textRenderInfo = textRenderInfo;
+ 
+-          // Update the geometry attributes
+-          this.geometry.updateGlyphs(
+-            textRenderInfo.glyphBounds,
+-            textRenderInfo.glyphAtlasIndices,
+-            textRenderInfo.blockBounds,
+-            textRenderInfo.chunkedBounds,
+-            textRenderInfo.glyphColors
+-          );
++          // BatchedText copies textRenderInfo itself. Per-member glyph buffers are unused.
++          if (this._troikaBatchMember) {
++            const bounds = textRenderInfo.blockBounds;
++            const bbox = this.geometry.boundingBox || (this.geometry.boundingBox = new Box3());
++            if (bounds && bounds.length >= 4) {
++              bbox.min.set(bounds[0], bounds[1], 0);
++              bbox.max.set(bounds[2], bounds[3], 0);
++            }
++          } else {
++            this.geometry.updateGlyphs(
++              textRenderInfo.glyphBounds,
++              textRenderInfo.glyphAtlasIndices,
++              textRenderInfo.blockBounds,
++              textRenderInfo.chunkedBounds,
++              textRenderInfo.glyphColors
++            );
++          }
+ 
+           // If we had extra sync requests queued up, kick it off
+           const queued = this._queuedSyncs;
+@@ -3632,6 +3645,7 @@ class BatchedText extends Text {
+         glyphCount: -1,
+         dirty: true
+       });
++      text._troikaBatchMember = true;
+       text.addEventListener("synccomplete", this._onMemberSynced);
+     }
+   }
 diff --git a/node_modules/troika-three-text/dist/troika-three-text.umd.js b/node_modules/troika-three-text/dist/troika-three-text.umd.js
 index 483bc6c..9416088 100644
 --- a/node_modules/troika-three-text/dist/troika-three-text.umd.js
@@ -37,6 +99,86 @@ index 209c40b..d2782cd 100644
  void 0,void 0,U.LinearFilter,U.LinearFilter),contextLost:!1,glyphsByFont:new Map},g.sdfTexture.generateMipmaps=!1,Kb(g));let {sdfTexture:h,sdfCanvas:m}=g;(Ea.useWorker?qb:Lb)(k).then(l=>{let {glyphIds:p,glyphFontIndices:B,fontData:t,glyphPositions:v,fontSize:q,glyphFontSizeMultipliers:u,timings:y}=l,x=[],H=new Float32Array(4*p.length),z=0,A=0;var w=Na();let F=t.map(D=>{let I=g.glyphsByFont.get(D.src);I||g.glyphsByFont.set(D.src,I=new Map);return I});p.forEach((D,I)=>{var J=B[I];let {src:G,unitsPerEm:R}=
  t[J];var M=F[J].get(D);if(!M){let {path:T,pathBounds:Q}=l.glyphData[G][D];M=Math.max(Q[2]-Q[0],Q[3]-Q[1])/d*(Ea.sdfMargin*d+.5);var O=g.glyphCount++;F[J].set(D,M={path:T,atlasIndex:O,sdfViewBox:[Q[0]-M,Q[1]-M,Q[2]+M,Q[3]+M]});x.push(M)}({sdfViewBox:D}=M);J=v[A++];O=v[A++];let L=u?u[I]:q/R;H[z++]=J+D[0]*L;H[z++]=O+D[1]*L;H[z++]=J+D[2]*L;H[z++]=O+D[3]*L;p[I]=M.atlasIndex});y.quads=(y.quads||0)+(Na()-w);let E=Na();y.sdf={};w=m.height;let C=Math.pow(2,Math.ceil(Math.log2(Math.ceil(g.glyphCount/f)*d)));
  C>w&&(console.info(`Increasing SDF texture size ${w}->${C}`),Mb(m,a,C),h.dispose());Promise.all(x.map(D=>rb(D,g,k.gpuAccelerateSDF).then(({timing:I})=>{y.sdf[D.atlasIndex]=I}))).then(()=>{x.length&&!g.contextLost&&(sb(g),h.needsUpdate=!0);y.sdfTotal=Na()-E;y.total=Na()-n;e(Object.freeze({parameters:k,sdfTexture:h,sdfGlyphSize:d,sdfExponent:c,glyphBounds:H,glyphAtlasIndices:p,glyphColors:l.glyphColors,caretPositions:l.caretPositions,chunkedBounds:l.chunkedBounds,ascender:l.ascender,descender:l.descender,
+diff --git a/node_modules/troika-three-text/src/BatchedText.js b/node_modules/troika-three-text/src/BatchedText.js
+index 345880e..0c41913 100644
+--- a/node_modules/troika-three-text/src/BatchedText.js
++++ b/node_modules/troika-three-text/src/BatchedText.js
+@@ -107,6 +107,7 @@ export class BatchedText extends Text {
+         glyphCount: -1,
+         dirty: true
+       });
++      text._troikaBatchMember = true
+       text.addEventListener("synccomplete", this._onMemberSynced);
+     }
+   }
+diff --git a/node_modules/troika-three-text/src/GlyphsGeometry.js b/node_modules/troika-three-text/src/GlyphsGeometry.js
+index dfce4cd..3e5f208 100644
+--- a/node_modules/troika-three-text/src/GlyphsGeometry.js
++++ b/node_modules/troika-three-text/src/GlyphsGeometry.js
+@@ -173,7 +173,11 @@ class GlyphsGeometry extends InstancedBufferGeometry {
+    * @param {Vector4} clipRect
+    */
+   applyClipRect(clipRect) {
+-    let count = this.getAttribute(glyphIndexAttrName).count
++    // Batch members skip updateGlyphs, so this attribute is absent. Their mesh is not drawn;
++    // BatchedText still calls _prepareForRender to copy uniforms. Missing index must not throw.
++    const indexAttr = this.getAttribute(glyphIndexAttrName)
++    if (!indexAttr) return
++    let count = indexAttr.count
+     let chunks = this._chunkedBounds
+     if (chunks) {
+       for (let i = chunks.length; i--;) {
+diff --git a/node_modules/troika-three-text/src/Text.js b/node_modules/troika-three-text/src/Text.js
+index 037bb90..fcf7d6f 100644
+--- a/node_modules/troika-three-text/src/Text.js
++++ b/node_modules/troika-three-text/src/Text.js
+@@ -1,4 +1,5 @@
+ import {
++  Box3,
+   Color,
+   DoubleSide,
+   Matrix4,
+@@ -435,7 +436,7 @@ class Text extends Mesh {
+           anchorY: this.anchorY,
+           color: this.color,
+           styleRanges: this.styleRanges, // TODO sanitize
+-          includeCaretPositions: true, //TODO parameterize
++          includeCaretPositions: !this._troikaBatchMember,
+           sdfGlyphSize: this.sdfGlyphSize,
+           gpuAccelerateSDF: this.gpuAccelerateSDF,
+           unicodeFontsURL: this.unicodeFontsURL,
+@@ -445,14 +446,23 @@ class Text extends Mesh {
+           // Save result for later use in onBeforeRender
+           this._textRenderInfo = textRenderInfo
+ 
+-          // Update the geometry attributes
+-          this.geometry.updateGlyphs(
+-            textRenderInfo.glyphBounds,
+-            textRenderInfo.glyphAtlasIndices,
+-            textRenderInfo.blockBounds,
+-            textRenderInfo.chunkedBounds,
+-            textRenderInfo.glyphColors
+-          )
++          // BatchedText copies textRenderInfo itself. Per-member glyph buffers are unused.
++          if (this._troikaBatchMember) {
++            const bounds = textRenderInfo.blockBounds
++            const bbox = this.geometry.boundingBox || (this.geometry.boundingBox = new Box3())
++            if (bounds && bounds.length >= 4) {
++              bbox.min.set(bounds[0], bounds[1], 0)
++              bbox.max.set(bounds[2], bounds[3], 0)
++            }
++          } else {
++            this.geometry.updateGlyphs(
++              textRenderInfo.glyphBounds,
++              textRenderInfo.glyphAtlasIndices,
++              textRenderInfo.blockBounds,
++              textRenderInfo.chunkedBounds,
++              textRenderInfo.glyphColors
++            )
++          }
+ 
+           // If we had extra sync requests queued up, kick it off
+           const queued = this._queuedSyncs
 diff --git a/node_modules/troika-three-text/src/TextBuilder.js b/node_modules/troika-three-text/src/TextBuilder.js
 index c4876d2..937163b 100644
 --- a/node_modules/troika-three-text/src/TextBuilder.js

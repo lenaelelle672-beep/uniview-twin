@@ -1,9 +1,9 @@
 type Phase = 'idle' | 'wait' | 'hold'
 
 /**
- * 锁机 D261 窗是点击到出齐后再加 1 秒。
- * 出齐锚点只读 max(本地三帧 shownAt, __twinLabelReadyAt)。
- * 这个戳只由标签侧第一次写入，这里不赋值、不抬高。
+ * 锁机 D261 窗是 floorReadyPoller 出齐后再加 1 秒。
+ * 出齐口径：淡入已结束、成员都有 textRenderInfo，且可见数|ΣfillOpacity|Σscale 连续 3 次不变。
+ * __twinLabelReadyAt 是首绘戳，只读、不拿来关窗，这里不赋值、不抬高。
  */
 export const LABEL_WINDOW_MS = 1000
 /** 定时器再让出一截，避免关窗那一帧的起点仍被算进闭区间。 */
@@ -29,7 +29,7 @@ let reason = ''
 let entryMark = 0
 let shownAt: number | null = null
 let armedAnchor = Number.NaN
-let shownVis = -1
+let shownSig = ''
 let shownStable = 0
 let watchRaf = 0
 let windowTimer: ReturnType<typeof setTimeout> | 0 = 0
@@ -42,12 +42,29 @@ function readLabelReadyAt(): number | null {
   return value
 }
 
-/** 关窗锚点。只读标签侧已写下的 ReadyAt，不在这里改它。没有三帧出齐时窗还开着。 */
+/**
+ * 关窗锚点是 poller 第三次稳定采样的时刻。
+ * 首绘 __twinLabelReadyAt 更早，读出来只为探针，不能把窗提前关上。
+ */
 export function labelWindowAnchor(): number | null {
-  if (shownAt == null) return null
-  const readyAt = readLabelReadyAt()
-  if (readyAt == null) return shownAt
-  return Math.max(shownAt, readyAt)
+  void readLabelReadyAt()
+  return shownAt
+}
+
+function resetPoller() {
+  shownSig = ''
+  shownStable = 0
+}
+
+/** 淡入还没结束时不能记出齐。没有淡入计划（没有 fadeStartAt）则不挡。 */
+function fadeStillOpen(): boolean {
+  if (typeof window === 'undefined') return false
+  if (window.__twinLabelFading === true) return true
+  const phases = window.__twinLabelPhases
+  const start = phases?.fadeStartAt
+  if (typeof start !== 'number' || start < entryMark) return false
+  const done = phases?.fadeDoneAt
+  return typeof done !== 'number' || done < entryMark || done < start
 }
 
 function clearLabelTimers() {
@@ -71,8 +88,7 @@ export function resetShadowBake() {
   entryMark = 0
   shownAt = null
   armedAnchor = Number.NaN
-  shownVis = -1
-  shownStable = 0
+  resetPoller()
   clearLabelTimers()
 }
 
@@ -84,7 +100,7 @@ export function labelShownAt(): number | null {
   return shownAt
 }
 
-/** 较晚的出齐锚点之后再过 LABEL_WINDOW_MS。只有上屏时间、没有三帧出齐时窗还开着。 */
+/** poller 出齐之后再过 LABEL_WINDOW_MS。只有首绘戳、采样还没稳定时窗还开着。 */
 export function labelWindowClosed(now = performance.now()): boolean {
   const anchor = labelWindowAnchor()
   if (anchor == null) return false
@@ -98,8 +114,7 @@ export function markShadowEntry(now = performance.now()) {
   entryMark = now
   shownAt = null
   armedAnchor = Number.NaN
-  shownVis = -1
-  shownStable = 0
+  resetPoller()
   clearLabelTimers()
   if (typeof window === 'undefined') return
   const mark = entryMark
@@ -156,8 +171,8 @@ function labelStampAfterEntry(): boolean {
 }
 
 /**
- * 与锁机出齐同一判据：成员 scale 与不透明度到位、blockBounds 齐，且连续三帧，淡入中不算。
- * 返回出齐时刻；未到返回 null。
+ * 与锁机 floorReadyPoller 同一口径。
+ * 淡入结束、每个成员都有 textRenderInfo，且「可见数|ΣfillOpacity|Σscale」连续 3 次采样不变，才记下出齐时刻。
  */
 export function observeLabelMembers(
   members: Iterable<LabelMember> | null | undefined,
@@ -165,33 +180,38 @@ export function observeLabelMembers(
   now: number,
 ): number | null {
   if (shownAt != null) return shownAt
-  if (fading || !members) {
-    shownVis = -1
-    shownStable = 0
+  if (fading || fadeStillOpen() || !members) {
+    resetPoller()
     return null
   }
+  let count = 0
   let vis = 0
-  let ready = 0
+  let fo = 0
+  let scale = 0
+  let missingInfo = false
   for (const text of members) {
-    if ((text.scale?.x ?? 0) > 0.05 && (text.fillOpacity ?? 0) >= 0.98) {
-      vis += 1
-      if (text.textRenderInfo?.blockBounds) ready += 1
-    }
+    count += 1
+    if (!text.textRenderInfo) missingInfo = true
+    const sx = text.scale?.x ?? 0
+    const opacity = text.fillOpacity ?? 0
+    fo += opacity
+    scale += sx
+    if (sx > 0.05) vis += 1
   }
-  if (vis > 0 && vis === ready) {
-    if (vis === shownVis) shownStable += 1
-    else {
-      shownVis = vis
-      shownStable = 1
-    }
-    if (shownStable >= 3) {
-      shownAt = now
-      return shownAt
-    }
+  if (missingInfo || count === 0 || vis === 0) {
+    resetPoller()
     return null
   }
-  shownVis = -1
-  shownStable = 0
+  const sig = `${vis}|${Math.round(fo * 1000)}|${Math.round(scale * 1000)}`
+  if (sig === shownSig) shownStable += 1
+  else {
+    shownSig = sig
+    shownStable = 1
+  }
+  if (shownStable >= 3) {
+    shownAt = now
+    return shownAt
+  }
   return null
 }
 
@@ -211,8 +231,7 @@ function clearPrematureShown() {
   const fadeDone = phases?.fadeDoneAt
   if (typeof fadeDone === 'number' && fadeDone >= entryMark && shownAt >= fadeDone) return
   shownAt = null
-  shownVis = -1
-  shownStable = 0
+  resetPoller()
   armedAnchor = Number.NaN
   if (windowTimer) {
     clearTimeout(windowTimer)
@@ -220,7 +239,7 @@ function clearPrematureShown() {
   }
 }
 
-/** 有进层后的标签时间戳才开始看。淡入期间不遍历场景。出齐后仍跟踪更晚的 ReadyAt。 */
+/** 有进层后的标签时间戳才开始看。淡入期间不遍历场景。出齐锚点只看 poller，不跟首绘戳。 */
 export function ensureLabelWatch(scene: SceneLike) {
   if (watchRaf) return
   if (typeof requestAnimationFrame !== 'function') return
@@ -234,9 +253,8 @@ export function ensureLabelWatch(scene: SceneLike) {
     if (labelWindowClosed()) return
     if (shownAt == null) {
       const fading = typeof window !== 'undefined' && window.__twinLabelFading === true
-      if (fading) {
-        shownVis = -1
-        shownStable = 0
+      if (fading || fadeStillOpen()) {
+        resetPoller()
       } else {
         observeLabelMembers(readLabelMembers(scene), false, performance.now())
       }
