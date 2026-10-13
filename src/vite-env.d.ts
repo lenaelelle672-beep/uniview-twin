@@ -247,6 +247,23 @@ interface Window {
   __twinCameraRestAt?: number
   __twinCameraMoveAt?: number
   __twinFlyPromiseAt?: number
+  /** D283：仅 keepDrawingBuffer=1 / probe=1 时写入。各层室内几何预热。 */
+  __twinInteriorPrewarm?: {
+    done?: boolean
+    floors?: Record<
+      string,
+      {
+        parseMs: number
+        buildMs: number
+        compileMs: number
+        uploadMs: number
+        meshes: number
+        uploaded: boolean
+      }
+    >
+    shell?: { planes: number; at: number; scene: boolean }
+    mount?: { floorId: string; at: number; reused: boolean; uploaded: boolean }
+  }
   __twinCameraFramed?: string
   __twinLabelPhases?: {
     restAt?: number

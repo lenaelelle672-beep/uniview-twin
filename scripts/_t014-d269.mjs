@@ -134,6 +134,18 @@ async function open(search = '?q=perf&keepDrawingBuffer=1') {
     }
     wrap(WebGLRenderingContext.prototype)
     if (typeof WebGL2RenderingContext !== 'undefined') wrap(WebGL2RenderingContext.prototype)
+    const wrapBuffer = (proto) => {
+      if (!proto || proto.__qaBufferHook) return
+      proto.__qaBufferHook = true
+      const orig = proto.bufferData
+      proto.bufferData = function (target, data, usage) {
+        const bytes = data && data.byteLength != null ? data.byteLength : 0
+        ;(window.__qaBufferData ??= []).push({ at: performance.now(), bytes })
+        return orig.call(this, target, data, usage)
+      }
+    }
+    wrapBuffer(WebGLRenderingContext.prototype)
+    if (typeof WebGL2RenderingContext !== 'undefined') wrapBuffer(WebGL2RenderingContext.prototype)
   })
   await page.goto(`${baseUrl}/${search}`, { waitUntil: 'load', timeout: 90_000 })
   await page.waitForFunction(() => window.__twinReady === true, { timeout: 90_000 })
@@ -513,6 +525,7 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
     const page = await open()
     await page.waitForFunction(() => window.__twinReady === true, { timeout: 90_000 })
     await waitGlyph(page)
+    await page.waitForFunction(() => window.__twinInteriorPrewarm?.done === true, { timeout: 40_000 }).catch(() => {})
     const resetAt = await page.evaluate(() => {
       const now = performance.now()
       if (Array.isArray(window.__twinRafStamps)) window.__twinRafStamps.length = 0
@@ -572,23 +585,34 @@ for (const floor of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8']) {
       const stamps = (window.__twinRafStamps ?? []).filter((item) => item.at >= t0 && item.at <= t1 && item.dt < 1000)
       const longest = stamps.reduce((best, item) => (!best || item.dt > best.dt ? item : best), null)
       const readyAt = window.__twinFloorFontReadyAt ?? null
+      const syncStartedAt = window.__twinLabelBatchSyncStartedAt ?? null
       const syncAt = window.__twinLabelBatchSyncAt ?? window.__twinLabelPhases?.syncStartAt ?? null
       const paintAt = window.__twinLabelPaintAt ?? window.__twinLabelReadyAt ?? null
       let phase = 'unknown'
       if (longest) {
-        if (readyAt != null && longest.at < readyAt) phase = 'before-ReadyAt'
-        else if (syncAt != null && longest.at < syncAt) phase = readyAt == null ? 'before-sync-no-ReadyAt' : 'after-ReadyAt-before-sync'
-        else if (syncAt != null && longest.at >= syncAt) phase = 'after-sync'
-        else if (readyAt == null) phase = 'no-ReadyAt'
+        if (syncStartedAt != null && syncAt != null && longest.at >= syncStartedAt && longest.at < syncAt) phase = 'during-sync'
+        else if (paintAt != null && longest.at >= paintAt) phase = 'after-paint'
+        else if (syncStartedAt != null && longest.at < syncStartedAt) phase = readyAt == null ? 'before-sync-no-ReadyAt' : 'before-sync'
+        else if (readyAt != null && longest.at < readyAt) phase = 'before-ReadyAt'
+        else if (readyAt != null && longest.at >= readyAt) phase = 'after-ReadyAt-before-sync'
+        else phase = 'before-sync-no-ReadyAt'
       }
+      const buffers = (window.__qaBufferData ?? []).filter((item) => item.at >= t0 && item.at <= t1)
+      const bufferBytes = buffers.reduce((sum, item) => sum + item.bytes, 0)
       return {
         longestAt: longest ? Math.round(longest.at) : null,
         longestDt: longest ? Math.round(longest.dt) : null,
         readyAt,
         syncAt,
         paintAt,
-        syncStartedAt: window.__twinLabelBatchSyncStartedAt ?? null,
+        syncStartedAt,
         phase,
+        interior: window.__twinInteriorPrewarm?.mount ?? null,
+        prewarmDone: window.__twinInteriorPrewarm?.done ?? false,
+        shellPlanes: window.__twinInteriorPrewarm?.shell?.planes ?? null,
+        bufferCalls: buffers.length,
+        bufferBytes,
+        bufferMax: buffers.length ? Math.max(...buffers.map((item) => item.bytes)) : 0,
       }
     }, resetAt, rest.restAt ?? resetAt + 12_000)
     log(`${label} ${floor}#${i} link=${row.shaders?.linkProgram} label=${row.shaders?.labelCompile}/${row.shaders?.labelLink} setSize=${row.setSize?.count} dpr=${row.setPixelRatio?.count} maxFrame=${row.maxFrameClickToRest}`)

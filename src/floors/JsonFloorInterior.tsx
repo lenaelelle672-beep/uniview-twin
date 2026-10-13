@@ -13,7 +13,9 @@ import { DeskFlash } from '../scene/stage/DeskFlash'
 import { FloorDecor } from '../scene/stage/lazyFloorDecor'
 import { MonitorDepthProxies } from '../scene/stage/MonitorDepthProxies'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
+import { glyphTimingProbeEnabled } from '../scene/stage/glyphProbe'
 import { roomLabelCharacters } from '../scene/stage/roomLabels'
+import { paintMonitorColors, peekPrebuiltInterior, type PrebuiltInterior } from './floorInteriorMesh'
 import { loadFloorPlan, peekFloorPlan } from './loadFloor'
 import { INTERIOR_WALL_H } from './interiorWall'
 import { roomLabelsFromPlan } from './labels'
@@ -133,6 +135,14 @@ function JsonFloorReady({
   }, [cores, slab])
 
   useLayoutEffect(() => {
+    if (!glyphTimingProbeEnabled()) return
+    window.__twinInteriorPrewarm = {
+      ...(window.__twinInteriorPrewarm ?? { floors: {}, done: false }),
+      mount: { floorId: spec.id, at: performance.now(), reused: false, uploaded: false },
+    }
+  }, [spec.id])
+
+  useLayoutEffect(() => {
     window.__twinInterior = {
       floorId: spec.id,
       dataDesks: colors.length,
@@ -240,5 +250,103 @@ export function JsonFloorInterior({
   }, [colors.length, error, spec.id])
 
   if (!plan || plan.floorId !== spec.id) return null
+  const prebuilt = peekPrebuiltInterior(spec.id)
+  if (prebuilt) {
+    return (
+      <PrebuiltFloorInterior
+        spec={spec}
+        plan={plan}
+        colors={colors}
+        devices={devices}
+        showPeople={showPeople}
+        prebuilt={prebuilt}
+      />
+    )
+  }
   return <JsonFloorReady spec={spec} plan={plan} colors={colors} devices={devices} showPeople={showPeople} />
+}
+
+function PrebuiltFloorInterior({
+  spec,
+  plan,
+  colors,
+  devices,
+  showPeople,
+  prebuilt,
+}: {
+  spec: FloorSpec
+  plan: FloorPlan
+  colors: Color[]
+  devices: Device[]
+  showPeople: boolean
+  prebuilt: PrebuiltInterior
+}) {
+  const labels = useMemo(() => roomLabelsFromPlan(plan), [plan])
+  const peoplePaths = useMemo(
+    () => plan.walkPaths.map((path) => path.map(([x, z]) => ({ x, z }))),
+    [plan],
+  )
+  const bounds = useMemo(() => ringBounds(plan.outline), [plan])
+
+  useLayoutEffect(() => {
+    paintMonitorColors(prebuilt, colors)
+  }, [colors, prebuilt])
+
+  useLayoutEffect(() => {
+    if (!glyphTimingProbeEnabled()) return
+    window.__twinInteriorPrewarm = {
+      ...(window.__twinInteriorPrewarm ?? { floors: {}, done: false }),
+      mount: {
+        floorId: spec.id,
+        at: performance.now(),
+        reused: true,
+        uploaded: prebuilt.uploaded,
+      },
+    }
+  }, [prebuilt, spec.id])
+
+  useLayoutEffect(() => {
+    window.__twinInterior = {
+      floorId: spec.id,
+      dataDesks: colors.length,
+      renderedDesks: plan.desks.length,
+      jsonDesks: plan.desks.length,
+      jsonColumns: plan.columns.length,
+      walkPaths: plan.walkPaths.length,
+      labels: labels.length,
+      jsonOfficeDesks: plan.officeDesks.length,
+      renderedOfficeDesks: plan.officeDesks.length,
+    }
+    window.__twinFloor = {
+      floorId: spec.id,
+      desks: plan.desks.map((desk) => ({ id: desk.id, x: desk.x, z: desk.z, rot: desk.rot })),
+      columns: plan.columns.map((column) => ({ id: column.id, x: column.x, z: column.z, w: column.w, d: column.d })),
+      cores: plan.cores.map((core) => ({
+        id: core.id,
+        x: core.polygon.reduce((sum, point) => sum + point[0], 0) / core.polygon.length,
+        z: core.polygon.reduce((sum, point) => sum + point[1], 0) / core.polygon.length,
+        polygon: core.polygon,
+      })),
+    }
+  }, [colors.length, labels.length, plan, spec.id])
+
+  return (
+    <group
+      name="FloorInterior"
+      position={[0, spec.elevation + SLAB_M, 0]}
+      onDoubleClick={(event) => event.stopPropagation()}
+    >
+      <primitive object={prebuilt.content} dispose={null} />
+      {showPeople ? <MonitorDepthProxies /> : null}
+      <DeskFlash floorId={spec.id} />
+      <FloorDecor floorId={spec.id} devices={devices} labels={labels} showPeople={showPeople} paths={peoplePaths} />
+      <Ceiling
+        width={Math.max(bounds.w, 8)}
+        depth={Math.max(bounds.d, 8)}
+        x={bounds.cx}
+        z={bounds.cz}
+        y={spec.height - SLAB_M - 0.06}
+      />
+    </group>
+  )
 }

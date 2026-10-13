@@ -8,6 +8,7 @@ import { roomLabelCharacters } from './roomLabels'
 import {
   GLYPH_BATCH,
   GLYPH_FIRST_BATCH,
+  GLYPH_IDLE_SLICE_MS,
   GLYPH_MS_PER,
   claimEntryFontChars,
   chunkGlyphs,
@@ -43,6 +44,9 @@ describe('D262/D264 字形预排', () => {
     expect(chunks.join('').length).toBe(unique.length)
     expect(floorLabelCharacters('F1').length).toBeGreaterThan(80)
     expect(takeGlyphBudget('abcdefghij', { timeRemaining: () => 0.8 }, 60).length).toBe(Math.floor(0.8 / GLYPH_MS_PER))
+    expect(takeGlyphBudget('a'.repeat(80), { timeRemaining: () => 50 }, 60).length).toBe(
+      Math.min(60, Math.floor(GLYPH_IDLE_SLICE_MS / GLYPH_MS_PER)),
+    )
   })
 
   it('预排在首帧后按 idle 切批，指针按下/相机运动暂停，不进 prefetch 主路径的静态依赖', () => {
@@ -75,10 +79,11 @@ describe('D262/D264 字形预排', () => {
     expect(probe).toMatch(/initTexture/)
     expect(probe).toMatch(/__twinTextRuntimeAt/)
     expect(probe).toMatch(/__twinWarmup/)
-    expect(probe).toMatch(/compileAsync/)
+    const shellClip = readFileSync(new URL('./shellClipCompile.ts', import.meta.url), 'utf8')
+    expect(shellClip).toMatch(/compileAsync/)
     expect(probe).toMatch(/__twinScene/)
-    expect(probe).toMatch(/__twinComposerInput/)
-    expect(probe).toMatch(/setRenderTarget/)
+    expect(shellClip).toMatch(/__twinComposerInput/)
+    expect(shellClip).toMatch(/setRenderTarget/)
     expect(probe).toMatch(/shaderSource/)
     expect(probe).toMatch(/uTroikaSDFTexture/)
     expect(probe).toMatch(/uTroikaMatricesTexture/)
@@ -98,6 +103,8 @@ describe('D262/D264 字形预排', () => {
     expect(room).toMatch(/preloadLabelChars/)
     const interior = readFileSync(new URL('../../floors/JsonFloorInterior.tsx', import.meta.url), 'utf8')
     expect(interior).toMatch(/preloadFloorEntryFont/)
+    expect(interior).toMatch(/peekPrebuiltInterior/)
+    expect(prefetch).toMatch(/scheduleFloorInteriorPrewarm/)
     expect(interior).toMatch(/import\('\.\.\/scene\/stage\/glyphProbe'\)/)
     expect(probe).toMatch(/installSpaceSplitHooks/)
     expect(probe).toMatch(/glyphTimingProbeEnabled/)
@@ -130,8 +137,8 @@ describe('D262/D264 字形预排', () => {
     expect(preload).toMatch(/compileDummyLabelMaterial/)
     expect(preload).toMatch(/compileInteriorMaterials/)
     expect(preload).toMatch(/compileClippedShellMaterials/)
-    expect(probe).toMatch(/localClippingEnabled = clippingWas/)
-    expect(probe).toMatch(/retainedClipObjects/)
+    expect(shellClip).toMatch(/localClippingEnabled = clippingWas/)
+    expect(shellClip).toMatch(/retainedClipObjects/)
     expect(preload).not.toMatch(/textureWidth:\s*4096/)
     expect(probe).not.toMatch(/from 'troika-three-text'/)
     expect(probe).not.toMatch(/import\('troika-three-text'\)/)

@@ -1,0 +1,17 @@
+diff --git a/node_modules/three/build/three.module.js b/node_modules/three/build/three.module.js
+index c52087a..06a46f8 100644
+--- a/node_modules/three/build/three.module.js
++++ b/node_modules/three/build/three.module.js
+@@ -17549,6 +17549,12 @@ class WebGLRenderer {
+ 		 * @param {?Scene} [targetScene=null] - The target scene.
+ 		 * @return {Promise} A Promise that resolves when the given scene can be rendered without unnecessary stalling due to shader compilation.
+ 		 */
++		this.uploadObject = function ( object ) {
++
++			objects.update( object );
++
++		};
++
+ 		this.compileAsync = function ( scene, camera, targetScene = null ) {
+ 
+ 			const materials = this.compile( scene, camera, targetScene );

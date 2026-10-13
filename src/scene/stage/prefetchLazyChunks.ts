@@ -61,8 +61,8 @@ export function schedulePrefetchAfterFirstFrame(): () => void {
     if (cancelled) return
     await prefetchClickChunks()
     if (cancelled) return
-    void import('./glyphProbe').then((mod) => {
-      void mod.compileClippedShellMaterials()
+    void import('./prewarmFloorInterior').then((mod) => {
+      if (!cancelled) mod.scheduleFloorInteriorPrewarm()
     })
     const go = () => {
       if (cancelled) return

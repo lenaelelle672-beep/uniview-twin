@@ -3,16 +3,11 @@ import {
   DoubleSide,
   Group,
   InstancedMesh,
-  Material,
   Mesh,
-  Plane,
-  Vector3,
-  type Camera,
-  type Object3D,
-  type Scene,
   type Texture,
   type WebGLRenderer,
 } from 'three'
+import { compileWithScene } from './shellClipCompile'
 import { ROOM_LABEL_FONT, roomLabelColors, roomLabelOutlineWidth } from './roomLabels'
 
 /** 首批小，字体解析已拆到 warmup。 */
@@ -21,6 +16,11 @@ export const GLYPH_FIRST_BATCH = 4
 export const GLYPH_BATCH = 60
 /** 切片预算：每个字形大约 0.2 ms。 */
 export const GLYPH_MS_PER = 0.2
+/**
+ * 浏览器给 idle 回调的 deadline 常有 50ms。锁机上 60 字会把这一帧撑到 48–52ms。
+ * 估算预算再封顶，空闲帧留在 33ms 以内。入场补字不走这里。
+ */
+export const GLYPH_IDLE_SLICE_MS = 6
 /** 字体解析用空格；研究提示：不应生成 SDF，需实测。 */
 export const GLYPH_WARMUP_SPACE = ' '
 /** 第二段 warmup：一个 ASCII，单独付 webgl-sdf-generator 首次自检。 */
@@ -60,7 +60,7 @@ export function takeGlyphBudget(
   max = GLYPH_BATCH,
 ): string {
   if (!characters) return ''
-  const remaining = deadline.timeRemaining()
+  const remaining = Math.min(deadline.timeRemaining(), GLYPH_IDLE_SLICE_MS)
   if (!(remaining > 0) && max > 0) return characters.slice(0, 1)
   const n = Math.max(1, Math.min(max, characters.length, Math.floor(remaining / GLYPH_MS_PER)))
   return characters.slice(0, n)
@@ -351,26 +351,6 @@ function noteProgramLog(label: string, renderer?: WebGLRenderer | null) {
 
 function labelQuality(): 'perf' | 'balanced' {
   return window.__twinGpu?.tier === 'performance' ? 'perf' : 'balanced'
-}
-
-async function compileWithScene(
-  renderer: WebGLRenderer,
-  object: Group | Mesh | InstancedMesh,
-  camera: Camera,
-  mainScene: Scene,
-): Promise<'composer' | 'canvas'> {
-  const previous = renderer.getRenderTarget()
-  const input = window.__twinComposerInput
-  const useComposer = Boolean(window.__twinComposerLive && input)
-  if (useComposer && input) renderer.setRenderTarget(input)
-  try {
-    const asyncCompile = renderer.compileAsync?.bind(renderer)
-    if (typeof asyncCompile === 'function') await asyncCompile(object, camera, mainScene)
-    else renderer.compile(object, camera, mainScene)
-  } finally {
-    renderer.setRenderTarget(previous)
-  }
-  return useComposer ? 'composer' : 'canvas'
 }
 
 function classifyTroikaSource(source: string | undefined): { label: boolean; batched: boolean } {
@@ -828,84 +808,7 @@ export async function compileInteriorMaterials(): Promise<
   }
 }
 
-const retainedClipObjects: Object3D[] = []
-let shellClipTask: Promise<boolean> | null = null
-let shellClipDone = false
-
-function markShellClip() {
-  shellClipDone = true
-  if (window.__twinGlyphPreload) window.__twinGlyphPreload.shellClip = true
-}
-
-/**
- * 进层会给外壳挂一个裁切平面，铝翅这类标准材质要另编一套程序。
- * 编完如果把材质改回去，three 会把这套程序释放掉，点击时还得再链一次。
- * 这里用克隆材质留住程序，并在首帧后马上做完，躲开总览空闲的计帧窗口。
- */
-export function compileClippedShellMaterials(): Promise<boolean> {
-  if (shellClipDone || window.__twinGlyphPreload?.shellClip) return Promise.resolve(true)
-  if (!shellClipTask) {
-    shellClipTask = compileClippedShellMaterialsNow().catch(() => {
-      shellClipTask = null
-      return false
-    })
-  }
-  return shellClipTask
-}
-
-async function compileClippedShellMaterialsNow(): Promise<boolean> {
-  const renderer = window.__twinRenderer
-  const camera = window.__twinCamera
-  const mainScene = window.__twinScene
-  if (!renderer || !camera || !mainScene || window.__twinView === 'floor') {
-    shellClipTask = null
-    return false
-  }
-  const shell = await import('../materials')
-  const plane = new Plane(new Vector3(0, -1, 0), 1)
-  const planes = [plane]
-  const sources: Material[] = [
-    shell.curtainMaterial,
-    shell.jointMaterial,
-    shell.solidMaterial,
-    shell.grilleMaterial,
-    shell.finMaterial,
-    shell.stoneMaterial,
-    shell.eaveMaterial,
-    shell.baseMaterial,
-  ]
-  mainScene.traverse((object) => {
-    const mesh = object as Mesh & { customDepthMaterial?: Material }
-    const list = mesh.material ? (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) : []
-    if (!list.some((item) => item?.name === 'east_grille')) return
-    for (const item of list) if (item) sources.push(item)
-    if (mesh.customDepthMaterial) sources.push(mesh.customDepthMaterial)
-  })
-  const clippingWas = renderer.localClippingEnabled
-  const geo = new BoxGeometry(1, 1, 1)
-  const group = new Group()
-  try {
-    renderer.localClippingEnabled = true
-    for (const source of new Set(sources)) {
-      const material = source.clone()
-      material.name = source.name
-      material.clippingPlanes = planes
-      material.clipShadows = true
-      material.needsUpdate = true
-      const mesh = new Mesh(geo, material)
-      mesh.castShadow = true
-      mesh.receiveShadow = true
-      mesh.frustumCulled = false
-      group.add(mesh)
-      retainedClipObjects.push(mesh)
-    }
-    renderer.compile(group, camera, mainScene)
-    markShellClip()
-    return true
-  } finally {
-    renderer.localClippingEnabled = clippingWas
-  }
-}
+export { compileClippedShellMaterials } from './shellClipCompile'
 
 export async function warmupTextMesh(): Promise<number> {
   installSdfAtlasHook()
