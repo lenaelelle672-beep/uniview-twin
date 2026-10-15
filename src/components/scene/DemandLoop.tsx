@@ -2,6 +2,21 @@ import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import { stepExplodeMotion } from '../../scene/explode'
+import { isCameraRested } from '../../scene/stage/cameraRest'
+import { cutElevation } from '../../scene/stage/cut'
+import {
+  commitShadowBake,
+  ensureLabelWatch,
+  labelWindowClosed,
+  markShadowEntry,
+  noteShadowBakeFrame,
+  requestShadowBake,
+  shadowBakePending,
+  shadowSceneReady,
+  shouldDeferShadowBake,
+  stepShadowBake,
+  subscribeLabelWindowOpen,
+} from '../../scene/stage/shadowBake'
 import {
   bumpTwinFrames,
   emptyChannelClock,
@@ -33,6 +48,8 @@ export function DemandLoop() {
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
   const exploded = useTwinStore((state) => state.exploded)
   const view = useTwinStore((state) => state.view)
+  const dayNight = useTwinStore((state) => state.dayNight)
+  const presentation = useTwinStore((state) => state.presentation)
   const controls = useThree((state) => state.controls)
   const last = useRef(emptyChannelClock())
   const wake = useRef(0)
@@ -58,13 +75,70 @@ export function DemandLoop() {
     bindTwinInvalidate(() => rawRef.current())
     if (window.__twinFrames == null) window.__twinFrames = 0
     gl.shadowMap.autoUpdate = false
-    if (quality !== 'perf') gl.shadowMap.needsUpdate = true
+    if (quality === 'perf') {
+      requestShadowBake('quality-off', false)
+      return
+    }
+    const live = useTwinStore.getState()
+    const defer = shouldDeferShadowBake({
+      reason: 'quality',
+      view: live.view,
+      rested: isCameraRested(),
+      labelWindowClosed: live.view !== 'floor' || labelWindowClosed(),
+    })
+    if (requestShadowBake('quality', defer) === 'bake-now') {
+      commitShadowBake(gl, 'quality', { rested: isCameraRested(), interior: false, deferred: false })
+    }
   }, [gl, quality])
 
   useLayoutEffect(() => {
     if (quality === 'perf') return
-    gl.shadowMap.needsUpdate = true
-  }, [exploded, gl, quality, selectedFloor, view])
+    const live = useTwinStore.getState()
+    const defer = shouldDeferShadowBake({
+      reason: 'explode',
+      view: live.view,
+      rested: isCameraRested(),
+      labelWindowClosed: live.view !== 'floor' || labelWindowClosed(),
+    })
+    if (requestShadowBake(exploded ? 'explode' : 'collapse', defer) === 'bake-now') {
+      commitShadowBake(gl, exploded ? 'explode' : 'collapse', { rested: isCameraRested(), interior: false, deferred: false })
+    }
+  }, [exploded, gl, quality])
+
+  useLayoutEffect(() => {
+    if (quality === 'perf') return
+    const live = useTwinStore.getState()
+    const defer = shouldDeferShadowBake({
+      reason: 'day-night',
+      view: live.view,
+      rested: isCameraRested(),
+      labelWindowClosed: live.view !== 'floor' || labelWindowClosed(),
+    })
+    const bakeReason = `surface:${presentation}:${dayNight}`
+    if (requestShadowBake(bakeReason, defer) === 'bake-now') {
+      commitShadowBake(gl, bakeReason, { rested: isCameraRested(), interior: false, deferred: false })
+    }
+  }, [dayNight, gl, presentation, quality])
+
+  // 放在最后：同一提交里昼夜/爆炸若先打了 needsUpdate，进层要清掉，飞入帧不烘。
+  // 不依赖 quality，避免换档时把已经该烘的影子清掉。
+  // 性能档也要记下进层时刻，否则上一层的出齐时间会把吊顶提前挂回来。
+  useLayoutEffect(() => {
+    if (view === 'floor') {
+      markShadowEntry()
+      if (useTwinStore.getState().quality === 'perf') return
+      requestShadowBake(`floor:${selectedFloor ?? ''}`, true)
+      gl.shadowMap.needsUpdate = false
+      gl.shadowMap.autoUpdate = false
+      return
+    }
+    if (useTwinStore.getState().quality === 'perf') return
+    if (requestShadowBake(`view:${view}`, false) === 'bake-now') {
+      commitShadowBake(gl, `view:${view}`, { rested: isCameraRested(), interior: false, deferred: false })
+    }
+  }, [gl, selectedFloor, view])
+
+  useEffect(() => subscribeLabelWindowOpen(() => rawRef.current()), [])
 
   useEffect(() => {
     const rig = controls as { addEventListener?: (type: string, fn: () => void) => void; removeEventListener?: (type: string, fn: () => void) => void } | null
@@ -117,12 +191,40 @@ export function DemandLoop() {
     }
   }, [gatedInvalidate])
 
-  useFrame(({ clock }) => {
-    const { exploded: boom, view: liveView, quality: liveQuality } = useTwinStore.getState()
+  useFrame(({ clock, scene }) => {
+    const { exploded: boom, view: liveView, quality: liveQuality, selectedFloor: liveFloor } = useTwinStore.getState()
+    if (liveView === 'floor') ensureLabelWatch(scene)
+    if (liveQuality !== 'perf' && document.visibilityState !== 'hidden' && shadowBakePending()) {
+      const cutActive = cutElevation(liveView, liveFloor) != null
+      const interiorMounted = liveView !== 'floor' || scene.getObjectByName('FloorInterior') != null
+      const windowClosed = liveView !== 'floor' || labelWindowClosed()
+      const ready = shadowSceneReady({
+        view: liveView,
+        rested: isCameraRested(),
+        interiorMounted,
+        cutActive,
+        clippingEnabled: gl.localClippingEnabled,
+        labelWindowClosed: windowClosed,
+      })
+      noteShadowBakeFrame({
+        ready,
+        rested: isCameraRested(),
+        interior: interiorMounted,
+        cutActive,
+        clipping: gl.localClippingEnabled,
+        windowClosed,
+      })
+      const baked = stepShadowBake(ready)
+      if (baked) {
+        commitShadowBake(gl, baked, { rested: isCameraRested(), interior: interiorMounted, deferred: true })
+      } else if (ready) {
+        // 单层没有人物/告警时调度是 0Hz。窗关上的 hold 帧再要一帧，阴影 pass 才落在窗后。
+        rawRef.current()
+      }
+    }
     const { animating } = stepExplodeMotion(boom, liveView, clock.elapsedTime)
     if (animating) {
       if (!explodeHold.current) explodeHold.current = retainFrameChannel('motion')
-      if (boom) window.__twinBadges = 0
     } else if (explodeHold.current) {
       explodeHold.current()
       explodeHold.current = null

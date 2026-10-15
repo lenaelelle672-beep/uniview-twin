@@ -1,4 +1,5 @@
 import { useFrame, useThree } from '@react-three/fiber'
+import { useRef } from 'react'
 import { Color, Vector3 } from 'three'
 import { floorSpec } from '../../data/floors'
 import { facadeGlassCorners, neighborFloorId, tightenNonOverlapping } from './facadeBoxes'
@@ -15,14 +16,13 @@ import { SLAB_M } from './cut'
 const corner = new Vector3()
 
 function projectCanvas(
-  camera: { updateMatrixWorld: () => void; updateProjectionMatrix?: () => void },
+  camera: { updateMatrixWorld: () => void; updateProjectionMatrix?: () => void; matrixWorld?: { elements: ArrayLike<number> } },
   width: number,
   height: number,
   x: number,
   y: number,
   z: number,
 ) {
-  camera.updateMatrixWorld()
   corner.set(x, y, z).project(camera as never)
   return {
     x: (corner.x * 0.5 + 0.5) * width,
@@ -116,10 +116,59 @@ export function MonitorSamples({
 }) {
   const camera = useThree((state) => state.camera)
   const gl = useThree((state) => state.gl)
+  const posed = useRef({
+    floorId: '',
+    x: Number.NaN,
+    y: Number.NaN,
+    z: Number.NaN,
+    fx: Number.NaN,
+    fy: Number.NaN,
+    fz: Number.NaN,
+    w: 0,
+    h: 0,
+    sawFlight: false,
+  })
 
   useFrame(() => {
+    const pose = posed.current
+    if (pose.floorId !== floorId) {
+      pose.floorId = floorId
+      pose.x = Number.NaN
+      if (window.__twinMonitorBoxes) delete window.__twinMonitorBoxes
+    }
+    // 飞入帧已经在画整层。315 个工位的屏上盒留到停稳后的下一帧，避免和那次绘制叠在同一帧。
+    if (window.__twinView === 'floor' && window.__twinCameraRested !== true) {
+      pose.sawFlight = true
+      return
+    }
+    if (pose.sawFlight) {
+      pose.sawFlight = false
+      return
+    }
+    camera.updateMatrixWorld()
     const width = gl.domElement.width
     const height = gl.domElement.height
+    const elements = camera.matrixWorld.elements
+    const still =
+      pose.floorId === floorId &&
+      pose.w === width &&
+      pose.h === height &&
+      Math.abs(elements[12]! - pose.x) < 5e-4 &&
+      Math.abs(elements[13]! - pose.y) < 5e-4 &&
+      Math.abs(elements[14]! - pose.z) < 5e-4 &&
+      Math.abs(elements[8]! - pose.fx) < 5e-4 &&
+      Math.abs(elements[9]! - pose.fy) < 5e-4 &&
+      Math.abs(elements[10]! - pose.fz) < 5e-4
+    if (still && window.__twinMonitorBoxes?.floorId === floorId) return
+    pose.floorId = floorId
+    pose.x = elements[12]!
+    pose.y = elements[13]!
+    pose.z = elements[14]!
+    pose.fx = elements[8]!
+    pose.fy = elements[9]!
+    pose.fz = elements[10]!
+    pose.w = width
+    pose.h = height
     const elevation = floorSpec(floorId).elevation
     const alarm: Array<{
       deskId: string
@@ -193,6 +242,7 @@ export function FacadeSamples() {
       delete window.__twinFacadeBoxes
       return
     }
+    camera.updateMatrixWorld()
     const spec = floorSpec(selected)
     const neighborId = neighborFloorId(selected)
     const neighbor = floorSpec(neighborId)

@@ -37,6 +37,32 @@
   width: min(560px, calc(100vw - 248px - 12px));
 }
 
+.app:has(.floor-rail) .alarm-drawer:not(.is-floor-collapsed) {
+  left: 232px;
+  inset-inline-start: 232px;
+  width: min(560px, calc(100vw - 232px - 248px - 12px));
+}
+
+.app:has(.floor-panel.is-strip) .alarm-drawer.is-floor-collapsed {
+  left: 68px;
+  inset-inline-start: 68px;
+  width: min(560px, calc(100vw - 68px - 248px - 12px));
+}
+
+@media (max-width: 1280px) {
+  .app:has(.floor-rail) .alarm-drawer:not(.is-floor-collapsed) {
+    left: 208px;
+    inset-inline-start: 208px;
+    width: min(560px, calc(100vw - 208px - 220px - 12px));
+  }
+
+  .app:has(.floor-panel.is-strip) .alarm-drawer.is-floor-collapsed {
+    left: 52px;
+    inset-inline-start: 52px;
+    width: min(560px, calc(100vw - 52px - 220px - 12px));
+  }
+}
+
 .alarm-drawer.is-strip,
 .alarm-drawer.is-strip.is-floor-collapsed {
   width: 48px;

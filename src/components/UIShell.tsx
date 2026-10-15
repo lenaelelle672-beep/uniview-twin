@@ -22,7 +22,9 @@ export function UIShell() {
         onToggleAlarm={() => setAlarmOpen((open) => !open)}
       />
       <div className="workspace">
-        <FloorList open={floorListOpen} />
+        <div className="floor-rail">
+          <FloorList open={floorListOpen} />
+        </div>
         <Stage />
         <DetailPanel />
       </div>

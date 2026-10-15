@@ -18,6 +18,7 @@ export interface FloorRoom {
   name: string
   label: [number, number]
   polygon: Array<[number, number]> | null
+  labelArea_m2: number | null
   confidence: string
 }
 
