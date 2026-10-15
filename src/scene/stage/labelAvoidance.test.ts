@@ -4,7 +4,9 @@ import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { classifyRoomLabel } from '../../floors/labelTier'
 import { displayName, roomLabelsFromPlan } from '../../floors/labels'
 import {
+  LABEL_GROUP_PAD,
   LABEL_MAX_OFFSET,
+  LABEL_PAD,
   avoidLabels,
   clusterLabelText,
   clusterTemplates,
@@ -108,6 +110,8 @@ describe('房间标签避让', () => {
 
   it('F1–F8 / F12 / F22 在 1024/1366/1920 拉近后 hiddenAfterZoom 为 0，重叠为 0，挪位 ≤48', () => {
     expect(LABEL_MAX_OFFSET).toBe(48)
+    expect(LABEL_PAD).toBe(4)
+    expect(LABEL_GROUP_PAD).toBe(4)
     for (const width of [1024, 1366, 1920]) {
       for (const floorId of ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F12', 'F22']) {
         const result = avoidLabels(planItems(floorId, width))
@@ -157,6 +161,28 @@ describe('房间标签避让', () => {
         expect(tier2Stats(items, result).hidden, `${floorId}@${width} tier2`).toBe(0)
       }
     }
+  })
+
+  it('贴边的不同名标签被间隙推开，告警不隐藏', () => {
+    const items = [
+      { id: 'a', text: '男卫', x: 100, y: 100, w: 45, h: 15, priority: 3, locked: false, area: 8 },
+      { id: 'b', text: '女卫', x: 108, y: 100, w: 46, h: 15, priority: 3, locked: false, area: 8 },
+      { id: 'alarm', text: '卫排', x: 104, y: 102, w: 50, h: 15, priority: 0, locked: true, area: 8 },
+    ]
+    const result = avoidLabels(items)
+    expect(result.placements.find((row) => row.id === 'alarm')?.visible).toBe(true)
+    expect(result.overlapPairs).toBe(0)
+    expect(result.maxOffset).toBeLessThanOrEqual(LABEL_MAX_OFFSET)
+  })
+
+  it('同名间隙小于合组阈值就合并，拉开后拆回', () => {
+    const near = [
+      { id: 'a', text: '洽谈室', x: 100, y: 100, w: 72, h: 28, priority: 3, locked: false, area: 10 },
+      { id: 'b', text: '洽谈室', x: 170, y: 100, w: 72, h: 28, priority: 3, locked: false, area: 10 },
+    ]
+    expect(avoidLabels(near).clusters).toHaveLength(1)
+    const apart = near.map((item, index) => ({ ...item, x: 80 + index * 160 }))
+    expect(avoidLabels(apart).clusters).toHaveLength(0)
   })
 
   it('可见标签挪位不超过 48 px，48 内放不下就隐藏', () => {
