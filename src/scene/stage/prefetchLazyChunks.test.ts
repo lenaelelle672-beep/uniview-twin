@@ -20,6 +20,8 @@ type TwinWindow = {
   __twinPrefetchAt?: number
   __twinPrefetchUnixMs?: number
   __twinFirstPrefetchDone?: boolean
+  __twinView?: string
+  __twinFloorShellAt?: number
   requestAnimationFrame: (cb: FrameRequestCallback) => number
   requestIdleCallback: (cb: IdleRequestCallback, opts?: IdleRequestOptions) => number
   cancelIdleCallback: (id: number) => void
@@ -142,6 +144,20 @@ describe('D223 prefetch 单例调度', () => {
     expect(idleQueue).toHaveLength(0)
   })
 
+  it('总览首帧后的空闲预取不拉楼层壳', async () => {
+    const api = await loadPrefetch()
+    mountStage(api, 'building')
+    win.__twinReady = true
+    win.__twinFirstFrameAt = performance.now()
+    win.__twinView = 'building'
+    await pump()
+    flushIdle()
+    await pump()
+    expect(win.__twinPrefetchAt).toBeTypeOf('number')
+    expect(win.__twinFloorShellAt).toBeUndefined()
+    expect(readFileSync(join(here, 'prefetchLazyChunks.ts'), 'utf8')).toMatch(/FLOOR_SHELL_AFTER_FIRST_MS = 2600/)
+  })
+
   it('直接 floor 启动也会 prefetch', async () => {
     const api = await loadPrefetch()
     mountStage(api, 'floor')
@@ -151,5 +167,6 @@ describe('D223 prefetch 单例调度', () => {
     await pump()
     expect(win.__twinPrefetchAt).toBeTypeOf('number')
     expect(idleQueue).toHaveLength(0)
+    expect(win.__twinFloorShellAt).toBeTypeOf('number')
   })
 })

@@ -207,6 +207,8 @@ interface Window {
   __twinFirstFrameAt?: number
   __twinFirstFrameUnixMs?: number
   __twinPrefetchAt?: number
+  /** 楼层壳 chunk 开始 import 的时刻。总览应晚于首帧 + FLOOR_SHELL_AFTER_FIRST_MS。 */
+  __twinFloorShellAt?: number
   __twinPrefetchUnixMs?: number
   __twinFirstPrefetchDone?: boolean
   __twinFirstPrefetchDoneAt?: number

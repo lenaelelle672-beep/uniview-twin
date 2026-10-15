@@ -6,6 +6,15 @@ let firstPrefetchSettled = false
 let scheduleArmed = false
 let preferImmediate = false
 let clickChunksStarted = false
+let glyphChunkStarted = false
+let interiorPrewarmStarted = false
+
+/**
+ * 总览楼层壳（JsonFloorInterior / glyphProbe / labels / Workstations）不能贴着首帧发。
+ * d126 的 cutoff 在首帧之后一点点，+1 帧的 import 会时进时出。
+ * 与室内预热同一时刻再拉，躲开首帧窗，也不提前进 D263 的 +2s 计帧。
+ */
+export const FLOOR_SHELL_AFTER_FIRST_MS = 2600
 
 function markFirstPrefetchDone() {
   if (firstPrefetchSettled) return
@@ -26,7 +35,7 @@ export function firstPrefetchDone(): boolean {
   return firstPrefetchSettled
 }
 
-/** 点击进层用的包。首帧后立刻评完，躲开 D263 first+2s 空闲计帧窗口。 */
+/** 点击进层用的包。总览要等过首帧截止；人已经在楼层上才立刻拉。 */
 async function prefetchClickChunks(): Promise<void> {
   if (clickChunksStarted) return
   clickChunksStarted = true
@@ -39,20 +48,51 @@ async function prefetchClickChunks(): Promise<void> {
   await interior
 }
 
-/** 总览空闲时预取按需包。必须在首帧之后，预取不算进首屏。 */
+/** 总览空闲时预取按需包。必须在首帧之后，预取不算进首屏。不含楼层壳。 */
 export function prefetchLazyChunks(): void {
   if (window.__twinPrefetchAt != null) return
   window.__twinPrefetchAt = performance.now()
   window.__twinPrefetchUnixMs = Date.now()
-  void import('./floorDecor')
   void import('../../blueprint/BlueprintView')
-  void import('./textRuntime').then(() => {
-    markFirstPrefetchDone()
-    void import('../labels/ProgressiveRoomLabels')
-  }, markFirstPrefetchDone)
+  void import('./textRuntime').then(markFirstPrefetchDone, markFirstPrefetchDone)
+}
+
+function scheduleGlyphChunk(): void {
+  if (glyphChunkStarted) return
+  glyphChunkStarted = true
   void import('./preloadFloorGlyphs').then((mod) => {
     mod.scheduleGlyphPreload()
   })
+}
+
+function scheduleInteriorPrewarm(): void {
+  if (interiorPrewarmStarted) return
+  interiorPrewarmStarted = true
+  void import('./prewarmFloorInterior').then((mod) => {
+    mod.scheduleFloorInteriorPrewarm()
+  })
+}
+
+function startFloorShellNow(): void {
+  if (window.__twinFloorShellAt == null) window.__twinFloorShellAt = performance.now()
+  void import('./floorDecor')
+  void import('../labels/ProgressiveRoomLabels')
+  void prefetchClickChunks()
+  scheduleInteriorPrewarm()
+  scheduleGlyphChunk()
+}
+
+/** 总览：等过首帧截止再拉楼层壳。进层路径不走这里。 */
+function scheduleFloorShellAfterCutoff(): void {
+  const tick = () => {
+    const first = window.__twinFirstFrameAt
+    if (first == null || performance.now() - first < FLOOR_SHELL_AFTER_FIRST_MS) {
+      window.requestAnimationFrame(tick)
+      return
+    }
+    startFloorShellNow()
+  }
+  window.requestAnimationFrame(tick)
 }
 
 function waitUntil(ok: () => boolean): Promise<void> {
@@ -83,14 +123,12 @@ function startWhenReady(): void {
     await waitUntil(() => window.__twinReady === true)
     await waitUntil(() => window.__twinFirstFrameAt != null)
     await nextFrame()
-    await prefetchClickChunks()
-    void import('./prewarmFloorInterior').then((mod) => {
-      mod.scheduleFloorInteriorPrewarm()
-    })
-    if (preferImmediate) {
+    if (preferImmediate || window.__twinView === 'floor') {
+      startFloorShellNow()
       prefetchLazyChunks()
       return
     }
+    scheduleFloorShellAfterCutoff()
     const go = () => {
       prefetchLazyChunks()
     }
@@ -122,10 +160,9 @@ export function schedulePrefetchAfterFirstFrame(): void {
 export function ensurePrefetchStarted(): void {
   preferImmediate = true
   if (typeof window === 'undefined') return
-  if (window.__twinPrefetchAt != null) return
   if (window.__twinReady === true && window.__twinFirstFrameAt != null) {
-    void prefetchClickChunks()
-    prefetchLazyChunks()
+    startFloorShellNow()
+    if (window.__twinPrefetchAt == null) prefetchLazyChunks()
     return
   }
   schedulePrefetchAfterFirstFrame()
