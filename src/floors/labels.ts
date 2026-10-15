@@ -1,4 +1,6 @@
 import type { RoomLabel } from '../scene/stage/roomLabels'
+import { labelLiftY } from './interiorWall'
+import { listTier2Rooms, roomAreaM2 } from './labelTier'
 import type { FloorPlan, FloorRoom } from './types'
 
 const PRIORITY = [
@@ -27,8 +29,58 @@ const ANNOTATION =
 const SKIP_ELEVATOR = /^\d+#电梯/
 const MARKER = /^(女|男|P|N|W|p)$/
 const NUMERIC = /^[\d.#＋+\s]+$/
+/** CAD 注记：图纸编号/型钢柱/拼接屏/插座预留/IPX/老化箱/D258 A 类 ASCII。 */
+const CAD_NOTE = [
+  /详建施[A-Za-z]?-\d+-\d+/,
+  /\d+\*\d+不锈钢/,
+  /\d+\*\d+拼接屏/,
+  /测试桌.*(?:插座|网口)/,
+  /IPX\d/,
+  /干燥箱|紫外老化箱/,
+  /一体机|饮水机|茶水柜/,
+  /^[XY]SIZE$/,
+  /^[（(]?\d+\s*kw\s*[）)]?$/i,
+  /HALT箱/,
+]
+/**
+ * D258 B 类设备/家具。会议桌精确匹配；不过滤 茶水台、打印、会议室。
+ * D260：货架区无多边形，单独精确匹配，不写裸 /货架/。
+ */
+const CAD_FURNITURE = [
+  /测试桌|测试整改桌/,
+  /温箱/,
+  /插座|网口|\d个\d插|1个大网/,
+  /^2个地漏$/,
+  /预留电视机电源/,
+  /振动台/,
+  /仪器台面|金相台面|跌落台/,
+  /泡棉货架|^货架\d*$|^货架及$/,
+  /组网架/,
+  /通风柜/,
+  /^主机$/,
+  /^显示屏$/,
+  /冰箱/,
+  /微波炉/,
+  /吹风机/,
+  /三脚架|观察台|操作台/,
+  /^会议桌$/,
+  /^机柜$/,
+  /投影仪/,
+  /锅炉烟囱/,
+  /^货架区$/,
+]
+/** D260：电梯层数范围、井道编号、洁具数量。建模确认 F1–F22 只命中 18 条。 */
+const CAD_RANGE_NOTE = [/^-?\d+\s*[~\-－]\s*\d+$/, /^\d+[（(]\d+[）)]$/]
+/** 部门名后的人数算式，只在 displayName 去掉。 */
+const HEADCOUNT = /[（(][\d＋+\s=]*\d[\d＋+\s=]*人[）)]/g
+/** 面积括号整段不拆，只在括号前硬换行。troika normal 会尊重 \\n，不占字形。 */
+const AREA_BRACKET = /(?<!\n)([（(]\d+\s*㎡[）)])/g
 
-export function isRoomName(name: string): boolean {
+export function keepAreaBracketTogether(text: string): string {
+  return text.replace(AREA_BRACKET, '\n$1')
+}
+
+export function isRoomName(name: string, room?: Pick<FloorRoom, 'polygon'> | null): boolean {
   const text = name.trim()
   if (text.length === 0) return false
   if (MARKER.test(text)) return false
@@ -36,6 +88,10 @@ export function isRoomName(name: string): boolean {
   if (SKIP_ELEVATOR.test(text)) return false
   if (/[（(]常开[）)]/.test(text) && text.replace(/[（()）常开\s]/g, '').length === 0) return false
   if (ANNOTATION.test(text)) return false
+  if (CAD_NOTE.some((pattern) => pattern.test(text))) return false
+  if (CAD_FURNITURE.some((pattern) => pattern.test(text))) return false
+  if (CAD_RANGE_NOTE.some((pattern) => pattern.test(text))) return false
+  if (text === 'UPS' && room && (!room.polygon || room.polygon.length < 3)) return false
   return true
 }
 
@@ -44,74 +100,23 @@ function scoreRoom(room: FloorRoom): number {
   return index >= 0 ? index : PRIORITY.length
 }
 
-function displayName(name: string): string {
-  if (/核心筒|电梯厅|合用前室/.test(name)) return '电梯厅'
-  if (/茶水/.test(name)) return '茶水间'
-  if (/前台/.test(name)) return '前台'
-  if (/洽谈/.test(name)) return '洽谈室'
-  if (/会议/.test(name)) return name.startsWith('会议') ? name.slice(0, 8) : '会议室'
-  return name.length > 8 ? name.slice(0, 8) : name
+export function displayName(name: string): string {
+  const text = name.replace(HEADCOUNT, '').trim()
+  if (/核心筒|电梯厅|合用前室/.test(text)) return '电梯厅'
+  if (/茶水/.test(text)) return '茶水间'
+  if (/前台/.test(text)) return '前台'
+  if (/洽谈/.test(text)) return '洽谈室'
+  if (/会议/.test(text)) return text.startsWith('会议') ? text : '会议室'
+  return keepAreaBracketTogether(text)
 }
 
-function outlineSpan(outline: Array<[number, number]>): number {
-  let minX = Infinity
-  let maxX = -Infinity
-  let minZ = Infinity
-  let maxZ = -Infinity
-  for (const [x, z] of outline) {
-    minX = Math.min(minX, x)
-    maxX = Math.max(maxX, x)
-    minZ = Math.min(minZ, z)
-    maxZ = Math.max(maxZ, z)
+function ringArea(ring: Array<[number, number]> | null | undefined): number {
+  if (!ring || ring.length < 3) return 0
+  let sum = 0
+  for (let index = 0, prev = ring.length - 1; index < ring.length; prev = index, index += 1) {
+    sum += ring[prev][0] * ring[index][1] - ring[index][0] * ring[prev][1]
   }
-  return Math.max(maxX - minX, maxZ - minZ)
-}
-
-/** 重名只靠稳定 id 和就近散开，不删。位移钳在锚点附近，避免大批标签被斥力推出楼板。 */
-function separateEndpoints(labels: RoomLabel[], minSep: number): RoomLabel[] {
-  const maxDrift = Math.min(8, Math.max(3.2, minSep * 0.85))
-  const next = labels.map((label, index) => {
-    const angle = (index / Math.max(labels.length, 1)) * Math.PI * 2
-    const ring = Math.min(minSep * 0.22, 1.4)
-    return {
-      ...label,
-      label: [
-        label.anchor[0] + Math.cos(angle) * ring,
-        3.2 + (index % 3) * 0.28,
-        label.anchor[2] + Math.sin(angle) * ring,
-      ] as [number, number, number],
-    }
-  })
-  for (let iter = 0; iter < 10; iter += 1) {
-    let moved = false
-    for (let i = 0; i < next.length; i += 1) {
-      for (let j = i + 1; j < next.length; j += 1) {
-        const dx = next[j].label[0] - next[i].label[0]
-        const dz = next[j].label[2] - next[i].label[2]
-        const dist = Math.hypot(dx, dz)
-        if (dist >= minSep) continue
-        const nx = dist < 1e-6 ? Math.cos((i + 0.5) * 1.7) : dx / dist
-        const nz = dist < 1e-6 ? Math.sin((i + 0.5) * 1.7) : dz / dist
-        const push = (minSep - Math.max(dist, 0.2)) / 2
-        next[i].label[0] -= nx * push
-        next[i].label[2] -= nz * push
-        next[j].label[0] += nx * push
-        next[j].label[2] += nz * push
-        moved = true
-      }
-    }
-    if (!moved) break
-  }
-  for (const label of next) {
-    const dx = label.label[0] - label.anchor[0]
-    const dz = label.label[2] - label.anchor[2]
-    const drift = Math.hypot(dx, dz)
-    if (drift <= maxDrift) continue
-    const scale = maxDrift / drift
-    label.label[0] = label.anchor[0] + dx * scale
-    label.label[2] = label.anchor[2] + dz * scale
-  }
-  return next
+  return Math.abs(sum) / 2
 }
 
 export interface RoomLabelFilterStats {
@@ -124,13 +129,13 @@ export interface RoomLabelFilterStats {
 
 export function roomNamesFromPlan(plan: FloorPlan): FloorRoom[] {
   return plan.rooms
-    .filter((room) => isRoomName(room.name))
+    .filter((room) => isRoomName(room.name, room))
     .slice()
     .sort((left, right) => scoreRoom(left) - scoreRoom(right) || left.name.localeCompare(right.name, 'zh'))
 }
 
 export function roomLabelFilterStats(plan: FloorPlan): RoomLabelFilterStats {
-  const dropped = plan.rooms.filter((room) => !isRoomName(room.name)).map((room) => room.name)
+  const dropped = plan.rooms.filter((room) => !isRoomName(room.name, room)).map((room) => room.name)
   const labels = roomLabelsFromPlan(plan)
   return {
     floorId: plan.floorId,
@@ -141,13 +146,30 @@ export function roomLabelFilterStats(plan: FloorPlan): RoomLabelFilterStats {
   }
 }
 
+export function tier2RoomsFromPlan(plan: FloorPlan) {
+  return listTier2Rooms(roomNamesFromPlan(plan)).map((row) => ({
+    id: `${plan.floorId}:${row.id}`,
+    name: row.name,
+    area: row.area,
+    rule: row.rule,
+  }))
+}
+
+export const TIER2_REF_COUNTS: Record<string, number> = {
+  F1: 28,
+  F2: 35,
+  F3: 29,
+  F4: 24,
+  F5: 20,
+  F6: 16,
+  F7: 14,
+  F8: 4,
+}
+
 export function roomLabelsFromPlan(plan: FloorPlan): RoomLabel[] {
   const rooms = roomNamesFromPlan(plan)
   const used = new Set<string>()
-  const span = outlineSpan(plan.outline)
-  const density = Math.max(rooms.length, 1)
-  const minSep = Math.max(2.4, (span > 70 ? 7.2 : 4.2) / Math.sqrt(density / 12))
-  const labels = rooms.map((room, index) => {
+  return rooms.map((room, index) => {
     const [x, z] = room.label
     let id = `${plan.floorId}:${room.id}`
     if (used.has(id)) id = `${id}:${index}`
@@ -155,9 +177,11 @@ export function roomLabelsFromPlan(plan: FloorPlan): RoomLabel[] {
     return {
       id,
       text: displayName(room.name),
+      sourceName: room.name,
       anchor: [x, 2.05, z] as [number, number, number],
-      label: [x, 3.2, z] as [number, number, number],
+      label: [x, labelLiftY(0.78), z] as [number, number, number],
+      area: roomAreaM2(room.name, ringArea(room.polygon), room.labelArea_m2),
+      polygon: room.polygon,
     }
   })
-  return separateEndpoints(labels, minSep)
 }

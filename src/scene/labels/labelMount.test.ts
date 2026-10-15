@@ -114,7 +114,7 @@ describe('T017 / D189 标签分批挂载', () => {
     expect(queue).not.toMatch(/\.opacity\s*=|fadeOpacity|setOpacity/)
     expect(priority).not.toMatch(/\.opacity\s*=|fadeOpacity|setOpacity/)
     const roomLabels = read('../stage/RoomLabels.tsx')
-    expect(roomLabels).toMatch(/waitFirstPrefetch/)
+    expect(roomLabels).toMatch(/loadRoomLabelChunk/)
     expect(roomLabels).toMatch(/ProgressiveRoomLabels/)
     const batched = read('../stage/BatchedRoomLabels.tsx')
     const data = read('../stage/roomLabels.ts')

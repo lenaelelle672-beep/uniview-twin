@@ -5,6 +5,7 @@ const firstPrefetch = new Promise<void>((resolve) => {
 let firstPrefetchSettled = false
 let scheduleArmed = false
 let preferImmediate = false
+let clickChunksStarted = false
 
 function markFirstPrefetchDone() {
   if (firstPrefetchSettled) return
@@ -16,7 +17,7 @@ function markFirstPrefetchDone() {
   settleFirstPrefetch()
 }
 
-/** D195：IdlePrewarm / labels 等第一个 prefetch（textRuntime）的 import() 完成，不用定时器。 */
+/** D195：IdlePrewarm 等第一个 prefetch（textRuntime）的 import() 完成，不用定时器。 */
 export function waitFirstPrefetch(): Promise<void> {
   return firstPrefetch
 }
@@ -25,7 +26,20 @@ export function firstPrefetchDone(): boolean {
   return firstPrefetchSettled
 }
 
-/** 总览空闲时预取三个按需包。必须在首帧之后，预取不算进首屏。 */
+/** 点击进层用的包。首帧后立刻评完，躲开 D263 first+2s 空闲计帧窗口。 */
+async function prefetchClickChunks(): Promise<void> {
+  if (clickChunksStarted) return
+  clickChunksStarted = true
+  const camera = import('./FloorStageCamera')
+  const interior = import('../../floors/JsonFloorInterior')
+  await camera
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve())
+  })
+  await interior
+}
+
+/** 总览空闲时预取按需包。必须在首帧之后，预取不算进首屏。 */
 export function prefetchLazyChunks(): void {
   if (window.__twinPrefetchAt != null) return
   window.__twinPrefetchAt = performance.now()
@@ -36,6 +50,9 @@ export function prefetchLazyChunks(): void {
     markFirstPrefetchDone()
     void import('../labels/ProgressiveRoomLabels')
   }, markFirstPrefetchDone)
+  void import('./preloadFloorGlyphs').then((mod) => {
+    mod.scheduleGlyphPreload()
+  })
 }
 
 function waitUntil(ok: () => boolean): Promise<void> {
@@ -66,6 +83,10 @@ function startWhenReady(): void {
     await waitUntil(() => window.__twinReady === true)
     await waitUntil(() => window.__twinFirstFrameAt != null)
     await nextFrame()
+    await prefetchClickChunks()
+    void import('./prewarmFloorInterior').then((mod) => {
+      mod.scheduleFloorInteriorPrewarm()
+    })
     if (preferImmediate) {
       prefetchLazyChunks()
       return
@@ -103,6 +124,7 @@ export function ensurePrefetchStarted(): void {
   if (typeof window === 'undefined') return
   if (window.__twinPrefetchAt != null) return
   if (window.__twinReady === true && window.__twinFirstFrameAt != null) {
+    void prefetchClickChunks()
     prefetchLazyChunks()
     return
   }

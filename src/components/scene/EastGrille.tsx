@@ -1,4 +1,4 @@
-import { useFrame, useLoader } from '@react-three/fiber'
+import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { DoubleSide, Mesh, MeshStandardMaterial, Object3D, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -9,6 +9,8 @@ import {
   preloadEastGrilleHi,
 } from '../../scene/eastGrilleAssets'
 import { grilleMaterial } from '../../scene/materials'
+import { isCameraRested } from '../../scene/stage/cameraRest'
+import { commitShadowBake, shadowBakePending } from '../../scene/stage/shadowBake'
 import { eastGrilleMount } from '../../scene/massing'
 import { installMeshopt } from '../../scene/meshopt'
 import type { QualityTier } from '../../types'
@@ -51,12 +53,23 @@ function tuneEastGrille(root: Object3D | null) {
   })
 }
 
+function bakeGrilleShadow(
+  gl: { shadowMap: { autoUpdate: boolean; needsUpdate: boolean; enabled: boolean } },
+  reason: string,
+) {
+  // 进层烘烤挂起时不另烘，包含出齐后的 D261 窗。窗关上且没有挂起时，hi 切换和昼夜再补。
+  if (!gl.shadowMap.enabled || !isCameraRested() || shadowBakePending()) return
+  commitShadowBake(gl, reason, { rested: true, interior: true, deferred: false })
+}
+
 function GrilleModel({ url }: { url: string }) {
+  const gl = useThree((state) => state.gl)
   const gltf = useLoader(GLTFLoader, url, installMeshopt)
   const scene = useMemo(() => gltf.scene.clone(true), [gltf])
   useLayoutEffect(() => {
     tuneEastGrille(scene)
-  }, [scene])
+    bakeGrilleShadow(gl, 'grille-cut')
+  }, [gl, scene])
   useFrame(() => {
     const envChanged = scene.userData.twinGrilleEnv !== grilleMaterial.envMap
     let clipStale = false
@@ -74,6 +87,7 @@ function GrilleModel({ url }: { url: string }) {
     if (!envChanged && !clipStale) return
     tuneEastGrille(scene)
     scene.userData.twinGrilleEnv = grilleMaterial.envMap
+    bakeGrilleShadow(gl, envChanged ? 'grille-env' : 'grille-cut')
   })
   return <primitive object={scene} />
 }

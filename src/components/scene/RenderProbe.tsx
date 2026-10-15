@@ -6,6 +6,8 @@ import { snapshotPrograms } from '../../scene/prewarm/programSnapshot'
 import { PICK_VOLUME_LAYER } from '../../scene/pickLayers'
 import { useTwinStore } from '../../store/store'
 
+const shellClipPromise = import('../../scene/stage/shellClipCompile')
+
 const projected = new Vector3()
 const grilleBox = new Box3()
 const raycaster = new Raycaster()
@@ -20,12 +22,13 @@ export function RenderProbe() {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const invalidate = useThree((state) => state.invalidate)
-
   useEffect(() => {
     invalidate()
     markSuspenseReady()
     window.__twinScene = scene
     window.__twinSnapPrograms = (label) => snapshotPrograms(gl, label)
+    window.__twinRenderer = gl
+    window.__twinCamera = camera
     window.__twinProject = (x, y, z) => {
       const rect = gl.domElement.getBoundingClientRect()
       projected.set(x, y, z).project(camera)
@@ -86,6 +89,8 @@ export function RenderProbe() {
     window.__twinDevices = useTwinStore.getState().devices
     window.__twinFocusDevice = (target) => useTwinStore.getState().focusDevice(target)
     window.__twinSelectFloor = (floorId) => useTwinStore.getState().setSelectedFloor(floorId)
+    window.__twinSetDayNight = (dayNight) => useTwinStore.getState().setDayNight(dayNight)
+    window.__twinSetQuality = (quality) => useTwinStore.getState().setQuality(quality)
     window.__twinSetExploded = (exploded) => useTwinStore.getState().setExploded(exploded)
     const unsubscribe = useTwinStore.subscribe((state) => {
       window.__twinFly = state.floorFlyRequest
@@ -111,6 +116,11 @@ export function RenderProbe() {
     if (window.__twinReadyAt != null && window.__twinFirstFrameAt == null) {
       window.__twinFirstFrameAt = performance.now()
       window.__twinFirstFrameUnixMs = Date.now()
+      if (window.__twinView !== 'floor') {
+        void shellClipPromise.then((mod) => {
+          void mod.compileClippedShellMaterials()
+        })
+      }
     }
     window.__twinStats = {
       calls: gl.info.render.calls,

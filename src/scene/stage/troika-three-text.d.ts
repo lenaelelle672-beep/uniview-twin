@@ -14,8 +14,12 @@ declare module 'troika-three-text' {
     anchorY: string | number
     characters?: string
     depthOffset?: number
+    maxWidth?: number
+    overflowWrap?: 'normal' | 'break-word'
+    whiteSpace?: 'normal' | 'nowrap'
     sync(callback?: () => void): void
     dispose(): void
+    textRenderInfo?: { blockBounds?: number[] } | null
   }
 
   export class BatchedText extends Text {
@@ -24,7 +28,12 @@ declare module 'troika-three-text' {
   }
 
   export function preloadFont(
-    options: { font?: string; characters?: string },
-    callback: () => void,
+    options: { font?: string; characters?: string; sdfGlyphSize?: number },
+    callback: (info?: { sdfTexture?: import('three').Texture }) => void,
+  ): void
+
+  export function getTextRenderInfo(
+    args: { font?: string; text?: string; sdfGlyphSize?: number; lang?: string },
+    callback: (info: { sdfTexture?: { image?: { width?: number; height?: number } } }) => void,
   ): void
 }

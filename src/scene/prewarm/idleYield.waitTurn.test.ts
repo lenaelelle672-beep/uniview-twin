@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetTwinStore, useTwinStore } from '../../store/store'
 import {
   PREWARM_SCENE_PAUSE_POLL_MS,
   createYieldController,
+  floorLabelsPending,
   waitPrewarmTurn,
 } from './idleYield'
 
@@ -69,5 +71,49 @@ describe('D214 waitTurn 不得堵住事件循环', () => {
     cancelled = true
     await turn
     yieldCtl.dispose()
+  })
+
+  it('D229 楼层标签未齐时 pauseReason 含楼层标签未齐，出齐或回总览后继续', () => {
+    resetTwinStore()
+    useTwinStore.setState({ view: 'floor', selectedFloor: 'F1', floorFlyRequest: null })
+    delete window.__twinLabelReadyAt
+    delete window.__twinLabelMount
+    const yieldCtl = createYieldController()
+    expect(floorLabelsPending()).toBe(true)
+    expect(yieldCtl.pauseReason()).toBe('楼层标签未齐')
+
+    window.__twinLabelMount = {
+      floorId: 'F1',
+      mounted: 2,
+      total: 4,
+      priorityIds: [],
+      firstBatchIds: [],
+      mountedIds: ['a', 'b'],
+      done: false,
+    }
+    expect(yieldCtl.pauseReason()).toBe('楼层标签未齐')
+
+    window.__twinLabelReadyAt = 10
+    window.__twinLabelMount = {
+      floorId: 'F1',
+      mounted: 4,
+      total: 4,
+      priorityIds: [],
+      firstBatchIds: [],
+      mountedIds: ['a', 'b', 'c', 'd'],
+      done: true,
+    }
+    expect(floorLabelsPending()).toBe(false)
+    expect(yieldCtl.pauseReason()).toBeNull()
+    yieldCtl.dispose()
+
+    useTwinStore.setState({ view: 'building', selectedFloor: null })
+    delete window.__twinLabelReadyAt
+    delete window.__twinLabelMount
+    const overview = createYieldController()
+    expect(floorLabelsPending()).toBe(false)
+    expect(overview.pauseReason()).toBeNull()
+    overview.dispose()
+    resetTwinStore()
   })
 })

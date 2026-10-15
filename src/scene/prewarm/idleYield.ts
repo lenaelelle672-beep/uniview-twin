@@ -9,7 +9,17 @@ export const PREWARM_RESUME_IDLE_MS = 1000
 /** 飞行 / 定位 / FloorInterior 未挂上时，按这个间隔让出宏任务，禁止 0ms 空转。 */
 export const PREWARM_SCENE_PAUSE_POLL_MS = 100
 
-export type PrewarmPauseReason = 'input' | 'scene'
+export type PrewarmPauseReason = 'input' | 'scene' | '楼层标签未齐'
+
+/** D229：楼层上标签还没出齐时预热让路。回总览或 mount.done 且已有就绪戳后再继续。 */
+export function floorLabelsPending(): boolean {
+  const state = useTwinStore.getState()
+  if (state.view !== 'floor') return false
+  const mount = window.__twinLabelMount
+  if (mount && mount.floorId === state.selectedFloor && mount.total > 0 && !mount.done) return true
+  if (window.__twinLabelReadyAt == null) return true
+  return false
+}
 
 export function scheduleIdle(callback: () => void, timeout = 800): IdleHandle {
   if (typeof requestIdleCallback === 'function') {
@@ -65,6 +75,7 @@ export function createYieldController() {
     if (state.view === 'floor' && state.selectedFloor && scene && !scene.getObjectByName('FloorInterior')) {
       return 'scene'
     }
+    if (floorLabelsPending()) return '楼层标签未齐'
     return null
   }
 
@@ -109,7 +120,8 @@ export function createYieldController() {
 export type YieldController = ReturnType<typeof createYieldController>
 
 async function yieldAfterPause(yieldCtl: YieldController, scene?: Scene): Promise<void> {
-  if (yieldCtl.pauseReason(scene) === 'scene') {
+  const reason = yieldCtl.pauseReason(scene)
+  if (reason === 'scene' || reason === '楼层标签未齐') {
     await yieldCtl.waitScenePause()
     return
   }

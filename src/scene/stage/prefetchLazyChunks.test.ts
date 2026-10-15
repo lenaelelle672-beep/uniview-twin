@@ -9,6 +9,10 @@ vi.mock('./floorDecor', () => ({}))
 vi.mock('../../blueprint/BlueprintView', () => ({ BlueprintView: () => null }))
 vi.mock('./textRuntime', () => ({}))
 vi.mock('../labels/ProgressiveRoomLabels', () => ({}))
+vi.mock('./FloorStageCamera', () => ({}))
+vi.mock('../../floors/JsonFloorInterior', () => ({}))
+vi.mock('./preloadFloorGlyphs', () => ({ scheduleGlyphPreload() {} }))
+vi.mock('./prewarmFloorInterior', () => ({ scheduleFloorInteriorPrewarm() {} }))
 
 type TwinWindow = {
   __twinReady?: boolean
@@ -57,7 +61,7 @@ function flushIdle() {
   for (const cb of q) cb({ didTimeout: false, timeRemaining: () => 50 })
 }
 
-async function pump(times = 8) {
+async function pump(times = 20) {
   for (let i = 0; i < times; i += 1) {
     await Promise.resolve()
     flushRaf()

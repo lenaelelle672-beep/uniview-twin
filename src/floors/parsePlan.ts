@@ -112,6 +112,7 @@ function parseRooms(raw: unknown): FloorRoom[] {
       name: item.name,
       label,
       polygon: polygon && polygon.length >= 3 ? polygon : null,
+      labelArea_m2: typeof item.labelArea_m2 === 'number' && item.labelArea_m2 > 0 ? item.labelArea_m2 : null,
       confidence: typeof item.confidence === 'string' ? item.confidence : 'none',
     })
   }

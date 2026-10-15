@@ -101,7 +101,9 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
     if (!isFloorId(floorId)) return
     const { view, selectedFloor } = get()
     if (view === 'floor' && selectedFloor === floorId) return
-    startTransition(() => set({ view: 'floor', selectedFloor: floorId }))
+    // 跟 focusDevice 一样同步切 view。startTransition 会把进层让给首屏预取，
+    // ready 后 500ms 双击时镜头要等那一轮画完才动。
+    set({ view: 'floor', selectedFloor: floorId })
   },
   exitFloor: () => {
     if (get().view !== 'floor') return

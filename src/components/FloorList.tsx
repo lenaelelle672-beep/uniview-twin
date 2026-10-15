@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import { loadFloorPlan } from '../floors/loadFloor'
+import { overviewFloorRows, stripFloorRows, writeFloorMarkerProbe } from '../scene/floorMarkers'
 import { useTwinStore } from '../store/store'
 
 interface FloorListProps {
@@ -8,38 +9,73 @@ interface FloorListProps {
 
 export function FloorList({ open }: FloorListProps) {
   const floors = useTwinStore((state) => state.floors)
-  const status = useTwinStore((state) => state.status)
+  const view = useTwinStore((state) => state.view)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
+  const hoveredFloor = useTwinStore((state) => state.hoveredFloor)
   const setSelectedFloor = useTwinStore((state) => state.setSelectedFloor)
+  const enterFloor = useTwinStore((state) => state.enterFloor)
+  const emitFloorFly = useTwinStore((state) => state.emitFloorFly)
   const setHoveredFloor = useTwinStore((state) => state.setHoveredFloor)
   const listRef = useRef<HTMLDivElement>(null)
+  const pendingSelect = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const strip = !open
+  // 总览 compact / 单层全宽只改 overlay；宽由 .floor-rail 固定，进层不 setSize（D272/D273）。
+  const compact = view === 'building' && open
+  const rows = useMemo(() => overviewFloorRows(floors), [floors])
+  const shown = strip ? stripFloorRows(rows) : rows
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    writeFloorMarkerProbe(shown.length)
+  }, [shown.length])
+
+  useLayoutEffect(() => {
+    return () => {
+      if (pendingSelect.current != null) clearTimeout(pendingSelect.current)
+    }
+  }, [])
+
+  useLayoutEffect(() => {
     if (!open || !selectedFloor || !listRef.current) return
     const target = listRef.current.querySelector<HTMLElement>(`[data-floor-id="${selectedFloor}"]`)
     target?.scrollIntoView({ block: 'nearest' })
-  }, [open, selectedFloor, floors])
+  }, [open, selectedFloor, shown])
+
+  const className = strip ? 'floor-panel is-strip' : compact ? 'floor-panel is-overview-compact' : 'floor-panel'
 
   return (
-    <aside className={open ? 'floor-panel' : 'floor-panel is-collapsed'} aria-label="楼层列表" inert={!open}>
-      <div className="panel-title">楼层</div>
+    <aside className={className} aria-label={strip ? '楼层窄条' : '楼层列表'}>
+      {!strip && <div className="panel-title">楼层</div>}
       <div className="floor-items" ref={listRef}>
-        {status === 'loading' && <p className="panel-hint">正在加载楼层…</p>}
-        {status !== 'loading' && floors.length === 0 && <p className="panel-hint">暂无楼层数据</p>}
-        {floors.map((floor) => {
+        {shown.map((floor) => {
           const selected = floor.id === selectedFloor
+          const hovered = floor.id === hoveredFloor
           return (
             <button
               key={floor.id}
               type="button"
-              className={selected ? 'floor-item is-selected' : 'floor-item'}
+              className={`floor-item${selected ? ' is-selected' : ''}${hovered ? ' is-hovered' : ''}`}
               data-floor-id={floor.id}
+              data-twin-floor-marker={floor.id}
               data-alarm={floor.alarmCount}
               data-offline={floor.offlineCount}
               aria-label={`${floor.id} ${floor.name}，告警 ${floor.alarmCount}，离线 ${floor.offlineCount}`}
               aria-pressed={selected}
               onClick={() => {
-                setSelectedFloor(floor.id)
+                // D253：单击只选中。双击的第一下先不画总览高亮，避免挡住进层。
+                if (floor.id !== 'B1') void loadFloorPlan(floor.id)
+                if (pendingSelect.current != null) clearTimeout(pendingSelect.current)
+                pendingSelect.current = setTimeout(() => {
+                  pendingSelect.current = null
+                  setSelectedFloor(floor.id)
+                }, 280)
+              }}
+              onDoubleClick={() => {
+                if (pendingSelect.current != null) {
+                  clearTimeout(pendingSelect.current)
+                  pendingSelect.current = null
+                }
+                emitFloorFly(floor.id)
+                enterFloor(floor.id)
                 if (floor.id !== 'B1') void loadFloorPlan(floor.id)
               }}
               onMouseEnter={() => {
@@ -51,10 +87,12 @@ export function FloorList({ open }: FloorListProps) {
               onBlur={() => setHoveredFloor(null)}
             >
               <span className="floor-id">{floor.id}</span>
-              <span className="floor-name">{floor.name}</span>
+              {!compact && !strip && <span className="floor-name">{floor.name}</span>}
               <span className="floor-counts">
-                <span className="count-alarm">告警 {floor.alarmCount}</span>
-                <span className="count-offline">离线 {floor.offlineCount}</span>
+                {floor.alarmCount > 0 && <span className="count-alarm">{compact || strip ? floor.alarmCount : `告警 ${floor.alarmCount}`}</span>}
+                {floor.offlineCount > 0 && (
+                  <span className="count-offline">{compact || strip ? floor.offlineCount : `离线 ${floor.offlineCount}`}</span>
+                )}
               </span>
             </button>
           )

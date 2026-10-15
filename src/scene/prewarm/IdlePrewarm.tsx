@@ -107,11 +107,10 @@ export function IdlePrewarm() {
         glyphsPrewarmed = uniqueCharacters(chunks.join('')).length
         glyphsRequired = collectDemoLabelCharacters().length
         if (textReady && !cancelled) {
-          for (const chunk of chunks) {
-            await waitTurn()
-            if (cancelled) return
-            await preloadLabelFont(chunk)
-          }
+          await waitTurn()
+          if (cancelled) return
+          // D235：一次把演示字形排进图集，避免飞入中途按 2048×32 逐行 readPixels 扩容。
+          await preloadLabelFont(uniqueCharacters(chunks.join('')))
           await waitTurn()
           if (!cancelled) {
             const before = programCount(gl)

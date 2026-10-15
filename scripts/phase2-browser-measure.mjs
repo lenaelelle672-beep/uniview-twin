@@ -43,7 +43,7 @@ async function waitReady(page) {
 async function stats(page) {
   return page.evaluate(() => ({
     ...(window.__twinStats ?? {}),
-    badges: window.__twinBadges ?? 0,
+    floorMarkers: window.__twinFloorMarkers ?? null,
     fxReady: document.querySelector('.scene-root')?.dataset.fxReady ?? '',
     quality: document.querySelector('.scene-root')?.dataset.quality ?? '',
     warmup: window.__twinWarmup ?? null,
@@ -443,15 +443,7 @@ async function main() {
       ]) {
         const key = `${quality}-${viewport.width}x${viewport.height}`
         const { page } = await open(browser, `?q=${quality}`, viewport)
-        await page.waitForFunction(() => (window.__twinBadgeCenters ?? []).length >= 12, { timeout: 30_000 })
-        const hit = await page.evaluate(() => {
-          const center = (window.__twinBadgeCenters ?? []).find((item) => item.id === 'F12')
-          if (!center || !window.__twinProject) return null
-          return { id: center.id, ...window.__twinProject(center.x, center.y, center.z) }
-        })
-        if (hit && !hit.behind) {
-          await page.mouse.click(hit.x, hit.y)
-        }
+        await page.waitForFunction(() => (window.__twinFloorMarkers?.count ?? 0) >= 23, { timeout: 30_000 })
         await page.evaluate(() => window.__twinSelectFloor?.('F12'))
         await page.waitForFunction(() => window.__twinSelected === 'F12' && window.__twinView === 'building' && window.__twinFacadeBoxes?.selectedFloor === 'F12', {
           timeout: 20_000,
@@ -540,23 +532,19 @@ async function main() {
 
     const { page, consoles } = await open(browser, '?q=perf')
     const clicks = []
-    for (let index = 0; index < 23; index += 1) {
-      const hit = await page.evaluate((i) => {
-        const centers = window.__twinBadgeCenters ?? []
-        const center = centers[i]
-        if (!center || !window.__twinProject) return null
-        return { id: center.id, ...window.__twinProject(center.x, center.y, center.z) }
-      }, index)
-      if (!hit || hit.behind) {
-        clicks.push({ index, ok: false, reason: 'no-center' })
+    const markerIds = await page.$$eval('[data-twin-floor-marker]', (nodes) => nodes.map((node) => node.getAttribute('data-twin-floor-marker')))
+    for (const [index, id] of markerIds.entries()) {
+      if (!id) {
+        clicks.push({ index, ok: false, reason: 'no-marker' })
         continue
       }
-      await page.mouse.click(hit.x, hit.y)
+      await page.click(`[data-twin-floor-marker="${id}"]`)
       await page.evaluate(() => new Promise((resolve) => setTimeout(resolve, 120)))
-      const selected = await page.evaluate(() => window.__twinSelected ?? null)
-      clicks.push({ index, id: hit.id, x: hit.x, y: hit.y, selected, ok: selected === hit.id })
+      const selected = await page.evaluate(() => ({ floor: window.__twinSelected ?? null, view: window.__twinView ?? null }))
+      // fb2：列表/标记单击只选层，view 仍是 building。
+      clicks.push({ index, id, selected: selected.floor, view: selected.view, ok: selected.floor === id && selected.view !== 'floor' })
     }
-    report.badges.clicks = clicks
+    report.floorMarkers = { ...(report.floorMarkers ?? {}), clicks }
 
     await page.goto(`${baseUrl}/?q=perf&keepDrawingBuffer=1`, { waitUntil: 'networkidle0' })
     await waitReady(page)

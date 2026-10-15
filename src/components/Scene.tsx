@@ -19,7 +19,6 @@ import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
 import { useTwinStore } from '../store/store'
 import { installInvalidateTrace } from '../scene/invalidateLog'
-import BadgeHud from './scene/BadgeHud'
 
 const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
 const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.PostFX })))
@@ -75,7 +74,6 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const [prefetchDone, setPrefetchDone] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const [loopOn, setLoopOn] = useState(false)
-  const view = useTwinStore((state) => state.view)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
@@ -98,7 +96,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       if (cancelled) return
       if (window.__twinFirstFrameAt != null) setLoopOn(true)
       // D195：等 textRuntime 预取 import() 完成，再挂 FacadeSamples / IdlePrewarm。
-      // BadgeHud 走 #18 的首屏 Suspense，不进这条 prefetch 链。
+      // #22 楼层标记走 FloorList，不进这条 prefetch 链。
       if (window.__twinFirstPrefetchDone) {
         requestAnimationFrame(() => {
           if (!cancelled) setPrefetchDone(true)
@@ -170,10 +168,9 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         )}
         <ExplodedLayout />
         <FloorStage />
-        {view === 'building' && <BadgeHud />}
         <RenderProbe />
       </Suspense>
-      {/* 合成器首帧出来之前继续由 MainScenePass 画主场景，避免只剩徽标。 */}
+      {/* 合成器首帧出来之前继续由 MainScenePass 画主场景。 */}
       {!composerLive && <MainScenePass renderPriority={1} />}
       <MonitorPass renderPriority={2} drawOverlay={!composerLive} />
       {prefetchDone && (
@@ -224,6 +221,8 @@ export function SceneCanvas() {
         onCreated={(state) => {
           if (import.meta.env.DEV) installInvalidateTrace(state)
           const { gl, setDpr } = state
+          // 生产构建不在首次用到材质时同步读 shader 日志。SwiftShader 上这次读取会把进层卡住一两秒。
+          if (!import.meta.env.DEV) gl.debug.checkShaderErrors = false
           const renderer = readGpuRenderer(gl)
           const software = SOFTWARE.test(renderer)
           const auto = software && !useTwinStore.getState().qualityPinned

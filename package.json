@@ -8,6 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --port 5190 --strictPort",
     "test": "vitest run",
+    "postinstall": "patch-package",
     "measure:first-screen": "node scripts/measure-first-screen.mjs",
     "test:first-switch": "node scripts/first-switch-empty-frames.mjs"
   },
@@ -35,6 +36,7 @@
     "@types/react-dom": "^19.2.2",
     "@types/three": "^0.186.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "patch-package": "^8.0.1",
     "puppeteer-core": "^24.15.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.7",
