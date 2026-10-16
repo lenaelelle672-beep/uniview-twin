@@ -3,6 +3,11 @@ import { type AvoidBox, type LabelPackState } from './labelAvoidance'
 
 /** 两向都大于此值才算重叠；擦边只计数。 */
 export const OVERLAP_STRONG_PX = 2
+/**
+ * 一条轴已经叠进对方大半、另一条轴仍贴着的长条。
+ * 不计入 overlapPairs，但清叠时和强重叠走同一套优先级：同名合组，其次藏第三级。
+ */
+export const OVERLAP_SLAB_PX = 8
 
 const world = new Matrix4()
 const local = new Matrix4()
@@ -152,8 +157,10 @@ export function pickOverlapVictim(
   right: { id: string; text: string },
   tierOf: (id: string) => number,
   keepTier2: boolean,
+  isProtected: (id: string) => boolean = () => false,
 ): string {
   const score = (id: string) => {
+    if (isProtected(id)) return -100
     const tier = tierOf(id)
     if (keepTier2 && tier === 2 && !id.startsWith('cluster:')) return -50
     if (id.startsWith('cluster:')) return 25
@@ -175,12 +182,29 @@ function hidePackEntry(pack: LabelPackState, id: string, cluster: string | null)
   if (pack.byId[id]) pack.byId[id] = { ...pack.byId[id]!, visible: false, cluster }
 }
 
-/** 按独立口径清掉两向都 >2 px 的叠字。同名单体并进合组；1366+ 不藏第二级单体，改藏第三级或合组。 */
+function overlapActionable(ox: number, oy: number): boolean {
+  if (ox <= 0 || oy <= 0) return false
+  if (ox > OVERLAP_STRONG_PX && oy > OVERLAP_STRONG_PX) return true
+  return Math.max(ox, oy) >= OVERLAP_SLAB_PX
+}
+
+export function hasActionableOverlap(boxes: readonly AvoidBox[]): boolean {
+  for (let i = 0; i < boxes.length; i += 1) {
+    for (let j = i + 1; j < boxes.length; j += 1) {
+      const { ox, oy } = overlapDepth(boxes[i]!, boxes[j]!)
+      if (overlapActionable(ox, oy)) return true
+    }
+  }
+  return false
+}
+
+/** 按独立口径清掉强重叠，以及一条轴叠进对方、另一条轴仍贴着的长条。同名先合组；告警/选中/搜索不藏；1366+ 不藏第二级单体。 */
 export function stripStrongOverlaps(
   live: readonly MeasuredLabelBox[],
   pack: LabelPackState,
   tierOf: (id: string) => number,
   keepTier2: boolean,
+  isProtected: (id: string) => boolean = () => false,
 ): { pack: LabelPackState; remaining: MeasuredLabelBox[] } {
   const next: LabelPackState = {
     byId: { ...pack.byId },
@@ -188,15 +212,33 @@ export function stripStrongOverlaps(
   }
   let remaining = live.slice()
   for (let pass = 0; pass < 16; pass += 1) {
-    if (countOverlapKinds(remaining.map((row) => row.box)).strong === 0) break
+    let pending = false
+    for (let i = 0; i < remaining.length && !pending; i += 1) {
+      for (let j = i + 1; j < remaining.length; j += 1) {
+        const { ox, oy } = overlapDepth(remaining[i]!.box, remaining[j]!.box)
+        if (overlapActionable(ox, oy)) {
+          pending = true
+          break
+        }
+      }
+    }
+    if (!pending) break
     let resolved = false
     pairLoop: for (let i = 0; i < remaining.length; i += 1) {
       for (let j = i + 1; j < remaining.length; j += 1) {
         const left = remaining[i]!
         const right = remaining[j]!
         const { ox, oy } = overlapDepth(left.box, right.box)
-        if (ox <= OVERLAP_STRONG_PX || oy <= OVERLAP_STRONG_PX) continue
-        if (left.text === right.text && !left.id.startsWith('cluster:') && !right.id.startsWith('cluster:')) {
+        const strong = ox > OVERLAP_STRONG_PX && oy > OVERLAP_STRONG_PX
+        const slab = !strong && overlapActionable(ox, oy)
+        if (!strong && !slab) continue
+        if (
+          left.text === right.text &&
+          !left.id.startsWith('cluster:') &&
+          !right.id.startsWith('cluster:') &&
+          !isProtected(left.id) &&
+          !isProtected(right.id)
+        ) {
           hidePackEntry(next, left.id, left.text)
           hidePackEntry(next, right.id, right.text)
           if (next.clusters[left.text]) next.clusters[left.text] = { ...next.clusters[left.text]!, visible: true }
@@ -209,14 +251,21 @@ export function stripStrongOverlaps(
           left.id.startsWith('cluster:') !== right.id.startsWith('cluster:')
         ) {
           const single = left.id.startsWith('cluster:') ? right : left
+          if (isProtected(single.id)) continue
           hidePackEntry(next, single.id, clusterBaseName(single.text))
           remaining = remaining.filter((row) => row.id !== single.id)
           resolved = true
           break pairLoop
         }
-        const drop = pickOverlapVictim(left, right, tierOf, keepTier2)
-        if (keepTier2 && !drop.startsWith('cluster:') && tierOf(drop) === 2) continue
-        hidePackEntry(next, drop, drop.startsWith('cluster:') ? null : null)
+        const drop = pickOverlapVictim(left, right, tierOf, keepTier2, isProtected)
+        if (isProtected(drop)) continue
+        if (keepTier2 && !drop.startsWith('cluster:') && tierOf(drop) === 2) {
+          const otherId = drop === left.id ? right.id : left.id
+          if (!isProtected(otherId)) continue
+        }
+        // 长条只藏第三级单体。合组留给强重叠，避免 0.5px 贴边拆掉一整组。
+        if (slab && (drop.startsWith('cluster:') || tierOf(drop) !== 3)) continue
+        hidePackEntry(next, drop, null)
         remaining = remaining.filter((row) => row.id !== drop)
         resolved = true
         break pairLoop

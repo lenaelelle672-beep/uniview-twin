@@ -6,7 +6,18 @@ export const LABEL_ZOOM_FACTOR = 8
 export const LABEL_SHIFT = 8
 /** 标签必须停在自己房间里或紧贴房间，超过就合组或隐藏。 */
 export const LABEL_MAX_OFFSET = 48
-const PAD = 4
+/**
+ * 落位间隙。再放大就会把已经分开的标签挤出 48px，变成多藏。
+ * 投影后仍贴着的长条交给 strip 的 OVERLAP_SLAB_PX，不在这里加码。
+ */
+export const LABEL_PAD = 4
+/**
+ * 同名合组间隙。再放宽会把第二级挤到已锁定的告警标签上（F3 教师休息室）。
+ * 贴边长条改由清叠处理，不靠把合组半径加大。
+ */
+export const LABEL_GROUP_PAD = 4
+/** 估算字盒的描边余量，不跟碰撞间隙一起放大。 */
+const BOX_PAD = 4
 const SHIFT = LABEL_SHIFT
 
 function buildAnchors(): Array<[number, number]> {
@@ -132,7 +143,7 @@ export function labelScreenBox(text: string, px: number): { w: number; h: number
   const em = Math.max(px, 1)
   const { longest, lines } = wrapMetrics(text, em)
   const outline = Math.max(0.5, em * 0.055)
-  const grow = PAD + 3 + outline
+  const grow = BOX_PAD + 3 + outline
   return { w: longest + grow * 2, h: lines * em * 1.25 + grow * 2 }
 }
 
@@ -158,7 +169,7 @@ export function countVisibleOverlapPairs(boxes: readonly AvoidBox[]): number {
   return pairs
 }
 
-export function boxesOverlap(a: AvoidBox, b: AvoidBox, pad = PAD): boolean {
+export function boxesOverlap(a: AvoidBox, b: AvoidBox, pad = LABEL_PAD): boolean {
   return a.x < b.x + b.w + pad && a.x + a.w + pad > b.x && a.y < b.y + b.h + pad && a.y + a.h + pad > b.y
 }
 
@@ -171,13 +182,18 @@ function boxAt(item: Pick<AvoidItem, 'x' | 'y' | 'w' | 'h'>, ax: number, ay: num
   }
 }
 
-function firstFree(item: AvoidItem, occupied: AvoidBox[], shift = SHIFT): { box: AvoidBox; ox: number; oy: number } | null {
+function firstFree(
+  item: AvoidItem,
+  occupied: AvoidBox[],
+  shift = SHIFT,
+  pad = LABEL_PAD,
+): { box: AvoidBox; ox: number; oy: number } | null {
   for (const [ax, ay] of ANCHORS) {
     const ox = ax * shift
     const oy = ay * shift
     if (Math.hypot(ox, oy) > LABEL_MAX_OFFSET) continue
     const box = boxAt(item, ax, ay, shift)
-    if (!occupied.some((other) => boxesOverlap(box, other))) {
+    if (!occupied.some((other) => boxesOverlap(box, other, pad))) {
       return { box, ox, oy }
     }
   }
@@ -190,7 +206,7 @@ export function placementOffsetLen(offsetX: number, offsetY: number): number {
 
 function sameNameNear(a: AvoidItem, b: AvoidItem): boolean {
   if (a.text !== b.text) return false
-  return boxesOverlap(boxAt(a, 0, 0), boxAt(b, 0, 0))
+  return boxesOverlap(boxAt(a, 0, 0), boxAt(b, 0, 0), LABEL_GROUP_PAD)
 }
 
 function sameNameGroups(items: readonly AvoidItem[]): AvoidItem[][] {
@@ -389,7 +405,8 @@ function packLabels(items: readonly AvoidItem[], keepTier2 = false): Omit<AvoidR
       .sort((a, b) => a.priority - b.priority || b.area - a.area || a.id.localeCompare(b.id))
     for (const item of sorted) {
       if (claimed.has(item.id)) continue
-      const fit = firstFree(item, occupied)
+      // 间隙放不下时，锁定项和第二级先贴边安放，避免叠回原点盖住告警。
+      const fit = firstFree(item, occupied) ?? (keep || item.locked ? firstFree(item, occupied, SHIFT, 0) : null)
       if (fit) {
         claimed.add(item.id)
         occupied.push(fit.box)

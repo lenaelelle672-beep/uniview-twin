@@ -23,6 +23,7 @@ import {
   countOverlapKinds,
   findRoomLabelBatch,
   isDrawnText,
+  hasActionableOverlap,
   overlapDepth,
   overlapPairNames,
   OVERLAP_STRONG_PX,
@@ -405,12 +406,12 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       const label = labels.find((item) => item.id === id)
       return label ? classifyRoomLabel(label.sourceName ?? label.text, label.area ?? 0).tier : 3
     }
-    const strong = countOverlapKinds(live.map((row) => row.box)).strong
-    if (strong === 0) {
+    if (!hasActionableOverlap(live.map((row) => row.box))) {
       layoutRef.current = packRef.current
       return true
     }
-    const stripped = stripStrongOverlaps(live, packRef.current, tierOf, keepTier2)
+    const protectedIds = new Set(itemsRef.current.filter((item) => item.locked).map((item) => item.id))
+    const stripped = stripStrongOverlaps(live, packRef.current, tierOf, keepTier2, (id) => protectedIds.has(id))
     layoutRef.current = stripped.pack
     packRef.current = stripped.pack
     api.applyPack(stripped.pack)

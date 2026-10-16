@@ -4,6 +4,7 @@ import { getFloorPlan } from '../../floors/cache'
 import { hydrateAllAboveGrade } from '../../floors/hydrateForTests'
 import { roomLabelsFromPlan } from '../../floors/labels'
 import {
+  OVERLAP_SLAB_PX,
   OVERLAP_STRONG_PX,
   countOverlapKinds,
   labelYawForCamera,
@@ -20,6 +21,7 @@ hydrateAllAboveGrade()
 describe('独立重叠口径 / 合组可见集合', () => {
   it('两向都 >2 px 才算重叠，擦边只计数', () => {
     expect(OVERLAP_STRONG_PX).toBe(2)
+    expect(OVERLAP_SLAB_PX).toBe(8)
     const a = { x: 0, y: 0, w: 40, h: 16 }
     const strong = { x: 20, y: 4, w: 40, h: 16 }
     const graze = { x: 39, y: 0, w: 40, h: 16 }
@@ -84,6 +86,50 @@ describe('独立重叠口径 / 合组可见集合', () => {
     )
     expect(keepL2.pack.byId.meet?.visible).toBe(true)
     expect(keepL2.pack.byId.guest?.visible).toBe(true)
+  })
+
+  it('长条贴边藏第三级，第二级和告警留下', () => {
+    const pack = {
+      byId: {
+        slab: { visible: true, cluster: null, offsetX: 0, offsetY: 0 },
+        major: { visible: true, cluster: null, offsetX: 0, offsetY: 0 },
+        alarm: { visible: true, cluster: null, offsetX: 0, offsetY: 0 },
+      },
+      clusters: {},
+    }
+    const tierOf = (id: string) => (id === 'major' ? 2 : 3)
+    const live = [
+      { id: 'slab', text: '卫排', box: { x: 0, y: 0, w: 50, h: 15 }, cluster: null, px: 16 },
+      { id: 'major', text: '丙类储藏', box: { x: 4, y: 14.5, w: 92, h: 14 }, cluster: null, px: 16 },
+      { id: 'alarm', text: '男卫', box: { x: 2, y: 0.4, w: 45, h: 15 }, cluster: null, px: 16 },
+    ]
+    const stripped = stripStrongOverlaps(live, pack, tierOf, true, (id) => id === 'alarm')
+    expect(stripped.pack.byId.alarm?.visible).toBe(true)
+    expect(stripped.pack.byId.major?.visible).toBe(true)
+    expect(stripped.pack.byId.slab?.visible).toBe(false)
+  })
+
+  it('告警压住第二级时藏第二级，告警留下', () => {
+    const pack = {
+      byId: {
+        alarm: { visible: true, cluster: null, offsetX: 0, offsetY: 0 },
+        train: { visible: true, cluster: null, offsetX: 0, offsetY: 0 },
+      },
+      clusters: {},
+    }
+    const tierOf = (id: string) => (id === 'train' ? 2 : 3)
+    const stripped = stripStrongOverlaps(
+      [
+        { id: 'alarm', text: '教师休息室', box: { x: 0, y: 0, w: 80, h: 16 }, cluster: null, px: 16 },
+        { id: 'train', text: '技服培训室', box: { x: 10, y: 13, w: 120, h: 28 }, cluster: null, px: 16 },
+      ],
+      pack,
+      tierOf,
+      true,
+      (id) => id === 'alarm',
+    )
+    expect(stripped.pack.byId.alarm?.visible).toBe(true)
+    expect(stripped.pack.byId.train?.visible).toBe(false)
   })
 
   it('转正 yaw 让字面朝向相机，俯视 -Z 时为 0', () => {
