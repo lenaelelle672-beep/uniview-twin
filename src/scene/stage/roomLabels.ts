@@ -18,18 +18,29 @@ export const LABEL_MAX_PX = 17
 export const ROOM_LABEL_COLOR = '#17324d'
 export const ROOM_LABEL_OUTLINE_COLOR = '#ffffff'
 /**
- * balanced/high 主通道会进合成器 AgX（白天曝光 2）。#17324d 会被抬成浅灰蓝，
- * 白描边发奶油色。源色压得更暗、描边略偏冷，过 AgX 之后仍读成深字浅边。
+ * balanced/high 白天进合成器 AgX，曝光仍是 2（DayExposure 不动）。
+ * 浅描边 #d8e2ec 过曝光 2 后落到 #d5d8db，和楼板 #e6e1d8 的输出 #d9d7d5 几乎等亮（对比约 1.0）。
+ * 字色再压暗，描边改成冷灰蓝：实心描边过 AgX 后约 #3f5c72，和近黑字、浅楼板都能分开。
+ * 夜间曝光是 1，浅描边才压得住深色地面，所以夜间沿用原来的一对。
  */
-export const ROOM_LABEL_COLOR_BALANCED = '#020910'
-export const ROOM_LABEL_OUTLINE_COLOR_BALANCED = '#d8e2ec'
-/** 字高提到 16px 后 0.055 em 晕圈又偏厚；0.045 + 0.78 只勾边，少挡笔画。 */
-export const ROOM_LABEL_OUTLINE_EM = 0.045
+export const ROOM_LABEL_COLOR_BALANCED = '#010308'
+export const ROOM_LABEL_OUTLINE_COLOR_BALANCED = '#263848'
+export const ROOM_LABEL_COLOR_BALANCED_NIGHT = '#020910'
+export const ROOM_LABEL_OUTLINE_COLOR_BALANCED_NIGHT = '#d8e2ec'
+/** 0.055 em 的浅晕会糊笔画。0.05 em 的实心冷边只加一圈，不往字心摊。 */
+export const ROOM_LABEL_OUTLINE_EM = 0.05
 export const ROOM_LABEL_OUTLINE_MIN = 0.03
-export const ROOM_LABEL_OUTLINE_OPACITY = 0.78
+/** 白天描边若再和楼板预混，AgX 会把边抬回楼板亮度。不透明才留得住这圈冷边。 */
+export const ROOM_LABEL_OUTLINE_OPACITY = 1
 
-export function roomLabelColors(quality: 'perf' | 'balanced' | 'high'): { color: string; outline: string } {
+export function roomLabelColors(
+  quality: 'perf' | 'balanced' | 'high',
+  tone: 'day' | 'night' = 'day',
+): { color: string; outline: string } {
   if (quality === 'perf') return { color: ROOM_LABEL_COLOR, outline: ROOM_LABEL_OUTLINE_COLOR }
+  if (tone === 'night') {
+    return { color: ROOM_LABEL_COLOR_BALANCED_NIGHT, outline: ROOM_LABEL_OUTLINE_COLOR_BALANCED_NIGHT }
+  }
   return { color: ROOM_LABEL_COLOR_BALANCED, outline: ROOM_LABEL_OUTLINE_COLOR_BALANCED }
 }
 

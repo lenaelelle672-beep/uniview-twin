@@ -67,7 +67,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const quality = useTwinStore((state) => state.quality)
   const model = mode === 'model'
   const night = mode === 'night'
-  const background = model ? '#000000' : night ? '#07111c' : '#c5d7ea'
+  const background = model ? '#000000' : night ? '#07111c' : '#bdd2e6'
   const shadowSize = quality === 'high' ? 2048 : 1024
   const [composerLive, setComposerLive] = useState(false)
   const [keepFx, setKeepFx] = useState(false)
@@ -124,16 +124,16 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       <LocalEnvironment enabled={!model} night={night} />
       <hemisphereLight
         args={[
-          model ? '#ffffff' : night ? '#243e68' : '#e7f1ff',
-          model ? '#6e6e6e' : night ? '#0c0e12' : '#c8c2b4',
-          model ? 0.5 : night ? 0.22 : 0.62,
+          model ? '#ffffff' : night ? '#243e68' : '#c5daf4',
+          model ? '#6e6e6e' : night ? '#0c0e12' : '#dcc8a2',
+          model ? 0.5 : night ? 0.22 : 0.54,
         ]}
       />
-      <ambientLight intensity={model ? 0.16 : night ? 0.05 : 0.14} />
+      <ambientLight intensity={model ? 0.16 : night ? 0.05 : 0.12} />
       <directionalLight
         position={[78, 120, 46]}
-        intensity={model ? 1.65 : night ? 0.32 : 1.4}
-        color={night ? '#b7c6ea' : '#fff4e4'}
+        intensity={model ? 1.65 : night ? 0.32 : 1.58}
+        color={model ? '#fff4e4' : night ? '#b7c6ea' : '#ffe2be'}
         castShadow={quality !== 'perf'}
         shadow-mapSize={[shadowSize, shadowSize]}
         shadow-bias={-0.0004}

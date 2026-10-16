@@ -143,7 +143,11 @@ export function BatchedRoomLabels({
   const gl = useThree((state) => state.gl)
   const invalidate = useThree((state) => state.invalidate)
   const quality = useTwinStore((state) => state.quality)
-  const palette = roomLabelColors(quality)
+  const dayNight = useTwinStore((state) => state.dayNight)
+  const presentation = useTwinStore((state) => state.presentation)
+  // 白模曝光是 1，但表面仍是浅色，跟白天一样用冷描边。只有夜间保留浅描边。
+  const labelTone = presentation === 'model' || dayNight !== 'night' ? 'day' : 'night'
+  const palette = roomLabelColors(quality, labelTone)
   const paletteRef = useRef(palette)
   paletteRef.current = palette
   const signature = labels.map((label) => `${label.id}|${label.text}|${label.label.join(',')}`).join(';')

@@ -190,6 +190,16 @@ export function applySurfaceMode(mode: SurfaceMode) {
     stoneMaterial.color.set('#e6e6e6')
     courtWallMaterial.color.set('#e6e6e6')
     deckMaterial.color.set('#dedede')
+    grassMaterial.roughness = 0.96
+    grassMaterial.envMapIntensity = 1
+    pavingMaterial.roughness = 0.88
+    pavingMaterial.envMapIntensity = 1
+    roadMaterial.roughness = 0.94
+    roadMaterial.envMapIntensity = 1
+    sidewalkMaterial.roughness = 0.88
+    sidewalkMaterial.envMapIntensity = 1
+    zebraMaterial.roughness = 0.7
+    zebraMaterial.envMapIntensity = 1
   } else if (mode === 'night') {
     curtainMaterial.color.set('#173a64')
     curtainMaterial.metalness = 0.48
@@ -222,23 +232,33 @@ export function applySurfaceMode(mode: SurfaceMode) {
     courtWallMaterial.color.set('#8a867e')
     deckMaterial.color.set('#6e6a64')
     grassMaterial.color.set('#1d2a22')
+    grassMaterial.roughness = 0.96
+    grassMaterial.envMapIntensity = 1
     pavingMaterial.color.set('#2a2e32')
+    pavingMaterial.roughness = 0.88
+    pavingMaterial.envMapIntensity = 1
     roadMaterial.color.set('#1a1d22')
+    roadMaterial.roughness = 0.94
+    roadMaterial.envMapIntensity = 1
     sidewalkMaterial.color.set('#2c3034')
+    sidewalkMaterial.roughness = 0.88
+    sidewalkMaterial.envMapIntensity = 1
     zebraMaterial.color.set('#d8d8d4')
+    zebraMaterial.roughness = 0.7
+    zebraMaterial.envMapIntensity = 1
   } else {
-    curtainMaterial.color.set('#7091c2')
+    curtainMaterial.color.set('#5f84b6')
     curtainMaterial.metalness = 0.98
-    curtainMaterial.roughness = 0.03
-    curtainMaterial.envMapIntensity = 1.85
+    curtainMaterial.roughness = 0.036
+    curtainMaterial.envMapIntensity = 1.57
     curtainMaterial.emissive.set('#000000')
     curtainMaterial.emissiveIntensity = 0
     grid.set('#142636')
     strength.value = 0.92
-    grilleMaterial.color.set('#5a6e84')
+    grilleMaterial.color.set('#687c92')
     grilleMaterial.metalness = 0.55
-    grilleMaterial.roughness = 0.4
-    grilleMaterial.envMapIntensity = 0.45
+    grilleMaterial.roughness = 0.46
+    grilleMaterial.envMapIntensity = 0.38
     solidMaterial.color.set('#f4f5f7')
     jointMaterial.color.set('#5e7388')
     jointMaterial.metalness = 0.35
@@ -261,11 +281,21 @@ export function applySurfaceMode(mode: SurfaceMode) {
     stoneMaterial.color.set('#b0ada8')
     courtWallMaterial.color.set('#9a9692')
     deckMaterial.color.set('#d9d5cc')
-    grassMaterial.color.set('#52762c')
-    pavingMaterial.color.set('#d5e3ec')
-    roadMaterial.color.set('#1c1e30')
-    sidewalkMaterial.color.set('#e7f1f6')
-    zebraMaterial.color.set('#f2f2f0')
+    grassMaterial.color.set('#466e28')
+    grassMaterial.roughness = 0.98
+    grassMaterial.envMapIntensity = 0.85
+    pavingMaterial.color.set('#bdd0de')
+    pavingMaterial.roughness = 0.96
+    pavingMaterial.envMapIntensity = 0.85
+    roadMaterial.color.set('#202434')
+    roadMaterial.roughness = 0.98
+    roadMaterial.envMapIntensity = 0.82
+    sidewalkMaterial.color.set('#cfe0e8')
+    sidewalkMaterial.roughness = 0.96
+    sidewalkMaterial.envMapIntensity = 0.85
+    zebraMaterial.color.set('#e8e8e4')
+    zebraMaterial.roughness = 0.8
+    zebraMaterial.envMapIntensity = 0.84
   }
   const touched: Material[] = [
     curtainMaterial,
