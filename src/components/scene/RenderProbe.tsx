@@ -2,6 +2,7 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { useEffect } from 'react'
 import { Box3, Raycaster, Vector2, Vector3 } from 'three'
 import { markSuspenseReady, resetOverviewReadyMarks } from '../../scene/overviewReady'
+import { snapshotPrograms } from '../../scene/prewarm/programSnapshot'
 import { PICK_VOLUME_LAYER } from '../../scene/pickLayers'
 import { useTwinStore } from '../../store/store'
 
@@ -25,6 +26,7 @@ export function RenderProbe() {
     invalidate()
     markSuspenseReady()
     window.__twinScene = scene
+    window.__twinSnapPrograms = (label) => snapshotPrograms(gl, label)
     window.__twinRenderer = gl
     window.__twinCamera = camera
     window.__twinProject = (x, y, z) => {

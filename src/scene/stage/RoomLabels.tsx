@@ -6,6 +6,7 @@ import { searchWorkstations } from '../../locate/search'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { pointInRing } from '../../floors/parsePlan'
 import { useTwinStore } from '../../store/store'
+import { waitFirstPrefetch } from './prefetchLazyChunks'
 import { classifyRoomLabel } from '../../floors/labelTier'
 import {
   avoidLabels,
@@ -45,10 +46,38 @@ import {
 } from './roomLabels'
 import { workstationPosition } from './workstationPosition'
 
-const BatchedRoomLabels = lazy(async () => {
-  const mod = await import('./textRuntime')
-  return { default: mod.BatchedRoomLabels }
-})
+function waitFirstFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof window !== 'undefined' && window.__twinFirstFrameAt != null) {
+      resolve()
+      return
+    }
+    const tick = () => {
+      if (window.__twinFirstFrameAt != null) {
+        resolve()
+        return
+      }
+      window.requestAnimationFrame(tick)
+    }
+    window.requestAnimationFrame(tick)
+  })
+}
+
+/** D226：楼层视图首帧后直接拉标签包；总览仍等首次 prefetch，避免动首屏窗口。 */
+export async function loadRoomLabelChunk() {
+  if (useTwinStore.getState().view !== 'floor') {
+    await waitFirstPrefetch()
+  } else {
+    await waitFirstFrame()
+  }
+  const [progressive] = await Promise.all([
+    import('../labels/ProgressiveRoomLabels'),
+    import('./textRuntime'),
+  ])
+  return { default: progressive.ProgressiveRoomLabels }
+}
+
+const BatchedRoomLabels = lazy(loadRoomLabelChunk)
 
 /** 1366 单层目标屏上字高；全层最大夹在 LABEL_MIN/MAX。 */
 export const LABEL_TARGET_PX = 16
