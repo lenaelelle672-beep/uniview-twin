@@ -116,6 +116,11 @@ button {
   color: #0c2340;
 }
 
+.seg button:hover:not(.is-active),
+.topbar .text-button:hover:not(.is-active) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
 .text-button {
   border-color: rgba(255, 255, 255, 0.28);
 }
@@ -139,7 +144,7 @@ button {
 }
 
 .search::placeholder {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .search-list {
@@ -345,6 +350,8 @@ button {
   overflow: auto;
   min-height: 0;
   padding: 0 10px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #0c2340 #d5deea;
 }
 
 .floor-item {

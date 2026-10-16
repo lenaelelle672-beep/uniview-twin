@@ -233,6 +233,8 @@
   min-height: 0;
   overflow: auto;
   padding: 0 10px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: #0c2340 #d5deea;
 }
 
 .alarm-cols,
