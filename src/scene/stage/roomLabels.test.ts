@@ -11,9 +11,11 @@ import {
   LABEL_MIN_PX,
   ROOM_LABEL_COLOR,
   ROOM_LABEL_COLOR_BALANCED,
+  ROOM_LABEL_COLOR_BALANCED_NIGHT,
   ROOM_LABEL_FONT,
   ROOM_LABEL_OUTLINE_COLOR,
   ROOM_LABEL_OUTLINE_COLOR_BALANCED,
+  ROOM_LABEL_OUTLINE_COLOR_BALANCED_NIGHT,
   ROOM_LABEL_OUTLINE_EM,
   ROOM_LABEL_OUTLINE_MIN,
   ROOM_LABEL_OUTLINE_OPACITY,
@@ -149,7 +151,7 @@ describe('房间引线标签', () => {
     expect(source).not.toMatch(/clipRect/)
   })
 
-  it('整批深色字配浅色细描边；perf 关 toneMapped，balanced 用更深源色', () => {
+  it('整批深色字配浅色细描边；perf 关 toneMapped，balanced 白天用冷描边', () => {
     expect(ROOM_LABEL_COLOR).toBe('#17324d')
     expect(ROOM_LABEL_OUTLINE_COLOR).toBe('#ffffff')
     expect(roomLabelColors('perf')).toEqual({ color: '#17324d', outline: '#ffffff' })
@@ -157,11 +159,19 @@ describe('房间引线标签', () => {
       color: ROOM_LABEL_COLOR_BALANCED,
       outline: ROOM_LABEL_OUTLINE_COLOR_BALANCED,
     })
+    expect(roomLabelColors('balanced', 'day')).toEqual({ color: '#010308', outline: '#263848' })
+    expect(roomLabelColors('balanced', 'night')).toEqual({
+      color: ROOM_LABEL_COLOR_BALANCED_NIGHT,
+      outline: ROOM_LABEL_OUTLINE_COLOR_BALANCED_NIGHT,
+    })
+    expect(ROOM_LABEL_COLOR_BALANCED_NIGHT).toBe('#020910')
+    expect(ROOM_LABEL_OUTLINE_COLOR_BALANCED_NIGHT).toBe('#d8e2ec')
     expect(roomLabelColors('high').color).toBe(ROOM_LABEL_COLOR_BALANCED)
-    expect(ROOM_LABEL_OUTLINE_EM).toBe(0.045)
+    expect(roomLabelColors('high', 'night').outline).toBe(ROOM_LABEL_OUTLINE_COLOR_BALANCED_NIGHT)
+    expect(ROOM_LABEL_OUTLINE_EM).toBe(0.05)
     expect(ROOM_LABEL_OUTLINE_MIN).toBe(0.03)
-    expect(ROOM_LABEL_OUTLINE_OPACITY).toBe(0.78)
-    expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.0351)
+    expect(ROOM_LABEL_OUTLINE_OPACITY).toBe(1)
+    expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.039)
     expect(roomLabelOutlineWidth(0.5)).toBe(0.03)
     const source = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
     const members = source.split('new Text()')
@@ -172,6 +182,8 @@ describe('房间引线标签', () => {
     expect(members[2]).toMatch(/outlineColor = paletteRef.current.outline/)
     expect(source).toMatch(/material.toneMapped = false/)
     expect(source).toMatch(/ROOM_LABEL_OUTLINE_OPACITY/)
+    expect(source).toMatch(/roomLabelColors\(quality,/)
+    expect(source).not.toMatch(/outlineBlur/)
     expect(source).not.toMatch(/batch\.outlineWidth/)
     expect(source).not.toMatch(/MONITOR_LAYER|labelAfterTone|labelLayer/)
   })

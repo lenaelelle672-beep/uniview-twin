@@ -189,7 +189,7 @@ function classifyFrame(data: Uint8ClampedArray, width: number, height: number, a
     const min = Math.min(r, g, b)
     samples += 1
     if (max < 8) dark += 1
-    // 清屏色 #c5d7ea 或全黑，几乎没有建筑细节
+    // 清屏色白天源值 #bdd2e6（原 #c5d7ea，仍落在这扇窗里）或全黑，几乎没有建筑细节
     if (max < 8 || (Math.abs(r - 197) < 12 && Math.abs(g - 215) < 12 && Math.abs(b - 234) < 12 && max - min < 18)) {
       empty += 1
     } else if (b > r + 8 && g > 80 && max - min > 20) {
