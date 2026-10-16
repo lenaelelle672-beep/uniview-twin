@@ -14,6 +14,7 @@ export const TROIKA_TEXT_CONFIG = {
   defaultFontURL: ROOM_LABEL_FONT,
   unicodeFontsURL: '',
   useWorker: false,
+  sdfGlyphSize: 32,
 } as const
 
 function applyTroikaConfig() {
@@ -25,6 +26,7 @@ function applyTroikaConfig() {
     defaultFontURL: font,
     unicodeFontsURL: '',
     useWorker: false,
+    sdfGlyphSize: 32,
   })
 }
 

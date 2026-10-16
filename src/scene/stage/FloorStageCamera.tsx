@@ -195,13 +195,13 @@ function markLocated(deskId: string, started: number) {
 export function FloorStageCamera() {
   const active = useTwinStore((state) => activeFloorId(state.view, state.selectedFloor))
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
+  const invalidate = useThree((state) => state.invalidate)
   const focusSeq = useTwinStore((state) => state.focusSeq)
   const controls = useThree((state) => state.controls)
   const camera = useThree((state) => state.camera)
   const scene = useThree((state) => state.scene)
   const size = useThree((state) => state.size)
   const gl = useThree((state) => state.gl)
-  const invalidate = useThree((state) => state.invalidate)
   const presented = useRef(false)
   const framedKey = useRef('')
 

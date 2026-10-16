@@ -554,7 +554,10 @@ export function startEntryFrameWatch() {
         texCalls: fresh.length,
         atlasTex: fresh.filter((row) => row.atlas).length,
         programs: window.__twinMemory?.programs ?? null,
-        packMs: window.__twinLabelPackMs ?? null,
+        packMs:
+          typeof window.__twinLabelPackMs === 'number'
+            ? window.__twinLabelPackMs
+            : (window.__twinLabelPackMs?.total ?? null),
         labelReady: window.__twinLabelReadyAt ?? null,
       })
       if (frames.length > 120) frames.splice(0, frames.length - 120)
