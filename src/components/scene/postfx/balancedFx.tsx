@@ -325,7 +325,8 @@ function DisposableContactShadows({ active }: { active: boolean }) {
   return (
     <group ref={group} position={CONTACT_SHADOW_POSITION} rotation-x={Math.PI / 2}>
       <mesh geometry={targets.planeGeometry} scale={[1, -1, 1]} rotation={[-Math.PI / 2, 0, 0]}>
-        <meshBasicMaterial transparent map={targets.renderTarget.texture} opacity={0.5} depthWrite={false} />
+        {/* T021：opacity 0.5→0.45。分辨率仍 CONTACT_SHADOW_RESOLUTION=512，blur 仍 2.1。同一张透明平面，调用数预期不变。 */}
+        <meshBasicMaterial transparent map={targets.renderTarget.texture} opacity={0.45} depthWrite={false} />
       </mesh>
       <orthographicCamera
         ref={camera}
