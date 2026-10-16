@@ -8,7 +8,9 @@
 
 .focus-card h3 {
   margin: 8px 0 0;
+  color: #0c2340;
   font-size: 13px;
+  font-weight: 700;
 }
 
 .focus-card h3:first-child {
@@ -32,9 +34,14 @@
 }
 
 .focus-card .cell-alarm {
-  color: #b42318;
+  color: #7a1d16;
+  background: #f8d2cc;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-weight: 700;
 }
 
 .focus-card .cell-offline {
-  color: #667085;
+  color: #344054;
+  font-weight: 700;
 }

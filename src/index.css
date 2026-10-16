@@ -301,7 +301,12 @@ button {
 }
 
 .floor-item.is-hovered {
-  background: #e7f1fb;
+  background: #d4e5f5;
+}
+
+.floor-panel.is-overview-compact .count-alarm,
+.floor-panel.is-strip .count-alarm {
+  padding: 0 3px;
 }
 
 .floor-leader {
@@ -330,6 +335,7 @@ button {
 .panel-title {
   flex: none;
   padding: 12px 14px 8px;
+  color: #0c2340;
   font-weight: 700;
 }
 
@@ -346,24 +352,39 @@ button {
   grid-template-columns: auto 1fr;
   gap: 2px 8px;
   text-align: left;
-  border: 1px solid transparent;
-  background: #f6f8fb;
+  border: 1px solid #c5d4e4;
+  background: #eef4fa;
+  color: #122033;
   border-radius: 8px;
   padding: 8px 10px;
   margin-bottom: 6px;
 }
 
 .floor-item.is-selected {
-  background: #e7f1fb;
+  background: #b7d2f0;
   border-color: #0b6bcb;
+  box-shadow: inset 3px 0 0 #0b6bcb;
+  color: #0c2340;
+  font-weight: 700;
+}
+
+.floor-item.is-selected.is-hovered {
+  background: #a9c9ee;
 }
 
 .floor-id {
+  color: #0c2340;
   font-weight: 700;
 }
 
 .floor-name {
-  color: #526070;
+  color: #1c3148;
+  font-weight: 650;
+}
+
+.floor-item.is-selected .floor-name {
+  color: #0c2340;
+  font-weight: 700;
 }
 
 .floor-counts {
@@ -371,14 +392,20 @@ button {
   display: flex;
   gap: 10px;
   font-size: 12px;
+  font-weight: 650;
 }
 
 .count-alarm {
-  color: #b42318;
+  color: #7a1d16;
+  background: #f8d2cc;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-weight: 700;
 }
 
 .count-offline {
-  color: #667085;
+  color: #344054;
+  font-weight: 650;
 }
 
 .panel-hint,
@@ -391,28 +418,41 @@ button {
   margin: 0 0 12px;
 }
 
+.detail-panel .panel-hint,
+.detail-panel .panel-note {
+  color: #1c3148;
+  font-weight: 600;
+}
+
 .detail-list div {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
   padding: 6px 0;
-  border-bottom: 1px solid #e6edf5;
+  border-bottom: 1px solid #c5d3e2;
 }
 
 .detail-list dt {
-  color: #667085;
+  color: #243044;
   flex: none;
+  font-weight: 650;
   white-space: nowrap;
 }
 
 .detail-list dd {
   margin: 0;
   min-width: 0;
-  font-weight: 650;
+  color: #0c2340;
+  font-weight: 700;
   text-align: right;
   overflow-wrap: break-word;
   word-break: normal;
+}
+
+.detail-panel .desk-devices li {
+  color: #122033;
+  border-bottom-color: #c5d3e2;
 }
 
 .stage {
