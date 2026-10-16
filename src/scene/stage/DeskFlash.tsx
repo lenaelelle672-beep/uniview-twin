@@ -79,14 +79,14 @@ export function DeskFlash({ floorId }: { floorId: string }) {
     if (tinted.current && (tinted.current !== mesh || tintedIndex.current !== deskIndex)) {
       restoreTint(tinted.current, tintedIndex.current)
     }
-    const pulse = 0.35 + 0.65 * Math.abs(Math.sin(elapsed * 9))
+    const pulse = 0.35 + 0.65 * Math.abs(Math.sin(elapsed * 5))
     mesh.setColorAt(deskIndex, BASE.clone().lerp(HOT, pulse))
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
     tinted.current = mesh
     tintedIndex.current = deskIndex
     const material = ring.current?.material
     if (material && 'opacity' in material) {
-      material.opacity = 0.35 + 0.65 * Math.abs(Math.sin(clock.elapsedTime * 8))
+      material.opacity = 0.35 + 0.65 * Math.abs(Math.sin(clock.elapsedTime * 4))
     }
   })
 

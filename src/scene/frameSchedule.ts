@@ -109,9 +109,9 @@ export function discreteAlarmLit(elapsedSec: number): boolean {
 }
 
 export function balancedAlarmGlow(elapsedSec: number): number {
-  return 0.78 + 0.22 * Math.sin(elapsedSec * 5)
+  return 0.78 + 0.22 * Math.sin(elapsedSec * 3)
 }
 
 export function balancedAlarmPulse(elapsedSec: number): number {
-  return 1 + 0.16 * Math.sin(elapsedSec * 5)
+  return 1 + 0.16 * Math.sin(elapsedSec * 3)
 }
