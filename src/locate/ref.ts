@@ -43,10 +43,13 @@ export function invalidPosMessage(raw: string): string {
   return `找不到工位 ${raw}。编号需为 B1 或 F1～F22，序号为本层工位号，例如 F12-66。`
 }
 
+/** 数值与单位之间的不换行空格，避免窄详情栏把「52.86 m」拆开（A19 / T16R-01）。 */
+const METER_UNIT = '\u00A0m'
+
 export function formatWorkstationPlace(floorId: string, deskId: string): string {
   try {
     const place = workstationPosition(floorId, deskId)
-    return `东 ${place.x.toFixed(2)} m，标高 ${place.y.toFixed(2)} m，北 ${(-place.z).toFixed(2)} m`
+    return `东 ${place.x.toFixed(2)}${METER_UNIT}，标高 ${place.y.toFixed(2)}${METER_UNIT}，北 ${(-place.z).toFixed(2)}${METER_UNIT}`
   } catch {
     return '按图纸工位'
   }
