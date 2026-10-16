@@ -167,7 +167,8 @@ button {
 }
 
 .search-option.is-active {
-  background: #e7f1fb;
+  background: #b7d2f0;
+  color: #0c2340;
 }
 
 .search-title {
@@ -176,7 +177,7 @@ button {
 
 .search-subtitle,
 .search-empty {
-  color: #526070;
+  color: #1c3148;
   font-size: 12px;
 }
 

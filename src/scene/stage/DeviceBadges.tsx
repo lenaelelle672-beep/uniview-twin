@@ -27,7 +27,7 @@ void main() {
   vUv = uv;
   vStatus = aStatus;
   float pulse = abs(aStatus - 2.0) < 0.5
-    ? (uDiscrete > 0.5 ? (uTime > 0.5 ? 1.16 : 1.0) : 1.0 + 0.16 * sin(uTime * 5.0))
+    ? (uDiscrete > 0.5 ? (uTime > 0.5 ? 1.16 : 1.0) : 1.0 + 0.16 * sin(uTime * 3.0))
     : 1.0;
   vec4 worldCenter = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
   vec4 mvPosition = viewMatrix * worldCenter;
@@ -48,7 +48,7 @@ void main() {
   vec4 tex = texture2D(uAtlas, vec2(u, vUv.y));
   if (tex.a < 0.45) discard;
   float glow = abs(vStatus - 2.0) < 0.5
-    ? (uDiscrete > 0.5 ? (uTime > 0.5 ? 1.0 : 0.12) : 0.78 + 0.22 * sin(uTime * 5.0))
+    ? (uDiscrete > 0.5 ? (uTime > 0.5 ? 1.0 : 0.12) : 0.78 + 0.22 * sin(uTime * 3.0))
     : 1.0;
   gl_FragColor = linearToOutputTexel(vec4(tex.rgb * glow, 1.0));
 }

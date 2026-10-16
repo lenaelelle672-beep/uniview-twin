@@ -107,7 +107,9 @@
 
 .alarm-head h2 {
   margin: 0;
+  color: #0c2340;
   font-size: 16px;
+  font-weight: 700;
 }
 
 .alarm-close {
@@ -135,7 +137,7 @@
 }
 
 .alarm-count span {
-  color: #526070;
+  color: #1c3148;
   margin-right: 8px;
 }
 
@@ -157,7 +159,7 @@
 
 .alarm-range label,
 .alarm-status span {
-  color: #526070;
+  color: #1c3148;
 }
 
 .alarm-range select {
@@ -183,20 +185,20 @@
 }
 
 .chip.is-on {
-  background: #fff1f0;
-  border-color: #b42318;
-  color: #b42318;
+  background: #f8d2cc;
+  border-color: #7a1d16;
+  color: #7a1d16;
 }
 
 .chip.is-on.chip-offline {
   background: #f2f4f7;
-  border-color: #667085;
+  border-color: #344054;
   color: #344054;
 }
 
 .alarm-hint {
   margin: 0;
-  color: #526070;
+  color: #1c3148;
   font-size: 12px;
 }
 
@@ -247,7 +249,7 @@
   z-index: 1;
   padding: 6px 8px;
   background: #eef3f8;
-  color: #526070;
+  color: #243044;
   font-size: 12px;
   font-weight: 700;
 }
@@ -255,16 +257,20 @@
 .alarm-row {
   width: 100%;
   text-align: left;
-  border: 1px solid transparent;
-  background: #f6f8fb;
+  border: 1px solid #c5d4e4;
+  background: #eef4fa;
+  color: #122033;
   border-radius: 8px;
   padding: 8px;
   margin-top: 6px;
 }
 
 .alarm-row.is-active {
-  background: #e7f1fb;
+  background: #b7d2f0;
   border-color: #0b6bcb;
+  box-shadow: inset 3px 0 0 #0b6bcb;
+  color: #0c2340;
+  font-weight: 700;
 }
 
 .alarm-row .cell-device,
@@ -273,18 +279,23 @@
 }
 
 .cell-alarm {
-  color: #b42318;
+  justify-self: start;
+  color: #7a1d16;
+  background: #f8d2cc;
+  border-radius: 999px;
+  padding: 0 6px;
   font-weight: 700;
 }
 
 .cell-offline {
-  color: #667085;
+  color: #344054;
   font-weight: 700;
 }
 
 .alarm-empty {
   margin: 12px 8px;
-  color: #526070;
+  color: #1c3148;
+  font-weight: 600;
 }
 
 @media (max-width: 1280px) {
