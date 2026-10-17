@@ -24,10 +24,10 @@ export function DetailPanel() {
         <FocusedAlarmDetail />
         {status === 'error' && <p className="panel-hint">数据未能加载，无法显示详情。</p>}
         {status !== 'error' && !selectedFloor && !focusedDeskId && !focusedDeviceId && (
-          <p className="panel-hint">请在左侧选择楼层。</p>
+          <p className="panel-hint">请选择左侧楼层。</p>
         )}
         {status !== 'error' && selectedFloor && !floor && (
-          <p className="panel-hint">当前数据里没有楼层 {selectedFloor}。</p>
+          <p className="panel-hint">没有楼层 {selectedFloor}。</p>
         )}
         {floor && (
           <dl className="detail-list">

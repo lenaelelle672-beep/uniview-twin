@@ -87,7 +87,7 @@ export function FocusedAlarmDetail() {
 }
 
 function DeskDeviceList({ devices }: { devices: Device[] }) {
-  if (devices.length === 0) return <p className="panel-hint">当前数据里没有这个工位的设备。</p>
+  if (devices.length === 0) return <p className="panel-hint">此工位暂无设备。</p>
   return (
     <ul className="desk-devices">
       {devices.map((device) => (

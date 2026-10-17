@@ -182,7 +182,7 @@ export function ReportPage() {
                 ))}
               </tbody>
             </table>
-            {details.length === 0 && <p className="report-note">当前筛选下没有记录。</p>}
+            {details.length === 0 && <p className="report-note">暂无筛选结果。</p>}
           </>
         )}
       </article>
