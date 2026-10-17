@@ -121,7 +121,7 @@ export function SearchBox() {
       />
       {shown && (
         <ul className="search-list" id={listId} role="listbox" aria-label="搜索结果">
-          {hits.length === 0 && <li className="search-empty">没有匹配的工位</li>}
+          {hits.length === 0 && <li className="search-empty">未找到工位</li>}
           {hits.map((hit, index) => (
             <li
               key={hit.deskId}

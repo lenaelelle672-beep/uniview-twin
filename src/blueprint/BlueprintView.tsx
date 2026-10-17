@@ -49,7 +49,7 @@ export function BlueprintView() {
   if (!selectedFloor || !isFloorId(selectedFloor)) {
     return (
       <div className="blueprint" role="region" aria-label="蓝图视图">
-        <p className="blueprint-empty">请在左侧选择楼层。</p>
+        <p className="blueprint-empty">请选择左侧楼层。</p>
       </div>
     )
   }

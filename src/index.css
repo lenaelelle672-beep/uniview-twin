@@ -49,6 +49,11 @@ button {
   outline-offset: 2px;
 }
 
+/* T022：仅深顶栏略提亮。#0b5fff 对 #0c2340 ≈3.08:1，对分段轨道 ≈2.44:1；#3d82ff 分别约 4.39:1 / 3.47:1，对激活浅底仍约 3.37:1。 */
+.topbar :focus-visible {
+  outline-color: #3d82ff;
+}
+
 .app {
   height: 100%;
   display: flex;

@@ -261,7 +261,7 @@ export function AlarmDrawer({ open, floorListOpen, onClose }: AlarmDrawerProps) 
         </div>
         {status === 'loading' && <p className="alarm-empty">正在加载告警…</p>}
         {status === 'error' && <p className="alarm-empty">数据未能加载，无法列出告警。</p>}
-        {ready && listed.length === 0 && <p className="alarm-empty">当前筛选下没有记录。</p>}
+        {ready && listed.length === 0 && <p className="alarm-empty">暂无筛选结果。</p>}
         {ready &&
           listed.map((row) => (
             <button
