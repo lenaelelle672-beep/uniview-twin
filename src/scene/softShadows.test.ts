@@ -9,9 +9,11 @@ import {
   resetSoftShadowsMountedForTests,
   setSoftShadowsMounted,
   shadowTypeAfterSoftShadowsUnmount,
+  SOFT_SHADOW_CHUNK_AFTER_FIRST_MS,
   SOFT_SHADOW_FOCUS,
   SOFT_SHADOW_SAMPLES,
   SOFT_SHADOW_SIZE,
+  softShadowChunkDue,
   softShadowGateOpen,
   softShadowsMounted,
   softShadowsQualityOn,
@@ -53,6 +55,22 @@ describe('SoftShadows 门闩', () => {
     expect(softShadowGateOpen({ ...base, quality: 'perf' })).toBe(false)
     expect(softShadowGateOpen({ ...base, view: 'floor', cameraRested: false })).toBe(false)
     expect(softShadowGateOpen({ ...base, view: 'floor', cameraRested: true, bakePending: true })).toBe(false)
+  })
+
+  it('分包晚于 extrasReady 和 d126 cutoff，perf 不拉', () => {
+    expect(SOFT_SHADOW_CHUNK_AFTER_FIRST_MS).toBeGreaterThan(64)
+    const due = {
+      quality: 'balanced',
+      extrasReady: true,
+      firstFrameAt: 1000,
+      now: 1000 + SOFT_SHADOW_CHUNK_AFTER_FIRST_MS,
+    }
+    expect(softShadowChunkDue(due)).toBe(true)
+    expect(softShadowChunkDue({ ...due, quality: 'high' })).toBe(true)
+    expect(softShadowChunkDue({ ...due, quality: 'perf' })).toBe(false)
+    expect(softShadowChunkDue({ ...due, extrasReady: false })).toBe(false)
+    expect(softShadowChunkDue({ ...due, firstFrameAt: null })).toBe(false)
+    expect(softShadowChunkDue({ ...due, now: 1000 + SOFT_SHADOW_CHUNK_AFTER_FIRST_MS - 1 })).toBe(false)
   })
 
   it('总览不要求相机停稳；单层停稳且烘影结束后才开', () => {
@@ -117,7 +135,17 @@ describe('SoftShadows 门闩', () => {
     const fx = readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8')
     const ground = readFileSync(join(here, 'groundTextures.ts'), 'utf8')
     const pkg = readFileSync(join(here, '../../package.json'), 'utf8')
-    expect(scene).toMatch(/quality !== 'perf' \? <BalancedSoftShadows \/> : null/)
+    const helper = readFileSync(join(here, 'softShadows.ts'), 'utf8')
+    const warmup = readFileSync(join(here, '../components/scene/useBalancedWarmup.ts'), 'utf8')
+    expect(scene).toMatch(
+      /const BalancedSoftShadows = lazy\(\(\) =>\s*import\('\.\/scene\/BalancedSoftShadows'\)\.then\(\(mod\) => \(\{ default: mod\.BalancedSoftShadows \}\)\)/,
+    )
+    expect(scene).toMatch(/softShadowChunkDue/)
+    expect(scene).toMatch(/softShadowChunkOn \?/)
+    expect(scene).not.toMatch(/import \{ BalancedSoftShadows \}/)
+    expect(scene).not.toMatch(/@react-three\/drei\/core\/softShadows/)
+    expect(helper).not.toMatch(/@react-three\/drei/)
+    expect(warmup).not.toMatch(/@react-three\/drei\/core\/softShadows/)
     expect(gate).toMatch(/@react-three\/drei\/core\/softShadows/)
     expect(gate).toMatch(/samples=\{SOFT_SHADOW_SAMPLES\}/)
     expect(gate).toMatch(/softShadowGateOpen/)

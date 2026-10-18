@@ -11,6 +11,12 @@ export const SOFT_SHADOW_FOCUS = 0
 /** DemandLoop 至少画出这么多帧之后才允许开门，躲开 D286 总览当帧烘影。 */
 export const SOFT_SHADOW_MIN_FRAMES = 1
 
+/**
+ * d126 hardGate 的 cutoff 在首帧后约 64ms，只晚一帧的请求会时进时出。
+ * SoftShadows 分包要等 extrasReady，并且首帧后再过这一截，才开始 import。
+ */
+export const SOFT_SHADOW_CHUNK_AFTER_FIRST_MS = 200
+
 let mounted = false
 
 export function setSoftShadowsMounted(next: boolean): void {
@@ -36,6 +42,25 @@ export type SoftShadowGateInput = {
   bakePending: boolean
   view: string
   cameraRested: boolean
+}
+
+export type SoftShadowChunkInput = {
+  quality: string
+  extrasReady: boolean
+  firstFrameAt: number | null | undefined
+  now: number
+}
+
+/**
+ * 主包只留本文件。drei `<SoftShadows>` 在独立分包里。
+ * extrasReady 可能早于首帧（预热的 compile 赶在 HDR / Suspense 之前），
+ * 所以还要等过 d126 cutoff，import() 才不会进 before-cutoff。
+ */
+export function softShadowChunkDue(input: SoftShadowChunkInput): boolean {
+  if (!softShadowsQualityOn(input.quality)) return false
+  if (!input.extrasReady) return false
+  if (input.firstFrameAt == null) return false
+  return input.now - input.firstFrameAt >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS
 }
 
 /**
