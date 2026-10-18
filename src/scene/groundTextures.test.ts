@@ -30,10 +30,17 @@ type TwinWindow = {
 let rafQueue: FrameRequestCallback[] = []
 let idleQueue: IdleRequestCallback[] = []
 let win: TwinWindow
+let now = 0
 
 function installWindow() {
   rafQueue = []
   idleQueue = []
+  now = 0
+  if (vi.isMockFunction(performance.now)) {
+    vi.mocked(performance.now).mockImplementation(() => now)
+  } else {
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+  }
   win = {
     requestAnimationFrame(cb) {
       rafQueue.push(cb)
@@ -76,6 +83,7 @@ async function loadModule() {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
   vi.resetModules()
 })
 
@@ -137,6 +145,8 @@ describe('T023 场地法线与粗糙度', () => {
     const src = readFileSync(join(here, 'groundTextures.ts'), 'utf8')
     expect(src).toMatch(/__twinReady === true/)
     expect(src).toMatch(/__twinFirstFrameAt != null/)
+    expect(src).toMatch(/FLOOR_SHELL_AFTER_FIRST_MS/)
+    expect(src).toMatch(/performance\.now\(\) - first >= FLOOR_SHELL_AFTER_FIRST_MS/)
     expect(src).toMatch(/requestAnimationFrame/)
     expect(src).toMatch(/requestIdleCallback/)
     expect(src).toMatch(/RepeatWrapping/)
@@ -149,7 +159,7 @@ describe('T023 场地法线与粗糙度', () => {
     expect(src).not.toMatch(/new TextureLoader\(\)\.load/)
   })
 
-  it('只有 Ready、或只有首帧，都不请求', async () => {
+  it('只有 Ready、或只有首帧，或首帧后不到 2600ms，都不请求', async () => {
     const readyOnly = await loadModule()
     const readyUrls: string[] = []
     readyOnly.scheduleGroundTextures((url) => {
@@ -171,9 +181,29 @@ describe('T023 场地法线与粗糙度', () => {
     flushIdle()
     expect(frameUrls).toEqual([])
     expect(idleQueue).toHaveLength(0)
+
+    const early = await loadModule()
+    const earlyUrls: string[] = []
+    early.scheduleGroundTextures((url) => {
+      earlyUrls.push(url)
+    })
+    win.__twinReady = true
+    win.__twinFirstFrameAt = 100
+    now = 100
+    await pump()
+    flushIdle()
+    expect(earlyUrls).toEqual([])
+    expect(idleQueue).toHaveLength(0)
+    now = 100 + 2599
+    await pump()
+    flushIdle()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(earlyUrls).toEqual([])
+    expect(idleQueue).toHaveLength(0)
   })
 
-  it('Ready 且首帧之后的下一帧和 idle 才赋 normalMap 与 roughnessMap', async () => {
+  it('首帧过后满 2600ms，再经下一帧和 idle，才赋 normalMap 与 roughnessMap', async () => {
     const mod = await loadModule()
     const { applySurfaceMode, grassMaterial, pavingMaterial, roadMaterial, sidewalkMaterial } = await import('./materials')
     const grassVersion = grassMaterial.version
@@ -187,6 +217,13 @@ describe('T023 场地法线与粗糙度', () => {
     })
     win.__twinReady = true
     win.__twinFirstFrameAt = 20
+    now = 20
+    await pump()
+    flushIdle()
+    expect(urls).toEqual([])
+    expect(idleQueue).toHaveLength(0)
+
+    now = 20 + 2600
     await pump()
     expect(idleQueue).toHaveLength(1)
     expect(urls).toEqual([])
@@ -266,6 +303,11 @@ describe('T023 场地法线与粗糙度', () => {
     })
     win.__twinReady = true
     win.__twinFirstFrameAt = 1
+    now = 1
+    await pump()
+    flushIdle()
+    expect(calls).toBe(0)
+    now = 1 + 2600
     await pump()
     flushIdle()
     await Promise.resolve()

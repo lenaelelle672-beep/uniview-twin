@@ -8,6 +8,7 @@ import {
 } from 'three'
 import { useTwinStore } from '../store/store'
 import { grassMaterial, pavingMaterial, roadMaterial, sidewalkMaterial } from './materials'
+import { FLOOR_SHELL_AFTER_FIRST_MS } from './stage/prefetchLazyChunks'
 
 /**
  * 场地只挂法线 + 粗糙度。反照率继续走 applySurfaceMode 的昼夜 color，不设 map。
@@ -137,7 +138,10 @@ function startLoads(load: GroundTextureLoad): void {
 }
 
 /**
- * D322：等 __twinReady 且首帧落下，再多一帧和一次 idle，才 TextureLoader。
+ * D322：等 __twinReady 且首帧落下，再等到
+ * performance.now() - __twinFirstFrameAt >= FLOOR_SHELL_AFTER_FIRST_MS。
+ * d126 的 cutoff 在首帧之后一点点，+1 帧的请求会时进时出；与楼层壳同一道 2600ms 门。
+ * 过门后再多一帧和一次 idle，才 TextureLoader。
  * 模块顶层不 load，贴图 URL 也不进 useLoader，避免进 hardGate / 首帧截止。
  */
 export function scheduleGroundTextures(load: GroundTextureLoad = defaultLoad): void {
@@ -146,6 +150,10 @@ export function scheduleGroundTextures(load: GroundTextureLoad = defaultLoad): v
   const run = async () => {
     await waitUntil(() => window.__twinReady === true)
     await waitUntil(() => window.__twinFirstFrameAt != null)
+    await waitUntil(() => {
+      const first = window.__twinFirstFrameAt
+      return first != null && performance.now() - first >= FLOOR_SHELL_AFTER_FIRST_MS
+    })
     await nextFrame()
     await idle()
     startLoads(load)
