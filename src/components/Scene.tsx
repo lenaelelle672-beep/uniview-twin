@@ -12,6 +12,7 @@ import { RenderProbe } from './scene/RenderProbe'
 import { ParcelMesh, Site } from './scene/Site'
 import { ExplodedLayout } from './scene/ExplodedLayout'
 import { Tower } from './scene/Tower'
+import { BalancedSoftShadows } from './scene/BalancedSoftShadows'
 import { useBalancedWarmup } from './scene/useBalancedWarmup'
 import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
@@ -145,6 +146,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         shadow-camera-top={220}
         shadow-camera-bottom={-220}
       />
+      {quality !== 'perf' ? <BalancedSoftShadows /> : null}
       <CameraRig fitRef={fitRef} fitGeneration={fitGeneration} />
       {/* D124 / D126：EastGrille 与 RenderProbe 同边界；__twinReady 等格栅 chunk+lo GLB，以及 Suspense 外 HDR 解码和 PMREM。 */}
       <Suspense fallback={null}>
