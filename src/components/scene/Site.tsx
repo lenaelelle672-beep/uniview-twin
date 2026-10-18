@@ -1,10 +1,11 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { BoxGeometry, PlaneGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { QualityTier } from '../../types'
 import { selectTreeModels } from '../../scene/quality'
 import { FoliageShadow, InstancedProp, PROP_URL } from './InstancedProp'
 import { extrudeUp } from '../../scene/extrude'
+import { scheduleGroundTextures, stampWorldGroundUv } from '../../scene/groundTextures'
 import { courtyardHole } from '../../scene/massing'
 import {
   grassMaterial,
@@ -78,6 +79,7 @@ function ribbonGeometry(ribbons: Ribbon[], y: number) {
   const merged = mergeGeometries(parts)
   parts.forEach((geometry) => geometry.dispose())
   if (!merged) throw new Error('道路几何为空')
+  stampWorldGroundUv(merged)
   return merged
 }
 
@@ -101,6 +103,10 @@ export function Site({ model, night, quality }: { model: boolean; night: boolean
     return merged
   }, [])
   const trees = selectTreeModels(quality)
+
+  useEffect(() => {
+    scheduleGroundTextures()
+  }, [])
 
   const clearSelection = (event: { delta: number; stopPropagation: () => void }) => {
     if (event.delta > 2) return
