@@ -61,6 +61,8 @@ npm test
 
 字体、环境贴图和解码器都不能在运行时向 CDN 请求。环境反射来自仓库里的室外天空 HDR，用 three 的 `HDRLoader` 在加载时预滤波一次，不使用 drei 的 Environment，也不把贴图设成背景。屋面字、行道树和路灯在 `public/models/`，用 `three/examples/jsm/libs/meshopt_decoder` 在本地解码 Meshopt，不从 CDN 拉取。楼顶标识是 v2（蓝色 UNV，材质槽 `sign_face` / `sign_face_cn` / `sign_body`）。
 
+场地法线 / 粗糙度在 `public/textures/ground/`（CC0，无反照率）。归属和物理边长见该目录 `README.md`。首帧之前不请求这些文件。
+
 室外天空贴图：
 
 | 文件 | 来源 | 许可证 |

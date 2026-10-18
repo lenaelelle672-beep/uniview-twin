@@ -1,0 +1,371 @@
+{
+  "label": "t023",
+  "baseUrl": "http://127.0.0.1:5190",
+  "method": "python gzip.compress(9)",
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "hardGateLimit": 436361,
+  "balancedFxLimit": 105000,
+  "balanced": {
+    "hardGate": 433412,
+    "hardGateWithMonitorSamples": 433412,
+    "monitorSamplesGzip": 0,
+    "balancedFx": 101397,
+    "fullFirstScreen": 534809,
+    "requestedBalancedFx": true,
+    "files": [
+      {
+        "url": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+        "bytes": 1435119,
+        "gzip": 954159,
+        "hdr": true,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-ulXLwZw7.js",
+        "bytes": 1403916,
+        "gzip": 396937,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/textures/ground/paving_nor.webp",
+        "bytes": 353306,
+        "gzip": 353434,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/textures/ground/road_nor.webp",
+        "bytes": 327748,
+        "gzip": 327866,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/textures/ground/road_rough.webp",
+        "bytes": 262976,
+        "gzip": 263079,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/textures/ground/grass_nor.webp",
+        "bytes": 212750,
+        "gzip": 212833,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/textures/ground/sidewalk_rough.webp",
+        "bytes": 195816,
+        "gzip": 195894,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/textures/ground/sidewalk_nor.webp",
+        "bytes": 175568,
+        "gzip": 175641,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/textures/ground/grass_rough.webp",
+        "bytes": 107242,
+        "gzip": 107295,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/assets/balancedFx-CrW4TL15.js",
+        "bytes": 231372,
+        "gzip": 101397,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": true,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/textures/ground/paving_rough.webp",
+        "bytes": 18136,
+        "gzip": 18164,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/models/street-tree-hi.glb",
+        "bytes": 16540,
+        "gzip": 13577,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/roof-sign.glb",
+        "bytes": 10548,
+        "gzip": 5061,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-DJiFIF8p.css",
+        "bytes": 13808,
+        "gzip": 3490,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-tree-lo.glb",
+        "bytes": 5696,
+        "gzip": 3466,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/east-grille-v4-lo.glb",
+        "bytes": 9568,
+        "gzip": 3229,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-lamp.glb",
+        "bytes": 5812,
+        "gzip": 2666,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/shadowBake-DCHTQdeH.js",
+        "bytes": 4321,
+        "gzip": 1709,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/DemandLoop-C62dyLhu.js",
+        "bytes": 4205,
+        "gzip": 1646,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/assets/shellClipCompile-zHJSJf5K.js",
+        "bytes": 3063,
+        "gzip": 1436,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/EastGrille-CD9eNArH.js",
+        "bytes": 2085,
+        "gzip": 1052,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/frameSchedule-DiyCxr8T.js",
+        "bytes": 1175,
+        "gzip": 520,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": true
+      },
+      {
+        "url": "/assets/cameraRest-C_-SQtZX.js",
+        "bytes": 898,
+        "gzip": 446,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/?q=balanced",
+        "bytes": 483,
+        "gzip": 343,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/favicon.svg",
+        "bytes": 548,
+        "gzip": 188,
+        "hdr": false,
+        "favicon": true,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      }
+    ]
+  },
+  "perf": {
+    "firstScreen": 419835,
+    "balancedFx": 0,
+    "requestedBalancedFx": false,
+    "files": [
+      {
+        "url": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+        "bytes": 1435119,
+        "gzip": 954159,
+        "hdr": true,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-ulXLwZw7.js",
+        "bytes": 1403916,
+        "gzip": 396937,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/roof-sign.glb",
+        "bytes": 10548,
+        "gzip": 5061,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-DJiFIF8p.css",
+        "bytes": 13808,
+        "gzip": 3490,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-tree-lo.glb",
+        "bytes": 5696,
+        "gzip": 3466,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/east-grille-v4-lo.glb",
+        "bytes": 9568,
+        "gzip": 3229,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-lamp.glb",
+        "bytes": 5812,
+        "gzip": 2666,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/shadowBake-DCHTQdeH.js",
+        "bytes": 4321,
+        "gzip": 1709,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/shellClipCompile-zHJSJf5K.js",
+        "bytes": 3063,
+        "gzip": 1436,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/EastGrille-CD9eNArH.js",
+        "bytes": 2085,
+        "gzip": 1052,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/cameraRest-C_-SQtZX.js",
+        "bytes": 898,
+        "gzip": 446,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/?q=perf",
+        "bytes": 483,
+        "gzip": 343,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      }
+    ]
+  },
+  "summary": {
+    "hardGateNoFx": 433412,
+    "hardGateWithMonitorSamples": 433412,
+    "monitorSamplesGzip": 0,
+    "balancedFx": 101397,
+    "balancedFullFirstScreen": 534809,
+    "perfFirstScreen": 419835
+  },
+  "ok": true,
+  "failures": []
+}
