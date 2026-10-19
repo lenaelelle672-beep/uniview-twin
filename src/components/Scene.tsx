@@ -1,6 +1,6 @@
 import { Canvas, useThree } from '@react-three/fiber'
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { AgXToneMapping, Group } from 'three'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { AgXToneMapping, FogExp2, Group } from 'three'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
@@ -15,6 +15,7 @@ import { ExplodedLayout } from './scene/ExplodedLayout'
 import { Tower } from './scene/Tower'
 import { useBalancedWarmup } from './scene/useBalancedWarmup'
 import { CAMERA_POSES } from '../scene/cameras'
+import { overviewFog, SCENE_BACKGROUND } from '../scene/fog'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
@@ -69,12 +70,31 @@ function DayExposure({ mode }: { mode: SurfaceMode }) {
   return null
 }
 
+function OverviewFog({ mode }: { mode: SurfaceMode }) {
+  const invalidate = useThree((state) => state.invalidate)
+  const preset = overviewFog(mode)
+  const fog = useMemo(() => {
+    if (!preset) return null
+    const next = new FogExp2(preset.color, preset.density)
+    next.name = 'OverviewFog'
+    return next
+  }, [preset])
+
+  useLayoutEffect(() => {
+    // frameloop=demand。雾挂上或昼夜套换掉时要补一帧，否则停在上一套颜色。
+    invalidate()
+  }, [fog, invalidate])
+
+  if (!fog) return null
+  return <primitive key={mode} object={fog} attach="fog" />
+}
+
 function SceneBody({ mode }: { mode: SurfaceMode }) {
   const quality = useTwinStore((state) => state.quality)
   const dayNight = useTwinStore((state) => state.dayNight)
   const model = mode === 'model'
   const night = mode === 'night'
-  const background = model ? '#000000' : night ? '#07111c' : '#bdd2e6'
+  const background = SCENE_BACKGROUND[mode]
   const shadowSize = quality === 'high' ? 2048 : 1024
   const [composerLive, setComposerLive] = useState(false)
   const [keepFx, setKeepFx] = useState(false)
@@ -172,6 +192,8 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         </Suspense>
       )}
       <color attach="background" args={[background]} />
+      {/* 白模不挂雾：背景是纯黑，黑雾会染脏白模。昼/夜见 src/scene/fog.ts。 */}
+      <OverviewFog mode={mode} />
       <EnablePickVolumeRaycast />
       <DayExposure mode={mode} />
       <LocalEnvironment enabled={!model} night={night} quality={quality} />
