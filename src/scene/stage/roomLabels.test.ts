@@ -16,6 +16,7 @@ import {
   ROOM_LABEL_OUTLINE_COLOR,
   ROOM_LABEL_OUTLINE_COLOR_BALANCED,
   ROOM_LABEL_OUTLINE_COLOR_BALANCED_NIGHT,
+  ROOM_LABEL_OUTLINE_BLUR,
   ROOM_LABEL_OUTLINE_EM,
   ROOM_LABEL_OUTLINE_MIN,
   ROOM_LABEL_OUTLINE_OPACITY,
@@ -171,19 +172,23 @@ describe('房间引线标签', () => {
     expect(ROOM_LABEL_OUTLINE_EM).toBe(0.05)
     expect(ROOM_LABEL_OUTLINE_MIN).toBe(0.03)
     expect(ROOM_LABEL_OUTLINE_OPACITY).toBe(1)
+    expect(ROOM_LABEL_OUTLINE_BLUR).toBe('10%')
     expect(roomLabelOutlineWidth(0.78)).toBeCloseTo(0.039)
     expect(roomLabelOutlineWidth(0.5)).toBe(0.03)
     const source = readFileSync(new URL('./BatchedRoomLabels.tsx', import.meta.url), 'utf8')
     const members = source.split('new Text()')
     expect(members.length).toBeGreaterThanOrEqual(3)
     expect(members[1]).toMatch(/outlineWidth = outlineWidth/)
+    expect(members[1]).toMatch(/outlineBlur = ROOM_LABEL_OUTLINE_BLUR/)
     expect(members[1]).toMatch(/outlineColor = paletteRef.current.outline/)
     expect(members[2]).toMatch(/outlineWidth = outlineWidth/)
+    expect(members[2]).toMatch(/outlineBlur = ROOM_LABEL_OUTLINE_BLUR/)
     expect(members[2]).toMatch(/outlineColor = paletteRef.current.outline/)
     expect(source).toMatch(/material.toneMapped = false/)
     expect(source).toMatch(/ROOM_LABEL_OUTLINE_OPACITY/)
+    expect(source).toMatch(/ROOM_LABEL_OUTLINE_BLUR/)
     expect(source).toMatch(/roomLabelColors\(quality,/)
-    expect(source).not.toMatch(/outlineBlur/)
+    expect(source.match(/outlineBlur = ROOM_LABEL_OUTLINE_BLUR/g)?.length).toBe(2)
     expect(source).not.toMatch(/batch\.outlineWidth/)
     expect(source).not.toMatch(/MONITOR_LAYER|labelAfterTone|labelLayer/)
   })
