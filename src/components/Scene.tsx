@@ -166,9 +166,10 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         ]}
       />
       <ambientLight intensity={model ? 0.16 : night ? 0.05 : 0.12} />
+      {/* T031：白天 directional 1.58 → 1.53，配合已合 DayExposure 1.95，略降直射避免叠曝洗白。夜 / 白模不动。 */}
       <directionalLight
         position={[78, 120, 46]}
-        intensity={model ? 1.65 : night ? 0.32 : 1.58}
+        intensity={model ? 1.65 : night ? 0.32 : 1.53}
         color={model ? '#fff4e4' : night ? '#b7c6ea' : '#ffe2be'}
         castShadow={quality !== 'perf'}
         shadow-mapSize={[shadowSize, shadowSize]}
