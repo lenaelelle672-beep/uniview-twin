@@ -4,6 +4,7 @@ import { AgXToneMapping, Group } from 'three'
 import { FloorStage } from '../scene/stage/FloorStage'
 import { B1 } from './scene/B1'
 import { CameraRig, FitBump } from './scene/CameraRig'
+import { BlankSuspenseFallback } from '../scene/assetLoad'
 import { EastBlock } from './scene/EastBlock'
 import { LocalEnvironment } from './scene/LocalEnvironment'
 import { Podium } from './scene/Podium'
@@ -189,7 +190,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       ) : null}
       <CameraRig fitRef={fitRef} fitGeneration={fitGeneration} />
       {/* D124 / D126：EastGrille 与 RenderProbe 同边界；__twinReady 等格栅 chunk+lo GLB，以及 Suspense 外 HDR 解码和 PMREM。 */}
-      <Suspense fallback={null}>
+      <Suspense fallback={<BlankSuspenseFallback />}>
         <group ref={fitRef} name="Buildings">
           <Tower night={night} />
           <group name="AboveGradeContext" visible={!openBasement}>

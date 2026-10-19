@@ -7,7 +7,9 @@ import { useTwinStore } from '../../store/store'
 import { activeFloorId } from './cut'
 import { obliqueOverviewSeed } from './poses'
 import { workstationPosition } from './workstationPosition'
+import { retainFrameChannel } from '../frameSchedule'
 import { beginCameraMove, markCameraRested, watchCameraRest } from './cameraRest'
+import { USER_CAMERA_SMOOTH_TIME, floorFramingGlide } from './cameraTransition'
 
 type VisibleFocusApi = typeof import('./visibleFocus')
 let visibleFocusApi: VisibleFocusApi | null = null
@@ -25,7 +27,6 @@ type FocusRig = CameraControlsImpl & {
 
 const FLOOR_FOV = 48
 const DESK_FOV = 42
-const FLY_SECONDS = 0.42
 const POLAR_DIP = 1.05
 
 const corner = new Vector3()
@@ -99,6 +100,9 @@ async function frameSlab(
   plate: Object3D,
   floorId: string,
   canvas: HTMLCanvasElement,
+  glide: boolean,
+  invalidate: () => void,
+  isCancelled: () => boolean,
 ) {
   plate.updateWorldMatrix(true, true)
   const box = new Box3().setFromObject(plate)
@@ -106,8 +110,14 @@ async function frameSlab(
   const center = box.getCenter(new Vector3())
   const size = box.getSize(new Vector3())
   const seed = obliqueOverviewSeed(center, { x: size.x, z: size.z })
+  const start = new Vector3()
+  const startTarget = new Vector3()
+  if (glide) {
+    rig.getPosition(start, false)
+    rig.getTarget(startTarget, false)
+  }
   beginCameraMove('frame-slab')
-  rig.smoothTime = 0
+  rig.smoothTime = USER_CAMERA_SMOOTH_TIME
   rig.maxPolarAngle = Math.PI / 2 - POLAR_DIP
   setFov(camera, FLOOR_FOV)
   await rig.setLookAt(
@@ -119,22 +129,54 @@ async function frameSlab(
     seed.target[2],
     false,
   )
+  if (isCancelled()) return false
   window.__twinCameraFramed = floorId
   await rig.fitToBox(box, false)
+  if (isCancelled()) return false
   applyVisibleFocalOffset(rig, camera, canvas, false)
   rig.update(0)
   const fitted = projectBox(camera, box)
   if (fitted.widthRatio > 0.05 && fitted.widthRatio < 0.7) {
     await rig.dollyTo(rig.distance * (fitted.widthRatio / 0.78), false)
+    if (isCancelled()) return false
     applyVisibleFocalOffset(rig, camera, canvas, false)
     rig.update(0)
   }
   rig.maxPolarAngle = Math.PI
   const settled = projectBox(camera, box)
   window.__twinSlab = { floorId, ...settled }
-  window.__twinFlyPromiseAt = performance.now()
-  markCameraRested('setLookAt')
-  return true
+  if (!glide) {
+    window.__twinFlyPromiseAt = performance.now()
+    markCameraRested('setLookAt')
+    return true
+  }
+  const end = new Vector3()
+  const endTarget = new Vector3()
+  rig.getPosition(end, false)
+  rig.getTarget(endTarget, false)
+  const focal = window.__twinVisibleFocus?.focal
+  if (typeof rig.setFocalOffset === 'function') {
+    void rig.setFocalOffset(0, 0, 0, false)
+    rig.update(0)
+  }
+  await rig.setLookAt(start.x, start.y, start.z, startTarget.x, startTarget.y, startTarget.z, false)
+  if (isCancelled()) return false
+  rig.smoothTime = USER_CAMERA_SMOOTH_TIME
+  watchCameraRest(rig, invalidate)
+  const releaseMotion = retainFrameChannel('motion')
+  try {
+    const fly = rig.setLookAt(end.x, end.y, end.z, endTarget.x, endTarget.y, endTarget.z, true)
+    if (focal && typeof rig.setFocalOffset === 'function') {
+      void rig.setFocalOffset(focal.x, focal.y, focal.z, true)
+    }
+    await fly
+    if (isCancelled()) return false
+    window.__twinFlyPromiseAt = performance.now()
+    markCameraRested('setLookAt')
+    return true
+  } finally {
+    releaseMotion()
+  }
 }
 
 function flyToDesk(
@@ -159,8 +201,8 @@ function flyToDesk(
   // 首帧画出来之前做阻尼，SwiftShader 上要等很久才进入 1.2 m。
   // 直达链接在第一帧提交时直接落到工位；已经在看画面时再平滑飞入。
   beginCameraMove('fly-desk')
+  rig.smoothTime = USER_CAMERA_SMOOTH_TIME
   if (!transition) {
-    rig.smoothTime = 0
     void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, false).then(() => {
       window.__twinFlyPromiseAt = performance.now()
       markCameraRested('setLookAt')
@@ -171,8 +213,9 @@ function flyToDesk(
     markLocated(deskId, started)
     return true
   }
-  rig.smoothTime = FLY_SECONDS
+  const releaseMotion = retainFrameChannel('motion')
   void rig.setLookAt(eye.x, eye.y, eye.z, target.x, target.y, target.z, true).then(() => {
+    releaseMotion()
     window.__twinFlyPromiseAt = performance.now()
     applyVisibleFocalOffset(rig, camera, canvas, false, target)
     markLocated(deskId, started)
@@ -204,6 +247,9 @@ export function FloorStageCamera() {
   const gl = useThree((state) => state.gl)
   const presented = useRef(false)
   const framedKey = useRef('')
+  const framing = useRef({ active: '', focusSeq: -1, width: 0, height: 0 })
+  const flightToken = useRef(0)
+  const flightHandoff = useRef(false)
 
   useEffect(() => {
     const rig = controls as (FocusRig & {
@@ -236,7 +282,7 @@ export function FloorStageCamera() {
     if (!rig || !active) return
     const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
     const deskId = focused && focused.floorId === active ? focused.deskId : null
-    const key = `${active}:${deskId ?? 'slab'}:${focusSeq}`
+    const key = `${active}:${deskId ?? 'slab'}:${focusSeq}:${size.width}x${size.height}`
     if (framedKey.current === key) return
     if (deskId) {
       const interior = scene.getObjectByName('FloorInterior')
@@ -250,21 +296,56 @@ export function FloorStageCamera() {
     const plate = scene.getObjectByName('FloorPlate')
     if (!plate) return
     framedKey.current = key
-    void frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement).then((ok) => {
+    const committed = framing.current
+    const sameFloor = committed.active === active && committed.focusSeq === focusSeq
+    const glide = floorFramingGlide({
+      seen: true,
+      targetChanged: !sameFloor,
+      resizeOnly: false,
+    })
+    void frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement, glide, invalidate, () => false).then((ok) => {
       if (ok) watchCameraRest(rig, invalidate)
     })
   })
 
   useLayoutEffect(() => {
     const rig = controls as FocusRig | null
-    let cancelled = false
+    let stopRetry = false
     let attempts = 0
-    // 以本次提交时是否已经出过帧为准。直达链接的楼板可能要等几帧才挂上，
-    // 若等到那时再阻尼，首屏会被 SwiftShader 的长帧拖过 5 秒。
-    const glide = focusSeq > 0 && presented.current
+    // 冷启动直达仍瞬时。场景已经出过帧再选层 / 换层 / 点工位，才滑过去。
+    // 纯缩放不滑。提交记在微任务里，StrictMode 重放这一次时仍能看出目标变了。
+    const nextFrame = { active: active ?? '', focusSeq, width: size.width, height: size.height }
+    const committed = framing.current
+    const sameFloor = committed.active === nextFrame.active && committed.focusSeq === nextFrame.focusSeq
+    const resizeOnly = sameFloor && (committed.width !== size.width || committed.height !== size.height)
+    const seen = presented.current || window.__twinFirstFrameAt != null
+    const glide = floorFramingGlide({ seen, targetChanged: !sameFloor, resizeOnly })
+    const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
+    const deskId = active && focused && focused.floorId === active ? focused.deskId : null
+    const key = active ? `${active}:${deskId ?? 'slab'}:${focusSeq}:${size.width}x${size.height}` : ''
+    // 同一取景被 invalidate / controls 重跑时，不要取消已经发出的 setLookAt(true)。
+    if (key && framedKey.current === key) {
+      flightHandoff.current = true
+      return () => {
+        flightHandoff.current = false
+        const token = flightToken.current
+        queueMicrotask(() => {
+          if (flightHandoff.current || flightToken.current !== token) return
+          flightToken.current += 1
+          framedKey.current = ''
+          resetFocalOffset(rig)
+        })
+      }
+    }
+    flightHandoff.current = false
+    const mine = ++flightToken.current
+    queueMicrotask(() => {
+      if (flightToken.current === mine) framing.current = nextFrame
+    })
     if (active) loadVisibleFocus()
+    const stillMine = () => flightToken.current !== mine
     const tick = () => {
-      if (cancelled) return
+      if (stopRetry || stillMine()) return
       const ready = rig && typeof rig.setLookAt === 'function' && typeof rig.fitToBox === 'function'
       if (!ready || !rig) {
         if (attempts < 40) {
@@ -274,12 +355,11 @@ export function FloorStageCamera() {
         return
       }
       if (!active) {
-        rig.smoothTime = 0
+        rig.smoothTime = USER_CAMERA_SMOOTH_TIME
         resetFocalOffset(rig)
         return
       }
-      const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
-      const deskId = focused && focused.floorId === active ? focused.deskId : null
+      if (framedKey.current === key) return
       if (deskId) {
         const interior = scene.getObjectByName('FloorInterior')
         if (!interior) {
@@ -290,7 +370,7 @@ export function FloorStageCamera() {
           return
         }
         flyToDesk(rig, camera as PerspectiveCamera, interior, active, deskId, glide, gl.domElement)
-        framedKey.current = `${active}:${deskId}:${focusSeq}`
+        framedKey.current = key
         watchCameraRest(rig, invalidate)
         return
       }
@@ -302,16 +382,32 @@ export function FloorStageCamera() {
         }
         return
       }
-      framedKey.current = `${active}:slab:${focusSeq}`
-      void frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement).then((ok) => {
-        if (cancelled || !ok) return
+      framedKey.current = key
+      void frameSlab(
+        rig,
+        camera as PerspectiveCamera,
+        plate,
+        active,
+        gl.domElement,
+        glide,
+        invalidate,
+        stillMine,
+      ).then((ok) => {
+        if (stillMine() || !ok) return
         watchCameraRest(rig, invalidate)
       })
     }
     tick()
     return () => {
-      cancelled = true
-      resetFocalOffset(rig)
+      stopRetry = true
+      flightHandoff.current = false
+      const token = mine
+      queueMicrotask(() => {
+        if (flightHandoff.current || flightToken.current !== token) return
+        flightToken.current += 1
+        framedKey.current = ''
+        resetFocalOffset(rig)
+      })
     }
   }, [active, camera, controls, focusSeq, focusedDeskId, gl, invalidate, scene, size.height, size.width])
 
