@@ -67,6 +67,7 @@ npm test
 
 | 文件 | 来源 | 许可证 |
 | --- | --- | --- |
-| `public/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky)，Poly Haven 1k 等距柱状 HDR（1024×512）。作者 Greg Zaal（原片）、Jarod Guest（天空编辑）。原始 1,435,119 字节，gzip 954,159 字节。性能档和均衡档共用这一张，只做反射 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `public/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky)，Poly Haven 1k 等距柱状 HDR（1024×512）。作者 Greg Zaal（原片）、Jarod Guest（天空编辑）。原始 1,435,119 字节，gzip 954,159 字节。白天三档共用这一张，只做反射。性能档夜景也不换 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
+| `public/hdr/modern_buildings_night_1k.hdr` | [Modern Buildings Night](https://polyhaven.com/a/modern_buildings_night)，Poly Haven 1k 等距柱状 HDR（1024×512）。作者 Greg Zaal。柏林河边夜景。原始 1,655,510 字节，gzip 1,400,337 字节。只在均衡档和高画质切到夜景、并且首帧后再过 200ms 才请求 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 单层视图的房间标签使用本地字体 `public/fonts/NotoSansSC-Regular-subset.woff`（D133 的 Noto Sans SC 2.004 子集，woff，628,356 B，OFL）。许可全文在 `public/fonts/NotoSansCJK-copyright.txt`。总览不请求该字体。走廊人物在 `public/models/people/`，只在均衡档和高画质的单层视图里加载，性能档不请求这些 GLB。模型是 Poly Pizza 上的 CC0（Quaternius）：[Man in Suit](https://poly.pizza/m/mQnGoME1ez)、[Woman Casual](https://poly.pizza/m/jpKRgGDxhk)、[Animated Human](https://poly.pizza/m/c3Ibh9I3udk)。仓库私有，这些 GLB 不单独对外分发。

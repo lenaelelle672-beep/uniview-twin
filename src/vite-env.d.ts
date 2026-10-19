@@ -271,6 +271,12 @@ interface Window {
   __twinCameraRestAt?: number
   __twinCameraMoveAt?: number
   /** D288：仅 keepDrawingBuffer=1 / probe=1 时写入。阴影贴图补烘。labelShownAt 是出齐时刻。 */
+  /** T026：当前赋给 scene.environment 的 HDR。白模或尚未解码时删掉。 */
+  __twinEnv?: {
+    url: string
+    nightMap: boolean
+    intensity: number
+  }
   /** T024：非 perf 档 drei SoftShadows 挂上之后写入，卸载时删掉。 */
   __twinSoftShadows?: {
     samples: number

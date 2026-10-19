@@ -6,3 +6,14 @@ Authors: Greg Zaal (original), Jarod Guest (sky edits)
 Source: Poly Haven, https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky
 License: CC0 1.0 Universal
 https://creativecommons.org/publicdomain/zero/1.0/
+
+Modern Buildings Night
+https://polyhaven.com/a/modern_buildings_night
+
+File: modern_buildings_night_1k.hdr
+Author: Greg Zaal
+Source: Poly Haven, https://polyhaven.com/a/modern_buildings_night
+Direct download: https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/modern_buildings_night_1k.hdr
+License: CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+https://polyhaven.com/license
