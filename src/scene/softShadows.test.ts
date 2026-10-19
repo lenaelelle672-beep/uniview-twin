@@ -142,6 +142,8 @@ describe('SoftShadows 门闩', () => {
     )
     expect(scene).toMatch(/softShadowChunkDue/)
     expect(scene).toMatch(/softShadowChunkOn \?/)
+    expect(scene).toMatch(/SOFT_SHADOW_CHUNK_AFTER_FIRST_MS/)
+    expect(scene).not.toMatch(/__twinFirstFrameAt != null\) setLoopOn\(true\)/)
     expect(scene).not.toMatch(/import \{ BalancedSoftShadows \}/)
     expect(scene).not.toMatch(/@react-three\/drei\/core\/softShadows/)
     expect(helper).not.toMatch(/@react-three\/drei/)

@@ -18,7 +18,7 @@ import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
-import { softShadowChunkDue } from '../scene/softShadows'
+import { SOFT_SHADOW_CHUNK_AFTER_FIRST_MS, softShadowChunkDue } from '../scene/softShadows'
 import { useTwinStore } from '../store/store'
 import { installInvalidateTrace } from '../scene/invalidateLog'
 
@@ -82,7 +82,10 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const [softShadowChunkOn, setSoftShadowChunkOn] = useState(false)
   const [loopOn, setLoopOn] = useState(false)
-  const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
+  const view = useTwinStore((state) => state.view)
+  const exploded = useTwinStore((state) => state.exploded)
+  const selectedFloor = useTwinStore((state) => state.selectedFloor)
+  const openBasement = view === 'floor' && selectedFloor === 'B1'
   const fitRef = useRef<Group>(null)
   const [fitGeneration, setFitGeneration] = useState(0)
   const bumpFit = useCallback(() => setFitGeneration((value) => value + 1), [])
@@ -130,23 +133,34 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   }, [extrasReady, quality])
 
   useEffect(() => {
+    if (view === 'floor' || exploded) setLoopOn(true)
+  }, [exploded, view])
+
+  useEffect(() => {
     let cancelled = false
+    let raf = 0
     const tick = () => {
       if (cancelled) return
-      if (window.__twinFirstFrameAt != null) setLoopOn(true)
+      const first = window.__twinFirstFrameAt
+      // 锁机 cutoff 比首帧宽，首帧后十几毫秒的 DemandLoop 会把
+      // cameraRest / frameSchedule 一起卷进 hardGateFiles。与软阴影同一道门再挂。
+      if (first != null && performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS) {
+        setLoopOn(true)
+      }
       // D195：等 textRuntime 预取 import() 完成，再挂 FacadeSamples / IdlePrewarm。
       // #22 楼层标记走 FloorList，不进这条 prefetch 链。
       if (window.__twinFirstPrefetchDone) {
         requestAnimationFrame(() => {
           if (!cancelled) setPrefetchDone(true)
         })
-        return
+        if (first != null && performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS) return
       }
-      requestAnimationFrame(tick)
+      raf = requestAnimationFrame(tick)
     }
     tick()
     return () => {
       cancelled = true
+      if (raf) cancelAnimationFrame(raf)
     }
   }, [])
 
