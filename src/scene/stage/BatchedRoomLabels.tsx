@@ -6,7 +6,13 @@ import { preloadFloorEntryFont } from './glyphProbe'
 import { clusterTemplates, LABEL_MAX_EMS, type LabelPackState, type LabelPlacementState } from './labelAvoidance'
 import { cameraLookYaw, isDrawnText, measureTextBox, type MeasuredLabelBox } from './labelScreenMeasure'
 import { useTwinStore } from '../../store/store'
-import { ROOM_LABEL_FONT, ROOM_LABEL_OUTLINE_OPACITY, roomLabelColors, type RoomLabel } from './roomLabels'
+import {
+  ROOM_LABEL_FONT,
+  ROOM_LABEL_OUTLINE_BLUR,
+  ROOM_LABEL_OUTLINE_OPACITY,
+  roomLabelColors,
+  type RoomLabel,
+} from './roomLabels'
 import { labelLiftY } from '../../floors/interiorWall'
 import { holdLabelPaint, releaseLabelPaint } from './labelPaintHold'
 
@@ -256,6 +262,7 @@ export function BatchedRoomLabels({
           text.fontSize = fontSize
           text.color = paletteRef.current.color
           text.outlineWidth = outlineWidth
+          text.outlineBlur = ROOM_LABEL_OUTLINE_BLUR
           text.outlineColor = paletteRef.current.outline
           text.anchorX = 'center'
           text.anchorY = 'middle'
@@ -280,6 +287,7 @@ export function BatchedRoomLabels({
           text.fontSize = fontSize
           text.color = paletteRef.current.color
           text.outlineWidth = outlineWidth
+          text.outlineBlur = ROOM_LABEL_OUTLINE_BLUR
           text.outlineColor = paletteRef.current.outline
           text.anchorX = 'center'
           text.anchorY = 'middle'

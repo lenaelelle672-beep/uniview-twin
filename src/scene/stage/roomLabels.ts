@@ -32,6 +32,11 @@ export const ROOM_LABEL_OUTLINE_EM = 0.05
 export const ROOM_LABEL_OUTLINE_MIN = 0.03
 /** 白天描边若再和楼板预混，AgX 会把边抬回楼板亮度。不透明才留得住这圈冷边。 */
 export const ROOM_LABEL_OUTLINE_OPACITY = 1
+/**
+ * T028：描边外缘软晕。troika 百分比相对 fontSize，不是相对 outlineWidth。
+ * 10% 在 16px 标签上约 1.6px 模糊半径，只进 outline pass；字心填充仍走原来的抗锯齿。
+ */
+export const ROOM_LABEL_OUTLINE_BLUR = '10%'
 
 export function roomLabelColors(
   quality: 'perf' | 'balanced' | 'high',

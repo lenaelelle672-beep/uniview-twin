@@ -7,6 +7,8 @@ declare module 'troika-three-text' {
     fontSize: number
     color: ColorRepresentation
     outlineWidth: number
+    /** troika：绝对世界单位，或相对 fontSize 的百分比字符串，例如 `"10%"`。 */
+    outlineBlur?: number | string
     outlineColor: ColorRepresentation
     fillOpacity?: number
     outlineOpacity?: number
