@@ -36,6 +36,34 @@ export function resetBlankSuspense(): void {
   emitBlank()
 }
 
+type AssetProgress = { active: boolean; progress: number }
+
+let assetProgress: AssetProgress = { active: false, progress: 0 }
+const progressListeners = new Set<() => void>()
+
+export function assetProgressSnapshot(): AssetProgress {
+  return assetProgress
+}
+
+export function subscribeAssetProgress(listener: () => void): () => void {
+  progressListeners.add(listener)
+  return () => {
+    progressListeners.delete(listener)
+  }
+}
+
+/** 由首帧后再加载的 useProgress 桥写入。主包不引用 drei Progress。 */
+export function publishAssetProgress(active: boolean, progress: number): void {
+  if (assetProgress.active === active && assetProgress.progress === progress) return
+  assetProgress = { active, progress }
+  for (const listener of progressListeners) listener()
+}
+
+export function resetAssetProgress(): void {
+  assetProgress = { active: false, progress: 0 }
+  for (const listener of progressListeners) listener()
+}
+
 /** 首屏或进层的空白 Suspense。返回 null，不往 three 场景里塞网格。 */
 export function BlankSuspenseFallback() {
   useLayoutEffect(() => retainBlankSuspense(), [])

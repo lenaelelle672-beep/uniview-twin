@@ -11,8 +11,7 @@ import {
   userCameraMove,
   type CameraSnap,
 } from '../../scene/stage/cameraTransition'
-import { retainFrameChannel } from '../../scene/frameSchedule'
-import { beginCameraMove, markCameraRested, watchCameraRest } from '../../scene/stage/cameraRest'
+import type { UserFlight } from '../../scene/stage/cameraMotion'
 import { useTwinStore } from '../../store/store'
 
 const targetScratch = new Vector3()
@@ -121,8 +120,8 @@ export function CameraRig({
   const flight = useRef(0)
   const effectEpoch = useRef(0)
   const prevSnap = useRef<CameraSnap | null>(null)
-  const stopWatch = useRef<(() => void) | null>(null)
-  const motionHold = useRef<(() => void) | null>(null)
+  const flightHold = useRef<UserFlight | null>(null)
+  const pumpRef = useRef(0)
 
   useLayoutEffect(() => {
     const nextSnap: CameraSnap = {
@@ -138,22 +137,24 @@ export function CameraRig({
     const move = userCameraMove({ presented, prev: previous, next: nextSnap })
     const rig = controls.current
 
-    const dropMotion = () => {
-      motionHold.current?.()
-      motionHold.current = null
+    const noteRested = () => {
+      void import('../../scene/stage/cameraRest').then((mod) => {
+        mod.markCameraRested('setLookAt')
+      })
     }
     const stopGlide = () => {
       flight.current += 1
       gliding.current = false
-      stopWatch.current?.()
-      stopWatch.current = null
-      dropMotion()
+      if (pumpRef.current) cancelAnimationFrame(pumpRef.current)
+      pumpRef.current = 0
+      flightHold.current?.cancel()
+      flightHold.current = null
     }
     const releaseOnUnmount = (seen: number) => () => {
       queueMicrotask(() => {
         if (effectEpoch.current !== seen) return
         stopGlide()
-        markCameraRested('setLookAt')
+        noteRested()
       })
     }
 
@@ -174,7 +175,7 @@ export function CameraRig({
     window.__twinRig = rig as unknown as Window['__twinRig']
     if (view === 'floor') {
       rig.setBoundary(undefined)
-      if (interrupted) markCameraRested('setLookAt')
+      if (interrupted) noteRested()
       return undefined
     }
 
@@ -202,37 +203,42 @@ export function CameraRig({
       rig.maxDistance = Math.max(distanceCap.current, startDistance, endDistance)
       rig.maxPolarAngle = Math.PI
       rig.smoothTime = USER_CAMERA_SMOOTH_TIME
-      // 先在绘制前回到起点，再开过渡。fitToBox 仍然用 enableTransition=false 量好终点。
+      // 先在绘制前回到起点。fitToBox 仍然用 enableTransition=false 量好终点。
+      // 续帧模块是异步包，到之前用 rAF 把 demand 接上，避免空档把过渡吃完。
       void rig.setLookAt(start.px, start.py, start.pz, start.tx, start.ty, start.tz, false)
       gliding.current = true
-      beginCameraMove(reason)
-      stopWatch.current?.()
-      stopWatch.current = watchCameraRest(rig, invalidate)
-      dropMotion()
-      // wake 不一定会再来（上一镜若停在 _updatedLastTime）。自己保住 motion，demand 才会把阻尼走完。
-      // 1.5s 的 watchCameraRest 只负责影子停稳，不能在镜头还在滑时停掉 invalidate。
-      motionHold.current = retainFrameChannel('motion')
       watching = true
-      void rig
-        .setLookAt(end.px, end.py, end.pz, end.tx, end.ty, end.tz, true)
-        .then(() => {
+      const pump = () => {
+        if (flight.current !== myFlight) return
+        invalidate()
+        pumpRef.current = requestAnimationFrame(pump)
+      }
+      pumpRef.current = requestAnimationFrame(pump)
+      void import('../../scene/stage/cameraMotion').then((mod) => {
+        if (flight.current !== myFlight) return
+        if (pumpRef.current) cancelAnimationFrame(pumpRef.current)
+        pumpRef.current = 0
+        const held = mod.beginUserCameraFlight({ rig, invalidate, reason })
+        flightHold.current = held
+        void rig.setLookAt(end.px, end.py, end.pz, end.tx, end.ty, end.tz, true).then(() => {
           if (flight.current !== myFlight) return
+          held.settled()
+          if (flightHold.current === held) flightHold.current = null
           gliding.current = false
-          dropMotion()
           rig.minDistance = CAMERA_LIMITS.minDistance
           rig.maxDistance = distanceCap.current
           rig.smoothTime = USER_CAMERA_SMOOTH_TIME
           applyCameraLimits(rig, distanceCap.current)
-          markCameraRested('setLookAt')
           gl.shadowMap.needsUpdate = true
           invalidate()
         })
+      })
     }
 
     if (!cam) {
       const bounds = group ? collapsedBounds(group) : null
       if (!bounds || bounds.isEmpty()) {
-        if (interrupted) markCameraRested('setLookAt')
+        if (interrupted) noteRested()
         return undefined
       }
       // 展开后顶层和屋面抬高 explodeOffset(FLOOR_COUNT - 1, 1)，框顶跟着抬，散开的楼层都进画面。
@@ -276,7 +282,7 @@ export function CameraRig({
         rig.getTarget(endTargetScratch, false)
         launchGlide(poseOf(endPositionScratch, endTargetScratch), move)
       }
-      if (interrupted && !watching) markCameraRested('setLookAt')
+      if (interrupted && !watching) noteRested()
       return watching ? releaseOnUnmount(seen) : undefined
     }
 
@@ -309,7 +315,7 @@ export function CameraRig({
     rig.update(0)
     applyCameraLimits(rig, distanceCap.current)
     rig.update(0)
-    if (interrupted) markCameraRested('setLookAt')
+    if (interrupted) noteRested()
     return undefined
   }, [cam, camera, fitGeneration, fitRef, gl, invalidate, size.height, size.width, spread, view])
 

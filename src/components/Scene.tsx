@@ -116,6 +116,8 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         })
       ) {
         setSoftShadowChunkOn(true)
+        // 过渡续帧包和软阴影同一窗口再拉，避免进 hardGate cutoff。
+        void import('../scene/stage/cameraMotion')
         return
       }
       raf = requestAnimationFrame(tick)

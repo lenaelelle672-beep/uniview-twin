@@ -9,7 +9,6 @@ import {
   preloadEastGrilleHi,
 } from '../../scene/eastGrilleAssets'
 import { grilleMaterial } from '../../scene/materials'
-import { isCameraRested } from '../../scene/stage/cameraRest'
 import { commitShadowBake, shadowBakePending } from '../../scene/stage/shadowBake'
 import { eastGrilleMount } from '../../scene/massing'
 import { installMeshopt } from '../../scene/meshopt'
@@ -53,12 +52,18 @@ function tuneEastGrille(root: Object3D | null) {
   })
 }
 
+function cameraSettled(): boolean {
+  // 不静态引用 cameraRest：那个包会跟格栅一起进首屏 cutoff。
+  // 停稳模块写入同一个 window 标志。
+  return window.__twinCameraRested === true
+}
+
 function bakeGrilleShadow(
   gl: { shadowMap: { autoUpdate: boolean; needsUpdate: boolean; enabled: boolean } },
   reason: string,
 ) {
   // 进层烘烤挂起时不另烘，包含出齐后的 D261 窗。窗关上且没有挂起时，hi 切换和昼夜再补。
-  if (!gl.shadowMap.enabled || !isCameraRested() || shadowBakePending()) return
+  if (!gl.shadowMap.enabled || !cameraSettled() || shadowBakePending()) return
   commitShadowBake(gl, reason, { rested: true, interior: true, deferred: false })
 }
 

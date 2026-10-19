@@ -13,9 +13,10 @@ export const SOFT_SHADOW_MIN_FRAMES = 1
 
 /**
  * d126 hardGate 的 cutoff 在首帧后约 64ms，只晚一帧的请求会时进时出。
- * SoftShadows 分包要等 extrasReady，并且首帧后再过这一截，才开始 import。
+ * 锁机还会把首帧后几百毫秒的请求算进 hardGateFiles。
+ * SoftShadows 与楼层壳同一时刻再 import，躲开这段窗口。
  */
-export const SOFT_SHADOW_CHUNK_AFTER_FIRST_MS = 200
+export const SOFT_SHADOW_CHUNK_AFTER_FIRST_MS = 2600
 
 let mounted = false
 
