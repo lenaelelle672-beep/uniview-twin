@@ -278,6 +278,14 @@ interface Window {
     focus: number
     at: number
   }
+  /** T025：夜景且合成器非 perf 时 Bloom 挂上之后写入，卸载时删掉。 */
+  __twinNightBloom?: {
+    luminanceThreshold: number
+    intensity: number
+    radius: number
+    mipmapBlur: boolean
+    at: number
+  }
   __twinShadowBake?: {
     at: number
     reason: string
