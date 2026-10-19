@@ -673,6 +673,50 @@ button {
   left: 12px;
 }
 
+.asset-load {
+  position: absolute;
+  z-index: 4;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 168px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: rgba(12, 35, 64, 0.82);
+  color: #fff;
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.asset-load-track {
+  width: 160px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+  overflow: hidden;
+}
+
+.asset-load-bar {
+  height: 100%;
+  width: 100%;
+  background: #8ebfff;
+  transform-origin: left center;
+}
+
+.asset-load-bar.is-indeterminate {
+  width: 40%;
+  animation: asset-load-slide 1s ease-in-out infinite;
+}
+
+@keyframes asset-load-slide {
+  0% { transform: translateX(-120%); }
+  100% { transform: translateX(320%); }
+}
+
 .back-button,
 .explode-button {
   position: absolute;

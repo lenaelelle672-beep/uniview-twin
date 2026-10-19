@@ -10,6 +10,7 @@ import { basementPickOutline } from './b1Plan'
 import { useTwinStore } from '../../store/store'
 import type { DeviceStatus } from '../../types'
 import { showCorridorPeople } from './corridor'
+import { BlankSuspenseFallback } from '../assetLoad'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
 import { MONITOR_DISPLAY_COLOR } from './materials'
@@ -163,7 +164,7 @@ export function FloorStage() {
         </Suspense>
       )}
       <BasementPick />
-      <Suspense fallback={null}>
+      <Suspense fallback={<BlankSuspenseFallback />}>
         {spec && spec.level > 0 && (
           <JsonFloorInterior
             spec={spec}

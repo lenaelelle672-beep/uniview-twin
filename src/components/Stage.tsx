@@ -1,6 +1,7 @@
 import { useEffect, useState, type ComponentType } from 'react'
 import { ensurePrefetchStarted, schedulePrefetchAfterFirstFrame } from '../scene/stage/prefetchLazyChunks'
 import { useTwinStore } from '../store/store'
+import { AssetLoadOverlay } from './AssetLoadOverlay'
 import { FloorLeader } from './FloorLeader'
 import { SceneCanvas } from './Scene'
 
@@ -73,6 +74,7 @@ export function Stage() {
         </p>
       )}
       {showBlueprint && BlueprintView ? <BlueprintView /> : <SceneCanvas />}
+      {view !== 'blueprint' && <AssetLoadOverlay />}
       {view === 'building' && <FloorLeader />}
       {view === 'floor' && (
         <button type="button" className="back-button" title="Esc 返回总览" onClick={() => exitFloor()}>

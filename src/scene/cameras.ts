@@ -11,7 +11,8 @@ export interface CameraPose {
  * 塔楼在西北，弧形裙楼连向东南 8F，下沉广场在弧内。
  * `east` 只从地址栏 `?cam=east` 进入，东面朝西，用来对照实景。
  * 总览姿态只作为 fitToBox 的起始方向，最终取景由 CameraRig 用 Buildings 组的 Box3 框定。
- * 竖向视场角。打开 `?cam=` 时直接落到该姿态，不播放飞行动画。
+ * 竖向视场角。地址栏初次打开 `?cam=` 时直接落到该姿态。
+ * 总览里再切换机位由 CameraRig 做过渡，不在这里播动画。
  */
 export const CAMERA_POSES: Record<CameraId | 'overview', CameraPose> = {
   overview: { position: [24, 70, 210], target: [0, 36, 48], fov: 33 },
