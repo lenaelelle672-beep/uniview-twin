@@ -129,7 +129,7 @@ describe('SoftShadows 门闩', () => {
     expect(chunk.includes('if ( frustumTest ) {')).toBe(true)
   })
 
-  it('Scene 只在非 perf 挂 SoftShadows，不进场地门，也不开 Bloom', () => {
+  it('Scene 只在非 perf 挂 SoftShadows，不进场地门', () => {
     const scene = readFileSync(join(here, '../components/Scene.tsx'), 'utf8')
     const gate = readFileSync(join(here, '../components/scene/BalancedSoftShadows.tsx'), 'utf8')
     const fx = readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8')
@@ -154,7 +154,8 @@ describe('SoftShadows 门闩', () => {
     expect(gate).not.toMatch(/groundTextures|FLOOR_SHELL_AFTER_FIRST_MS/)
     expect(gate).not.toMatch(/Bloom|SelectiveBloom|postprocessing/)
     expect(scene).not.toMatch(/Bloom|SelectiveBloom/)
-    expect(fx).not.toMatch(/Bloom|SelectiveBloom/)
+    // T025 的夜景 Bloom 在 balancedFx，不进 SoftShadows。
+    expect(fx).not.toMatch(/SelectiveBloom/)
     expect(ground).toMatch(/FLOOR_SHELL_AFTER_FIRST_MS/)
     expect(pkg).toMatch(/"@react-three\/drei": "10\.7\.9"/)
     expect(pkg).not.toMatch(/postprocessing": "\^/)

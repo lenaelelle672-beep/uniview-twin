@@ -69,6 +69,7 @@ function DayExposure({ mode }: { mode: SurfaceMode }) {
 
 function SceneBody({ mode }: { mode: SurfaceMode }) {
   const quality = useTwinStore((state) => state.quality)
+  const dayNight = useTwinStore((state) => state.dayNight)
   const model = mode === 'model'
   const night = mode === 'night'
   const background = model ? '#000000' : night ? '#07111c' : '#bdd2e6'
@@ -220,7 +221,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       )}
       {keepFx && (
         <Suspense fallback={null}>
-          <PostFX active={quality !== 'perf'} onLive={() => setComposerLive(true)} />
+          <PostFX active={quality !== 'perf'} night={dayNight === 'night'} onLive={() => setComposerLive(true)} />
         </Suspense>
       )}
     </>

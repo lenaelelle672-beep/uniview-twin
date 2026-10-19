@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber'
-import { EffectComposer, EffectComposerContext, N8AO, ToneMapping } from '@react-three/postprocessing'
-import { Pass, ToneMappingMode } from 'postprocessing'
+import { Bloom, EffectComposer, EffectComposerContext, N8AO, ToneMapping } from '@react-three/postprocessing'
+import { BlendFunction, Pass, ToneMappingMode } from 'postprocessing'
 import { use, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   AgXToneMapping,
@@ -139,6 +139,50 @@ function MonitorAfterTone() {
   const camera = useThree((state) => state.camera)
   const pass = useMemo(() => new MonitorAfterTonePass(scene, camera), [camera, scene])
   return <primitive object={pass} />
+}
+
+/**
+ * postprocessing 6.39.5 BloomEffect 的社区默认。
+ * 阈值从默认 1 抬到 1.2：夜景灯带 emissive 最高约 2.4，幕墙约 0.62，
+ * 只让灯带和高自发光进泛光。
+ * r3pp 3.1.3 的 `<Bloom>` 省略 blendFunction 时会改成 ADD；这里写明 SCREEN，沿用 BloomEffect 自己的默认。
+ */
+const NIGHT_BLOOM_LUMINANCE_THRESHOLD = 1.2
+const NIGHT_BLOOM_LUMINANCE_SMOOTHING = 0.03
+const NIGHT_BLOOM_INTENSITY = 1
+const NIGHT_BLOOM_RADIUS = 0.85
+const NIGHT_BLOOM_MIPMAP_BLUR = true
+
+function publishNightBloom(): void {
+  window.__twinNightBloom = {
+    luminanceThreshold: NIGHT_BLOOM_LUMINANCE_THRESHOLD,
+    intensity: NIGHT_BLOOM_INTENSITY,
+    radius: NIGHT_BLOOM_RADIUS,
+    mipmapBlur: NIGHT_BLOOM_MIPMAP_BLUR,
+    at: performance.now(),
+  }
+}
+
+function NightBloom() {
+  const invalidate = useThree((state) => state.invalidate)
+  useLayoutEffect(() => {
+    publishNightBloom()
+    invalidate()
+    return () => {
+      delete window.__twinNightBloom
+      invalidate()
+    }
+  }, [invalidate])
+  return (
+    <Bloom
+      blendFunction={BlendFunction.SCREEN}
+      luminanceThreshold={NIGHT_BLOOM_LUMINANCE_THRESHOLD}
+      luminanceSmoothing={NIGHT_BLOOM_LUMINANCE_SMOOTHING}
+      mipmapBlur={NIGHT_BLOOM_MIPMAP_BLUR}
+      intensity={NIGHT_BLOOM_INTENSITY}
+      radius={NIGHT_BLOOM_RADIUS}
+    />
+  )
 }
 
 function BalancedAO() {
@@ -346,13 +390,22 @@ export function ContactGround({ active = true }: { active?: boolean }) {
  * D119：告警屏在 AgX 之后画进单采样、带场景深度的离屏 FBO，再用全屏四边形写回合成器。
  * 深度由 MonitorAfterTone 在离屏 FBO 里只重画挡住告警屏的实体，不再 blit 合成器深度。
  */
-export function PostFX({ onLive, active = true }: { onLive?: () => void; active?: boolean }) {
+export function PostFX({
+  onLive,
+  active = true,
+  night = false,
+}: {
+  onLive?: () => void
+  active?: boolean
+  night?: boolean
+}) {
   return (
     <>
       <ToneMappingBridge active={active} />
       <EffectComposer enabled={active} multisampling={0} enableNormalPass={false} stencilBuffer={false} renderPriority={1}>
         <ComposerBudget active={active} />
         <BalancedAO />
+        {active && night ? <NightBloom /> : null}
         <ToneMapping mode={ToneMappingMode.AGX} />
         <MonitorAfterTone />
       </EffectComposer>
