@@ -156,7 +156,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       <color attach="background" args={[background]} />
       <EnablePickVolumeRaycast />
       <DayExposure mode={mode} />
-      <LocalEnvironment enabled={!model} night={night} />
+      <LocalEnvironment enabled={!model} night={night} quality={quality} />
       <hemisphereLight
         args={[
           model ? '#ffffff' : night ? '#243e68' : '#c5daf4',
