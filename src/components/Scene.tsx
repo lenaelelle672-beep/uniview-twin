@@ -61,8 +61,9 @@ function readGpuRenderer(gl: { getContext: () => WebGLRenderingContext | WebGL2R
 function DayExposure({ mode }: { mode: SurfaceMode }) {
   const gl = useThree((state) => state.gl)
   useLayoutEffect(() => {
-    // AgX 中灰比 ACES 更沉，白天抬曝光，单层和 B1 才不会整层变暗。夜间和白模保持 1。
-    gl.toneMappingExposure = mode === 'day' ? 2 : 1
+    // AgX 中灰比 ACES 更沉，白天抬曝光，单层和 B1 才不会整层变暗。
+    // T030：2 → 1.95，略减曝，总览更透、不洗白。夜间和白模保持 1。
+    gl.toneMappingExposure = mode === 'day' ? 1.95 : 1
   }, [gl, mode])
   return null
 }
