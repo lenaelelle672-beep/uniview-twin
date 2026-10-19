@@ -206,7 +206,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     curtainMaterial.roughness = 0.2
     curtainMaterial.envMapIntensity = 0.42
     curtainMaterial.emissive.set('#1b4f88')
-    curtainMaterial.emissiveIntensity = 0.62
+    curtainMaterial.emissiveIntensity = 0.68
     grid.set('#d7e7f6')
     strength.value = 0.5
     grilleMaterial.color.set('#8d949c')
