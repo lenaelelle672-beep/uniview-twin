@@ -2,6 +2,7 @@ import { useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { DirectionalLight, WebGLRenderTarget, type Camera, type Object3D, type Scene, type WebGLRenderer } from 'three'
 import { supportsParallelShaderCompile } from '../../scene/glProbe'
+import { assignBalancedShadowType } from '../../scene/softShadows'
 import type { QualityTier } from '../../types'
 
 const FREEZE_ATTR = 'data-twin-freeze'
@@ -59,7 +60,8 @@ function waitFrames(count: number): Promise<void> {
 
 function enableBalancedShadows(gl: WebGLRenderer, scene: Object3D) {
   // three 0.186：PCFShadowMap=1。R3F 在 shadows=false 时会写成已删除的 PCFSoft。
-  gl.shadowMap.type = 1
+  // PCSS 挂着时保持 BasicShadowMap，避免把采样器写回 PCF。
+  assignBalancedShadowType(gl.shadowMap)
   gl.shadowMap.enabled = true
   gl.shadowMap.needsUpdate = true
   scene.traverse((object) => {
@@ -83,7 +85,7 @@ function renderShadowWarmup(gl: WebGLRenderer, scene: Scene, camera: Camera) {
   const previous = gl.getRenderTarget()
   const previousAutoClear = gl.autoClear
   gl.autoClear = true
-  gl.shadowMap.type = 1
+  assignBalancedShadowType(gl.shadowMap)
   gl.shadowMap.enabled = true
   gl.shadowMap.needsUpdate = true
   gl.setRenderTarget(target)

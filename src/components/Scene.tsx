@@ -17,10 +17,14 @@ import { CAMERA_POSES } from '../scene/cameras'
 import { applySurfaceMode, type SurfaceMode } from '../scene/materials'
 import { qualityDprRange } from '../scene/quality'
 import { EnablePickVolumeRaycast } from '../scene/pickLayers'
+import { softShadowChunkDue } from '../scene/softShadows'
 import { useTwinStore } from '../store/store'
 import { installInvalidateTrace } from '../scene/invalidateLog'
 
 const ContactGround = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.ContactGround })))
+const BalancedSoftShadows = lazy(() =>
+  import('./scene/BalancedSoftShadows').then((mod) => ({ default: mod.BalancedSoftShadows })),
+)
 const PostFX = lazy(() => import('./scene/postfx/balancedFx').then((mod) => ({ default: mod.PostFX })))
 const FacadeSamples = lazy(() =>
   import('../scene/stage/MonitorSamples').then((mod) => ({ default: mod.FacadeSamples })),
@@ -73,6 +77,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const [keepFx, setKeepFx] = useState(false)
   const [prefetchDone, setPrefetchDone] = useState(false)
   const extrasReady = useBalancedWarmup(quality, composerLive)
+  const [softShadowChunkOn, setSoftShadowChunkOn] = useState(false)
   const [loopOn, setLoopOn] = useState(false)
   const openBasement = useTwinStore((state) => state.view === 'floor' && state.selectedFloor === 'B1')
   const fitRef = useRef<Group>(null)
@@ -89,6 +94,35 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   useLayoutEffect(() => {
     if (extrasReady) setKeepFx(true)
   }, [extrasReady])
+
+  useEffect(() => {
+    if (quality === 'perf' || !extrasReady) {
+      setSoftShadowChunkOn(false)
+      return
+    }
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      if (
+        softShadowChunkDue({
+          quality,
+          extrasReady: true,
+          firstFrameAt: window.__twinFirstFrameAt,
+          now: performance.now(),
+        })
+      ) {
+        setSoftShadowChunkOn(true)
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [extrasReady, quality])
 
   useEffect(() => {
     let cancelled = false
@@ -145,6 +179,11 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         shadow-camera-top={220}
         shadow-camera-bottom={-220}
       />
+      {softShadowChunkOn ? (
+        <Suspense fallback={null}>
+          <BalancedSoftShadows />
+        </Suspense>
+      ) : null}
       <CameraRig fitRef={fitRef} fitGeneration={fitGeneration} />
       {/* D124 / D126：EastGrille 与 RenderProbe 同边界；__twinReady 等格栅 chunk+lo GLB，以及 Suspense 外 HDR 解码和 PMREM。 */}
       <Suspense fallback={null}>

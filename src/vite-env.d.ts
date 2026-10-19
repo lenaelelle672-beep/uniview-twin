@@ -271,6 +271,13 @@ interface Window {
   __twinCameraRestAt?: number
   __twinCameraMoveAt?: number
   /** D288：仅 keepDrawingBuffer=1 / probe=1 时写入。阴影贴图补烘。labelShownAt 是出齐时刻。 */
+  /** T024：非 perf 档 drei SoftShadows 挂上之后写入，卸载时删掉。 */
+  __twinSoftShadows?: {
+    samples: number
+    size: number
+    focus: number
+    at: number
+  }
   __twinShadowBake?: {
     at: number
     reason: string
