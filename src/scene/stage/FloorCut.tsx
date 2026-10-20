@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Material, Plane, Vector3 } from 'three'
 import {
@@ -14,6 +14,8 @@ import {
 import { REFLECTIVE_ENV_MATERIALS } from '../../components/scene/LocalEnvironment'
 import { useTwinStore } from '../../store/store'
 import { cutElevation } from './cut'
+
+const FloorStencilCap = lazy(() => import('./FloorStencilCap').then((mod) => ({ default: mod.FloorStencilCap })))
 
 const SHELL_MATERIALS = [
   curtainMaterial,
@@ -74,6 +76,8 @@ export function FloorCut() {
   const plane = useMemo(() => new Plane(new Vector3(0, -1, 0), 0), [])
   const planes = useMemo(() => [plane], [plane])
   const enabled = useRef(false)
+  const cutNow = cutElevation(view, selectedFloor)
+  if (cutNow != null) plane.constant = cutNow
 
   useLayoutEffect(() => {
     const cut = cutElevation(view, selectedFloor)
@@ -115,5 +119,10 @@ export function FloorCut() {
     applyEastGrilleCut(scene.getObjectByName('EastGrille'), planes, true)
   })
 
-  return null
+  if (cutNow == null) return null
+  return (
+    <Suspense fallback={null}>
+      <FloorStencilCap plane={plane} />
+    </Suspense>
+  )
 }
