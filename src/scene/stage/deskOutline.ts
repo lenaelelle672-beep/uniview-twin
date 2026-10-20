@@ -33,6 +33,38 @@ export interface DeskOutlineShell {
   pose: DeskOutlinePose
 }
 
+/**
+ * 进层后的多工位描边封顶。
+ * 方案区间是 8～12。取 12：搜索列表本身最多 10 条，8 会在告警稍多时把搜索挤没；
+ * 12 仍把 draw call 增量关在固定上界里。
+ */
+export const MULTI_OUTLINE_CAP = 12
+
+/** 与状态圆标三角红一致，和聚焦青 `#3df0ff` 分开。 */
+export const ALARM_OUTLINE_COLOR = '#ff4d4f'
+
+/**
+ * 搜索命中的次级色。
+ * 不沿用告警红，也不用聚焦青，进层后两种多描边能分开看。
+ */
+export const SEARCH_OUTLINE_COLOR = '#faad14'
+
+/** 与 SearchBox 当前列表的 limit 一致。多出来的命中不描。 */
+export const SEARCH_OUTLINE_HIT_LIMIT = 10
+
+export interface OutlineSearchHit {
+  deskId: string
+  floorId: string
+}
+
+export interface MultiOutlineShell {
+  name: 'AlarmOutline' | 'SearchOutline'
+  deskId: string
+  geometry: BufferGeometry
+  pose: DeskOutlinePose
+  color: string
+}
+
 export function deskOutlinePose(floorId: string, focusedDeskId: string | null): DeskOutlinePose | null {
   if (!focusedDeskId) return null
   const target = resolveWorkstationRef(focusedDeskId)
@@ -66,4 +98,73 @@ export function focusedOutlineShells(
   const device = deviceOutlinePose(floorId, focusedDeviceId, devices)
   if (device) shells.push({ name: 'DeviceOutline', geometry: monitorGeometry, pose: device })
   return shells
+}
+
+/**
+ * 本层告警工位，再接当前搜索命中。
+ * 工位状态跟电脑走（圆标 / 蓝图同一套）。打印机、摄像头没有可挂网格，不进列表。
+ * 正在聚焦的工位留给青色 DeskOutline，这里跳过，避免两套壳叠在同一张桌面上。
+ * 告警先占名额，搜索用剩下的，一共不超过 cap。
+ */
+export function multiOutlineShells(
+  floorId: string,
+  devices: readonly Device[],
+  searchHits: readonly OutlineSearchHit[],
+  focusedDeskId: string | null,
+  cap = MULTI_OUTLINE_CAP,
+): MultiOutlineShell[] {
+  const focused = focusedDeskOnFloor(floorId, focusedDeskId)
+  const alarms = alarmDeskIds(floorId, devices)
+  const alarmSet = new Set(alarms)
+  const searches = searchDeskIds(floorId, searchHits, alarmSet)
+  const shells: MultiOutlineShell[] = []
+  const push = (deskId: string, role: 'alarm' | 'search') => {
+    if (shells.length >= cap || deskId === focused) return
+    const pose = deskOutlinePose(floorId, deskId)
+    if (!pose) return
+    shells.push({
+      name: role === 'alarm' ? 'AlarmOutline' : 'SearchOutline',
+      deskId,
+      geometry: deskGeometry,
+      pose,
+      color: role === 'alarm' ? ALARM_OUTLINE_COLOR : SEARCH_OUTLINE_COLOR,
+    })
+  }
+  for (const deskId of alarms) push(deskId, 'alarm')
+  for (const deskId of searches) push(deskId, 'search')
+  return shells
+}
+
+function focusedDeskOnFloor(floorId: string, focusedDeskId: string | null): string | null {
+  if (!focusedDeskId) return null
+  const target = resolveWorkstationRef(focusedDeskId)
+  if (!target || target.floorId !== floorId) return null
+  if (!deskOutlinePose(floorId, target.deskId)) return null
+  return target.deskId
+}
+
+/** 只认本层电脑告警。同一工位多条记录只留一次，按工位号稳定排序。 */
+function alarmDeskIds(floorId: string, devices: readonly Device[]): string[] {
+  const ids = new Set<string>()
+  for (const device of devices) {
+    if (device.floorId !== floorId || device.type !== 'pc' || device.status !== 'alarm' || !device.deskId) continue
+    ids.add(device.deskId)
+  }
+  return [...ids].sort((left, right) => left.localeCompare(right, 'en', { numeric: true }))
+}
+
+/** 保持搜索列表的原顺序。已经算作告警的工位不再占第二个名额。 */
+function searchDeskIds(
+  floorId: string,
+  searchHits: readonly OutlineSearchHit[],
+  blocked: ReadonlySet<string>,
+): string[] {
+  const ids: string[] = []
+  const seen = new Set<string>()
+  for (const hit of searchHits) {
+    if (hit.floorId !== floorId || blocked.has(hit.deskId) || seen.has(hit.deskId)) continue
+    seen.add(hit.deskId)
+    ids.push(hit.deskId)
+  }
+  return ids
 }

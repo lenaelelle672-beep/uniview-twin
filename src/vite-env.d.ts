@@ -509,6 +509,22 @@ interface Window {
   __twinSlab?: TwinSlabMetrics
   __twinLocate?: TwinLocateMetrics
   __twinHighlight?: string
+  /** T034/T036：当前聚焦工位的青色描边。没有聚焦壳时删掉。 */
+  __twinDeskOutline?: {
+    floorId: string
+    color: string
+    names: Array<'DeskOutline' | 'DeviceOutline'>
+  }
+  /** T036：进层后的告警 / 搜索多描边。卸载或没有载体时删掉。 */
+  __twinMultiOutlines?: {
+    floorId: string
+    cap: number
+    count: number
+    alarmDeskIds: string[]
+    searchDeskIds: string[]
+    alarmColor: string
+    searchColor: string
+  }
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
   __twinMonitorBoxes?: TwinMonitorBoxes

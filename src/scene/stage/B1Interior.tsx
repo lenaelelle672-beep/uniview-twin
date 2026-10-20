@@ -51,7 +51,7 @@ import {
   woodMaterial,
 } from './materials'
 import { DeskFlash } from './DeskFlash'
-import { FocusedDeskOutlines } from './DeskOutline'
+import { FloorMultiOutlines, FocusedDeskOutlines } from './DeskOutline'
 import { FloorDecor } from './lazyFloorDecor'
 import { ZoneHeat } from './lazyZoneHeat'
 import { basementRoomLabels } from './roomLabels'
@@ -116,6 +116,7 @@ export function B1Interior({ slots, colors, devices }: { slots: Slot[]; colors: 
       </group>
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
+      <FloorMultiOutlines floorId="B1" />
       <FocusedDeskOutlines floorId="B1" />
       <DeskFlash floorId="B1" />
       <FloorDecor floorId="B1" devices={devices} labels={basementRoomLabels()} />
