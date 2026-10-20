@@ -1,11 +1,21 @@
 import { useLayoutEffect, useRef } from 'react'
 import { Color, InstancedMesh, Material, Object3D, BufferGeometry } from 'three'
 import { ALARM_MARKER_ORDER, MONITOR_LAYER } from '../overlayOrder'
-import { chairMaterial, deskMaterial, monitorMaterial } from './materials'
+import { MONITOR_DISPLAY_COLOR, chairMaterial, deskMaterial, monitorMaterial } from './materials'
 import type { Slot } from './layout'
 import { deskChairGeometry, deskGeometry, monitorGeometry } from './geometry'
 
 const dummy = new Object3D()
+
+/**
+ * 空数组也是 truthy。`colors[index] ?? colors[0]` 会把 undefined 交给 setColorAt，three 再读 toArray。
+ * 没传颜色（桌、椅）保持不写。空表落到离线色，这次 setColorAt 会建好 instanceColor。
+ */
+export function instanceColorAt(colors: Color[] | undefined, index: number): Color | null {
+  if (!colors) return null
+  if (colors.length === 0) return MONITOR_DISPLAY_COLOR.offline
+  return colors[index] ?? colors[0] ?? null
+}
 
 export function InstancedSlots({
   name,
@@ -37,7 +47,8 @@ export function InstancedSlots({
       dummy.scale.set(slot.sx ?? 1, slot.sy ?? 1, slot.sz ?? 1)
       dummy.updateMatrix()
       mesh.setMatrixAt(index, dummy.matrix)
-      if (colors) mesh.setColorAt(index, colors[index] ?? colors[0])
+      const color = instanceColorAt(colors, index)
+      if (color) mesh.setColorAt(index, color)
     })
     mesh.count = slots.length
     mesh.instanceMatrix.needsUpdate = true
