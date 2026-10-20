@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { createMockData } from '../../data/mockData'
 import { hydrateFloorFromDisk } from '../../floors/hydrateForTests'
 import type { Device } from '../../types'
 import { DEPTH_PROXY_LAYER, MONITOR_LAYER } from '../overlayOrder'
@@ -9,12 +10,17 @@ import { PICK_VOLUME_LAYER } from '../pickLayers'
 import { deskGeometry, monitorGeometry } from './geometry'
 import { workstationPosition } from './workstationPosition'
 import {
+  ALARM_OUTLINE_COLOR,
   DESK_OUTLINE_COLOR,
   DESK_OUTLINE_THICKNESS,
+  MULTI_OUTLINE_CAP,
   OUTLINE_CARRIER_LAYER,
+  SEARCH_OUTLINE_COLOR,
+  SEARCH_OUTLINE_HIT_LIMIT,
   deskOutlinePose,
   deviceOutlinePose,
   focusedOutlineShells,
+  multiOutlineShells,
 } from './deskOutline'
 
 hydrateFloorFromDisk('F12')
@@ -105,9 +111,11 @@ describe('聚焦工位 Outlines', () => {
     for (const file of ['../../floors/JsonFloorInterior.tsx', 'B1Interior.tsx', 'TowerInterior.tsx']) {
       const source = read(file)
       const desks = source.indexOf('<Workstations')
+      const multi = source.indexOf('<FloorMultiOutlines')
       const outlines = source.indexOf('<FocusedDeskOutlines')
       expect(desks).toBeGreaterThan(-1)
-      expect(outlines).toBeGreaterThan(desks)
+      expect(multi).toBeGreaterThan(desks)
+      expect(outlines).toBeGreaterThan(multi)
     }
     const flash = read('DeskFlash.tsx')
     expect(flash).toMatch(/const FLASH_MS = 3000/)
@@ -120,5 +128,131 @@ describe('聚焦工位 Outlines', () => {
     expect(leader).not.toMatch(/Outlines/)
     const pkg = readFileSync(join(here, '../../../package.json'), 'utf8')
     expect(pkg).toMatch(/"@react-three\/drei": "10\.7\.9"/)
+  })
+})
+
+describe('进层告警和搜索多描边', () => {
+  it('封顶 12，告警红和搜索琥珀都避开聚焦青', () => {
+    expect(MULTI_OUTLINE_CAP).toBe(12)
+    expect(SEARCH_OUTLINE_HIT_LIMIT).toBe(10)
+    expect(ALARM_OUTLINE_COLOR).toBe('#ff4d4f')
+    expect(DESK_OUTLINE_COLOR).toBe('#3df0ff')
+    expect(SEARCH_OUTLINE_COLOR).toBe('#faad14')
+    expect(new Set([ALARM_OUTLINE_COLOR, DESK_OUTLINE_COLOR, SEARCH_OUTLINE_COLOR]).size).toBe(3)
+  })
+
+  it('只描本层电脑告警，打印机摄像头和电话单独告警不造网格', () => {
+    const devices = [
+      device({ id: 'F12-2-PC', type: 'pc', deskId: 'F12-2', status: 'alarm' }),
+      device({ id: 'F12-2-PC-dup', type: 'pc', deskId: 'F12-2', status: 'alarm' }),
+      device({ id: 'F12-10-PC', type: 'pc', deskId: 'F12-10', status: 'alarm' }),
+      device({ id: 'F12-10-PH', type: 'phone', deskId: 'F12-10', status: 'alarm' }),
+      device({ id: 'F11-1-PC', type: 'pc', deskId: 'F11-1', floorId: 'F11', status: 'alarm' }),
+      device({ id: 'F12-4-PC', type: 'pc', deskId: 'F12-4', status: 'online' }),
+      device({ id: 'F12-4-PH', type: 'phone', deskId: 'F12-4', status: 'alarm' }),
+      device({ id: 'F12-PR1', type: 'printer', status: 'alarm' }),
+      device({ id: 'F12-CAM', type: 'camera', deskId: 'F12-1', status: 'alarm' }),
+      device({ id: 'F12-missing-PC', type: 'pc', deskId: 'F12-9999', status: 'alarm' }),
+    ]
+    const shells = multiOutlineShells('F12', devices, [], null)
+    expect(shells.map((shell) => shell.deskId)).toEqual(['F12-2', 'F12-10'])
+    expect(shells.every((shell) => shell.name === 'AlarmOutline' && shell.geometry === deskGeometry)).toBe(true)
+    expect(shells.every((shell) => shell.color === ALARM_OUTLINE_COLOR)).toBe(true)
+    expect(multiOutlineShells('F12', [], [], null)).toEqual([])
+  })
+
+  it('搜索命中接在告警后面，共用封顶；清空搜索就没有搜索壳', () => {
+    const devices = Array.from({ length: 11 }, (_, index) =>
+      device({
+        id: `F12-${index + 1}-PC`,
+        type: 'pc',
+        deskId: `F12-${index + 1}`,
+        status: 'alarm',
+      }),
+    )
+    const hits = [
+      { deskId: 'F12-1', floorId: 'F12' },
+      { deskId: 'F12-40', floorId: 'F12' },
+      { deskId: 'F12-30', floorId: 'F12' },
+      { deskId: 'F12-30', floorId: 'F12' },
+      { deskId: 'F11-3', floorId: 'F11' },
+      { deskId: 'F12-9999', floorId: 'F12' },
+    ]
+    const mixed = multiOutlineShells('F12', devices, hits, null)
+    expect(mixed).toHaveLength(MULTI_OUTLINE_CAP)
+    expect(mixed.filter((shell) => shell.name === 'AlarmOutline')).toHaveLength(11)
+    expect(mixed.filter((shell) => shell.name === 'SearchOutline').map((shell) => shell.deskId)).toEqual(['F12-40'])
+    expect(mixed.at(-1)?.color).toBe(SEARCH_OUTLINE_COLOR)
+
+    const searchOnly = multiOutlineShells(
+      'F12',
+      devices.map((item) => ({ ...item, status: 'online' as const })),
+      hits,
+      null,
+    )
+    expect(searchOnly.map((shell) => [shell.deskId, shell.name])).toEqual([
+      ['F12-1', 'SearchOutline'],
+      ['F12-40', 'SearchOutline'],
+      ['F12-30', 'SearchOutline'],
+    ])
+    expect(multiOutlineShells('F12', devices, [], null).every((shell) => shell.name === 'AlarmOutline')).toBe(true)
+  })
+
+  it('超过 12 个告警时搜索让位，聚焦工位不占多描边名额', () => {
+    const devices = Array.from({ length: 14 }, (_, index) =>
+      device({
+        id: `F12-${index + 1}-PC`,
+        type: 'pc',
+        deskId: `F12-${index + 1}`,
+        status: 'alarm' as const,
+      }),
+    )
+    const capped = multiOutlineShells('F12', devices, [{ deskId: 'F12-40', floorId: 'F12' }], 'F12-2')
+    expect(capped).toHaveLength(MULTI_OUTLINE_CAP)
+    expect(capped.map((shell) => shell.deskId)).not.toContain('F12-2')
+    expect(capped.map((shell) => shell.deskId)).not.toContain('F12-40')
+    expect(capped.every((shell) => shell.name === 'AlarmOutline')).toBe(true)
+    expect(capped.map((shell) => shell.deskId)).toContain('F12-13')
+    expect(capped.map((shell) => shell.deskId)).not.toContain('F12-14')
+
+    const focus = focusedOutlineShells('F12', 'F12-2', 'F12-2-PC', devices)
+    expect(focus.map((shell) => shell.name)).toEqual(['DeskOutline', 'DeviceOutline'])
+    expect(multiOutlineShells('F12', devices.slice(0, 1), [], 'F12-1')).toEqual([])
+  })
+
+  it('样例楼层的告警工位落在封顶内，而且都是本层电脑', () => {
+    const data = createMockData()
+    const shells = multiOutlineShells('F12', data.devices, [], null)
+    expect(shells.length).toBeGreaterThan(0)
+    expect(shells.length).toBeLessThanOrEqual(MULTI_OUTLINE_CAP)
+    for (const shell of shells) {
+      const pc = data.devices.find((item) => item.deskId === shell.deskId && item.type === 'pc')
+      expect(pc?.floorId).toBe('F12')
+      expect(pc?.status).toBe('alarm')
+      expect(shell.geometry).toBe(deskGeometry)
+    }
+  })
+
+  it('多描边复用可挂 mesh 和 invalidate，不挂实例父级', () => {
+    const source = read('DeskOutline.tsx')
+    expect(source).toMatch(/function FloorMultiOutlines/)
+    expect(source).toMatch(/searchWorkstations\(\{ desks, people \}, searchQuery, SEARCH_OUTLINE_HIT_LIMIT\)/)
+    expect(source).toMatch(/multiOutlineShells\(/)
+    expect(source).toMatch(/name="MultiOutlines"/)
+    expect(source).toMatch(/color=\{shell\.color\}/)
+    expect(source).toMatch(/delete window\.__twinMultiOutlines/)
+    expect(source).toMatch(/delete window\.__twinDeskOutline/)
+    expect(source).toMatch(/<Outlines/)
+    expect(source).toMatch(/screenspace/)
+    expect(source).toMatch(/invalidate\(\)/)
+    expect(source).not.toMatch(/<instancedMesh/)
+    expect(source).toMatch(/WorkstationDesks \/ WorkstationMonitors 是 InstancedMesh/)
+    expect(source).not.toMatch(/<WorkstationDesks|<WorkstationMonitors/)
+    expect(source).not.toMatch(/OutlinePass|@react-three\/postprocessing|Vignette/)
+    expect(source).not.toMatch(/softShadows|DemandLoop|cameraRest|frameSchedule|balancedFx/)
+    const logic = read('deskOutline.ts')
+    expect(logic).not.toMatch(/softShadows|DemandLoop|cameraRest|frameSchedule|balancedFx|OutlinePass/)
+    expect(logic).toMatch(/geometry: deskGeometry/)
+    expect(logic).toMatch(/geometry: monitorGeometry/)
   })
 })

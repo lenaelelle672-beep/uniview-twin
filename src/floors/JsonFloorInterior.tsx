@@ -10,7 +10,7 @@ import type { Point, Slot } from '../scene/stage/layout'
 import { columnMaterial, coreWallMaterial, meetingGlassMaterial, slabMaterial, woodMaterial } from '../scene/stage/materials'
 import { Ceiling } from '../scene/stage/Ceiling'
 import { DeskFlash } from '../scene/stage/DeskFlash'
-import { FocusedDeskOutlines } from '../scene/stage/DeskOutline'
+import { FloorMultiOutlines, FocusedDeskOutlines } from '../scene/stage/DeskOutline'
 import { useAfterInteriorPaint, useAfterLabelWindow } from '../scene/stage/floorExtrasGate'
 import { FloorHeavy, FloorLabels } from '../scene/stage/lazyFloorDecor'
 import { ZoneHeat } from '../scene/stage/lazyZoneHeat'
@@ -222,6 +222,7 @@ function JsonFloorReady({
         castShadow={false}
       />
       <Workstations slots={slots} colors={colors} />
+      <FloorMultiOutlines floorId={spec.id} />
       <FocusedDeskOutlines floorId={spec.id} />
       <InstancedSlots name="OfficeDesks" geometry={officeDeskGeometry} material={woodMaterial} slots={officeSlots} />
       {showPeople ? <MonitorDepthProxies /> : null}
