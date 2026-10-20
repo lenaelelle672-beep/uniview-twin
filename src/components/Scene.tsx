@@ -48,6 +48,8 @@ const CANVAS_GL = {
   alpha: false,
   preserveDrawingBuffer: KEEP_DRAWING_BUFFER,
   toneMapping: AgXToneMapping,
+  // T037：剖切封盖要模板缓冲。只加这一项，其余 gl 参数不动。
+  stencil: true,
 }
 
 function readGpuRenderer(gl: { getContext: () => WebGLRenderingContext | WebGL2RenderingContext }) {

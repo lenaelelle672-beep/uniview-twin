@@ -539,6 +539,7 @@ interface Window {
   __twinBlitSites?: ReadonlyArray<{ file: string; fn: string; dest: string }>
   __twinComposerLive?: boolean
   __twinComposerInput?: import('three').WebGLRenderTarget | null
+  __twinStencilCap?: { shells: number; at: number }
   __twinProgramSnaps?: Record<string, Array<{ name: string; cacheKey: string }>>
   __twinSnapPrograms?: (label: string) => Array<{ name: string; cacheKey: string }>
   __twinPrewarmed?: boolean
