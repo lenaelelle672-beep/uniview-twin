@@ -380,6 +380,8 @@ function PrebuiltFloorInterior({
     >
       <primitive object={prebuilt.content} dispose={null} />
       <ZoneHeat floorId={spec.id} />
+      <FloorMultiOutlines floorId={spec.id} />
+      <FocusedDeskOutlines floorId={spec.id} />
       {showPeople ? <MonitorDepthProxies /> : null}
       <StagedFloorExtras
         floorId={spec.id}

@@ -129,6 +129,18 @@ describe('聚焦工位 Outlines', () => {
     const pkg = readFileSync(join(here, '../../../package.json'), 'utf8')
     expect(pkg).toMatch(/"@react-three\/drei": "10\.7\.9"/)
   })
+
+  it('预构建室内同样挂多描边和聚焦描边', () => {
+    const source = read('../../floors/JsonFloorInterior.tsx')
+    const prebuilt = source.indexOf('function PrebuiltFloorInterior')
+    const primitive = source.indexOf('<primitive object={prebuilt.content}', prebuilt)
+    const multi = source.indexOf('<FloorMultiOutlines', primitive)
+    const focus = source.indexOf('<FocusedDeskOutlines', primitive)
+    expect(prebuilt).toBeGreaterThan(-1)
+    expect(primitive).toBeGreaterThan(prebuilt)
+    expect(multi).toBeGreaterThan(primitive)
+    expect(focus).toBeGreaterThan(multi)
+  })
 })
 
 describe('进层告警和搜索多描边', () => {
