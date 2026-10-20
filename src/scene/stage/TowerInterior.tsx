@@ -30,6 +30,7 @@ import {
   woodMaterial,
 } from './materials'
 import { DeskFlash } from './DeskFlash'
+import { FocusedDeskOutlines } from './DeskOutline'
 import { FloorDecor } from './lazyFloorDecor'
 import { towerRoomLabels } from './roomLabels'
 import { InstancedSlots, Workstations } from './Workstations'
@@ -76,6 +77,7 @@ export function TowerInterior({
       <mesh geometry={meetingGlassGeometry} material={meetingGlassMaterial} />
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columns} />
       <Workstations slots={slots} colors={colors} />
+      <FocusedDeskOutlines floorId={spec.id} />
       <DeskFlash floorId={spec.id} />
       <FloorDecor floorId={spec.id} devices={devices} labels={towerRoomLabels()} showPeople={showPeople} />
       <Ceiling width={width} depth={depth} y={spec.height - SLAB_M - 0.06} />
