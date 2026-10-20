@@ -53,6 +53,7 @@ import {
 import { DeskFlash } from './DeskFlash'
 import { FocusedDeskOutlines } from './DeskOutline'
 import { FloorDecor } from './lazyFloorDecor'
+import { ZoneHeat } from './lazyZoneHeat'
 import { basementRoomLabels } from './roomLabels'
 import { InstancedSlots, Workstations } from './Workstations'
 
@@ -93,6 +94,7 @@ export function B1Interior({ slots, colors, devices }: { slots: Slot[]; colors: 
       <group name="FloorPlate">
         <mesh name="FloorSlab" geometry={slab} material={slabMaterial} receiveShadow />
       </group>
+      <ZoneHeat floorId="B1" />
       <mesh geometry={court} material={atriumMaterial} receiveShadow />
       <mesh geometry={courtInner} material={atriumInnerMaterial} position={[0, 0.02, 0]} />
       <mesh geometry={fan} material={fanFloorMaterial} receiveShadow />
