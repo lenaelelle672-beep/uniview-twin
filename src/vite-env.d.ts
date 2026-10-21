@@ -567,6 +567,16 @@ interface Window {
       almostNowMs: number
     }
   }
+  /** T046：楼层小地图上的眼点 / 注视点。离开单层后删掉。 */
+  __twinMinimap?: {
+    floorId: string
+    eyeX: number
+    eyeZ: number
+    targetX: number
+    targetZ: number
+    headingX: number
+    headingZ: number
+  }
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
   __twinMonitorBoxes?: TwinMonitorBoxes
