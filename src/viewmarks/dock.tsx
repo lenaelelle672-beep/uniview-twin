@@ -4,9 +4,22 @@ import { ViewmarkDock } from './ViewmarkDock'
 
 let root: Root | null = null
 let host: HTMLElement | null = null
+let mountMeasure: (() => void) | null = null
+
+function mountMeasureSoon() {
+  if (mountMeasure) {
+    mountMeasure()
+    return
+  }
+  void import('../measure/boot').then((mod) => {
+    mountMeasure = mod.mountMeasure
+    mountMeasure()
+  })
+}
 
 function mount() {
   mountAlarmTimeline()
+  mountMeasureSoon()
   if (host && !host.isConnected) {
     root?.unmount()
     root = null

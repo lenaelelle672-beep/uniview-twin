@@ -487,6 +487,9 @@ interface Window {
   __twinLabelPackDetail?: TwinLabelPackMs
   __twinLabelMount?: TwinLabelMount
   __twinDismissEsc?: () => boolean
+  /** DemandLoop 里的测距挂载点。工具本体在懒包里。 */
+  __twinMeasureSlot?: (node: import('react').ReactNode) => void
+  __twinMeasureExit?: () => void
   __twinVisibleFocus?: {
     canvas: { left: number; right: number; top: number; bottom: number }
     visible: { left: number; right: number; top: number; bottom: number }

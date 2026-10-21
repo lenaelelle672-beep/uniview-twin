@@ -1,0 +1,40 @@
+.measure-toggle {
+  position: absolute;
+  z-index: 6;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  background: #0c2340;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(16, 32, 51, 0.2);
+  cursor: pointer;
+}
+
+.measure-toggle:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.measure-toggle.is-active {
+  background: #9a3412;
+}
+
+.measure-label {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(12, 35, 64, 0.92);
+  color: #fff;
+  font: 600 13px/1.4 "Noto Sans CJK SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 720px) {
+  .measure-toggle {
+    top: 52px;
+  }
+}
