@@ -125,10 +125,10 @@ describe('D223 prefetch 单例调度', () => {
     const api = await loadPrefetch()
     mountStage(api, 'building')
     win.__twinReady = true
-    win.__twinFirstFrameAt = 1
+    win.__twinFirstFrameAt = performance.now()
     await pump()
     expect(win.__twinPrefetchAt).toBeUndefined()
-    expect(idleQueue).toHaveLength(1)
+    expect(idleQueue).toHaveLength(0)
 
     mountStage(api, 'floor')
     expect(win.__twinPrefetchAt).toBeTypeOf('number')
@@ -144,7 +144,7 @@ describe('D223 prefetch 单例调度', () => {
     expect(idleQueue).toHaveLength(0)
   })
 
-  it('总览首帧后的空闲预取不拉楼层壳', async () => {
+  it('总览在首帧 cutoff 内不拉 textRuntime，过 2600ms 才拉', async () => {
     const api = await loadPrefetch()
     mountStage(api, 'building')
     win.__twinReady = true
@@ -152,10 +152,17 @@ describe('D223 prefetch 单例调度', () => {
     win.__twinView = 'building'
     await pump()
     flushIdle()
-    await pump()
-    expect(win.__twinPrefetchAt).toBeTypeOf('number')
+    expect(win.__twinPrefetchAt).toBeUndefined()
     expect(win.__twinFloorShellAt).toBeUndefined()
-    expect(readFileSync(join(here, 'prefetchLazyChunks.ts'), 'utf8')).toMatch(/FLOOR_SHELL_AFTER_FIRST_MS = 2600/)
+    expect(idleQueue).toHaveLength(0)
+
+    win.__twinFirstFrameAt = performance.now() - 2600 - 30
+    await pump(4)
+    expect(win.__twinPrefetchAt).toBeTypeOf('number')
+    expect(win.__twinFloorShellAt).toBeTypeOf('number')
+    const prefetch = readFileSync(join(here, 'prefetchLazyChunks.ts'), 'utf8')
+    expect(prefetch).toMatch(/FLOOR_SHELL_AFTER_FIRST_MS = 2600/)
+    expect(prefetch).not.toMatch(/requestIdleCallback/)
   })
 
   it('直接 floor 启动也会 prefetch', async () => {

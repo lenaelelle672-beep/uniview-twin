@@ -48,7 +48,7 @@ async function prefetchClickChunks(): Promise<void> {
   await interior
 }
 
-/** 总览空闲时预取按需包。必须在首帧之后，预取不算进首屏。不含楼层壳。 */
+/** 预取蓝图和 textRuntime。总览要等过首帧截止，避免 troika 进锁机 cutoff。不含楼层壳。 */
 export function prefetchLazyChunks(): void {
   if (window.__twinPrefetchAt != null) return
   window.__twinPrefetchAt = performance.now()
@@ -83,17 +83,22 @@ function startFloorShellNow(): void {
   scheduleGlyphChunk()
 }
 
-/** 总览：等过首帧截止再拉楼层壳。进层路径不走这里。 */
-function scheduleFloorShellAfterCutoff(): void {
+/** 总览：等过首帧截止再做。进层路径不走这里。 */
+function scheduleAfterCutoff(run: () => void): void {
   const tick = () => {
     const first = window.__twinFirstFrameAt
     if (first == null || performance.now() - first < FLOOR_SHELL_AFTER_FIRST_MS) {
       window.requestAnimationFrame(tick)
       return
     }
-    startFloorShellNow()
+    run()
   }
   window.requestAnimationFrame(tick)
+}
+
+/** 总览：等过首帧截止再拉楼层壳。进层路径不走这里。 */
+function scheduleFloorShellAfterCutoff(): void {
+  scheduleAfterCutoff(startFloorShellNow)
 }
 
 function waitUntil(ok: () => boolean): Promise<void> {
@@ -129,15 +134,11 @@ function startWhenReady(): void {
       prefetchLazyChunks()
       return
     }
+    // textRuntime 静态带上 disableTroikaCdn / troika-three-text。
+    // 总览不能在首帧后的空闲回调里拉：锁机 cutoff 是首帧 + 64ms，空闲经常落在里面。
+    // 与楼层壳同一道门再拉，首屏同步图不引用这两个包。
     scheduleFloorShellAfterCutoff()
-    const go = () => {
-      prefetchLazyChunks()
-    }
-    if (typeof window.requestIdleCallback === 'function') {
-      window.requestIdleCallback(go, { timeout: 4000 })
-    } else {
-      go()
-    }
+    scheduleAfterCutoff(prefetchLazyChunks)
   }
 
   void run()
@@ -145,7 +146,7 @@ function startWhenReady(): void {
 
 /**
  * D120 / D126：HDR+PMREM 与 Suspense 资源都就绪后才 __twinReady，
- * 再等首帧 useFrame、多 1 个 rAF、可选 idle，然后才发三个 import()。
+ * 再等首帧 useFrame、多 1 个 rAF。总览上 textRuntime（troika）和楼层壳都再等 2600ms。
  * D223：模块级单例，离开 building 不取消；重复调用不会再调度。
  */
 export function schedulePrefetchAfterFirstFrame(): void {
