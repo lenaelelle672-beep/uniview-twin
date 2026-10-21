@@ -1,5 +1,5 @@
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import { stepExplodeMotion } from '../../scene/explode'
 import { isCameraRested } from '../../scene/stage/cameraRest'
@@ -257,7 +257,27 @@ export function DemandLoop() {
     }, wait)
   }, 100)
 
-  return <AdaptiveQualityHost />
+  return (
+    <>
+      <MeasureSlot />
+      <AdaptiveQualityHost />
+    </>
+  )
+}
+
+/**
+ * 测距工具的挂载点。实现在点击后的懒包里，这个文件不能 import 它，
+ * 否则进层提前拉起 DemandLoop 时会把 Line / Html 卷进更早的请求。
+ */
+function MeasureSlot() {
+  const [node, setNode] = useState<ReactNode>(null)
+  useEffect(() => {
+    window.__twinMeasureSlot = (next) => setNode(next)
+    return () => {
+      delete window.__twinMeasureSlot
+    }
+  }, [])
+  return node
 }
 
 /**
