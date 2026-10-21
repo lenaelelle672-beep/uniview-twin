@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetTwinStore, useTwinStore } from '../store/store'
 import { applySearchToStore, parseSearch, serializeUrl, storeToSearch } from './urlState'
+import { formatViewpoint, parseViewpoint, roundViewpointMillimetre, type Viewpoint } from './viewpoint'
 
 describe('URL 解析与回写', () => {
   beforeEach(() => {
@@ -126,6 +127,63 @@ describe('URL 解析与回写', () => {
     expect(storeToSearch()).toBe('?q=balanced&keepDrawingBuffer=1')
     applySearchToStore('?q=perf')
     expect(storeToSearch()).toBe('?q=perf')
+  })
+
+  it('?vp= 往返保留眼点和目标，非法串丢掉', () => {
+    const vp: Viewpoint = {
+      px: 24.1234,
+      py: 70,
+      pz: -12.2,
+      tx: 1,
+      ty: 36.5,
+      tz: 8,
+      fov: 33,
+      fx: 0.2,
+      fy: 0,
+      fz: -0.4,
+    }
+    const token = formatViewpoint(vp)
+    expect(token).toBeTruthy()
+    expect(parseViewpoint(token ?? '')).toEqual(parseViewpoint(token ?? ''))
+    for (const key of ['px', 'py', 'pz', 'tx', 'ty', 'tz', 'fov', 'fx', 'fy', 'fz'] as const) {
+      expect(Math.abs((parseViewpoint(token ?? '')?.[key] ?? 0) - vp[key])).toBeLessThanOrEqual(0.0005)
+      expect(roundViewpointMillimetre(vp[key])).toBe(parseViewpoint(token ?? '')?.[key])
+    }
+    expect(parseSearch(`?floor=F8&vp=${token}`).vp).toBe(token)
+    expect(serializeUrl({ floor: 'F8', vp: token ?? undefined })).toBe(`?floor=F8&vp=${token}`)
+    expect(parseSearch('?vp=nope')).toEqual({})
+    expect(parseSearch('?vp=1~2~3~4~5~6~1')).toEqual({})
+    expect(parseViewpoint('1~2~3~4~5~6~40')).toMatchObject({ fov: 40, fx: 0, fy: 0, fz: 0 })
+
+    applySearchToStore(`?floor=F8&q=balanced&vp=${token}`)
+    expect(parseViewpoint(useTwinStore.getState().vp ?? '')?.px).toBeCloseTo(24.123, 3)
+    expect(useTwinStore.getState().vp).toBe(token)
+    expect(useTwinStore.getState().selectedFloor).toBe('F8')
+    expect(storeToSearch()).toBe(`?floor=F8&q=balanced&vp=${token}`)
+  })
+
+  it('?pos= 与 ?vp= 同时存在时工位和视角都留下', () => {
+    const token = formatViewpoint({
+      px: 8,
+      py: 60,
+      pz: 20,
+      tx: 0,
+      ty: 52,
+      tz: 4,
+      fov: 42,
+      fx: 0,
+      fy: 0,
+      fz: 0,
+    })
+    applySearchToStore(`?pos=F12-66&vp=${token}`)
+    const state = useTwinStore.getState()
+    expect(state.view).toBe('floor')
+    expect(state.selectedFloor).toBe('F12')
+    expect(state.focusedDeskId).toBe('F12-66')
+    expect(state.vp).toBe(token)
+    expect(state.vpSeq).toBeGreaterThan(0)
+    expect(storeToSearch()).toContain(`vp=${token}`)
+    expect(storeToSearch()).toContain('pos=F12-66')
   })
 
   it('外站 data 地址不作为可加载路径，但仍保留在地址栏', () => {

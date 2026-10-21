@@ -92,6 +92,7 @@ export function Stage() {
           {exploded ? '收拢楼层' : '爆炸视图'}
         </button>
       )}
+      {view !== 'blueprint' && <div data-vm />}
       {view !== 'blueprint' && (
         <p className="view-chip">
           {view === 'floor' ? `单层视图${selectedFloor ? ` · ${selectedFloor}` : ''}` : exploded ? '总览视图 · 爆炸' : '总览视图'}

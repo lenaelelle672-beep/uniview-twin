@@ -108,6 +108,8 @@ export function CameraRig({
   const cam = useTwinStore((state) => state.cam)
   const view = useTwinStore((state) => state.view)
   const exploded = useTwinStore((state) => state.exploded)
+  const viewpointToken = useTwinStore((state) => state.vp)
+  const viewpointSeq = useTwinStore((state) => state.vpSeq)
   const spread = view === 'building' && exploded
   const controls = useRef<CameraControls>(null)
   const distanceCap = useRef(CAMERA_LIMITS.maxDistance)
@@ -124,6 +126,7 @@ export function CameraRig({
   const pumpRef = useRef(0)
 
   useLayoutEffect(() => {
+    window.__vpP = () => invalidate()
     const nextSnap: CameraSnap = {
       view,
       cam,
@@ -156,6 +159,13 @@ export function CameraRig({
         stopGlide()
         noteRested()
       })
+    }
+
+    if (rig && viewpointToken && window.__vpH && !window.__vpT) {
+      stopGlide()
+      window.__twinRig = rig as unknown as Window['__twinRig']
+      window.__vpS?.(rig as unknown as NonNullable<Window['__twinRig']>, viewpointToken, view === 'floor')
+      return undefined
     }
 
     // 机位没变时，fitGeneration / invalidate 会把效果重跑一遍。
@@ -317,12 +327,13 @@ export function CameraRig({
     rig.update(0)
     if (interrupted) noteRested()
     return undefined
-  }, [cam, camera, fitGeneration, fitRef, gl, invalidate, size.height, size.width, spread, view])
+  }, [cam, camera, fitGeneration, fitRef, gl, invalidate, size.height, size.width, spread, view, viewpointSeq, viewpointToken])
 
   useFrame(() => {
     seenFrame.current = true
     const rig = controls.current
     if (!rig || view === 'floor' || gliding.current) return
+    if (window.__vpH || window.__vpT) return
     applyCameraLimits(rig, distanceCap.current)
   }, -2)
 

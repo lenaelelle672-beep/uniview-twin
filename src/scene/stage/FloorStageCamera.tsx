@@ -283,6 +283,10 @@ export function FloorStageCamera() {
     const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
     const deskId = focused && focused.floorId === active ? focused.deskId : null
     const key = `${active}:${deskId ?? 'slab'}:${focusSeq}:${size.width}x${size.height}`
+    if (window.__vpH || window.__vpT) {
+      framedKey.current = key
+      return
+    }
     if (framedKey.current === key) return
     if (deskId) {
       const interior = scene.getObjectByName('FloorInterior')
@@ -323,6 +327,10 @@ export function FloorStageCamera() {
     const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
     const deskId = active && focused && focused.floorId === active ? focused.deskId : null
     const key = active ? `${active}:${deskId ?? 'slab'}:${focusSeq}:${size.width}x${size.height}` : ''
+    if (window.__vpH || window.__vpT) {
+      if (key) framedKey.current = key
+      return
+    }
     // 同一取景被 invalidate / controls 重跑时，不要取消已经发出的 setLookAt(true)。
     if (key && framedKey.current === key) {
       flightHandoff.current = true
@@ -331,6 +339,7 @@ export function FloorStageCamera() {
         const token = flightToken.current
         queueMicrotask(() => {
           if (flightHandoff.current || flightToken.current !== token) return
+          if (window.__vpH || window.__vpT) return
           flightToken.current += 1
           framedKey.current = ''
           resetFocalOffset(rig)
@@ -404,6 +413,7 @@ export function FloorStageCamera() {
       const token = mine
       queueMicrotask(() => {
         if (flightHandoff.current || flightToken.current !== token) return
+        if (window.__vpH || window.__vpT) return
         flightToken.current += 1
         framedKey.current = ''
         resetFocalOffset(rig)
