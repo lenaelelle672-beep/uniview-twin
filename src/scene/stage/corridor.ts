@@ -1,5 +1,6 @@
 import { TOWER } from '../siteGeometry'
 import { CORE, MEETINGS, type Point } from './layout'
+import { showPeopleMarks } from './showCorridorPeople'
 
 export type { Point }
 
@@ -98,7 +99,8 @@ export interface CorridorPerson {
 }
 
 export function corridorRoster(count = CORRIDOR_PEOPLE_COUNT): CorridorPerson[] {
-  return Array.from({ length: count }, (_, index) => ({
+  const extra = showPeopleMarks.reduce<number>((sum, mark) => sum + mark, 0)
+  return Array.from({ length: count + extra }, (_, index) => ({
     model: index % 2 === 0 ? 'man' : 'woman',
     offset: index / count,
   }))
