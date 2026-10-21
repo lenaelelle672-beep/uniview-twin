@@ -1,14 +1,15 @@
 import { floorSpec } from '../data/floors'
 import { TOWER_OUTLINE_BOUNDS, TOWER_OUTLINE_OVERVIEW, ringBounds } from './shell/rings'
-import { b1SlabOutline } from './stage/b1Plan'
+import { basementPickOutline } from './stage/b1Plan'
 
 export function floorMarkerOutline(id: string): Array<[number, number]> {
-  return id === 'B1' ? b1SlabOutline() : TOWER_OUTLINE_OVERVIEW
+  return id === 'B1' ? basementPickOutline() : TOWER_OUTLINE_OVERVIEW
 }
 
 export function floorMarkerMidY(id: string): number {
   const spec = floorSpec(id)
   const offset = window.__twinExplode?.floors.find((floor) => floor.id === id)?.offset ?? 0
+  if (spec.level < 0) return offset
   return spec.elevation + spec.height / 2 + offset
 }
 

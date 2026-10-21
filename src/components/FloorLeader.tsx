@@ -55,7 +55,7 @@ export function FloorLeader() {
       svg.dataset.active = id
     }
     const moving = () => {
-      if (window.__twinCameraRested === false) return true
+      if (window.__twinCameraRested === false || window.__twinRig?.active) return true
       const progress = window.__twinExplode?.progress
       return typeof progress === 'number' && progress > 0 && progress < 1
     }
