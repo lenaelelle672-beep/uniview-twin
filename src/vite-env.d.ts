@@ -282,6 +282,18 @@ interface Window {
     nightMap: boolean
     intensity: number
   }
+  /** T043：自适应画质。demand 下只在固定连续窗口或无限 Hz 负载采样。 */
+  __twinAdaptive?: {
+    mode: 'idle' | 'warmup' | 'fixed-window' | 'unthrottled-load'
+    sampling: boolean
+    ceiling: 'perf' | 'balanced' | 'high'
+    frozen: boolean
+    lastSignal: 'decline' | 'incline' | 'steady' | null
+    lastApplied: 'decline' | 'incline' | null
+    lastFps: number | null
+    pumpFrames: number
+    at: number
+  }
   /** T024：非 perf 档 drei SoftShadows 挂上之后写入，卸载时删掉。 */
   __twinSoftShadows?: {
     samples: number

@@ -53,6 +53,7 @@ describe('URL 解析与回写', () => {
     expect(state.qualityPinned).toBe(true)
     expect(state.selectedFloor).toBe('F8')
     state.declineQuality()
+    state.inclineQuality()
     expect(useTwinStore.getState().quality).toBe('high')
     expect(storeToSearch()).toBe('?floor=F8&q=high')
 
