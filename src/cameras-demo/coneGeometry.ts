@@ -1,12 +1,34 @@
-import { ConeGeometry, DoubleSide, MeshBasicMaterial } from 'three'
-import { BUILDING_HIGHLIGHT_ORDER } from '../scene/overlayOrder'
+import { BufferAttribute, BufferGeometry, DoubleSide, MeshBasicMaterial } from 'three'
 import { CAMERA_CONE_LENGTH, CAMERA_CONE_RADIUS } from './DEMO_cameras'
 
 /**
  * 与楼体选中高亮同一档：高于默认楼板，低于徽标数字。
- * 数字留在首屏 overlayOrder 里，这里只引用，不新增一档。
+ * 数字留在这个分包里。须与楼体高亮那一档保持一致。
  */
-export const CAMERA_CONE_ORDER = BUILDING_HIGHLIGHT_ORDER
+export const CAMERA_CONE_ORDER = 9
+
+/**
+ * 尖在原点、沿 -Z 张开。顶点写在这个分包里，不从 three 取 ConeGeometry 绑定。
+ */
+class ConeGeometry extends BufferGeometry {
+  constructor(radius: number, height: number, radialSegments: number) {
+    super()
+    const positions: number[] = [0, 0, 0, 0, 0, -height]
+    const indices: number[] = []
+    for (let i = 0; i < radialSegments; i += 1) {
+      const theta = (i / radialSegments) * Math.PI * 2
+      positions.push(Math.sin(theta) * radius, Math.cos(theta) * radius, -height)
+    }
+    for (let i = 0; i < radialSegments; i += 1) {
+      const current = 2 + i
+      const next = 2 + ((i + 1) % radialSegments)
+      indices.push(0, next, current, 1, current, next)
+    }
+    this.setAttribute('position', new BufferAttribute(new Float32Array(positions), 3))
+    this.setIndex(indices)
+    this.computeVertexNormals()
+  }
+}
 
 export const CAMERA_CONE_COLOR = '#35c2ff'
 export const CAMERA_CONE_SELECTED_COLOR = '#9ee6ff'
@@ -18,9 +40,7 @@ export const CAMERA_CONE_SELECTED_OPACITY = 0.5
  * 把尖挪到局部原点，再转到 -Z，heading 0 时朝北。
  */
 export function createCameraConeGeometry(): ConeGeometry {
-  const geometry = new ConeGeometry(CAMERA_CONE_RADIUS, CAMERA_CONE_LENGTH, 12, 1, false)
-  geometry.translate(0, -CAMERA_CONE_LENGTH / 2, 0)
-  geometry.rotateX(Math.PI / 2)
+  const geometry = new ConeGeometry(CAMERA_CONE_RADIUS, CAMERA_CONE_LENGTH, 12)
   geometry.computeBoundingSphere()
   return geometry
 }

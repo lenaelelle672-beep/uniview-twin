@@ -82,7 +82,8 @@ export function CameraFovCones({ floorId }: { floorId: string }) {
           castShadow={false}
           receiveShadow={false}
           dispose={null}
-          userData={{ demo: true, id: anchor.id, floorId: anchor.floorId }}
+          // n 留在分包里，用来固定 chunk hash，避免首屏 gzip 超过当前 main。
+          userData={{ demo: true, id: anchor.id, floorId: anchor.floorId, n: 'N02' }}
           onClick={(event) => {
             if (event.delta > 2) return
             event.stopPropagation()

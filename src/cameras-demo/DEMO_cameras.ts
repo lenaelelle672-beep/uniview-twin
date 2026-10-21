@@ -9,7 +9,6 @@
  * heading 为绕 Y 的弧度：0 朝北（-Z），正角逆时针，与 three.js 一致。
  */
 import { floorIdList, isFloorId } from '../data/floors'
-import { CAMERA_LIMITS } from '../scene/cameras'
 
 /** 一层最多挂这么多锥。多出来的锚点不进场景。 */
 export const CAMERA_CONE_CAP = 6
@@ -28,9 +27,10 @@ export const CAMERA_MOUNT_Y = 2.15
 
 /**
  * 注视点沿视线走这么远，眼点仍停在机位上。
- * 大于 CameraRig 的 minDistance，setLookAt 不会被最近距离推开。
+ * 镜头最近距离是 18 米，这里再往前 6 米，setLookAt 不会把眼点推离机位。
+ * 数字写在这个分包里，不引用镜头模块。
  */
-export const POV_REACH_M = CAMERA_LIMITS.minDistance + 6
+export const POV_REACH_M = 24
 
 /** 注视点比机位低这么多，进 POV 时略向下看楼板。 */
 export const POV_DROP_M = 1.4
