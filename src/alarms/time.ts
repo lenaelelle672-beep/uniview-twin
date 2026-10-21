@@ -1,5 +1,8 @@
-/** 演示截止时刻：2026-09-28 18:00（东八区）。告警时间由设备编号稳定散列，刷新不变。 */
-const DEMO_END_MS = Date.UTC(2026, 8, 28, 10, 0, 0)
+/**
+ * 演示截止时刻：2026-09-28 18:00（东八区）。
+ * 告警时间由设备编号稳定散列，刷新不变。这不是出现/恢复时刻。
+ */
+export const DEMO_END_MS = Date.UTC(2026, 8, 28, 10, 0, 0)
 const WINDOW_MINUTES = 7 * 24 * 60
 
 export function stableEpochMs(key: string): number {

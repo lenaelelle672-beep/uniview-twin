@@ -147,7 +147,15 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   exitFloor: () => {
     if (get().view !== 'floor') return
     releaseHeldViewpoint()
-    startTransition(() => set(dropped({ view: 'building' })))
+    // 和视图切回总览同一次写入，避免离层途中先把描边刷回现网再卸室内。
+    startTransition(() =>
+      set(
+        dropped({
+          view: 'building',
+          alarmPlayback: null,
+        }),
+      ),
+    )
   },
   focusDevice: ({ floor, deskId, deviceId = null }) => {
     releaseHeldViewpoint()

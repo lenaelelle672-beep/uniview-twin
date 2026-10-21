@@ -72,10 +72,19 @@ export function FloorMultiOutlines({ floorId }: { floorId: string }) {
   const people = useTwinStore((state) => state.people)
   const searchQuery = useTwinStore((state) => state.searchQuery)
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
+  const alarmPlayback = useTwinStore((state) => state.alarmPlayback)
   const shells = useMemo(() => {
     const hits = searchWorkstations({ desks, people }, searchQuery, SEARCH_OUTLINE_HIT_LIMIT)
-    return multiOutlineShells(floorId, devices, hits, focusedDeskId)
-  }, [desks, devices, floorId, focusedDeskId, people, searchQuery])
+    if (!alarmPlayback) return multiOutlineShells(floorId, devices, hits, focusedDeskId)
+    return multiOutlineShells(
+      floorId,
+      devices,
+      hits,
+      focusedDeskId,
+      MULTI_OUTLINE_CAP,
+      alarmPlayback.alarmDeskIds,
+    )
+  }, [alarmPlayback, desks, devices, floorId, focusedDeskId, people, searchQuery])
 
   useEffect(() => {
     if (shells.length === 0) {

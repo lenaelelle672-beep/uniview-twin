@@ -540,6 +540,21 @@ interface Window {
     alarmColor: string
     searchColor: string
   }
+  /** T042：DEMO 告警时间轴。离开楼层或卸载时删掉。 */
+  __twinAlarmTimeline?: {
+    demo: true
+    live: boolean
+    cursorMs: number
+    startMs: number
+    nowMs: number
+    alarmDeskIds: string[]
+    samples: {
+      startMs: number
+      withHistoryMs: number
+      partialMs: number
+      almostNowMs: number
+    }
+  }
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
   __twinMonitorBoxes?: TwinMonitorBoxes
