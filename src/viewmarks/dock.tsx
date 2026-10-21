@@ -2,6 +2,9 @@ import { createRoot, type Root } from 'react-dom/client'
 import { mountAlarmTimeline } from '../components/AlarmTimelineGate'
 import { ViewmarkDock } from './ViewmarkDock'
 
+// T046：小地图跟这条晚加载入口走，不进首屏 hardGate / balancedFx。
+void import('../minimap/mount')
+
 let root: Root | null = null
 let host: HTMLElement | null = null
 let mountMeasure: (() => void) | null = null

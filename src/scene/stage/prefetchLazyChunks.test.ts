@@ -7,6 +7,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 
 vi.mock('./floorDecor', () => ({}))
 vi.mock('../../blueprint/BlueprintView', () => ({ BlueprintView: () => null }))
+vi.mock('../../minimap/mount', () => ({}))
 vi.mock('./textRuntime', () => ({}))
 vi.mock('../labels/ProgressiveRoomLabels', () => ({}))
 vi.mock('./FloorStageCamera', () => ({}))
