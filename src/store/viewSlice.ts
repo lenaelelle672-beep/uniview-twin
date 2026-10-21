@@ -4,6 +4,15 @@ import { isFloorId } from '../data/floors'
 import type { CameraId, DayNight, QualityTier, ViewMode } from '../types'
 import type { TwinStore } from './types'
 
+function releaseHeldViewpoint(): void {
+  if (typeof window === 'undefined') return
+  window.__vpH = false
+}
+
+function dropped<T extends object>(patch: T): T & { vp: null } {
+  return { ...patch, vp: null }
+}
+
 const QUALITY_ORDER: QualityTier[] = ['high', 'balanced', 'perf']
 
 export type Presentation = 'lit' | 'model'
@@ -45,6 +54,18 @@ export interface ViewSlice {
   /** 每次 focusDevice 加一。T005 订阅该序号后再做镜头飞行。 */
   focusSeq: number
   focusDevice: (target: { floor: string; deskId: string | null; deviceId?: string | null }) => void
+  /** 已规范化的 `?vp=`。null 表示地址栏没有视角。字段名保持很短，避免首屏包变大。 */
+  vp: string | null
+  /** 同一条链接再次套用时也要重新对齐镜头。 */
+  vpSeq: number
+  showViewpoint: (next: {
+    token: string
+    view: ViewMode
+    floor: string | null
+    cam: CameraId | null
+    /** 不传则保留当前工位。传 null 表示这个视角没有工位焦点。 */
+    pos?: string | null
+  }) => void
 }
 
 export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set, get) => ({
@@ -64,8 +85,18 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   floorFlyRequest: null,
   posNotice: null,
   focusSeq: 0,
-  setView: (view) => startTransition(() => set({ view })),
-  setExploded: (exploded) => set({ exploded }),
+  vp: null,
+  vpSeq: 0,
+  setView: (view) => {
+    if (get().view === view) return
+    releaseHeldViewpoint()
+    startTransition(() => set(dropped({ view })))
+  },
+  setExploded: (exploded) => {
+    if (get().exploded === exploded) return
+    releaseHeldViewpoint()
+    set(dropped({ exploded }))
+  },
   setDayNight: (dayNight) => startTransition(() => set({ dayNight })),
   setQuality: (quality) => startTransition(() => set({ quality, downgradeSuppressed: true })),
   declineQuality: () => {
@@ -83,13 +114,20 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
     const floorId = splitAt > 0 ? deskId.slice(0, splitAt) : ''
     if (!isFloorId(floorId)) return
     const pc = get().devices.find((device) => device.deskId === deskId && device.type === 'pc')
-    set({
-      selectedFloor: floorId,
-      focusedDeskId: deskId,
-      focusedDeviceId: pc?.id ?? null,
-    })
+    releaseHeldViewpoint()
+    set(
+      dropped({
+        selectedFloor: floorId,
+        focusedDeskId: deskId,
+        focusedDeviceId: pc?.id ?? null,
+      }),
+    )
   },
-  setCam: (cam) => startTransition(() => set({ cam })),
+  setCam: (cam) => {
+    if (get().cam === cam) return
+    releaseHeldViewpoint()
+    startTransition(() => set(dropped({ cam })))
+  },
   emitFloorFly: (floorId) =>
     set({
       floorFlyRequest: {
@@ -103,19 +141,37 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
     if (view === 'floor' && selectedFloor === floorId) return
     // 跟 focusDevice 一样同步切 view。startTransition 会把进层让给首屏预取，
     // ready 后 500ms 双击时镜头要等那一轮画完才动。
-    set({ view: 'floor', selectedFloor: floorId })
+    releaseHeldViewpoint()
+    set(dropped({ view: 'floor', selectedFloor: floorId }))
   },
   exitFloor: () => {
     if (get().view !== 'floor') return
-    startTransition(() => set({ view: 'building' }))
+    releaseHeldViewpoint()
+    startTransition(() => set(dropped({ view: 'building' })))
   },
-  focusDevice: ({ floor, deskId, deviceId = null }) =>
+  focusDevice: ({ floor, deskId, deviceId = null }) => {
+    releaseHeldViewpoint()
+    set((state) =>
+      dropped({
+        selectedFloor: floor,
+        focusedDeskId: deskId,
+        focusedDeviceId: deviceId,
+        view: 'floor' as const,
+        posNotice: null,
+        focusSeq: state.focusSeq + 1,
+      }),
+    )
+  },
+  showViewpoint: ({ token, view, floor, cam, pos }) => {
+    if (typeof window !== 'undefined') window.__vpH = true
     set((state) => ({
+      vp: token,
+      vpSeq: state.vpSeq + 1,
+      view,
       selectedFloor: floor,
-      focusedDeskId: deskId,
-      focusedDeviceId: deviceId,
-      view: 'floor',
-      posNotice: null,
-      focusSeq: state.focusSeq + 1,
-    })),
+      cam,
+      focusedDeskId: pos === undefined ? state.focusedDeskId : pos,
+      focusedDeviceId: pos === undefined || pos === state.focusedDeskId ? state.focusedDeviceId : null,
+    }))
+  },
 })

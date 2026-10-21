@@ -1,5 +1,10 @@
 /// <reference types="vite/client" />
 
+declare module '*.css?inline' {
+  const css: string
+  export default css
+}
+
 declare module 'troika-three-text' {
   export function configureTextBuilder(config: {
     defaultFontURL?: string | null
@@ -505,8 +510,17 @@ interface Window {
     setBoundary: (box: import('three').Box3 | null) => void
     getPosition: (out: import('three').Vector3, receiveEndValue?: boolean) => import('three').Vector3
     getTarget: (out: import('three').Vector3, receiveEndValue?: boolean) => import('three').Vector3
+    getFocalOffset?: (out: import('three').Vector3, receiveEndValue?: boolean) => import('three').Vector3
     update: (delta: number) => boolean
   }
+  /** T041：?vp= 还原期间不要让取景和距离夹紧改掉眼点。 */
+  __vpH?: boolean
+  /** T041：导览巡游时单层相机不要抢 setLookAt。 */
+  __vpT?: boolean
+  /** T041：导览在画布外泵一帧。不进 cameraRest / frameSchedule。 */
+  __vpP?: () => void
+  /** T041：?vp= 还原函数，按需包挂上之前是空的。 */
+  __vpS?: (rig: NonNullable<Window['__twinRig']>, token: string, floor: boolean) => void
   __twinSlab?: TwinSlabMetrics
   __twinLocate?: TwinLocateMetrics
   __twinHighlight?: string

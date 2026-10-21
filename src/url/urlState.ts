@@ -14,6 +14,8 @@ export interface UrlState {
   q?: QualityTier
   style?: Presentation
   keepDrawingBuffer?: boolean
+  /** 已规范化的 `?vp=`。 */
+  vp?: string
 }
 
 function keepDrawingBufferFromSearch(search: string): boolean {
@@ -62,6 +64,9 @@ export function parseSearch(search: string): UrlState {
 
   if (keepDrawingBufferFromSearch(search)) result.keepDrawingBuffer = true
 
+  const acceptedVp = acceptVp(params.get('vp'))
+  if (acceptedVp) result.vp = acceptedVp
+
   return result
 }
 
@@ -75,6 +80,7 @@ export function serializeUrl(state: UrlState): string {
     ['q', state.q],
     ['style', state.style === 'model' ? 'model' : undefined],
     ['keepDrawingBuffer', state.keepDrawingBuffer ? '1' : undefined],
+    ['vp', state.vp],
   ]
   const query = parts
     .filter((entry): entry is [string, string] => Boolean(entry[1]))
@@ -94,7 +100,20 @@ export function storeToSearch(): string {
     q: state.urlQuality ?? undefined,
     style: state.presentation === 'model' ? 'model' : undefined,
     keepDrawingBuffer: keepDrawingBufferFlag || undefined,
+    vp: state.vp ?? undefined,
   })
+}
+
+/** 首屏只做能挡住 `?vp=nope` 的检查。越界和小数格式由按需包再拦。 */
+function acceptVp(raw: string | null): string | null {
+  if (!raw) return null
+  const parts = raw.split('~')
+  const count = parts.length
+  if (count !== 7 && count !== 10) return null
+  const fov = +parts[6]
+  if (!(fov >= 5 && fov <= 120)) return null
+  for (let i = 0; i < count; i += 1) if (Number.isNaN(+parts[i])) return null
+  return raw
 }
 
 function rawParam(search: string, key: string): string | null {
@@ -110,6 +129,7 @@ export function applySearchToStore(search: string) {
   const dataUrl = parsed.data ?? null
   const rawPos = rawParam(search, 'pos')
   const located = rawPos ? resolveWorkstationRef(rawPos) : null
+  if (typeof window !== 'undefined') window.__vpH = false
   useTwinStore.setState({
     view: parsed.view ?? 'building',
     selectedFloor: parsed.floor ?? null,
@@ -125,8 +145,17 @@ export function applySearchToStore(search: string) {
     presentation: parsed.style ?? 'lit',
     error: dataUrl && !isLocalDataPath(dataUrl) ? '数据地址必须是以 / 开头的站内路径' : null,
     status: dataUrl && !isLocalDataPath(dataUrl) ? 'error' : useTwinStore.getState().status,
+    vp: null,
   })
   if (located) {
     useTwinStore.getState().focusDevice({ floor: located.floorId, deskId: located.deskId })
+  }
+  if (parsed.vp) {
+    if (typeof window !== 'undefined') window.__vpH = true
+    useTwinStore.setState({
+      vp: parsed.vp,
+      vpSeq: useTwinStore.getState().vpSeq + 1,
+    })
+    void import('../components/scene/vp')
   }
 }

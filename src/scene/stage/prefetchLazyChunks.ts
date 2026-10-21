@@ -75,6 +75,7 @@ function scheduleInteriorPrewarm(): void {
 
 function startFloorShellNow(): void {
   if (window.__twinFloorShellAt == null) window.__twinFloorShellAt = performance.now()
+  void import('../../viewmarks/dock')
   void import('./floorDecor')
   void import('../labels/ProgressiveRoomLabels')
   void prefetchClickChunks()
