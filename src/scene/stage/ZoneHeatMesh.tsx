@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo } from 'react'
 import { useThree } from '@react-three/fiber'
 import { useTwinStore } from '../../store/store'
+import { HiddenLayer, useLayerShown } from '../layerGate'
 import { ZONE_HEAT_LIFT, ZONE_HEAT_ORDER, buildZoneHeatGeometry, createZoneHeatMaterial } from './zoneHeat'
 
 /**
@@ -8,7 +9,7 @@ import { ZONE_HEAT_LIFT, ZONE_HEAT_ORDER, buildZoneHeatGeometry, createZoneHeatM
  * frameloop=demand：挂上、告警变了、卸下都要 invalidate，否则停在上一帧。
  * 卸下时丢掉几何和材质，回总览不留这块网格。
  */
-export function ZoneHeatMesh({ floorId }: { floorId: string }) {
+function ZoneHeatMeshLive({ floorId }: { floorId: string }) {
   const liveAlarms = useTwinStore((state) => state.alarms)
   // 没有回放帧时仍走现网 alarms。有回放帧时把那一帧交给原来的几何函数。
   const playbackAlarms = useTwinStore((state) => state.alarmPlayback?.alarms)
@@ -52,4 +53,10 @@ export function ZoneHeatMesh({ floorId }: { floorId: string }) {
       dispose={null}
     />
   )
+}
+
+export function ZoneHeatMesh({ floorId }: { floorId: string }) {
+  const on = useLayerShown('heat')
+  if (!on) return <HiddenLayer />
+  return <ZoneHeatMeshLive floorId={floorId} />
 }

@@ -1,4 +1,3 @@
-import type { QualityTier } from '../../types'
 import { TOWER } from '../siteGeometry'
 import { CORE, MEETINGS, type Point } from './layout'
 
@@ -105,7 +104,4 @@ export function corridorRoster(count = CORRIDOR_PEOPLE_COUNT): CorridorPerson[] 
   }))
 }
 
-/** 性能档不画人物。总览本来就不挂室内，这里再挡一层。 */
-export function showCorridorPeople(quality: QualityTier): boolean {
-  return quality !== 'perf'
-}
+export { showCorridorPeople } from './showCorridorPeople'

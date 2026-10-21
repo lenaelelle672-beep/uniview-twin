@@ -2,6 +2,7 @@ import { useFrame } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { discreteAlarmLit, retainFrameChannel } from '../frameSchedule'
 import { useTwinStore } from '../../store/store'
+import { HiddenLayer, useLayerShown } from '../layerGate'
 import {
   CanvasTexture,
   InstancedBufferAttribute,
@@ -97,7 +98,7 @@ function createBadgeAtlas(): CanvasTexture {
   return texture
 }
 
-export function DeviceBadges({ floorId, devices }: { floorId: string; devices: Device[] }) {
+function DeviceBadgesLive({ floorId, devices }: { floorId: string; devices: Device[] }) {
   const badges = useMemo(() => deviceBadges(floorId, devices), [devices, floorId])
   const meshRef = useRef<InstancedMesh>(null)
   const time = useRef({ value: 0 })
@@ -172,4 +173,10 @@ export function DeviceBadges({ floorId, devices }: { floorId: string; devices: D
       receiveShadow={false}
     />
   )
+}
+
+export function DeviceBadges({ floorId, devices }: { floorId: string; devices: Device[] }) {
+  const on = useLayerShown('badges')
+  if (!on) return <HiddenLayer />
+  return <DeviceBadgesLive floorId={floorId} devices={devices} />
 }

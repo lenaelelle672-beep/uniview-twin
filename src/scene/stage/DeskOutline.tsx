@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Mesh, type BufferGeometry } from 'three'
 import { searchWorkstations } from '../../locate/search'
 import { useTwinStore } from '../../store/store'
+import { HiddenLayer, useLayerShown } from '../layerGate'
 import {
   ALARM_OUTLINE_COLOR,
   DESK_OUTLINE_COLOR,
@@ -23,7 +24,7 @@ import {
  * 会按 instanceMatrix 把整层都描上，所以这里单独放一个可挂的 mesh，只描当前工位。
  * 楼层悬停仍走改色和 FloorLeader：外壳在总览主包里，不把 Outlines 拉进首屏。
  */
-export function FocusedDeskOutlines({ floorId }: { floorId: string }) {
+function FocusedDeskOutlinesLive({ floorId }: { floorId: string }) {
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
   const focusedDeviceId = useTwinStore((state) => state.focusedDeviceId)
   const devices = useTwinStore((state) => state.devices)
@@ -66,7 +67,7 @@ export function FocusedDeskOutlines({ floorId }: { floorId: string }) {
  * 进层后的告警工位和当前搜索命中。
  * 和聚焦青描边分开挂，共用 N=12 的载体预算。离层时这组跟着室内卸载。
  */
-export function FloorMultiOutlines({ floorId }: { floorId: string }) {
+function FloorMultiOutlinesLive({ floorId }: { floorId: string }) {
   const devices = useTwinStore((state) => state.devices)
   const desks = useTwinStore((state) => state.desks)
   const people = useTwinStore((state) => state.people)
@@ -176,4 +177,16 @@ function OutlineCarrier({
       />
     </mesh>
   )
+}
+
+export function FocusedDeskOutlines({ floorId }: { floorId: string }) {
+  const on = useLayerShown('outlines')
+  if (!on) return <HiddenLayer />
+  return <FocusedDeskOutlinesLive floorId={floorId} />
+}
+
+export function FloorMultiOutlines({ floorId }: { floorId: string }) {
+  const on = useLayerShown('outlines')
+  if (!on) return <HiddenLayer />
+  return <FloorMultiOutlinesLive floorId={floorId} />
 }
