@@ -13,6 +13,7 @@ import { DeskFlash } from '../scene/stage/DeskFlash'
 import { FloorMultiOutlines, FocusedDeskOutlines } from '../scene/stage/DeskOutline'
 import { useAfterInteriorPaint, useAfterLabelWindow } from '../scene/stage/floorExtrasGate'
 import { FloorHeavy, FloorLabels } from '../scene/stage/lazyFloorDecor'
+import { CameraFov } from '../cameras-demo/lazyCameraFov'
 import { ZoneHeat } from '../scene/stage/lazyZoneHeat'
 import { MonitorDepthProxies } from '../scene/stage/MonitorDepthProxies'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
@@ -211,6 +212,7 @@ function JsonFloorReady({
         <mesh name="FloorSlab" geometry={slab} material={slabMaterial} receiveShadow />
       </group>
       <ZoneHeat floorId={spec.id} />
+      <CameraFov floorId={spec.id} />
       {cores && <mesh name="FloorCores" geometry={cores} material={coreWallMaterial} castShadow receiveShadow />}
       <InstancedSlots name="FloorColumns" geometry={columnGeometry} material={columnMaterial} slots={columnSlots} />
       <InstancedSlots name="FloorWalls" geometry={wallBoxGeometry} material={coreWallMaterial} slots={opaqueWalls} />
@@ -380,6 +382,7 @@ function PrebuiltFloorInterior({
     >
       <primitive object={prebuilt.content} dispose={null} />
       <ZoneHeat floorId={spec.id} />
+      <CameraFov floorId={spec.id} />
       <FloorMultiOutlines floorId={spec.id} />
       <FocusedDeskOutlines floorId={spec.id} />
       {showPeople ? <MonitorDepthProxies /> : null}
