@@ -1,7 +1,6 @@
 import { startTransition } from 'react'
 import type { StateCreator } from 'zustand'
 import { isFloorId } from '../data/floors'
-import { lowerQualityTier, raiseQualityTier } from '../scene/quality'
 import type { CameraId, DayNight, QualityTier, ViewMode } from '../types'
 import type { TwinStore } from './types'
 
@@ -13,6 +12,8 @@ function releaseHeldViewpoint(): void {
 function dropped<T extends object>(patch: T): T & { vp: null } {
   return { ...patch, vp: null }
 }
+
+const QUALITY_ORDER: QualityTier[] = ['high', 'balanced', 'perf']
 
 export type Presentation = 'lit' | 'model'
 
@@ -40,8 +41,6 @@ export interface ViewSlice {
   setDayNight: (dayNight: DayNight) => void
   setQuality: (quality: QualityTier) => void
   declineQuality: () => void
-  /** 自动升一档。URL 锁定或手动选过档之后不再动。 */
-  inclineQuality: () => void
   setSelectedFloor: (floorId: string | null) => void
   setHoveredFloor: (floorId: string | null) => void
   setFocusedDeskId: (deskId: string | null) => void
@@ -103,13 +102,8 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   declineQuality: () => {
     const { qualityPinned, downgradeSuppressed, quality } = get()
     if (qualityPinned || downgradeSuppressed) return
-    const next = lowerQualityTier(quality)
-    if (next !== quality) set({ quality: next })
-  },
-  inclineQuality: () => {
-    const { qualityPinned, downgradeSuppressed, quality } = get()
-    if (qualityPinned || downgradeSuppressed) return
-    const next = raiseQualityTier(quality)
+    const index = QUALITY_ORDER.indexOf(quality)
+    const next = QUALITY_ORDER[Math.min(index + 1, QUALITY_ORDER.length - 1)]
     if (next !== quality) set({ quality: next })
   },
   setSelectedFloor: (selectedFloor) => set({ selectedFloor }),

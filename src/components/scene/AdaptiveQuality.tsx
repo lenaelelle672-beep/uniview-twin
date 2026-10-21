@@ -17,6 +17,7 @@ import {
   ensureAdaptiveMemory,
   noteAdaptivePumpFrame,
   phaseActivity,
+  inclineAdaptiveQuality,
   publishAdaptiveStatus,
   readAdaptiveMemory,
   readAdaptivePumpFrames,
@@ -169,7 +170,7 @@ export function AdaptiveQuality() {
       const decision = decideAdaptiveTier(current, state.quality, signal, performance.now())
       writeAdaptiveMemory(decision.memory)
       if (decision.applied === 'decline') state.declineQuality()
-      else if (decision.applied === 'incline') state.inclineQuality()
+      else if (decision.applied === 'incline') inclineAdaptiveQuality()
       const live = useTwinStore.getState().quality
       if (decision.applied) stampGpuTier(live)
       publishAdaptiveStatus({

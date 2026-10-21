@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetTwinStore, useTwinStore } from '../store/store'
 import { applySearchToStore, parseSearch, serializeUrl, storeToSearch } from './urlState'
+import { inclineAdaptiveQuality } from '../scene/adaptiveQuality'
 import { formatViewpoint, parseViewpoint, roundViewpointMillimetre, type Viewpoint } from './viewpoint'
 
 describe('URL 解析与回写', () => {
@@ -53,7 +54,7 @@ describe('URL 解析与回写', () => {
     expect(state.qualityPinned).toBe(true)
     expect(state.selectedFloor).toBe('F8')
     state.declineQuality()
-    state.inclineQuality()
+    inclineAdaptiveQuality()
     expect(useTwinStore.getState().quality).toBe('high')
     expect(storeToSearch()).toBe('?floor=F8&q=high')
 

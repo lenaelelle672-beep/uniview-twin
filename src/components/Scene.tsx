@@ -33,11 +33,6 @@ const FacadeSamples = lazy(() =>
 )
 const PrewarmGate = lazy(() => import('../scene/prewarm/PrewarmGate').then((mod) => ({ default: mod.PrewarmGate })))
 const DemandLoop = lazy(() => import('./scene/DemandLoop'))
-// T043：画质监视分包不进主包。采样策略在 scene/adaptiveQuality.ts。
-// 挂上时刻与软阴影同一道门，避免分包请求进 hardGate cutoff。
-const AdaptiveQuality = lazy(() =>
-  import('./scene/AdaptiveQuality').then((mod) => ({ default: mod.AdaptiveQuality })),
-)
 
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render driver/i
 
@@ -96,7 +91,7 @@ function OverviewFog({ mode }: { mode: SurfaceMode }) {
   return <primitive key={mode} object={fog} attach="fog" />
 }
 
-function SceneBody({ mode, softwareAuto }: { mode: SurfaceMode; softwareAuto: boolean }) {
+function SceneBody({ mode }: { mode: SurfaceMode }) {
   const quality = useTwinStore((state) => state.quality)
   const dayNight = useTwinStore((state) => state.dayNight)
   const model = mode === 'model'
@@ -109,9 +104,6 @@ function SceneBody({ mode, softwareAuto }: { mode: SurfaceMode; softwareAuto: bo
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const [softShadowChunkOn, setSoftShadowChunkOn] = useState(false)
   const [loopOn, setLoopOn] = useState(false)
-  const [adaptiveGate, setAdaptiveGate] = useState(false)
-  const qualityPinned = useTwinStore((state) => state.qualityPinned)
-  const downgradeSuppressed = useTwinStore((state) => state.downgradeSuppressed)
   const view = useTwinStore((state) => state.view)
   const exploded = useTwinStore((state) => state.exploded)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
@@ -169,19 +161,13 @@ function SceneBody({ mode, softwareAuto }: { mode: SurfaceMode; softwareAuto: bo
   useEffect(() => {
     let cancelled = false
     let raf = 0
-    let adaptiveOpened = false
     const tick = () => {
       if (cancelled) return
       const first = window.__twinFirstFrameAt
       // 锁机 cutoff 比首帧宽，首帧后十几毫秒的 DemandLoop 会把
       // cameraRest / frameSchedule 一起卷进 hardGateFiles。与软阴影同一道门再挂。
-      // 自适应画质分包也走这道门，不提前发请求。
       if (first != null && performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS) {
         setLoopOn(true)
-        if (!adaptiveOpened) {
-          adaptiveOpened = true
-          setAdaptiveGate(true)
-        }
       }
       // D195：等 textRuntime 预取 import() 完成，再挂 FacadeSamples / IdlePrewarm。
       // #22 楼层标记走 FloorList，不进这条 prefetch 链。
@@ -207,11 +193,6 @@ function SceneBody({ mode, softwareAuto }: { mode: SurfaceMode; softwareAuto: bo
           <DemandLoop />
         </Suspense>
       )}
-      {adaptiveGate && !softwareAuto && !qualityPinned && !downgradeSuppressed ? (
-        <Suspense fallback={null}>
-          <AdaptiveQuality />
-        </Suspense>
-      ) : null}
       <color attach="background" args={[background]} />
       {/* 白模不挂雾：背景是纯黑，黑雾会染脏白模。昼/夜见 src/scene/fog.ts。 */}
       <OverviewFog mode={mode} />
@@ -349,7 +330,7 @@ export function SceneCanvas() {
           setSelectedFloor(null)
         }}
       >
-        {gpuReady ? <SceneBody mode={mode} softwareAuto={softwareAuto} /> : null}
+        {gpuReady ? <SceneBody mode={mode} /> : null}
       </Canvas>
     </div>
   )

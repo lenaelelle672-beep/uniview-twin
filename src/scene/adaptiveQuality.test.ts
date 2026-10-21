@@ -16,6 +16,7 @@ import {
   adaptiveFpsBounds,
   adaptiveMonitorSignal,
   decideAdaptiveTier,
+  inclineAdaptiveQuality,
   initialAdaptiveMemory,
   normalizeScheduledHz,
   phaseActivity,
@@ -183,10 +184,10 @@ describe('锁定和 GPU 戳', () => {
     useTwinStore.setState({ quality: 'balanced', qualityPinned: false, downgradeSuppressed: false })
     useTwinStore.getState().declineQuality()
     expect(useTwinStore.getState().quality).toBe('perf')
-    useTwinStore.getState().inclineQuality()
+    inclineAdaptiveQuality()
     expect(useTwinStore.getState().quality).toBe('balanced')
     useTwinStore.getState().setQuality('perf')
-    useTwinStore.getState().inclineQuality()
+    inclineAdaptiveQuality()
     expect(useTwinStore.getState().quality).toBe('perf')
     expect(useTwinStore.getState().downgradeSuppressed).toBe(true)
   })
@@ -209,18 +210,25 @@ describe('锁定和 GPU 戳', () => {
 })
 
 describe('分包不进硬门禁静态图', () => {
-  it('Scene 懒挂，主包不引用 PerformanceMonitor，也不把续帧模块提前卷进来', () => {
+  it('主包不挂监视器，DemandLoop 在软阴影同一道门之后再懒加载', () => {
     const scene = readFileSync(join(here, '../components/Scene.tsx'), 'utf8')
+    const loop = readFileSync(join(here, '../components/scene/DemandLoop.tsx'), 'utf8')
     const chunk = readFileSync(join(here, '../components/scene/AdaptiveQuality.tsx'), 'utf8')
     const policy = readFileSync(join(here, 'adaptiveQuality.ts'), 'utf8')
-    expect(scene).toMatch(/lazy\(\(\) =>\s*import\('\.\/scene\/AdaptiveQuality'\)/)
-    expect(scene).toMatch(/SOFT_SHADOW_CHUNK_AFTER_FIRST_MS/)
-    expect(scene).toMatch(/adaptiveGate && !softwareAuto && !qualityPinned && !downgradeSuppressed/)
-    expect(scene).toMatch(/frameloop="demand"/)
+    expect(scene).not.toMatch(/AdaptiveQuality/)
     expect(scene).not.toMatch(/from ['"][^'"]*PerformanceMonitor['"]/)
     expect(scene).not.toMatch(/import\([^)]*PerformanceMonitor/)
     expect(scene).not.toMatch(/setFrameloop/)
     expect(scene).not.toMatch(/from ['"][^'"]*adaptiveQuality['"]/)
+    expect(scene).toMatch(/frameloop="demand"/)
+    expect(scene).toMatch(/SOFT_SHADOW_CHUNK_AFTER_FIRST_MS/)
+    expect(scene).toMatch(/gl\.toneMappingExposure = mode === 'day' \? 1\.95 : 1/)
+    expect(loop).toMatch(/import\('\.\/AdaptiveQuality'\)/)
+    expect(loop).toMatch(/ADAPTIVE_AFTER_FIRST_MS = 2600/)
+    expect(loop).toMatch(/qualityPinned/)
+    expect(loop).toMatch(/downgradeSuppressed/)
+    expect(loop).toMatch(/softwareAuto/)
+    expect(loop).not.toMatch(/setFrameloop/)
     expect(chunk).toMatch(/@react-three\/drei\/core\/PerformanceMonitor/)
     expect(chunk).not.toMatch(/setFrameloop/)
     expect(chunk).toMatch(/noteAdaptivePumpFrame/)
@@ -231,6 +239,5 @@ describe('分包不进硬门禁静态图', () => {
     expect(policy).not.toMatch(banned)
     expect(policy).not.toMatch(/@react-three\/drei/)
     expect(chunk).not.toMatch(/toneMappingExposure|SOFT_SHADOW_SAMPLES|FogExp2/)
-    expect(scene).toMatch(/gl\.toneMappingExposure = mode === 'day' \? 1\.95 : 1/)
   })
 })

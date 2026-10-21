@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { lowerQualityTier, qualityTierRank, raiseQualityTier, resolveQualityDpr, selectTreeModels } from './quality'
+import { lowerQualityTier, qualityTierRank, raiseQualityTier } from './adaptiveQuality'
+import { resolveQualityDpr, selectTreeModels } from './quality'
 
 describe('画质档像素比', () => {
   it('devicePixelRatio=2 时性能 1、均衡 1.5、高画质 2', () => {

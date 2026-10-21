@@ -26,24 +26,3 @@ export function selectTreeModels(quality: QualityTier): { visual: 'hi' | 'lo'; s
   if (quality === 'perf') return { visual: 'lo', shadow: null }
   return { visual: 'hi', shadow: 'lo' }
 }
-
-/** 从低到高。自动降档 / 升档都走这一列，避免和 DPR 上限各写一套。 */
-const QUALITY_LADDER: QualityTier[] = ['perf', 'balanced', 'high']
-
-export function qualityTierRank(quality: QualityTier): number {
-  const index = QUALITY_LADDER.indexOf(quality)
-  return index < 0 ? 0 : index
-}
-
-export function lowerQualityTier(quality: QualityTier): QualityTier {
-  const index = QUALITY_LADDER.indexOf(quality)
-  if (index <= 0) return 'perf'
-  return QUALITY_LADDER[index - 1]
-}
-
-export function raiseQualityTier(quality: QualityTier): QualityTier {
-  const index = QUALITY_LADDER.indexOf(quality)
-  if (index < 0) return 'balanced'
-  if (index >= QUALITY_LADDER.length - 1) return 'high'
-  return QUALITY_LADDER[index + 1]
-}

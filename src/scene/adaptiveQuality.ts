@@ -1,6 +1,35 @@
 import type { QualityTier } from '../types'
+import { useTwinStore } from '../store/store'
 import { gpuTierLabel } from './gpuDetect'
-import { lowerQualityTier, qualityTierRank, raiseQualityTier, resolveQualityDpr } from './quality'
+
+/** 从低到高。自动降档 / 升档都走这一列，定义在懒分包里，避免主包变大。 */
+const QUALITY_LADDER: QualityTier[] = ['perf', 'balanced', 'high']
+
+export function qualityTierRank(quality: QualityTier): number {
+  const index = QUALITY_LADDER.indexOf(quality)
+  return index < 0 ? 0 : index
+}
+
+export function lowerQualityTier(quality: QualityTier): QualityTier {
+  const index = QUALITY_LADDER.indexOf(quality)
+  if (index <= 0) return 'perf'
+  return QUALITY_LADDER[index - 1]
+}
+
+export function raiseQualityTier(quality: QualityTier): QualityTier {
+  const index = QUALITY_LADDER.indexOf(quality)
+  if (index < 0) return 'balanced'
+  if (index >= QUALITY_LADDER.length - 1) return 'high'
+  return QUALITY_LADDER[index + 1]
+}
+
+/** 自动升一档。URL 锁定或手动选过档之后不再动。不进 viewSlice，避免主包变大。 */
+export function inclineAdaptiveQuality(): void {
+  const { qualityPinned, downgradeSuppressed, quality } = useTwinStore.getState()
+  if (qualityPinned || downgradeSuppressed) return
+  const next = raiseQualityTier(quality)
+  if (next !== quality) useTwinStore.setState({ quality: next })
+}
 
 /**
  * T043 采样策略（frameloop 保持 demand）。
@@ -275,5 +304,6 @@ export function stampGpuTier(quality: QualityTier, devicePixelRatio?: number): v
   gpu.tier = gpuTierLabel(quality)
   if (gpu.software) return
   const dpr = devicePixelRatio ?? host.devicePixelRatio ?? 1
-  gpu.dpr = resolveQualityDpr(quality, dpr)
+  const cap = quality === 'perf' ? 1 : quality === 'high' ? 2 : 1.5
+  gpu.dpr = Math.min(Math.max(1, dpr), cap)
 }

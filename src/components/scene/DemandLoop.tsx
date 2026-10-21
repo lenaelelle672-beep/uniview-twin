@@ -1,5 +1,5 @@
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentType } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import { stepExplodeMotion } from '../../scene/explode'
 import { isCameraRested } from '../../scene/stage/cameraRest'
@@ -257,7 +257,44 @@ export function DemandLoop() {
     }, wait)
   }, 100)
 
-  return null
+  return <AdaptiveQualityHost />
+}
+
+/**
+ * T043：监视器不进主包。总览里 DemandLoop 自己也要等软阴影那道门，
+ * 单层会更早挂上，所以这里再用同一道 2600ms 门才 import。
+ * 字面量写在本文件，避免主包为了这个数字多一个导出。
+ */
+const ADAPTIVE_AFTER_FIRST_MS = 2600
+
+function AdaptiveQualityHost() {
+  const pinned = useTwinStore((state) => state.qualityPinned || state.downgradeSuppressed)
+  const [Monitor, setMonitor] = useState<ComponentType | null>(null)
+
+  useEffect(() => {
+    if (pinned || window.__twinGpu?.softwareAuto) return
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (first != null && performance.now() - first >= ADAPTIVE_AFTER_FIRST_MS) {
+        void import('./AdaptiveQuality').then((mod) => {
+          if (!cancelled) setMonitor(() => mod.AdaptiveQuality)
+        })
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [pinned])
+
+  if (!Monitor || pinned || window.__twinGpu?.softwareAuto) return null
+  return <Monitor />
 }
 
 export default DemandLoop
