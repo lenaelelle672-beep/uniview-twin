@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { lowerQualityTier, qualityTierRank, raiseQualityTier } from './adaptiveQuality'
 import { resolveQualityDpr, selectTreeModels } from './quality'
 
 describe('画质档像素比', () => {
@@ -24,5 +25,18 @@ describe('树模型按档位选择', () => {
   it('均衡和高画质主模型用精细树，阴影用远景树叶', () => {
     expect(selectTreeModels('balanced')).toEqual({ visual: 'hi', shadow: 'lo' })
     expect(selectTreeModels('high')).toEqual({ visual: 'hi', shadow: 'lo' })
+  })
+})
+
+describe('画质档阶梯', () => {
+  it('降档停在性能，升档停在高画质', () => {
+    expect(lowerQualityTier('high')).toBe('balanced')
+    expect(lowerQualityTier('balanced')).toBe('perf')
+    expect(lowerQualityTier('perf')).toBe('perf')
+    expect(raiseQualityTier('perf')).toBe('balanced')
+    expect(raiseQualityTier('balanced')).toBe('high')
+    expect(raiseQualityTier('high')).toBe('high')
+    expect(qualityTierRank('perf')).toBeLessThan(qualityTierRank('balanced'))
+    expect(qualityTierRank('balanced')).toBeLessThan(qualityTierRank('high'))
   })
 })
