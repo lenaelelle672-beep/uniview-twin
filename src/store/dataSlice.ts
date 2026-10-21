@@ -39,7 +39,7 @@ export const createDataSlice: StateCreator<TwinStore, [], [], DataSlice> = (set)
   error: null,
   dataUrl: null,
   setDataUrl: (dataUrl) => set({ dataUrl }),
-  setLoading: () => set({ status: 'loading', error: null, ...emptyData }),
-  setData: (data) => set({ ...data, status: 'ready', error: null }),
-  setError: (error) => set({ status: 'error', error, ...emptyData }),
+  setLoading: () => set({ status: 'loading', error: null, ...emptyData, alarmCursorMs: null, alarmPlayback: null }),
+  setData: (data) => set({ ...data, status: 'ready', error: null, alarmCursorMs: null, alarmPlayback: null }),
+  setError: (error) => set({ status: 'error', error, ...emptyData, alarmCursorMs: null, alarmPlayback: null }),
 })

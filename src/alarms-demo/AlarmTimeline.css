@@ -1,0 +1,64 @@
+.alarm-timeline {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  bottom: 40px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: calc(100% - 24px);
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(12, 35, 64, 0.9);
+  color: #f4f8fc;
+  box-shadow: 0 6px 18px rgba(16, 32, 51, 0.28);
+}
+
+.alarm-timeline-demo {
+  flex: none;
+  padding: 2px 4px;
+  border-radius: 4px;
+  background: #9a3412;
+  color: #fff;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.alarm-timeline-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.alarm-timeline-range {
+  width: min(360px, 34vw);
+  min-width: 96px;
+  margin: 0;
+  accent-color: #ff4d4f;
+}
+
+.alarm-timeline-clock {
+  flex: none;
+  min-width: 108px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.alarm-timeline-clear {
+  flex: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: inherit;
+}
+
+@media (max-width: 1280px) {
+  .alarm-timeline-range {
+    width: min(220px, 28vw);
+  }
+}

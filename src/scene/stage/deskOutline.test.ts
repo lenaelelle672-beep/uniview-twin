@@ -245,6 +245,32 @@ describe('进层告警和搜索多描边', () => {
     }
   })
 
+  it('回放工位表只替换告警来源，封顶、颜色和搜索让位不变', () => {
+    const devices = [
+      device({ id: 'F12-1-PC', type: 'pc', deskId: 'F12-1', status: 'online' }),
+      device({ id: 'F12-8-PC', type: 'pc', deskId: 'F12-8', status: 'online' }),
+      device({ id: 'F12-3-PC', type: 'pc', deskId: 'F12-3', status: 'alarm' }),
+      device({ id: 'F12-20-PC', type: 'pc', deskId: 'F12-20', status: 'online' }),
+    ]
+    expect(multiOutlineShells('F12', devices, [], null).map((shell) => shell.deskId)).toEqual(['F12-3'])
+    const played = multiOutlineShells(
+      'F12',
+      devices,
+      [{ deskId: 'F12-20', floorId: 'F12' }],
+      null,
+      MULTI_OUTLINE_CAP,
+      ['F12-8', 'F12-1', 'F12-1', 'F11-1'],
+    )
+    expect(played.map((shell) => [shell.deskId, shell.name, shell.color])).toEqual([
+      ['F12-1', 'AlarmOutline', ALARM_OUTLINE_COLOR],
+      ['F12-8', 'AlarmOutline', ALARM_OUTLINE_COLOR],
+      ['F12-20', 'SearchOutline', SEARCH_OUTLINE_COLOR],
+    ])
+    expect(played).toHaveLength(3)
+    expect(MULTI_OUTLINE_CAP).toBe(12)
+    expect(multiOutlineShells('F12', devices, [], null, MULTI_OUTLINE_CAP, [])).toEqual([])
+  })
+
   it('多描边复用可挂 mesh 和 invalidate，不挂实例父级', () => {
     const source = read('DeskOutline.tsx')
     expect(source).toMatch(/function FloorMultiOutlines/)

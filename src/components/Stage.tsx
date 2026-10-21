@@ -1,6 +1,7 @@
 import { useEffect, useState, type ComponentType } from 'react'
 import { ensurePrefetchStarted, schedulePrefetchAfterFirstFrame } from '../scene/stage/prefetchLazyChunks'
 import { useTwinStore } from '../store/store'
+import { AlarmTimelineGate } from './AlarmTimelineGate'
 import { AssetLoadOverlay } from './AssetLoadOverlay'
 import { FloorLeader } from './FloorLeader'
 import { SceneCanvas } from './Scene'
@@ -81,6 +82,7 @@ export function Stage() {
           返回总览
         </button>
       )}
+      {view === 'floor' && <AlarmTimelineGate />}
       {view === 'building' && (
         <button
           type="button"

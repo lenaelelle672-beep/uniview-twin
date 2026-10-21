@@ -9,7 +9,10 @@ import { ZONE_HEAT_LIFT, ZONE_HEAT_ORDER, buildZoneHeatGeometry, createZoneHeatM
  * 卸下时丢掉几何和材质，回总览不留这块网格。
  */
 export function ZoneHeatMesh({ floorId }: { floorId: string }) {
-  const alarms = useTwinStore((state) => state.alarms)
+  const liveAlarms = useTwinStore((state) => state.alarms)
+  // 没有回放帧时仍走现网 alarms。有回放帧时把那一帧交给原来的几何函数。
+  const playbackAlarms = useTwinStore((state) => state.alarmPlayback?.alarms)
+  const alarms = playbackAlarms ?? liveAlarms
   const devices = useTwinStore((state) => state.devices)
   const invalidate = useThree((state) => state.invalidate)
   const geometry = useMemo(() => buildZoneHeatGeometry(floorId, alarms, devices), [alarms, devices, floorId])

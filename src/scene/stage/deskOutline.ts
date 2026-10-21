@@ -105,6 +105,10 @@ export function focusedOutlineShells(
  * 工位状态跟电脑走（圆标 / 蓝图同一套）。打印机、摄像头没有可挂网格，不进列表。
  * 正在聚焦的工位留给青色 DeskOutline，这里跳过，避免两套壳叠在同一张桌面上。
  * 告警先占名额，搜索用剩下的，一共不超过 cap。
+ *
+ * playbackDeskIds 缺省时仍按现网 status==='alarm' 取工位。
+ * 传入时（含空数组）只改告警工位来源：本层有电脑的那些才留。
+ * 封顶、颜色、搜索让位和聚焦让位不改。
  */
 export function multiOutlineShells(
   floorId: string,
@@ -112,9 +116,11 @@ export function multiOutlineShells(
   searchHits: readonly OutlineSearchHit[],
   focusedDeskId: string | null,
   cap = MULTI_OUTLINE_CAP,
+  playbackDeskIds?: readonly string[] | null,
 ): MultiOutlineShell[] {
   const focused = focusedDeskOnFloor(floorId, focusedDeskId)
-  const alarms = alarmDeskIds(floorId, devices)
+  const alarms =
+    playbackDeskIds == null ? alarmDeskIds(floorId, devices) : playbackDeskIdsOnFloor(floorId, devices, playbackDeskIds)
   const alarmSet = new Set(alarms)
   const searches = searchDeskIds(floorId, searchHits, alarmSet)
   const shells: MultiOutlineShell[] = []
@@ -141,6 +147,20 @@ function focusedDeskOnFloor(floorId: string, focusedDeskId: string | null): stri
   if (!target || target.floorId !== floorId) return null
   if (!deskOutlinePose(floorId, target.deskId)) return null
   return target.deskId
+}
+
+/** 回放工位表再收一次：只要本层电脑，排序与现网告警工位相同。 */
+function playbackDeskIdsOnFloor(floorId: string, devices: readonly Device[], deskIds: readonly string[]): string[] {
+  const pcs = new Set<string>()
+  for (const device of devices) {
+    if (device.floorId !== floorId || device.type !== 'pc' || !device.deskId) continue
+    pcs.add(device.deskId)
+  }
+  const ids = new Set<string>()
+  for (const deskId of deskIds) {
+    if (pcs.has(deskId)) ids.add(deskId)
+  }
+  return [...ids].sort((left, right) => left.localeCompare(right, 'en', { numeric: true }))
 }
 
 /** 只认本层电脑告警。同一工位多条记录只留一次，按工位号稳定排序。 */
