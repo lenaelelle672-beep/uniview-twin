@@ -686,4 +686,18 @@ interface Window {
     cx: number,
     cy: number,
   ) => { name: string; parent: string; material: string; distance: number; point: [number, number, number] } | null
+  /** T048：进层人流路径。回总览卸载时删掉。points 与传给 Line 的数组是同一引用。 */
+  __twinWalkPaths?: {
+    floorId: string
+    visible: boolean
+    occupancy: boolean
+    dashed: boolean
+    opacity: number
+    lift: number
+    order: number
+    lines: number
+    points: ReadonlyArray<ReadonlyArray<readonly [number, number, number]>>
+    setVisible: (on: boolean) => void
+    setOccupancy: (on: boolean) => void
+  }
 }
