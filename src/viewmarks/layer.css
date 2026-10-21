@@ -1,0 +1,43 @@
+.layer-panel {
+  flex: none;
+  width: 100%;
+  padding: 8px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #122033;
+  box-shadow: 0 10px 28px rgba(12, 24, 40, 0.22);
+}
+
+.layer-title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.layer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.layer-panel button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 28px;
+  border: 1px solid #c5d2e0;
+  background: #f4f8fc;
+  color: #0c2340;
+  border-radius: 6px;
+  padding: 4px 8px;
+}
+
+.layer-panel button:hover {
+  background: #e4eef8;
+}
+
+.layer-panel button[aria-pressed='false'] {
+  background: #e7eef5;
+  color: #1c3148;
+}

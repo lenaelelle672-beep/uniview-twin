@@ -1,9 +1,10 @@
 import { Detailed } from '@react-three/drei/core/Detailed'
 import { useAnimations } from '@react-three/drei/core/useAnimations'
-import { useFrame, useLoader } from '@react-three/fiber'
+import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Group, MeshStandardMaterial, SkinnedMesh } from 'three'
 import { channelDue, channelIntervalMs, retainFrameChannel } from '../frameSchedule'
+import { useLayerShown } from '../layerGate'
 import { useTwinStore } from '../../store/store'
 import { clone as cloneSkeleton } from 'three/examples/jsm/utils/SkeletonUtils.js'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
@@ -129,9 +130,18 @@ function CorridorPeopleModels({ paths }: { paths: Point[][] }) {
   )
 }
 
-/** 性能档不挂载，因此不会请求人物 GLB。walkPaths 为空则不放人。 */
+/** 性能档或人流图层关闭时不挂载，因此不会请求人物 GLB。walkPaths 为空则不放人。 */
 export function CorridorPeople({ enabled, paths }: { enabled: boolean; paths?: Point[][] }) {
+  const people = useLayerShown('people')
+  const invalidate = useThree((state) => state.invalidate)
+  const visible = enabled && people
+  useLayoutEffect(() => {
+    invalidate()
+    return () => {
+      invalidate()
+    }
+  }, [invalidate, visible])
   const resolved = paths && paths.length > 0 ? paths : paths === undefined ? [towerCorridorPolyline()] : []
-  if (!enabled || resolved.length === 0) return null
+  if (!visible || resolved.length === 0) return null
   return <CorridorPeopleModels paths={resolved} />
 }

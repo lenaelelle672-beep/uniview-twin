@@ -1,9 +1,12 @@
+import { lazy, Suspense } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { mountAlarmTimeline } from '../components/AlarmTimelineGate'
 import { ViewmarkDock } from './ViewmarkDock'
 
 // T046：小地图跟这条晚加载入口走，不进首屏 hardGate / balancedFx。
 void import('../minimap/mount')
+
+const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
 let root: Root | null = null
 let host: HTMLElement | null = null
@@ -33,7 +36,14 @@ function mount() {
   host = next
   root?.unmount()
   root = createRoot(next)
-  root.render(<ViewmarkDock />)
+  root.render(
+    <div className="viewmark-row">
+      <Suspense fallback={null}>
+        <LayerPanel />
+      </Suspense>
+      <ViewmarkDock />
+    </div>,
+  )
 }
 
 mount()

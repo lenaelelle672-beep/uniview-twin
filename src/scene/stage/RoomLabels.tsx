@@ -6,6 +6,7 @@ import { searchWorkstations } from '../../locate/search'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { pointInRing } from '../../floors/parsePlan'
 import { useTwinStore } from '../../store/store'
+import { HiddenLayer, useLayerShown } from '../layerGate'
 import { waitFirstPrefetch } from './prefetchLazyChunks'
 import { classifyRoomLabel } from '../../floors/labelTier'
 import {
@@ -292,7 +293,7 @@ function deskInRoom(floorId: string, deskId: string, polygon: Array<[number, num
   }
 }
 
-export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
+function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
   const camera = useThree((state) => state.camera)
   const scene = useThree((state) => state.scene)
   const size = useThree((state) => state.size)
@@ -944,4 +945,10 @@ export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomL
       ) : null}
     </group>
   )
+}
+
+export function RoomLabels({ floorId, labels }: { floorId: string; labels: RoomLabel[] }) {
+  const on = useLayerShown('labels')
+  if (!on) return <HiddenLayer />
+  return <RoomLabelsLive floorId={floorId} labels={labels} />
 }

@@ -9,7 +9,7 @@ import { extrudeUp } from '../extrude'
 import { basementPickOutline } from './b1Plan'
 import { useTwinStore } from '../../store/store'
 import type { DeviceStatus } from '../../types'
-import { showCorridorPeople } from './corridor'
+import { showCorridorPeople } from './showCorridorPeople'
 import { BlankSuspenseFallback } from '../assetLoad'
 import { activeFloorId } from './cut'
 import { FloorCut } from './FloorCut'
@@ -99,7 +99,7 @@ function BasementPick() {
 export function FloorStage() {
   const view = useTwinStore((state) => state.view)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
-  const quality = useTwinStore((state) => state.quality)
+  const showPeople = useTwinStore((state) => showCorridorPeople(state.quality, state.layers.people))
   const desks = useTwinStore((state) => state.desks)
   const devices = useTwinStore((state) => state.devices)
   const active = activeFloorId(view, selectedFloor)
@@ -170,7 +170,7 @@ export function FloorStage() {
             spec={spec}
             colors={colors}
             devices={floorDevices}
-            showPeople={showCorridorPeople(quality)}
+            showPeople={showPeople}
           />
         )}
         {spec && spec.level < 0 && <B1Interior slots={basementSlots} colors={colors} devices={floorDevices} />}

@@ -17,6 +17,16 @@ const QUALITY_ORDER: QualityTier[] = ['high', 'balanced', 'perf']
 
 export type Presentation = 'lit' | 'model'
 
+export interface LayerFlags {
+  people: boolean
+  labels: boolean
+  heat: boolean
+  outlines: boolean
+  badges: boolean
+}
+
+export type LayerKey = keyof LayerFlags
+
 export interface ViewSlice {
   view: ViewMode
   exploded: boolean
@@ -26,6 +36,8 @@ export interface ViewSlice {
   qualityPinned: boolean
   urlQuality: QualityTier | null
   downgradeSuppressed: boolean
+  /** 人流、标签、热力、描边、圆标。默认全开，和画质档一起决定画不画。 */
+  layers: LayerFlags
   selectedFloor: string | null
   hoveredFloor: string | null
   focusedDeskId: string | null
@@ -40,6 +52,7 @@ export interface ViewSlice {
   setExploded: (exploded: boolean) => void
   setDayNight: (dayNight: DayNight) => void
   setQuality: (quality: QualityTier) => void
+  setLayer: (key: LayerKey, on: boolean) => void
   declineQuality: () => void
   setSelectedFloor: (floorId: string | null) => void
   setHoveredFloor: (floorId: string | null) => void
@@ -77,6 +90,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   qualityPinned: false,
   urlQuality: null,
   downgradeSuppressed: false,
+  layers: { people: true, labels: true, heat: true, outlines: true, badges: true },
   selectedFloor: null,
   hoveredFloor: null,
   focusedDeskId: null,
@@ -99,6 +113,11 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   },
   setDayNight: (dayNight) => startTransition(() => set({ dayNight })),
   setQuality: (quality) => startTransition(() => set({ quality, downgradeSuppressed: true })),
+  setLayer: (key, on) => {
+    const layers = get().layers
+    if (layers[key] === on) return
+    set({ layers: { ...layers, [key]: on } })
+  },
   declineQuality: () => {
     const { qualityPinned, downgradeSuppressed, quality } = get()
     if (qualityPinned || downgradeSuppressed) return

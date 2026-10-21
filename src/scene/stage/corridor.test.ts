@@ -35,6 +35,10 @@ describe('走廊折线', () => {
     expect(showCorridorPeople('perf')).toBe(false)
     expect(showCorridorPeople('balanced')).toBe(true)
     expect(showCorridorPeople('high')).toBe(true)
+    expect(showCorridorPeople('balanced', false)).toBe(false)
+    expect(showCorridorPeople('high', false)).toBe(false)
+    expect(showCorridorPeople('perf', true)).toBe(false)
+    expect(showCorridorPeople('balanced', true)).toBe(true)
   })
 
   it('F12 的 walkPaths 是闭合折线，条数不超过 12', () => {
