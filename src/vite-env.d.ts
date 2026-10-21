@@ -555,6 +555,14 @@ interface Window {
     alarmColor: string
     searchColor: string
   }
+  /** T045：DEMO 摄像头覆盖锥。离开楼层或卸载时删掉。 */
+  __twinCameraFov?: {
+    demo: true
+    floorId: string
+    cap: number
+    count: number
+    ids: string[]
+  }
   /** T042：DEMO 告警时间轴。离开楼层或卸载时删掉。 */
   __twinAlarmTimeline?: {
     demo: true
