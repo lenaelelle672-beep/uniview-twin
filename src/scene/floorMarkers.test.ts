@@ -1,6 +1,11 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { floorSpec } from '../data/floors'
+import { courtyardHole } from './massing'
+import { floorMarkerMidY, floorMarkerOutline, floorMarkerWorldPoints } from './floorMarkerAnchors'
 import { overviewFloorIds, overviewFloorRows, stripFloorRows, writeFloorMarkerProbe } from './floorMarkers'
+import { TOWER_OUTLINE_OVERVIEW } from './shell/rings'
+import { b1SlabOutline, basementPickOutline } from './stage/b1Plan'
 
 describe('总览楼层标记', () => {
   it('23 层顺序为 F22…F1、B1', () => {
@@ -56,11 +61,55 @@ describe('总览楼层标记', () => {
     expect(source).toMatch(/enterFloor\(floor\.id\)/)
   })
 
-  it('楼层引线只在相机或爆炸还在动时续帧', () => {
+  it('楼层引线在相机未停、回程滑行或爆炸途中续帧', () => {
     const source = readFileSync(new URL('../components/FloorLeader.tsx', import.meta.url), 'utf8')
     expect(source).toMatch(/__twinCameraRested === false/)
+    expect(source).toMatch(/__twinRig\?\.active/)
+    expect(source).not.toMatch(/from ['"][^'"]*cameraRest/)
     expect(source).toMatch(/pointerdown/)
     expect(source).toMatch(/wheel/)
     expect(source).not.toMatch(/frame = requestAnimationFrame\(tick\)\s+const svg/)
+    const types = readFileSync(new URL('../vite-env.d.ts', import.meta.url), 'utf8')
+    expect(types).toMatch(/__twinRig\?: \{[\s\S]*?active\?: boolean/)
+  })
+
+  it('B1 锚点用下沉广场开口，地下层不加层中高度', () => {
+    const anchors = readFileSync(new URL('./floorMarkerAnchors.ts', import.meta.url), 'utf8')
+    expect(anchors).toMatch(/basementPickOutline/)
+    expect(anchors).not.toMatch(/b1SlabOutline/)
+    expect(anchors).toMatch(/spec\.level < 0\) return offset/)
+
+    const root = globalThis as unknown as { window?: Window }
+    const had = Object.prototype.hasOwnProperty.call(root, 'window')
+    const previous = root.window
+    const win = {} as Window
+    root.window = win
+    try {
+      expect(floorMarkerOutline('B1')).toEqual(basementPickOutline())
+      expect(floorMarkerOutline('B1')).toEqual(courtyardHole())
+      expect(floorMarkerOutline('B1')).not.toEqual(b1SlabOutline())
+      expect(floorMarkerOutline('F1')).toBe(TOWER_OUTLINE_OVERVIEW)
+      expect(floorMarkerMidY('B1')).toBe(0)
+      const above = floorSpec('F1')
+      expect(floorMarkerMidY('F1')).toBeCloseTo(above.elevation + above.height / 2, 5)
+      win.__twinExplode = {
+        progress: 1,
+        exploded: true,
+        gap: 8,
+        overlap: false,
+        floors: [
+          { id: 'B1', offset: 3, groupY: null, bottom: -5.5, top: 0 },
+          { id: 'F1', offset: 3, groupY: null, bottom: 0, top: above.height },
+        ],
+      }
+      expect(floorMarkerMidY('B1')).toBe(3)
+      expect(floorMarkerMidY('F1')).toBeCloseTo(above.elevation + above.height / 2 + 3, 5)
+      const points = floorMarkerWorldPoints('B1')
+      expect(points.slice(3).map(([x, , z]) => [x, z])).toEqual(courtyardHole())
+      expect(points.every(([, y]) => y === 3)).toBe(true)
+    } finally {
+      if (had) root.window = previous
+      else delete root.window
+    }
   })
 })

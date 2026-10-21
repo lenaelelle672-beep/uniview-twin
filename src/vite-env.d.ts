@@ -480,6 +480,7 @@ interface Window {
   __twinFloor?: TwinFloorProbe
   __twinCut?: TwinCutStats
   __twinRig?: {
+    active?: boolean
     minDistance: number
     maxDistance: number
     distance: number
