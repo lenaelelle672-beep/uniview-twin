@@ -25,6 +25,7 @@ import {
   playbackAt,
 } from './DEMO_alarmTimeline'
 import { ALARM_TIMELINE_INVALIDATE_THROTTLE_MS, createInvalidateThrottle } from './invalidateThrottle'
+import { clearAlarmPlayback, setAlarmPlayback } from './playbackStore'
 
 hydrateFloorFromDisk('F12')
 
@@ -116,23 +117,24 @@ describe('回放 store', () => {
       alarmDeskIds: ['F12-1'],
       alarms: [{ id: 'DEMO-x', deviceId: 'F12-1-PC', floorId: 'F12', message: 'DEMO' }],
     }
-    useTwinStore.getState().setAlarmPlayback(frame)
-    expect(useTwinStore.getState().alarmCursorMs).toBe(DEMO_SAMPLE.partialMs)
-    useTwinStore.getState().clearAlarmPlayback()
+    setAlarmPlayback(frame)
+    expect(useTwinStore.getState().alarmPlayback?.cursorMs).toBe(DEMO_SAMPLE.partialMs)
+    clearAlarmPlayback()
     expect(useTwinStore.getState().alarmPlayback).toBeNull()
-    expect(useTwinStore.getState().alarmCursorMs).toBeNull()
+    clearAlarmPlayback()
+    expect(useTwinStore.getState().alarmPlayback).toBeNull()
 
     useTwinStore.getState().enterFloor('F12')
-    useTwinStore.getState().setAlarmPlayback(frame)
+    setAlarmPlayback(frame)
     useTwinStore.getState().exitFloor()
     expect(useTwinStore.getState().view).toBe('building')
     expect(useTwinStore.getState().alarmPlayback).toBeNull()
     expect(useTwinStore.getState().selectedFloor).toBe('F12')
 
-    useTwinStore.getState().setAlarmPlayback(frame)
+    setAlarmPlayback(frame)
     useTwinStore.getState().setData(createMockData())
     expect(useTwinStore.getState().alarmPlayback).toBeNull()
-    useTwinStore.getState().setAlarmPlayback(frame)
+    setAlarmPlayback(frame)
     useTwinStore.getState().setLoading()
     expect(useTwinStore.getState().alarmPlayback).toBeNull()
   })
@@ -183,6 +185,7 @@ describe('时间轴分包不进首屏图', () => {
     const gate = readRepo('../components/AlarmTimelineGate.tsx')
     const stage = readRepo('../components/Stage.tsx')
     const ui = readRepo('AlarmTimeline.tsx')
+    const dock = readRepo('../viewmarks/dock.tsx')
     const prefetch = readRepo('../scene/stage/prefetchLazyChunks.ts')
     const outlines = readRepo('../scene/stage/DeskOutline.tsx')
     const logic = readRepo('../scene/stage/deskOutline.ts')
@@ -193,7 +196,12 @@ describe('时间轴分包不进首屏图', () => {
     expect(gate).toMatch(/import\('\.\.\/alarms-demo\/AlarmTimeline'\)/)
     expect(gate).not.toMatch(/from '\.\.\/alarms-demo\/AlarmTimeline'/)
     expect(gate).toMatch(/SOFT_SHADOW_CHUNK_AFTER_FIRST_MS/)
-    expect(stage).toMatch(/<AlarmTimelineGate \/>/)
+    expect(stage).not.toMatch(/AlarmTimeline/)
+    expect(dock).toMatch(/mountAlarmTimeline/)
+    expect(dock).not.toMatch(/alarms-demo/)
+    expect(prefetch).toMatch(/import\('\.\.\/\.\.\/viewmarks\/dock'\)/)
+    expect(prefetch).toMatch(/FLOOR_SHELL_AFTER_FIRST_MS = 2600/)
+    expect(prefetch).not.toMatch(/requestIdleCallback/)
     expect(ui).toMatch(/import '\.\/AlarmTimeline\.css'/)
     expect(ui).toMatch(/createInvalidateThrottle/)
     expect(ui).toMatch(/flush\(\)/)

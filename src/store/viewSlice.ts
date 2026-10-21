@@ -152,7 +152,6 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
       set(
         dropped({
           view: 'building',
-          alarmCursorMs: null,
           alarmPlayback: null,
         }),
       ),

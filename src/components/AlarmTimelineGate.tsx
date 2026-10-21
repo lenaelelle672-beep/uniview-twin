@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
 import { SOFT_SHADOW_CHUNK_AFTER_FIRST_MS } from '../scene/softShadows'
 import { useTwinStore } from '../store/store'
 
@@ -41,4 +42,29 @@ export function AlarmTimelineGate() {
       <AlarmTimeline />
     </Suspense>
   )
+}
+
+let root: Root | null = null
+let host: HTMLElement | null = null
+
+/**
+ * 挂进 .stage，时间轴仍按 stage 绝对定位。
+ * 调用方是 viewmarks/dock：总览上这条包在首帧 2600ms 之后，不进均衡档 cutoff。
+ * Stage 若把宿主清掉，下次 DOM 变更会再挂上。
+ */
+export function mountAlarmTimeline(): void {
+  if (typeof document === 'undefined') return
+  if (host && !host.isConnected) {
+    root?.unmount()
+    root = null
+    host = null
+  }
+  if (host?.isConnected) return
+  const stage = document.querySelector('.stage')
+  if (!stage) return
+  const next = document.createElement('div')
+  stage.appendChild(next)
+  host = next
+  root = createRoot(next)
+  root.render(<AlarmTimelineGate />)
 }

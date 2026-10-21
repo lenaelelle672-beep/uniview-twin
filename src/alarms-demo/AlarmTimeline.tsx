@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTwinStore } from '../store/store'
 import type { AlarmPlaybackFrame } from '../store/filterSlice'
+import { clearAlarmPlayback, setAlarmPlayback } from './playbackStore'
 import './AlarmTimeline.css'
 import {
   DEMO_NOW_MS,
@@ -48,16 +49,16 @@ export function AlarmTimeline() {
   commitRef.current = (cursorMs: number) => {
     const state = useTwinStore.getState()
     if (cursorMs >= DEMO_NOW_MS) {
-      if (state.alarmPlayback) state.clearAlarmPlayback()
+      if (state.alarmPlayback) clearAlarmPlayback()
       return
     }
     const frame = frameFromSpans(spansRef.current, cursorMs)
     if (!frame) {
-      if (state.alarmPlayback) state.clearAlarmPlayback()
+      if (state.alarmPlayback) clearAlarmPlayback()
       return
     }
     if (state.alarmPlayback && sameFrame(state.alarmPlayback, frame)) return
-    state.setAlarmPlayback(frame)
+    setAlarmPlayback(frame)
   }
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export function AlarmTimeline() {
     const throttle = throttleRef.current
     return () => {
       throttle?.cancel()
-      useTwinStore.getState().clearAlarmPlayback()
+      clearAlarmPlayback()
     }
   }, [])
 
@@ -92,7 +93,7 @@ export function AlarmTimeline() {
     throttleRef.current?.cancel()
     draftRef.current = DEMO_NOW_MS
     setDraftMs(DEMO_NOW_MS)
-    useTwinStore.getState().clearAlarmPlayback()
+    clearAlarmPlayback()
   }
 
   const onRange = (value: string) => {

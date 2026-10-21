@@ -1,10 +1,12 @@
 import { createRoot, type Root } from 'react-dom/client'
+import { mountAlarmTimeline } from '../components/AlarmTimelineGate'
 import { ViewmarkDock } from './ViewmarkDock'
 
 let root: Root | null = null
 let host: HTMLElement | null = null
 
 function mount() {
+  mountAlarmTimeline()
   if (host && !host.isConnected) {
     root?.unmount()
     root = null

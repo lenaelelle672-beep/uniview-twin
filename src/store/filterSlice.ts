@@ -20,33 +20,19 @@ export interface FilterSlice {
   alarmFloorRange: AlarmFloorRange | null
   statusFilter: DeviceStatus[]
   searchQuery: string
-  /** null 表示停在「现在」，3D 读现网快照。 */
-  alarmCursorMs: number | null
+  /** null 表示停在「现在」，3D 读现网快照。游标在帧的 cursorMs 上。 */
   alarmPlayback: AlarmPlaybackFrame | null
   setAlarmFloorRange: (range: AlarmFloorRange | null) => void
   setStatusFilter: (statusFilter: DeviceStatus[]) => void
   setSearchQuery: (searchQuery: string) => void
-  setAlarmPlayback: (frame: AlarmPlaybackFrame | null) => void
-  clearAlarmPlayback: () => void
 }
 
 export const createFilterSlice: StateCreator<TwinStore, [], [], FilterSlice> = (set) => ({
   alarmFloorRange: null,
   statusFilter: [],
   searchQuery: '',
-  alarmCursorMs: null,
   alarmPlayback: null,
   setAlarmFloorRange: (alarmFloorRange) => set({ alarmFloorRange }),
   setStatusFilter: (statusFilter) => set({ statusFilter }),
   setSearchQuery: (searchQuery) => set({ searchQuery }),
-  setAlarmPlayback: (alarmPlayback) =>
-    set({
-      alarmPlayback,
-      alarmCursorMs: alarmPlayback?.cursorMs ?? null,
-    }),
-  clearAlarmPlayback: () =>
-    set((state) => {
-      if (state.alarmPlayback == null && state.alarmCursorMs == null) return state
-      return { alarmPlayback: null, alarmCursorMs: null }
-    }),
 })
