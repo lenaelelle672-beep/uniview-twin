@@ -551,9 +551,17 @@ interface Window {
     cap: number
     count: number
     alarmDeskIds: string[]
+    boxDeskIds: string[]
     searchDeskIds: string[]
     alarmColor: string
+    boxColor: string
     searchColor: string
+  }
+  /** T052：进层 Shift 框选。proxies 是本层工位代理数，描边仍走多描边封顶。卸载时删掉。 */
+  __twinBoxSelect?: {
+    floorId: string
+    proxies: number
+    deskIds: string[]
   }
   /** T045：DEMO 摄像头覆盖锥。离开楼层或卸载时删掉。 */
   __twinCameraFov?: {

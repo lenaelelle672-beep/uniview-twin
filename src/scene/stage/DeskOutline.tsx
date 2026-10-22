@@ -1,12 +1,14 @@
 import { Outlines } from '@react-three/drei/core/Outlines'
 import { useThree } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { Mesh, type BufferGeometry } from 'three'
 import { searchWorkstations } from '../../locate/search'
 import { useTwinStore } from '../../store/store'
 import { HiddenLayer, useLayerShown } from '../layerGate'
+import { EMPTY_BOX_IDS, useBoxSelectStore } from './boxSelectStore'
 import {
   ALARM_OUTLINE_COLOR,
+  BOX_OUTLINE_COLOR,
   DESK_OUTLINE_COLOR,
   DESK_OUTLINE_THICKNESS,
   MULTI_OUTLINE_CAP,
@@ -17,6 +19,8 @@ import {
   multiOutlineShells,
   type DeskOutlinePose,
 } from './deskOutline'
+
+const DeskBoxSelect = lazy(() => import('./DeskBoxSelect').then((mod) => ({ default: mod.DeskBoxSelect })))
 
 /**
  * 聚焦工位的选中轮廓。
@@ -74,18 +78,19 @@ function FloorMultiOutlinesLive({ floorId }: { floorId: string }) {
   const searchQuery = useTwinStore((state) => state.searchQuery)
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
   const alarmPlayback = useTwinStore((state) => state.alarmPlayback)
+  const boxDeskIds = useBoxSelectStore((state) => (state.floorId === floorId ? state.deskIds : EMPTY_BOX_IDS))
   const shells = useMemo(() => {
     const hits = searchWorkstations({ desks, people }, searchQuery, SEARCH_OUTLINE_HIT_LIMIT)
-    if (!alarmPlayback) return multiOutlineShells(floorId, devices, hits, focusedDeskId)
     return multiOutlineShells(
       floorId,
       devices,
       hits,
       focusedDeskId,
       MULTI_OUTLINE_CAP,
-      alarmPlayback.alarmDeskIds,
+      alarmPlayback ? alarmPlayback.alarmDeskIds : undefined,
+      boxDeskIds,
     )
-  }, [alarmPlayback, desks, devices, floorId, focusedDeskId, people, searchQuery])
+  }, [alarmPlayback, boxDeskIds, desks, devices, floorId, focusedDeskId, people, searchQuery])
 
   useEffect(() => {
     if (shells.length === 0) {
@@ -97,8 +102,10 @@ function FloorMultiOutlinesLive({ floorId }: { floorId: string }) {
       cap: MULTI_OUTLINE_CAP,
       count: shells.length,
       alarmDeskIds: shells.filter((shell) => shell.name === 'AlarmOutline').map((shell) => shell.deskId),
+      boxDeskIds: shells.filter((shell) => shell.name === 'BoxOutline').map((shell) => shell.deskId),
       searchDeskIds: shells.filter((shell) => shell.name === 'SearchOutline').map((shell) => shell.deskId),
       alarmColor: ALARM_OUTLINE_COLOR,
+      boxColor: BOX_OUTLINE_COLOR,
       searchColor: SEARCH_OUTLINE_COLOR,
     }
     window.__twinMultiOutlines = stamp
@@ -107,19 +114,25 @@ function FloorMultiOutlinesLive({ floorId }: { floorId: string }) {
     }
   }, [floorId, shells])
 
-  if (shells.length === 0) return null
   return (
-    <group name="MultiOutlines">
-      {shells.map((shell) => (
-        <OutlineCarrier
-          key={`${shell.name}:${shell.deskId}`}
-          name={shell.name}
-          geometry={shell.geometry}
-          pose={shell.pose}
-          color={shell.color}
-        />
-      ))}
-    </group>
+    <>
+      <Suspense fallback={null}>
+        <DeskBoxSelect floorId={floorId} />
+      </Suspense>
+      {shells.length === 0 ? null : (
+        <group name="MultiOutlines">
+          {shells.map((shell) => (
+            <OutlineCarrier
+              key={`${shell.name}:${shell.deskId}`}
+              name={shell.name}
+              geometry={shell.geometry}
+              pose={shell.pose}
+              color={shell.color}
+            />
+          ))}
+        </group>
+      )}
+    </>
   )
 }
 
