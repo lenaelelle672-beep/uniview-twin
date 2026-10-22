@@ -15,6 +15,7 @@ import {
   DESK_OUTLINE_THICKNESS,
   MULTI_OUTLINE_CAP,
   OUTLINE_CARRIER_LAYER,
+  BOX_OUTLINE_COLOR,
   SEARCH_OUTLINE_COLOR,
   SEARCH_OUTLINE_HIT_LIMIT,
   deskOutlinePose,
@@ -292,5 +293,90 @@ describe('进层告警和搜索多描边', () => {
     expect(logic).not.toMatch(/softShadows|DemandLoop|cameraRest|frameSchedule|balancedFx|OutlinePass/)
     expect(logic).toMatch(/geometry: deskGeometry/)
     expect(logic).toMatch(/geometry: monitorGeometry/)
+  })
+
+  it('框选接在告警后面、搜索前面，告警工位保持红色', () => {
+    expect(BOX_OUTLINE_COLOR).toBe('#55aaff')
+    expect(new Set([ALARM_OUTLINE_COLOR, BOX_OUTLINE_COLOR, DESK_OUTLINE_COLOR, SEARCH_OUTLINE_COLOR]).size).toBe(4)
+    const devices = [
+      device({ id: 'F12-2-PC', type: 'pc', deskId: 'F12-2', status: 'alarm' }),
+      device({ id: 'F12-4-PC', type: 'pc', deskId: 'F12-4', status: 'online' }),
+      device({ id: 'F12-9-PC', type: 'pc', deskId: 'F12-9', status: 'online' }),
+    ]
+    const shells = multiOutlineShells(
+      'F12',
+      devices,
+      [
+        { deskId: 'F12-9', floorId: 'F12' },
+        { deskId: 'F12-15', floorId: 'F12' },
+      ],
+      null,
+      MULTI_OUTLINE_CAP,
+      undefined,
+      ['F12-9', 'F12-2', 'F12-4', 'F11-1', 'F12-4'],
+    )
+    expect(shells.map((shell) => [shell.deskId, shell.name, shell.color])).toEqual([
+      ['F12-2', 'AlarmOutline', ALARM_OUTLINE_COLOR],
+      ['F12-4', 'BoxOutline', BOX_OUTLINE_COLOR],
+      ['F12-9', 'BoxOutline', BOX_OUTLINE_COLOR],
+      ['F12-15', 'SearchOutline', SEARCH_OUTLINE_COLOR],
+    ])
+    expect(shells.filter((shell) => shell.deskId === 'F12-2')).toHaveLength(1)
+  })
+
+  it('告警占满 12 个名额时框选和搜索都让位', () => {
+    const devices = Array.from({ length: 12 }, (_, index) =>
+      device({
+        id: `F12-${index + 1}-PC`,
+        type: 'pc',
+        deskId: `F12-${index + 1}`,
+        status: 'alarm' as const,
+      }),
+    )
+    const shells = multiOutlineShells(
+      'F12',
+      devices,
+      [{ deskId: 'F12-20', floorId: 'F12' }],
+      null,
+      MULTI_OUTLINE_CAP,
+      undefined,
+      ['F12-1', 'F12-20', 'F12-21'],
+    )
+    expect(shells).toHaveLength(MULTI_OUTLINE_CAP)
+    expect(shells.every((shell) => shell.name === 'AlarmOutline' && shell.color === ALARM_OUTLINE_COLOR)).toBe(true)
+    expect(shells.map((shell) => shell.deskId)).not.toContain('F12-20')
+    expect(shells.map((shell) => shell.deskId)).not.toContain('F12-21')
+  })
+
+  it('没有告警时框选最多 12 个，聚焦工位不占名额', () => {
+    const picked = Array.from({ length: 14 }, (_, index) => `F12-${index + 1}`)
+    const shells = multiOutlineShells('F12', [], [], 'F12-4', MULTI_OUTLINE_CAP, undefined, picked)
+    expect(shells).toHaveLength(MULTI_OUTLINE_CAP)
+    expect(shells.every((shell) => shell.name === 'BoxOutline' && shell.color === BOX_OUTLINE_COLOR)).toBe(true)
+    expect(shells.map((shell) => shell.deskId)).toEqual(['F12-1', 'F12-2', 'F12-3', 'F12-5', 'F12-6', 'F12-7', 'F12-8', 'F12-9', 'F12-10', 'F12-11', 'F12-12', 'F12-13'])
+    expect(shells.map((shell) => shell.deskId)).not.toContain('F12-4')
+    expect(shells.map((shell) => shell.deskId)).not.toContain('F12-14')
+  })
+
+  it('回放告警名单优先于框选颜色，不在回放里的现网告警可以涂成框选色', () => {
+    const devices = [
+      device({ id: 'F12-3-PC', type: 'pc', deskId: 'F12-3', status: 'alarm' }),
+      device({ id: 'F12-5-PC', type: 'pc', deskId: 'F12-5', status: 'online' }),
+      device({ id: 'F12-8-PC', type: 'pc', deskId: 'F12-8', status: 'online' }),
+    ]
+    const shells = multiOutlineShells(
+      'F12',
+      devices,
+      [],
+      null,
+      MULTI_OUTLINE_CAP,
+      ['F12-8'],
+      ['F12-3', 'F12-8', 'F12-5'],
+    )
+    expect(shells.map((shell) => [shell.deskId, shell.name, shell.color])).toEqual([
+      ['F12-8', 'AlarmOutline', ALARM_OUTLINE_COLOR],
+      ['F12-3', 'BoxOutline', BOX_OUTLINE_COLOR],
+      ['F12-5', 'BoxOutline', BOX_OUTLINE_COLOR],
+    ])
   })
 })

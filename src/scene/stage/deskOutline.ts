@@ -49,6 +49,13 @@ export const ALARM_OUTLINE_COLOR = '#ff4d4f'
  */
 export const SEARCH_OUTLINE_COLOR = '#faad14'
 
+/**
+ * 框选里非告警工位。
+ * 与 drei `<Select>` 默认框线 `#55aaff` 一致，和告警红、搜索琥珀、聚焦青都分开。
+ * 同一工位如果在告警名单里，仍用告警红，不用这个颜色。
+ */
+export const BOX_OUTLINE_COLOR = '#55aaff'
+
 /** 与 SearchBox 当前列表的 limit 一致。多出来的命中不描。 */
 export const SEARCH_OUTLINE_HIT_LIMIT = 10
 
@@ -58,7 +65,7 @@ export interface OutlineSearchHit {
 }
 
 export interface MultiOutlineShell {
-  name: 'AlarmOutline' | 'SearchOutline'
+  name: 'AlarmOutline' | 'BoxOutline' | 'SearchOutline'
   deskId: string
   geometry: BufferGeometry
   pose: DeskOutlinePose
@@ -101,14 +108,16 @@ export function focusedOutlineShells(
 }
 
 /**
- * 本层告警工位，再接当前搜索命中。
+ * 本层告警工位，再接框选，最后接当前搜索命中。
  * 工位状态跟电脑走（圆标 / 蓝图同一套）。打印机、摄像头没有可挂网格，不进列表。
  * 正在聚焦的工位留给青色 DeskOutline，这里跳过，避免两套壳叠在同一张桌面上。
- * 告警先占名额，搜索用剩下的，一共不超过 cap。
+ * 告警先占名额，框选用剩下的，搜索再用剩下的，一共不超过 cap。
+ * 框选里的告警工位留在红名单里，不再涂成框选蓝。
  *
  * playbackDeskIds 缺省时仍按现网 status==='alarm' 取工位。
  * 传入时（含空数组）只改告警工位来源：本层有电脑的那些才留。
  * 封顶、颜色、搜索让位和聚焦让位不改。
+ * boxDeskIds 缺省或空数组时不增加框选壳，和没有框选时一样。
  */
 export function multiOutlineShells(
   floorId: string,
@@ -117,28 +126,48 @@ export function multiOutlineShells(
   focusedDeskId: string | null,
   cap = MULTI_OUTLINE_CAP,
   playbackDeskIds?: readonly string[] | null,
+  boxDeskIds?: readonly string[] | null,
 ): MultiOutlineShell[] {
   const focused = focusedDeskOnFloor(floorId, focusedDeskId)
   const alarms =
     playbackDeskIds == null ? alarmDeskIds(floorId, devices) : playbackDeskIdsOnFloor(floorId, devices, playbackDeskIds)
   const alarmSet = new Set(alarms)
-  const searches = searchDeskIds(floorId, searchHits, alarmSet)
+  const boxes = boxDeskIds == null ? [] : boxDeskIdsOnFloor(floorId, boxDeskIds, alarmSet)
+  const taken = new Set<string>(alarmSet)
+  for (const deskId of boxes) taken.add(deskId)
+  const searches = searchDeskIds(floorId, searchHits, taken)
   const shells: MultiOutlineShell[] = []
-  const push = (deskId: string, role: 'alarm' | 'search') => {
+  const push = (deskId: string, role: 'alarm' | 'box' | 'search') => {
     if (shells.length >= cap || deskId === focused) return
     const pose = deskOutlinePose(floorId, deskId)
     if (!pose) return
     shells.push({
-      name: role === 'alarm' ? 'AlarmOutline' : 'SearchOutline',
+      name: role === 'alarm' ? 'AlarmOutline' : role === 'box' ? 'BoxOutline' : 'SearchOutline',
       deskId,
       geometry: deskGeometry,
       pose,
-      color: role === 'alarm' ? ALARM_OUTLINE_COLOR : SEARCH_OUTLINE_COLOR,
+      color: role === 'alarm' ? ALARM_OUTLINE_COLOR : role === 'box' ? BOX_OUTLINE_COLOR : SEARCH_OUTLINE_COLOR,
     })
   }
   for (const deskId of alarms) push(deskId, 'alarm')
+  for (const deskId of boxes) push(deskId, 'box')
   for (const deskId of searches) push(deskId, 'search')
   return shells
+}
+
+/** 框选工位再收一次：去掉告警（告警保持红色）、外层和没有落点的编号。 */
+function boxDeskIdsOnFloor(floorId: string, deskIds: readonly string[], blocked: ReadonlySet<string>): string[] {
+  const ids: string[] = []
+  const seen = new Set<string>()
+  for (const deskId of deskIds) {
+    const target = resolveWorkstationRef(deskId)
+    if (!target || target.floorId !== floorId) continue
+    if (blocked.has(target.deskId) || seen.has(target.deskId)) continue
+    if (!deskOutlinePose(floorId, target.deskId)) continue
+    seen.add(target.deskId)
+    ids.push(target.deskId)
+  }
+  return ids.sort((left, right) => left.localeCompare(right, 'en', { numeric: true }))
 }
 
 function focusedDeskOnFloor(floorId: string, focusedDeskId: string | null): string | null {
