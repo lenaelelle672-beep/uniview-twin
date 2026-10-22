@@ -26,6 +26,7 @@ import {
   scheduledHz,
   soonestWakeMs,
 } from '../../scene/frameSchedule'
+import { FocusFloatHost } from '../../scene/focusFloat/FocusFloatHost'
 import { useTwinStore } from '../../store/store'
 
 function markInv(src: string) {
@@ -260,6 +261,8 @@ export function DemandLoop() {
   return (
     <>
       <MeasureSlot />
+      {/* 聚焦摘要的挂载点。drei Html 在懒包里，这里只引用 Host。 */}
+      <FocusFloatHost />
       <AdaptiveQualityHost />
     </>
   )
