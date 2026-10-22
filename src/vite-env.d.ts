@@ -721,4 +721,11 @@ interface Window {
     setVisible: (on: boolean) => void
     setOccupancy: (on: boolean) => void
   }
+  /** T050：总览方位块。离开总览后删掉。北在 -Z。 */
+  __twinGizmo?: {
+    view: 'building'
+    faces: readonly string[]
+    north: '北'
+    renderPriority: number
+  }
 }

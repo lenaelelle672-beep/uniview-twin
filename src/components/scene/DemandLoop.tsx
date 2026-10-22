@@ -264,6 +264,7 @@ export function DemandLoop() {
       {/* 聚焦摘要的挂载点。drei Html 在懒包里，这里只引用 Host。 */}
       <FocusFloatHost />
       <AdaptiveQualityHost />
+      <OverviewGizmoHost />
     </>
   )
 }
@@ -318,6 +319,41 @@ function AdaptiveQualityHost() {
 
   if (!Monitor || pinned || window.__twinGpu?.softwareAuto) return null
   return <Monitor />
+}
+
+/**
+ * T050：总览方位块。drei 在独立分包里。
+ * 与监视器同一道 2600ms 门再 import，躲开 hardGate / balancedFx。
+ * 单层不拉这个包。
+ */
+function OverviewGizmoHost() {
+  const view = useTwinStore((state) => state.view)
+  const [Gizmo, setGizmo] = useState<ComponentType | null>(null)
+
+  useEffect(() => {
+    if (view !== 'building') return
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (first != null && performance.now() - first >= ADAPTIVE_AFTER_FIRST_MS) {
+        void import('../../gizmo/OrientationGizmo').then((mod) => {
+          if (!cancelled) setGizmo(() => mod.OrientationGizmo)
+        })
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [view])
+
+  if (view !== 'building' || !Gizmo) return null
+  return <Gizmo />
 }
 
 export default DemandLoop
