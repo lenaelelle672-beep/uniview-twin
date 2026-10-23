@@ -78,6 +78,7 @@ describe('速查目录', () => {
       'measure',
       'minimap',
       'bookmarks',
+      'fullscreen',
       'alarm',
     ])
     const text = JSON.stringify(SHORTCUT_GROUPS)

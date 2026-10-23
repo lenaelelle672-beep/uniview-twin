@@ -66,10 +66,26 @@
 }
 
 .viewmark-share,
-.viewmark-glb {
+.viewmark-glb,
+.viewmark-fullscreen {
   display: block;
   width: 100%;
   margin: 0 0 6px;
+}
+
+.viewmark-dock button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.scene-root:fullscreen {
+  background: #d7e6f2;
+}
+
+@media (max-width: 720px) {
+  .viewmark-fullscreen {
+    padding: 4px 6px;
+  }
 }
 
 .viewmark-note {
