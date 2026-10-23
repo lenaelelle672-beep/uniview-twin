@@ -545,6 +545,16 @@ interface Window {
   __vpT?: boolean
   /** T041：导览在画布外泵一帧。不进 cameraRest / frameSchedule。 */
   __vpP?: () => void
+  /**
+   * T060：结构边。默认不挂。
+   * latch 固定为 edges-wins：结构边和 T063 Wireframe 同时开时只画 Edges。
+   */
+  __twinStructureEdges?: {
+    mode: 'off' | 'edges' | 'wireframe'
+    count: number
+    threshold: number
+    latch: 'edges-wins'
+  }
   /** T041：?vp= 还原函数，按需包挂上之前是空的。 */
   __vpS?: (rig: NonNullable<Window['__twinRig']>, token: string, floor: boolean) => void
   __twinSlab?: TwinSlabMetrics

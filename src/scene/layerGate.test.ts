@@ -13,8 +13,15 @@ function read(path: string): string {
   return readFileSync(join(here, path), 'utf8')
 }
 
-const ALL_ON: LayerFlags = { people: true, labels: true, heat: true, outlines: true, badges: true }
-const KEYS: LayerKey[] = ['people', 'labels', 'heat', 'outlines', 'badges']
+const ALL_ON: LayerFlags = {
+  people: true,
+  labels: true,
+  heat: true,
+  outlines: true,
+  badges: true,
+  edges: true,
+}
+const KEYS: LayerKey[] = ['people', 'labels', 'heat', 'outlines', 'badges', 'edges']
 const TIERS: QualityTier[] = ['perf', 'balanced', 'high']
 
 describe('图层和画质一起决定画不画', () => {
