@@ -65,6 +65,12 @@
   flex: 1;
 }
 
+.viewmark-share {
+  display: block;
+  width: 100%;
+  margin: 0 0 6px;
+}
+
 .viewmark-note {
   margin: 0 0 6px;
   font-size: 12px;

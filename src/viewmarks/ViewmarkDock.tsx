@@ -35,6 +35,7 @@ export function ViewmarkDock() {
   const [note, setNote] = useState('')
   const [touring, setTouring] = useState(false)
   const [tourFloor, setTourFloor] = useState<string | null>(null)
+  const [sharing, setSharing] = useState(false)
   const cancelRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -107,15 +108,36 @@ export function ViewmarkDock() {
     setNote('已保存，刷新会回到这个视角')
   }
 
+  function viewpointHref(): string {
+    return `${window.location.origin}${window.location.pathname}${storeToSearch()}${window.location.hash}`
+  }
+
   async function onCopy() {
     const token = captureToken()
     if (!token) return
-    const href = `${window.location.origin}${window.location.pathname}${storeToSearch()}${window.location.hash}`
     try {
-      await navigator.clipboard.writeText(href)
+      await navigator.clipboard.writeText(viewpointHref())
       setNote('链接已复制')
     } catch {
       setNote('链接已写入地址栏')
+    }
+  }
+
+  async function onShare() {
+    if (sharing) return
+    const token = captureToken()
+    if (!token) return
+    const href = viewpointHref()
+    setSharing(true)
+    setNote('正在截取画面')
+    try {
+      const mod = await import('./shareShot')
+      const result = await mod.shareViewpointShot(href)
+      setNote(result.message)
+    } catch {
+      setNote('截图没有完成')
+    } finally {
+      setSharing(false)
     }
   }
 
@@ -172,6 +194,15 @@ export function ViewmarkDock() {
           {touring ? '停止导览' : '导览告警'}
         </button>
       </div>
+      <button
+        type="button"
+        className="viewmark-share"
+        data-share-shot
+        onClick={() => void onShare()}
+        disabled={status !== 'ready' || sharing}
+      >
+        截图/分享
+      </button>
       {touring && (
         <p className="viewmark-note" role="status">
           导览中{tourFloor ? ` · ${tourFloor}` : ''}，Esc 或点击画面可停
