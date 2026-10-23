@@ -9,6 +9,69 @@ void import('../audio/AlarmAudioCue').then((mod) => {
 })
 `
 
+const CLIP_SOURCE_BLOCK = `// T062：短视频录制。整段逻辑在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../capture/mountClip').then((mod) => {
+  mod.mountClipCapture()
+})
+`
+
+/**
+ * 与提示音同一条晚加载入口。生产构建在算 dock 哈希之前摘掉这段，
+ * early index 不因录制接线变长；哈希定稿后再把独立分包接回 dock。
+ */
+function clipCaptureAfterHash(): Plugin {
+  return {
+    name: 'clip-capture-after-hash',
+    apply: 'build',
+    enforce: 'pre',
+    transform(code, id) {
+      const file = id.split('?')[0]?.replaceAll('\\', '/')
+      if (!file?.endsWith('/src/viewmarks/dock.tsx')) return null
+      if (!code.includes(CLIP_SOURCE_BLOCK)) {
+        this.error('T062：dock 里的录制接线变了，生产构建无法在哈希前摘干净')
+      }
+      return { code: code.replace(CLIP_SOURCE_BLOCK, ''), map: null }
+    },
+    async generateBundle(_options, bundle) {
+      const dock = Object.values(bundle).find((item) => item.type === 'chunk' && item.name === 'dock')
+      if (!dock || dock.type !== 'chunk') this.error('T062：找不到 dock 分包')
+      const built = await esbuild({
+        absWorkingDir: fileURLToPath(new URL('.', import.meta.url)),
+        entryPoints: [fileURLToPath(new URL('./src/capture/mountClip.ts', import.meta.url))],
+        bundle: true,
+        format: 'esm',
+        platform: 'browser',
+        target: 'es2022',
+        minify: true,
+        legalComments: 'none',
+        write: false,
+      })
+      const source = built.outputFiles[0]?.text ?? ''
+      if (
+        !source.includes('mountClipCapture') ||
+        source.length > 20_000 ||
+        /ccapture|zustand|react-three|from"three"|from'three'/i.test(source)
+      ) {
+        this.error('T062：录制分包没有独立打出来')
+      }
+      const fileName = 'assets/ClipCapture.js'
+      const names: string[] = ['clipCapture']
+      const originalFileNames: string[] = []
+      bundle[fileName] = {
+        type: 'asset',
+        fileName,
+        name: 'clipCapture',
+        names,
+        originalFileName: null,
+        originalFileNames,
+        source,
+        needsCodeReference: false,
+      }
+      dock.code += `\nvoid import("./ClipCapture.js").then((m)=>{m.mountClipCapture()});\n`
+    },
+  }
+}
+
 /**
  * 开发时 dock 源码里的动态 import 照常走。
  * 生产构建在算内容哈希之前把这段从 dock 摘掉，哈希与 main 的 dock 对齐，
@@ -206,6 +269,7 @@ function stripJsdelivr(): Plugin {
 export default defineConfig({
   plugins: [
     alarmCueAfterHash(),
+    clipCaptureAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
