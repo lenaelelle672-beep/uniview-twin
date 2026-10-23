@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { shortcutTargetBlocks } from '../shortcuts/guard'
 import { useTwinStore } from '../store/store'
 import { registerEscapeLayer } from '../ui/escapeLayers'
 import { storeToSearch } from '../url/urlState'
@@ -14,6 +15,24 @@ import {
 import { readViewpoint } from './readViewpoint'
 import { TWIN_TOUR_EVENT, type TwinTourDetail } from './tourEvents'
 import dockCss from './viewmark.css?inline'
+
+async function runFullscreenToggle(): Promise<{ ok: boolean; active: boolean; message: string; blocked: boolean }> {
+  try {
+    const mod = await import('./fullscreen')
+    if (mod.fullscreenDisabled()) {
+      return { ok: false, active: false, message: '全屏已关闭', blocked: true }
+    }
+    const result = await mod.toggleFullscreen()
+    return { ok: result.ok, active: result.active, message: result.message, blocked: false }
+  } catch {
+    return {
+      ok: false,
+      active: typeof document !== 'undefined' && document.fullscreenElement != null,
+      message: '全屏没有完成',
+      blocked: false,
+    }
+  }
+}
 
 function pinCurrent(token: string) {
   if (!parseViewpoint(token)) return false
@@ -37,7 +56,13 @@ export function ViewmarkDock() {
   const [tourFloor, setTourFloor] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [fullOn, setFullOn] = useState(false)
+  const [fullOff, setFullOff] = useState(false)
+  const [fullBusy, setFullBusy] = useState(false)
   const cancelRef = useRef<(() => void) | null>(null)
+  const fullOffRef = useRef(false)
+  const fullBusyRef = useRef(false)
+  const performRef = useRef<() => void>(() => {})
 
   useEffect(() => {
     const node = document.createElement('style')
@@ -66,6 +91,58 @@ export function ViewmarkDock() {
       cancelRef.current?.()
     })
   }, [touring])
+
+  useEffect(() => {
+    // T061：包跟书签条晚加载。真正进入全屏仍发生在点击或 F 上，预取只为赶上手势窗口。
+    let cancelled = false
+    void import('./fullscreen')
+      .then((mod) => {
+        if (cancelled) return
+        const off = mod.fullscreenDisabled()
+        fullOffRef.current = off
+        setFullOff(off)
+      })
+      .catch(() => {
+        if (cancelled) return
+        fullOffRef.current = true
+        setFullOff(true)
+      })
+
+    const onChange = () => {
+      const on = document.fullscreenElement != null
+      setFullOn(on)
+      if (!on) setNote((prev) => (prev.includes('已进入全屏') ? '已退出全屏' : prev))
+    }
+    document.addEventListener('fullscreenchange', onChange)
+
+    // Esc 退出全屏走浏览器默认。捕获阶段停掉冒泡，避免同一次按键被楼层 Esc 先 preventDefault。
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || !document.fullscreenElement) return
+      event.stopPropagation()
+    }
+    window.addEventListener('keydown', onEsc, true)
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat || event.isComposing) return
+      if (event.altKey || event.metaKey || event.ctrlKey) return
+      if (event.key !== 'f' && event.key !== 'F') return
+      if (shortcutTargetBlocks(event.target)) return
+      if (fullOffRef.current) {
+        setNote('全屏已关闭')
+        return
+      }
+      event.preventDefault()
+      performRef.current()
+    }
+    window.addEventListener('keydown', onKey)
+
+    return () => {
+      cancelled = true
+      document.removeEventListener('fullscreenchange', onChange)
+      window.removeEventListener('keydown', onEsc, true)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [])
 
   function captureToken(): string | null {
     const raw = readViewpoint()
@@ -140,6 +217,27 @@ export function ViewmarkDock() {
     } finally {
       setSharing(false)
     }
+  }
+
+  async function performFullscreen() {
+    if (fullOffRef.current || fullBusyRef.current) return
+    fullBusyRef.current = true
+    setFullBusy(true)
+    try {
+      const result = await runFullscreenToggle()
+      if (result.blocked) {
+        fullOffRef.current = true
+        setFullOff(true)
+      }
+      setFullOn(result.active)
+      setNote(result.message)
+    } finally {
+      fullBusyRef.current = false
+      setFullBusy(false)
+    }
+  }
+  performRef.current = () => {
+    void performFullscreen()
   }
 
   async function onExportGlb() {
@@ -228,6 +326,19 @@ export function ViewmarkDock() {
         disabled={status !== 'ready' || exporting}
       >
         导出本层
+      </button>
+      <button
+        type="button"
+        className="viewmark-fullscreen"
+        data-fullscreen
+        aria-label={fullOn ? '退出全屏' : '进入全屏'}
+        aria-keyshortcuts="f"
+        aria-pressed={fullOn}
+        title={fullOff ? '地址栏带 ?nofullscreen=1，已关闭全屏' : 'F 全屏，Esc 退出'}
+        onClick={() => performRef.current()}
+        disabled={fullOff || fullBusy}
+      >
+        {fullOn ? '退出全屏' : '全屏'}
       </button>
       {touring && (
         <p className="viewmark-note" role="status">

@@ -66,6 +66,14 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
+    id: 'fullscreen',
+    title: '全屏',
+    rows: [
+      { keys: 'F', action: '进入或退出画面全屏。优先画布区域' },
+      { keys: 'Esc', action: '退出全屏，沿用浏览器默认，不经过本页的 Esc 栈' },
+    ],
+  },
+  {
     id: 'alarm',
     title: '告警',
     rows: [
