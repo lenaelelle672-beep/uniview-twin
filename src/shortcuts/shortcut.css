@@ -1,0 +1,104 @@
+.shortcut-host {
+  position: absolute;
+  z-index: 6;
+  top: 56px;
+  right: 12px;
+  width: min(320px, calc(100% - 24px));
+  max-height: calc(100% - 68px);
+  pointer-events: none;
+}
+
+.shortcut-sheet {
+  pointer-events: auto;
+  max-height: min(70vh, 640px);
+  overflow: auto;
+  padding: 10px 12px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #122033;
+  box-shadow: 0 10px 28px rgba(12, 24, 40, 0.22);
+}
+
+.shortcut-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.shortcut-head h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.shortcut-head button {
+  border: 0;
+  border-radius: 8px;
+  padding: 4px 10px;
+  background: #0c2340;
+  color: #fff;
+}
+
+.shortcut-head button:focus-visible {
+  outline: 2px solid #0c2340;
+  outline-offset: 2px;
+}
+
+.shortcut-note {
+  margin: 0 0 8px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #526070;
+}
+
+.shortcut-group {
+  margin: 0 0 8px;
+}
+
+.shortcut-group h3 {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0c2340;
+}
+
+.shortcut-group dl {
+  margin: 0;
+}
+
+.shortcut-row {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  margin: 0 0 4px;
+}
+
+.shortcut-row dt,
+.shortcut-row dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.shortcut-row dt {
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .shortcut-host {
+    position: fixed;
+    top: 64px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    max-height: calc(100vh - 80px);
+    z-index: 8;
+  }
+
+  .shortcut-sheet {
+    max-height: calc(100vh - 80px);
+  }
+}

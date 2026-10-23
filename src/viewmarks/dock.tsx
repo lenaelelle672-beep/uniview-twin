@@ -5,6 +5,8 @@ import { ViewmarkDock } from './ViewmarkDock'
 
 // T046：小地图跟这条晚加载入口走，不进首屏 hardGate / balancedFx。
 void import('../minimap/mount')
+// T051：问号监听跟同一条晚加载入口。面板本体仍等按下 ? 再拉。
+void import('../shortcuts/arm')
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
