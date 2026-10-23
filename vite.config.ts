@@ -1,4 +1,5 @@
 import { build as esbuild } from 'esbuild'
+import { gridAxesAfterHash } from './scripts/gridAxesPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -270,6 +271,7 @@ export default defineConfig({
   plugins: [
     alarmCueAfterHash(),
     clipCaptureAfterHash(),
+    gridAxesAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
