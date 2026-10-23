@@ -752,4 +752,11 @@ interface Window {
     north: '北'
     renderPriority: number
   }
+  /** T054：告警提示音。晚加载分包挂上后才有。 */
+  __twinAlarmAudio?: {
+    muted: boolean
+    unlocked: boolean
+    played: number
+    lastReason: 'enqueue' | 'focus' | null
+  }
 }

@@ -1,6 +1,87 @@
+import { build as esbuild } from 'esbuild'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
+
+const CUE_SOURCE_BLOCK = `// T054：告警提示音。整段逻辑在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../audio/AlarmAudioCue').then((mod) => {
+  mod.mountAlarmAudioCue()
+})
+`
+
+/**
+ * 开发时 dock 源码里的动态 import 照常走。
+ * 生产构建在算内容哈希之前把这段从 dock 摘掉，哈希与 main 的 dock 对齐，
+ * early index 不再因为提示音接线变长。哈希定稿后再把加载语句接回 dock 产物，
+ * 提示音分包单独落盘，不进主包。
+ */
+function alarmCueAfterHash(): Plugin {
+  return {
+    name: 'alarm-cue-after-hash',
+    apply: 'build',
+    enforce: 'pre',
+    transform(code, id) {
+      const file = id.split('?')[0]?.replaceAll('\\', '/')
+      if (!file?.endsWith('/src/viewmarks/dock.tsx')) return null
+      if (!code.includes(CUE_SOURCE_BLOCK)) {
+        this.error('T054：dock 里的提示音接线变了，生产构建无法在哈希前摘干净')
+      }
+      return { code: code.replace(CUE_SOURCE_BLOCK, ''), map: null }
+    },
+    async generateBundle(_options, bundle) {
+      const dock = Object.values(bundle).find((item) => item.type === 'chunk' && item.name === 'dock')
+      if (!dock || dock.type !== 'chunk') this.error('T054：找不到 dock 分包')
+      const binding = dock.code.match(/\{[^}]*\ba as ([A-Za-z_$][\w$]*)/)?.[1]
+      if (!binding || !dock.code.includes(`${binding}.getState`)) {
+        this.error('T054：dock 里没有可交给提示音的 store')
+      }
+      const built = await esbuild({
+        absWorkingDir: fileURLToPath(new URL('.', import.meta.url)),
+        entryPoints: [fileURLToPath(new URL('./src/audio/AlarmAudioCue.ts', import.meta.url))],
+        bundle: true,
+        format: 'esm',
+        platform: 'browser',
+        target: 'es2022',
+        minify: true,
+        legalComments: 'none',
+        write: false,
+        plugins: [
+          {
+            name: 'cue-store-bridge',
+            setup(build) {
+              build.onResolve({ filter: /^\.\.\/store\/store$/ }, () => ({
+                path: 'store-bridge',
+                namespace: 'cue-store-bridge',
+              }))
+              build.onLoad({ filter: /.*/, namespace: 'cue-store-bridge' }, () => ({
+                loader: 'js',
+                contents: 'export const useTwinStore = globalThis.__twinCueStore\n',
+              }))
+            },
+          },
+        ],
+      })
+      const source = built.outputFiles[0]?.text ?? ''
+      if (!source.includes('mountAlarmAudioCue') || source.length > 30_000 || source.includes('zustand')) {
+        this.error('T054：提示音分包没有独立打出来')
+      }
+      const fileName = 'assets/AlarmAudioCue.js'
+      const names: string[] = ['alarmAudioCue']
+      const originalFileNames: string[] = []
+      bundle[fileName] = {
+        type: 'asset',
+        fileName,
+        name: 'alarmAudioCue',
+        names,
+        originalFileName: null,
+        originalFileNames,
+        source,
+        needsCodeReference: false,
+      }
+      dock.code += `\nwindow.__twinCueStore=${binding};void import("./AlarmAudioCue.js").then((m)=>{m.mountAlarmAudioCue()});\n`
+    },
+  }
+}
 
 /**
  * three-stdlib TransformControls 从 three 取 Euler / Line / 几个几何。
@@ -123,7 +204,15 @@ function stripJsdelivr(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [isolateTransformControlsLeaves(), react(), stubTroikaUnicodeResolver(), redirectBvhThreeLeaves(), stripJsdelivr(), cacheWoffFonts()],
+  plugins: [
+    alarmCueAfterHash(),
+    isolateTransformControlsLeaves(),
+    react(),
+    stubTroikaUnicodeResolver(),
+    redirectBvhThreeLeaves(),
+    stripJsdelivr(),
+    cacheWoffFonts(),
+  ],
   resolve: {
     alias: [
       {
