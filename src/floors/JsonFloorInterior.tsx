@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { BoxGeometry, Color, type BufferGeometry } from 'three'
+import { BoxGeometry, Color, type BufferGeometry, type Mesh } from 'three'
+import { MeasureSurface } from '../scene/pick/MeasureSurface'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import type { FloorSpec } from '../data/floors'
 import type { Device } from '../types'
@@ -159,6 +160,7 @@ function JsonFloorReady({
     geometry.translate(0, -SLAB_M, 0)
     return geometry
   }, [plan])
+  const [slabMesh, setSlabMesh] = useState<Mesh | null>(null)
   const cores = useMemo(() => mergeCores(plan, WALL_H), [plan])
   const bounds = useMemo(() => ringBounds(plan.outline), [plan])
 
@@ -209,7 +211,8 @@ function JsonFloorReady({
       onDoubleClick={(event) => event.stopPropagation()}
     >
       <group name="FloorPlate">
-        <mesh name="FloorSlab" geometry={slab} material={slabMaterial} receiveShadow />
+        <mesh ref={setSlabMesh} name="FloorSlab" geometry={slab} material={slabMaterial} receiveShadow />
+        <MeasureSurface name="PickBvh:measure-slab" target={slabMesh} />
       </group>
       <ZoneHeat floorId={spec.id} />
       <CameraFov floorId={spec.id} />
@@ -331,6 +334,7 @@ function PrebuiltFloorInterior({
     [plan],
   )
   const bounds = useMemo(() => ringBounds(plan.outline), [plan])
+  const slabMesh = prebuilt.content.getObjectByName('FloorSlab') ?? null
 
   useLayoutEffect(() => {
     paintMonitorColors(prebuilt, colors)
@@ -381,6 +385,7 @@ function PrebuiltFloorInterior({
       onDoubleClick={(event) => event.stopPropagation()}
     >
       <primitive object={prebuilt.content} dispose={null} />
+      <MeasureSurface name="PickBvh:measure-slab" target={slabMesh} />
       <ZoneHeat floorId={spec.id} />
       <CameraFov floorId={spec.id} />
       <FloorMultiOutlines floorId={spec.id} />

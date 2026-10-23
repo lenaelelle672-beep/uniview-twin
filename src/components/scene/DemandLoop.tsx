@@ -27,6 +27,7 @@ import {
   soonestWakeMs,
 } from '../../scene/frameSchedule'
 import { FocusFloatHost } from '../../scene/focusFloat/FocusFloatHost'
+import { PICK_BVH_AFTER_FIRST_MS } from '../../scene/pick/pickBvhTiming'
 import { useTwinStore } from '../../store/store'
 
 function markInv(src: string) {
@@ -265,6 +266,7 @@ export function DemandLoop() {
       <FocusFloatHost />
       <AdaptiveQualityHost />
       <OverviewGizmoHost />
+      <PickBvhSlot />
     </>
   )
 }
@@ -354,6 +356,36 @@ function OverviewGizmoHost() {
 
   if (view !== 'building' || !Gizmo) return null
   return <Gizmo />
+}
+
+/**
+ * T055：拾取包围树。与监视器同一道 2600ms 门再 import。
+ * 总览里 DemandLoop 自己也晚于这道门，单层会更早挂上，所以这里再挡一次。
+ */
+function PickBvhSlot() {
+  const [Host, setHost] = useState<ComponentType | null>(null)
+  useEffect(() => {
+    let stop = false
+    let raf = 0
+    const tick = () => {
+      if (stop) return
+      const first = window.__twinFirstFrameAt
+      if (first != null && performance.now() - first >= PICK_BVH_AFTER_FIRST_MS) {
+        void import('../../scene/pick/PickBvhHost').then((mod) => {
+          if (!stop) setHost(() => mod.PickBvhHost)
+        })
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      stop = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+  if (!Host) return null
+  return <Host />
 }
 
 export default DemandLoop

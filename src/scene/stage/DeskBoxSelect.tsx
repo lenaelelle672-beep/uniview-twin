@@ -2,6 +2,7 @@ import { Select } from '@react-three/drei/web/Select'
 import { useThree } from '@react-three/fiber'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial, type Object3D } from 'three'
+import { BoxPickBvh } from '../pick/BoxPickBvh'
 import { useTwinStore } from '../../store/store'
 import {
   deskIdsFromBoxSelection,
@@ -22,9 +23,11 @@ function ignoreRaycast() {}
 
 function DeskPickProxies({ proxies }: { proxies: ReturnType<typeof floorPickProxies> }) {
   const group = useRef<Group>(null)
+  const retire = useRef<Mesh[]>([])
   useLayoutEffect(() => {
     const parent = group.current
     if (!parent) return
+    const created: Mesh[] = []
     for (const proxy of proxies) {
       const mesh = new Mesh(proxyGeometry, proxyMaterial)
       mesh.name = 'DeskPickProxy'
@@ -33,12 +36,18 @@ function DeskPickProxies({ proxies }: { proxies: ReturnType<typeof floorPickProx
       mesh.raycast = ignoreRaycast
       mesh.userData = { boxPickProxy: true, deskId: proxy.deskId, instanceIndex: proxy.instanceIndex }
       parent.add(mesh)
+      created.push(mesh)
     }
     parent.updateMatrixWorld(true)
     return () => {
-      const current = group.current
-      if (!current) return
-      for (const child of [...current.children]) current.remove(child)
+      // 先留在组里。Bvh 的卸载 effect 还要 traverse 到这些网格，layout 里摘掉就卸不掉树。
+      retire.current.push(...created)
+    }
+  }, [proxies])
+  useEffect(() => {
+    return () => {
+      const stale = retire.current.splice(0, retire.current.length)
+      for (const mesh of stale) mesh.removeFromParent()
     }
   }, [proxies])
   return <group ref={group} name="DeskPickProxies" />
@@ -122,6 +131,7 @@ export function DeskBoxSelect({ floorId }: { floorId: string }) {
   }, [floorId])
 
   if (proxies.length === 0) return null
+  const version = proxies.map((proxy) => proxy.deskId).join('\n')
   return (
     <Select
       name="DeskBoxSelect"
@@ -133,7 +143,9 @@ export function DeskBoxSelect({ floorId }: { floorId: string }) {
       onClick={swallowPointer}
       onPointerMissed={swallowPointer}
     >
-      <DeskPickProxies proxies={proxies} />
+      <BoxPickBvh version={version}>
+        <DeskPickProxies proxies={proxies} />
+      </BoxPickBvh>
     </Select>
   )
 }
