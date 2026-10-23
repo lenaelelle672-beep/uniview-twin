@@ -65,7 +65,8 @@
   flex: 1;
 }
 
-.viewmark-share {
+.viewmark-share,
+.viewmark-glb {
   display: block;
   width: 100%;
   margin: 0 0 6px;
