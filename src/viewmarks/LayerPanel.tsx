@@ -10,7 +10,14 @@ const ROWS: Array<[LayerToggleKey, string]> = [
   ['outlines', '描边'],
   ['badges', '圆标'],
   ['wireframe', '线框'],
+  ['edges', '结构边'],
 ]
+
+function armStructureOverlay() {
+  void import('../scene/stage/structureArm').then((mod) => {
+    mod.armStructureOverlay()
+  })
+}
 
 export function LayerPanel() {
   const layers = useTwinStore((state) => state.layers)
@@ -22,6 +29,11 @@ export function LayerPanel() {
     node.textContent = panelCss
     document.head.append(node)
     return () => node.remove()
+  }, [])
+
+  useEffect(() => {
+    if (!useTwinStore.getState().layers.edges) return
+    armStructureOverlay()
   }, [])
 
   return (
@@ -38,7 +50,11 @@ export function LayerPanel() {
               aria-label={`图层：${label}`}
               title={key === 'wireframe' ? '总览画外壳，单层只画当前层。棱边开启时让位。' : undefined}
               data-layer={key}
-              onClick={() => setLayer(key, !on)}
+              onClick={() => {
+                const next = !on
+                setLayer(key, next)
+                if (key === 'edges') armStructureOverlay()
+              }}
             >
               <span>{label}</span>
               <span>{on ? '开' : '关'}</span>

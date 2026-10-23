@@ -23,6 +23,8 @@ export interface LayerFlags {
   heat: boolean
   outlines: boolean
   badges: boolean
+  /** T060 结构边。默认关。与 T063 的 layers.wireframe 同时为真时只画这一边。 */
+  edges: boolean
 }
 
 export type LayerKey = keyof LayerFlags
@@ -39,7 +41,7 @@ export interface ViewSlice {
   qualityPinned: boolean
   urlQuality: QualityTier | null
   downgradeSuppressed: boolean
-  /** 人流、标签、热力、描边、圆标。默认全开，和画质档一起决定画不画。线框另计，缺省关。 */
+  /** 人流、标签、热力、描边、圆标默认开。结构边默认关。线框另计，缺省关。 */
   layers: LayerFlags
   selectedFloor: string | null
   hoveredFloor: string | null
@@ -93,7 +95,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   qualityPinned: false,
   urlQuality: null,
   downgradeSuppressed: false,
-  layers: { people: true, labels: true, heat: true, outlines: true, badges: true },
+  layers: { people: true, labels: true, heat: true, outlines: true, badges: true, edges: false },
   selectedFloor: null,
   hoveredFloor: null,
   focusedDeskId: null,

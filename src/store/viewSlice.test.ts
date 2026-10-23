@@ -27,16 +27,37 @@ describe('图层开关', () => {
     resetTwinStore()
   })
 
-  it('默认全开，关掉一项不影响其余，重复写入不换对象', () => {
+  it('人流到圆标默认开，结构边默认关；关掉一项不影响其余', () => {
     const initial = useTwinStore.getState().layers
-    expect(initial).toEqual({ people: true, labels: true, heat: true, outlines: true, badges: true })
+    expect(initial).toEqual({
+      people: true,
+      labels: true,
+      heat: true,
+      outlines: true,
+      badges: true,
+      edges: false,
+    })
     useTwinStore.getState().setLayer('heat', false)
     const next = useTwinStore.getState().layers
-    expect(next).toEqual({ people: true, labels: true, heat: false, outlines: true, badges: true })
+    expect(next).toEqual({
+      people: true,
+      labels: true,
+      heat: false,
+      outlines: true,
+      badges: true,
+      edges: false,
+    })
     expect(next).not.toBe(initial)
     useTwinStore.getState().setLayer('heat', false)
     expect(useTwinStore.getState().layers).toBe(next)
-    const keys: LayerKey[] = ['people', 'labels', 'heat', 'outlines', 'badges']
+    const withWire = { ...next, wireframe: true }
+    useTwinStore.setState({ layers: withWire })
+    useTwinStore.getState().setLayer('edges', true)
+    const withEdges = useTwinStore.getState().layers
+    expect(withEdges.edges).toBe(true)
+    expect(withEdges.heat).toBe(false)
+    expect((withEdges as { wireframe?: boolean }).wireframe).toBe(true)
+    const keys: LayerKey[] = ['people', 'labels', 'heat', 'outlines', 'badges', 'edges']
     for (const key of keys) useTwinStore.getState().setLayer(key, false)
     expect(useTwinStore.getState().layers).toEqual({
       people: false,
@@ -44,6 +65,8 @@ describe('图层开关', () => {
       heat: false,
       outlines: false,
       badges: false,
+      edges: false,
+      wireframe: true,
     })
     useTwinStore.getState().enterFloor('F3')
     expect(useTwinStore.getState().layers.people).toBe(false)
