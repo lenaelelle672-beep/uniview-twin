@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   buildingSummary,
   buildExceptionRows,
@@ -15,6 +15,7 @@ import { useTwinData } from '../data/useTwinData'
 import { useTwinStore } from '../store/store'
 import { formatChinaTime } from '../alarms/time'
 import { navigateTo } from './navigate'
+import { reportShotState, subscribeReportShot } from './reportShotState'
 import './report.css'
 
 export function ReportPage() {
@@ -65,9 +66,21 @@ export function ReportPage() {
     [devices, alarms, filter],
   )
   const generatedAt = useMemo(() => formatChinaTime(Date.now()), [])
+  const [shot, setShot] = useState(reportShotState)
+
+  useEffect(() => subscribeReportShot(setShot), [])
 
   function goBack() {
     navigateTo('/', mainSearchFromReport(window.location.search))
+  }
+
+  async function onEmbed() {
+    try {
+      const mod = await import('./reportShot')
+      await mod.embedCurrentView()
+    } catch {
+      // 截图包没加载到时留在报告页。加载到之后的失败由包内提示。
+    }
   }
 
   return (
@@ -77,15 +90,29 @@ export function ReportPage() {
           返回孪生
         </button>
         <p>A4 纵向 · 可离线打印</p>
+        <button type="button" onClick={() => void onEmbed()} disabled={shot.pending}>
+          嵌入当前视图
+        </button>
         <button type="button" onClick={() => window.print()} disabled={!ready}>
           打印
         </button>
+        {shot.note ? (
+          <p className="report-toolbar-note" role="status">
+            {shot.note}
+          </p>
+        ) : null}
       </div>
       <article className="report-sheet" data-report-ready={ready ? 'true' : 'false'}>
         <h1>宇视总部大楼数字孪生告警报告</h1>
         <p className="report-meta">
           筛选：楼层 {rangeLabel(filter.range)} · 状态 {statusFilterLabel(filter.statusFilter)} · 生成时间 {generatedAt}
         </p>
+        {shot.url ? (
+          <figure className="report-shot" data-report-shot>
+            <img src={shot.url} alt="当前三维视图" />
+            <figcaption>当前三维视图</figcaption>
+          </figure>
+        ) : null}
         {status === 'loading' && <p>正在加载数据…</p>}
         {status === 'error' && <p>{error ?? '数据未能加载'}</p>}
         {ready && (
