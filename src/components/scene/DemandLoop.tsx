@@ -29,6 +29,7 @@ import {
 import { FocusFloatHost } from '../../scene/focusFloat/FocusFloatHost'
 import { demoEditActive, retainDemoEditParam } from '../../demo-edit/flag'
 import { PICK_BVH_AFTER_FIRST_MS } from '../../scene/pick/pickBvhTiming'
+import { wireframeOverlayOn } from '../../scene/wire/latch'
 import { useTwinStore } from '../../store/store'
 
 function markInv(src: string) {
@@ -269,6 +270,7 @@ export function DemandLoop() {
       <OverviewGizmoHost />
       <PickBvhSlot />
       <DemoEditHost />
+      <WireframeHost />
     </>
   )
 }
@@ -428,6 +430,43 @@ function PickBvhSlot() {
   }, [])
   if (!Host) return null
   return <Host />
+}
+
+/**
+ * T063：壳 / 当前层线框。默认关，所以这条 import 不会在首屏发出。
+ * 单层会提前挂上 DemandLoop，这里再等首帧 2600ms，Wireframe 和材质才可能进请求。
+ * 与 T060 Edges 的门闩在 latch：两边都开时不挂本组件。
+ */
+const WIRE_AFTER_FIRST_MS = 2600
+
+function WireframeHost() {
+  const on = useTwinStore((state) => wireframeOverlayOn(state.layers))
+  const [View, setView] = useState<ComponentType | null>(null)
+
+  useEffect(() => {
+    if (!on) return
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (first != null && performance.now() - first >= WIRE_AFTER_FIRST_MS) {
+        void import('../../scene/wire/ShellWireframe').then((mod) => {
+          if (!cancelled) setView(() => mod.ShellWireframe)
+        })
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [on])
+
+  if (!on || !View) return null
+  return <View />
 }
 
 export default DemandLoop

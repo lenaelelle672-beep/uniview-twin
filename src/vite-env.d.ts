@@ -487,6 +487,13 @@ interface Window {
   __twinLabelPackDetail?: TwinLabelPackMs
   __twinLabelMount?: TwinLabelMount
   __twinDismissEsc?: () => boolean
+  /** T063：线框挂上之后写入，关掉就删。外壳或当前层，不含全场景。 */
+  __twinWire?: {
+    mode: 'shell' | 'floor'
+    floorId: string | null
+    count: number
+    names: string[]
+  }
   /** DemandLoop 里的测距挂载点。工具本体在懒包里。 */
   __twinMeasureSlot?: (node: import('react').ReactNode) => void
   __twinMeasureExit?: () => void
