@@ -27,6 +27,7 @@ import {
   soonestWakeMs,
 } from '../../scene/frameSchedule'
 import { FocusFloatHost } from '../../scene/focusFloat/FocusFloatHost'
+import { demoEditActive, retainDemoEditParam } from '../../demo-edit/flag'
 import { PICK_BVH_AFTER_FIRST_MS } from '../../scene/pick/pickBvhTiming'
 import { useTwinStore } from '../../store/store'
 
@@ -267,8 +268,49 @@ export function DemandLoop() {
       <AdaptiveQualityHost />
       <OverviewGizmoHost />
       <PickBvhSlot />
+      <DemoEditHost />
     </>
   )
+}
+
+/**
+ * T058：摆点。只有启动地址带 ?demoEdit=1，并且已经在单层时，才在首帧 2600ms 之后 import。
+ * 默认总览和默认演示都不进这条 import。
+ */
+const DEMO_EDIT_AFTER_FIRST_MS = 2600
+
+function DemoEditHost() {
+  const view = useTwinStore((state) => state.view)
+  const [Editor, setEditor] = useState<ComponentType | null>(null)
+
+  useEffect(() => {
+    retainDemoEditParam()
+  }, [])
+
+  useEffect(() => {
+    if (view !== 'floor' || !demoEditActive()) return
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (first != null && performance.now() - first >= DEMO_EDIT_AFTER_FIRST_MS) {
+        void import('../../demo-edit/DemoPointEditor').then((mod) => {
+          if (!cancelled) setEditor(() => mod.DemoPointEditor)
+        })
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [view])
+
+  if (view !== 'floor' || !Editor) return null
+  return <Editor />
 }
 
 /**
