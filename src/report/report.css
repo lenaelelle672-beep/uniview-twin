@@ -18,6 +18,7 @@ html:has(.report-page) #root {
   z-index: 2;
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 10px 16px;
   background: #0c2340;
@@ -39,6 +40,32 @@ html:has(.report-page) #root {
 
 .report-toolbar p {
   margin: 0;
+}
+
+.report-toolbar-note {
+  flex-basis: 100%;
+  margin: 0;
+  color: #d7e3f0;
+  font-size: 13px;
+}
+
+.report-shot {
+  margin: 12px 0 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.report-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid #d5deea;
+}
+
+.report-shot figcaption {
+  margin-top: 4px;
+  color: #526070;
+  font-size: 12px;
 }
 
 .report-sheet {
@@ -173,7 +200,8 @@ html:has(.report-page) #root {
   }
 
   .report-table th,
-  .stat-grid div {
+  .stat-grid div,
+  .report-shot img {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
