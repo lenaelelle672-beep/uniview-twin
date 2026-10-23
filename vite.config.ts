@@ -1,5 +1,29 @@
+import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
+
+/**
+ * three-stdlib TransformControls 从 three 取 Euler / Line / 几个几何。
+ * 这些绑定已经在入口包里，再被懒包点名就会多出 early index 的 export。
+ * 改成摆点包内的叶子类，入口不再重新导出。
+ */
+function isolateTransformControlsLeaves(): Plugin {
+  const from =
+    'import { Object3D, Raycaster, Vector3, Quaternion, Euler, Matrix4, MeshBasicMaterial, DoubleSide, LineBasicMaterial, CylinderGeometry, BoxGeometry, BufferGeometry, Float32BufferAttribute, Mesh, Line, OctahedronGeometry, PlaneGeometry, TorusGeometry, SphereGeometry, Color } from "three";'
+  const leaves = fileURLToPath(new URL('./src/demo-edit/gizmoLeaves.ts', import.meta.url))
+  const to = `import { Object3D, Raycaster, Vector3, Quaternion, Matrix4, MeshBasicMaterial, DoubleSide, CylinderGeometry, BoxGeometry, BufferGeometry, Float32BufferAttribute, Mesh, PlaneGeometry, Color } from "three";
+import { Euler, LineBasicMaterial, Line, OctahedronGeometry, TorusGeometry, SphereGeometry } from ${JSON.stringify(leaves)};`
+  return {
+    name: 'isolate-transform-controls-leaves',
+    transform(code, id) {
+      if (!id.includes('three-stdlib/controls/TransformControls.js')) return null
+      if (!code.includes(from)) {
+        this.error('TransformControls three import did not match the pinned three-stdlib shape')
+      }
+      return { code: code.replace(from, to), map: null }
+    },
+  }
+}
 
 function stubTroikaUnicodeResolver(): Plugin {
   const stub =
@@ -99,7 +123,7 @@ function stripJsdelivr(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), stubTroikaUnicodeResolver(), redirectBvhThreeLeaves(), stripJsdelivr(), cacheWoffFonts()],
+  plugins: [isolateTransformControlsLeaves(), react(), stubTroikaUnicodeResolver(), redirectBvhThreeLeaves(), stripJsdelivr(), cacheWoffFonts()],
   resolve: {
     alias: [
       {
@@ -121,6 +145,15 @@ export default defineConfig({
   build: {
     // 性能档不得因为 HTML modulepreload 去请求 balancedFx / 楼层内装预取包。
     modulePreload: false,
+    rollupOptions: {
+      output: {
+        // 懒包文件名写在 early index 里。DemandLoop 缩短前缀；rollup 允许的最短哈希是 7 位。
+        chunkFileNames(chunk) {
+          if (chunk.name === 'DemandLoop') return 'assets/d-[hash:7].js'
+          return 'assets/[name]-[hash:7].js'
+        },
+      },
+    },
   },
   test: {
     environment: 'node',

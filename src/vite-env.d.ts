@@ -567,6 +567,18 @@ interface Window {
     proxies: number
     deskIds: string[]
   }
+  /** T058：?demoEdit=1 进层后的摆点。离开楼层或卸载时删掉。 */
+  __twinDemoEdit?: {
+    demo: true
+    floorId: string
+    catalog: 'cameras-demo' | 'alarms-demo'
+    mode: 'translate' | 'rotate'
+    selectedId: string | null
+    cameraCount: number
+    alarmCount: number
+    /** drei TransformControls 已经挂上当前选中的点。 */
+    gizmo: boolean
+  }
   /** T045：DEMO 摄像头覆盖锥。离开楼层或卸载时删掉。 */
   __twinCameraFov?: {
     demo: true
