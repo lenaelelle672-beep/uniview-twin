@@ -490,6 +490,10 @@ interface Window {
   /** DemandLoop 里的测距挂载点。工具本体在懒包里。 */
   __twinMeasureSlot?: (node: import('react').ReactNode) => void
   __twinMeasureExit?: () => void
+  /** 测距工具挂上之后为 true，室内楼板才去拉拾取包围树。 */
+  __twinMeasureOn?: boolean
+  /** 当前还挂着的拾取包围树组数，以及建出树的几何体个数。 */
+  __twinPickBvh?: { mounted: number; trees: number }
   __twinVisibleFocus?: {
     canvas: { left: number; right: number; top: number; bottom: number }
     visible: { left: number; right: number; top: number; bottom: number }

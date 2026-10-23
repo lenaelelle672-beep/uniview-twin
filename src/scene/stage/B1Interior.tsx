@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react'
-import { Color } from 'three'
+import { useEffect, useMemo, useState } from 'react'
+import { Color, type Mesh } from 'three'
+import { MeasureSurface } from '../pick/MeasureSurface'
 import type { Device } from '../../types'
 import { extrudeUp } from '../extrude'
 import { b1SlabOutline, ellipseRing, ringFromAabb } from './b1Plan'
@@ -64,6 +65,7 @@ const fanSeats = fanSeatSlots()
 const columns = b1Columns().map((column) => ({ ...column, rot: 0 }))
 
 export function B1Interior({ slots, colors, devices }: { slots: Slot[]; colors: Color[]; devices: Device[] }) {
+  const [slabMesh, setSlabMesh] = useState<Mesh | null>(null)
   const slab = useMemo(() => {
     const geometry = extrudeUp(b1SlabOutline(), SLAB_M)
     geometry.translate(0, -SLAB_M, 0)
@@ -93,7 +95,8 @@ export function B1Interior({ slots, colors, devices }: { slots: Slot[]; colors: 
   return (
     <group name="FloorInterior" position={[0, -5.5 + SLAB_M, 0]} onDoubleClick={(event) => event.stopPropagation()}>
       <group name="FloorPlate">
-        <mesh name="FloorSlab" geometry={slab} material={slabMaterial} receiveShadow />
+        <mesh ref={setSlabMesh} name="FloorSlab" geometry={slab} material={slabMaterial} receiveShadow />
+        <MeasureSurface name="PickBvh:measure-slab" target={slabMesh} />
       </group>
       <ZoneHeat floorId="B1" />
       <CameraFov floorId="B1" />

@@ -36,6 +36,51 @@ function cacheWoffFonts(): Plugin {
   }
 }
 
+const BVH_THREE_LEAVES: Record<string, string> = {
+  Ray: 'three/src/math/Ray.js',
+  Triangle: 'three/src/math/Triangle.js',
+  BatchedMesh: new URL('./src/scene/pick/bvhBatchedMeshStub.ts', import.meta.url).pathname,
+}
+
+/**
+ * drei Bvh 拉 three-mesh-bvh 时会从 three 入口再要 Ray / Triangle / BatchedMesh。
+ * 这三个类已经在首屏 index 里，再 export 出去会把 hardGate 顶过 436361。
+ * 叶子改走 three/src 或本地空子类，Mesh 仍用共享入口，射线身份不变。
+ */
+function redirectBvhThreeLeaves(): Plugin {
+  return {
+    name: 'redirect-bvh-three-leaves',
+    transform(code, id) {
+      if (!id.includes('three-mesh-bvh') || !/from\s+['"]three['"]/.test(code)) return null
+      let changed = false
+      const next = code.replace(/import\s*\{([^}]+)\}\s*from\s*['"]three['"]/g, (full, inner: string) => {
+        const parts = inner
+          .split(',')
+          .map((part) => part.trim())
+          .filter(Boolean)
+        const keep: string[] = []
+        const leaves: string[] = []
+        for (const part of parts) {
+          const imported = part.split(/\s+as\s+/)[0]?.trim() ?? ''
+          if (imported in BVH_THREE_LEAVES) leaves.push(part)
+          else keep.push(part)
+        }
+        if (leaves.length === 0) return full
+        changed = true
+        const lines = []
+        if (keep.length > 0) lines.push(`import { ${keep.join(', ')} } from 'three'`)
+        for (const part of leaves) {
+          const imported = part.split(/\s+as\s+/)[0]?.trim() ?? ''
+          lines.push(`import { ${part} } from '${BVH_THREE_LEAVES[imported]}'`)
+        }
+        return lines.join('\n')
+      })
+      if (!changed) return null
+      return { code: next, map: null }
+    },
+  }
+}
+
 function stripJsdelivr(): Plugin {
   const pattern = /https?:\/\/cdn\.jsdelivr\.net[^"'`\s]*/g
   const leftover = /https?:\/\/\/?gh\/lojjic\/[^"'`\s]*/g
@@ -54,7 +99,7 @@ function stripJsdelivr(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), stubTroikaUnicodeResolver(), stripJsdelivr(), cacheWoffFonts()],
+  plugins: [react(), stubTroikaUnicodeResolver(), redirectBvhThreeLeaves(), stripJsdelivr(), cacheWoffFonts()],
   resolve: {
     alias: [
       {

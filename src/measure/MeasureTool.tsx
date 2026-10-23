@@ -3,6 +3,7 @@ import { Html } from '@react-three/drei/web/Html'
 import { useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Vector2, Vector3 } from 'three'
+import { setMeasurePickActive } from '../scene/pick/pickBvhTiming'
 import { useTwinStore } from '../store/store'
 import {
   bindMeasureEscape,
@@ -46,6 +47,11 @@ export function MeasureTool() {
     setSegment(null)
     window.__twinMeasureExit?.()
   }, [session])
+
+  useEffect(() => {
+    setMeasurePickActive(true)
+    return () => setMeasurePickActive(false)
+  }, [])
 
   useEffect(() => bindMeasureEscape(() => window.__twinMeasureExit?.()), [])
 

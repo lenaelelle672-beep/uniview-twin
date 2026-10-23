@@ -1,4 +1,6 @@
-import { Color } from 'three'
+import { useState } from 'react'
+import { Color, type Mesh } from 'three'
+import { MeasureSurface } from '../pick/MeasureSurface'
 import type { FloorSpec } from '../../data/floors'
 import type { Device } from '../../types'
 import { TOWER } from '../siteGeometry'
@@ -52,6 +54,7 @@ export function TowerInterior({
 }) {
   const width = TOWER.maxX - TOWER.minX - 0.7
   const depth = TOWER.maxZ - TOWER.minZ - 0.7
+  const [slabMesh, setSlabMesh] = useState<Mesh | null>(null)
 
   return (
     <group
@@ -60,9 +63,16 @@ export function TowerInterior({
       onDoubleClick={(event) => event.stopPropagation()}
     >
       <group name="FloorPlate">
-        <mesh name="FloorSlab" position={[0, -SLAB_M / 2, 0]} material={slabMaterial} receiveShadow>
+        <mesh
+          ref={setSlabMesh}
+          name="FloorSlab"
+          position={[0, -SLAB_M / 2, 0]}
+          material={slabMaterial}
+          receiveShadow
+        >
           <boxGeometry args={[width, SLAB_M, depth]} />
         </mesh>
+        <MeasureSurface name="PickBvh:measure-slab" target={slabMesh} />
       </group>
       <mesh geometry={coreFloorGeometry} material={coreMaterial} receiveShadow />
       <mesh geometry={towerCoreGeometry} material={coreWallMaterial} castShadow receiveShadow />
