@@ -36,6 +36,7 @@ export function ViewmarkDock() {
   const [touring, setTouring] = useState(false)
   const [tourFloor, setTourFloor] = useState<string | null>(null)
   const [sharing, setSharing] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const cancelRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -141,6 +142,21 @@ export function ViewmarkDock() {
     }
   }
 
+  async function onExportGlb() {
+    if (exporting) return
+    setExporting(true)
+    setNote('正在导出当前层')
+    try {
+      const mod = await import('./floorGlb')
+      const result = await mod.exportCurrentFloorGlb()
+      setNote(result.message)
+    } catch {
+      setNote('导出没有完成')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   async function onTour() {
     if (touring) {
       cancelRef.current?.()
@@ -202,6 +218,16 @@ export function ViewmarkDock() {
         disabled={status !== 'ready' || sharing}
       >
         截图/分享
+      </button>
+      <button
+        type="button"
+        className="viewmark-glb"
+        data-floor-glb
+        aria-label="导出当前楼层 GLB"
+        onClick={() => void onExportGlb()}
+        disabled={status !== 'ready' || exporting}
+      >
+        导出本层
       </button>
       {touring && (
         <p className="viewmark-note" role="status">

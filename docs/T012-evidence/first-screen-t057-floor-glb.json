@@ -1,0 +1,263 @@
+{
+  "label": "t057-floor-glb",
+  "baseUrl": "http://127.0.0.1:5190",
+  "method": "python gzip.compress(9)",
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "hardGateLimit": 436361,
+  "balancedFxLimit": 105000,
+  "balanced": {
+    "hardGate": 436349,
+    "hardGateWithMonitorSamples": 436349,
+    "monitorSamplesGzip": 0,
+    "balancedFx": 104552,
+    "fullFirstScreen": 540901,
+    "requestedBalancedFx": true,
+    "files": [
+      {
+        "url": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+        "bytes": 1435119,
+        "gzip": 954159,
+        "hdr": true,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-DcM5gvcF.js",
+        "bytes": 1413252,
+        "gzip": 400145,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/balancedFx-DZ-CvNwn.js",
+        "bytes": 246234,
+        "gzip": 104552,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": true,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-tree-hi.glb",
+        "bytes": 16540,
+        "gzip": 13577,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/roof-sign.glb",
+        "bytes": 10548,
+        "gzip": 5061,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-DgSBdyaU.css",
+        "bytes": 14440,
+        "gzip": 3666,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-tree-lo.glb",
+        "bytes": 5696,
+        "gzip": 3466,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/east-grille-v4-lo.glb",
+        "bytes": 9568,
+        "gzip": 3229,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-lamp.glb",
+        "bytes": 5812,
+        "gzip": 2666,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/shadowBake-BIDE4SLl.js",
+        "bytes": 4321,
+        "gzip": 1709,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/shellClipCompile-CcbwxTrP.js",
+        "bytes": 3063,
+        "gzip": 1435,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/EastGrille-Dg_4hvMf.js",
+        "bytes": 2091,
+        "gzip": 1055,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/?q=balanced",
+        "bytes": 483,
+        "gzip": 340,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/favicon.svg",
+        "bytes": 548,
+        "gzip": 188,
+        "hdr": false,
+        "favicon": true,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      }
+    ]
+  },
+  "perf": {
+    "firstScreen": 422772,
+    "balancedFx": 0,
+    "requestedBalancedFx": false,
+    "files": [
+      {
+        "url": "/hdr/kloofendal_48d_partly_cloudy_puresky_1k.hdr",
+        "bytes": 1435119,
+        "gzip": 954159,
+        "hdr": true,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-DcM5gvcF.js",
+        "bytes": 1413252,
+        "gzip": 400145,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/roof-sign.glb",
+        "bytes": 10548,
+        "gzip": 5061,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/index-DgSBdyaU.css",
+        "bytes": 14440,
+        "gzip": 3666,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-tree-lo.glb",
+        "bytes": 5696,
+        "gzip": 3466,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/east-grille-v4-lo.glb",
+        "bytes": 9568,
+        "gzip": 3229,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/models/street-lamp.glb",
+        "bytes": 5812,
+        "gzip": 2666,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/shadowBake-BIDE4SLl.js",
+        "bytes": 4321,
+        "gzip": 1709,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/shellClipCompile-CcbwxTrP.js",
+        "bytes": 3063,
+        "gzip": 1435,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/assets/EastGrille-Dg_4hvMf.js",
+        "bytes": 2091,
+        "gzip": 1055,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      },
+      {
+        "url": "/?q=perf",
+        "bytes": 483,
+        "gzip": 340,
+        "hdr": false,
+        "favicon": false,
+        "balancedFx": false,
+        "afterFirstFrame": false
+      }
+    ]
+  },
+  "summary": {
+    "hardGateNoFx": 436349,
+    "hardGateWithMonitorSamples": 436349,
+    "monitorSamplesGzip": 0,
+    "balancedFx": 104552,
+    "balancedFullFirstScreen": 540901,
+    "perfFirstScreen": 422772
+  },
+  "ok": true,
+  "failures": []
+}
