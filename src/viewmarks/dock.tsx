@@ -15,6 +15,10 @@ void import('../audio/AlarmAudioCue').then((mod) => {
 void import('../capture/mountClip').then((mod) => {
   mod.mountClipCapture()
 })
+// T059：网格和坐标轴。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../grid/mount').then((mod) => {
+  mod.mountGridAxes()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

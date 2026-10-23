@@ -776,4 +776,14 @@ interface Window {
     played: number
     lastReason: 'enqueue' | 'focus' | null
   }
+  /** T059：米制格网。默认关。打开后才挂 drei Grid 和 axesHelper。 */
+  __twinGrid?: {
+    on: boolean
+    mounted: boolean
+    cellM: number
+    sectionM: number
+    axisM: number
+    y: number | null
+    fadeM: number | null
+  }
 }
