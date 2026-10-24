@@ -790,6 +790,15 @@ interface Window {
     kinds: string[]
     setDebugHelpers?: (on: boolean) => void
   }
+  /** T065：墙面贴花。默认关。打开后才挂 drei Decal。 */
+  __twinDecals?: {
+    on: boolean
+    mounted: number
+    decals: number
+    images: number
+    cap: number
+    blocked: boolean
+  }
   /** T059：米制格网。默认关。打开后才挂 drei Grid 和 axesHelper。 */
   __twinGrid?: {
     on: boolean

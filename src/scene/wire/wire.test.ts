@@ -212,7 +212,7 @@ describe('线框分包', () => {
       devDependencies: Record<string, string>
     }
 
-    expect(view).toMatch(/LayerToggleKey = LayerKey \| 'wireframe'/)
+    expect(view).toMatch(/LayerToggleKey = LayerKey \| 'wireframe' \| 'plaques' \| 'decals'/)
     expect(view).not.toMatch(/wireframe:\s*(true|false)/)
     expect(panel).toMatch(/\['wireframe', '线框'\]/)
     expect(panel).toMatch(/data-layer=\{key\}/)

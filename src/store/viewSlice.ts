@@ -29,8 +29,8 @@ export interface LayerFlags {
 
 export type LayerKey = keyof LayerFlags
 
-/** T063 线框、T064 铭牌。不放进 LayerFlags，避免缺省字段把图层判断的返回值变成 undefined。运行时由 setLayer 写入。 */
-export type LayerToggleKey = LayerKey | 'wireframe' | 'plaques'
+/** T063 线框、T064 铭牌、T065 贴花。不放进 LayerFlags，缺省即关，避免首屏初始对象变长，也避免缺省字段把图层判断的返回值变成 undefined。运行时由 setLayer 写入。 */
+export type LayerToggleKey = LayerKey | 'wireframe' | 'plaques' | 'decals'
 
 export interface ViewSlice {
   view: ViewMode
@@ -41,7 +41,7 @@ export interface ViewSlice {
   qualityPinned: boolean
   urlQuality: QualityTier | null
   downgradeSuppressed: boolean
-  /** 人流、标签、热力、描边、圆标默认开。结构边默认关。线框另计，缺省关。 */
+  /** 人流、标签、热力、描边、圆标默认开。结构边默认关。线框、铭牌和贴花另计，缺省关。 */
   layers: LayerFlags
   selectedFloor: string | null
   hoveredFloor: string | null
@@ -119,7 +119,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   setDayNight: (dayNight) => startTransition(() => set({ dayNight })),
   setQuality: (quality) => startTransition(() => set({ quality, downgradeSuppressed: true })),
   setLayer: (key, on) => {
-    const layers = get().layers as LayerFlags & { wireframe?: boolean; plaques?: boolean }
+    const layers = get().layers as LayerFlags & { wireframe?: boolean; plaques?: boolean; decals?: boolean }
     if (layers[key] === on) return
     set({ layers: { ...layers, [key]: on } as LayerFlags })
   },

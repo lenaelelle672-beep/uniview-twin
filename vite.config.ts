@@ -1,5 +1,6 @@
 import { build as esbuild } from 'esbuild'
 import { authorHelpersAfterHash } from './scripts/authorHelpersPlugin'
+import { decalAfterHash } from './scripts/decalPlugin'
 import { gridAxesAfterHash } from './scripts/gridAxesPlugin'
 import { rectAreaAfterHash } from './scripts/rectAreaPlugin'
 import { fileURLToPath } from 'node:url'
@@ -276,6 +277,7 @@ export default defineConfig({
     gridAxesAfterHash(),
     authorHelpersAfterHash(),
     rectAreaAfterHash(),
+    decalAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

@@ -42,7 +42,7 @@ export function LayerPanel() {
       <p className="layer-title">图层</p>
       <div className="layer-list">
         {ROWS.map(([key, label]) => {
-          const on = (layers as LayerFlags & { wireframe?: boolean; plaques?: boolean })[key] === true
+          const on = (layers as LayerFlags & { wireframe?: boolean; plaques?: boolean; decals?: boolean })[key] === true
           return (
             <button
               key={key}
