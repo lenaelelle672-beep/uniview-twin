@@ -19,6 +19,10 @@ void import('../capture/mountClip').then((mod) => {
 void import('../grid/mount').then((mod) => {
   mod.mountGridAxes()
 })
+// T066：灯光和相机辅助。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../author/helpers/mount').then((mod) => {
+  mod.mountAuthorHelpers()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

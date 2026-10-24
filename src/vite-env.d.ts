@@ -776,6 +776,20 @@ interface Window {
     played: number
     lastReason: 'enqueue' | 'focus' | null
   }
+  /** T066：作者辅助节点。格网槽在刷新时把它和测距、格网画在一起。默认没有。 */
+  __twinAuthorNode?: import('react').ReactNode
+  /** T059 格网挂上槽之后才有。返回 false 表示 Canvas 里的槽还没接上。 */
+  __twinSceneOverlayFlush?: () => boolean
+  /**
+   * T066：灯光/相机辅助。默认关。
+   * `?demoEdit=1` 或 `layers.debugHelpers === true` 才挂 drei useHelper。
+   */
+  __twinAuthorHelpers?: {
+    on: boolean
+    mounted: boolean
+    kinds: string[]
+    setDebugHelpers?: (on: boolean) => void
+  }
   /** T059：米制格网。默认关。打开后才挂 drei Grid 和 axesHelper。 */
   __twinGrid?: {
     on: boolean

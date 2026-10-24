@@ -66,12 +66,19 @@ function planeProps(): GridAxesProps | null {
   return plane
 }
 
-function flush(): void {
-  if (!rawSlot) return
+/** 测距、格网、T066 作者辅助共用一条槽。作者节点缺省时和原来一样。 */
+export function composeOverlay(measure: ReactNode, grid: ReactNode, author: ReactNode): ReactNode {
+  const parts = [measure, grid, author].filter((node) => node != null)
+  if (parts.length > 1) return createElement(Fragment, null, ...parts)
+  return parts[0] ?? null
+}
+
+function flush(): boolean {
+  if (!rawSlot) return false
   const props = planeProps()
   gridNode = props && GridComp ? createElement(GridComp, props) : null
-  if (measureNode && gridNode) rawSlot(createElement(Fragment, null, measureNode, gridNode))
-  else rawSlot(measureNode ?? gridNode ?? null)
+  rawSlot(composeOverlay(measureNode, gridNode, window.__twinAuthorNode ?? null))
+  return true
 }
 
 function wrapMeasureSlot(): void {
@@ -176,6 +183,7 @@ export function mountGridAxes(): void {
   if (typeof document === 'undefined') return
   if (started) return
   started = true
+  window.__twinSceneOverlayFlush = () => flush()
   publish()
   ensureButton()
   wrapMeasureSlot()
