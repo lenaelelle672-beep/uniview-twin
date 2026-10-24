@@ -1,6 +1,7 @@
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
+import { canvasOffscreen } from '../../scene/offscreenPause'
 import { stepExplodeMotion } from '../../scene/explode'
 import { isCameraRested } from '../../scene/stage/cameraRest'
 import { cutElevation } from '../../scene/stage/cut'
@@ -31,6 +32,7 @@ import { demoEditActive, retainDemoEditParam } from '../../demo-edit/flag'
 import { PICK_BVH_AFTER_FIRST_MS } from '../../scene/pick/pickBvhTiming'
 import { wireframeOverlayOn } from '../../scene/wire/latch'
 import { useTwinStore } from '../../store/store'
+import { useOffscreenPause } from './useOffscreenPause'
 
 function markInv(src: string) {
   if (!import.meta.env.DEV) return
@@ -41,10 +43,16 @@ function markInv(src: string) {
   if (log.length > 400) log.splice(0, log.length - 400)
 }
 
+/** 标签页隐藏，或画布容器已经滚出视口。两件事都停需求泵。 */
+function pumpPaused(): boolean {
+  return document.visibilityState === 'hidden' || canvasOffscreen()
+}
+
 /**
  * D180 续帧：总览 0/2、单层性能 ≤10 / 均衡 ≤30（告警并入）、运动性能 30、后台 0。
  * 晚于场景 useFrame 读 hold，并把 invalidate 按当前 Hz 限幅（相机飞行/拖动走同一套）。
  */
+
 export function DemandLoop() {
   const rawInvalidate = useThree((state) => state.invalidate)
   const gl = useThree((state) => state.gl)
@@ -60,10 +68,12 @@ export function DemandLoop() {
   const lastGate = useRef(0)
   const explodeHold = useRef<(() => void) | null>(null)
   const rawRef = useRef(rawInvalidate)
+  const holdRef = useRef<() => void>(() => {})
+  const releaseRef = useRef<() => void>(() => {})
   rawRef.current = rawInvalidate
 
   const gatedInvalidate = useRef(() => {
-    if (document.visibilityState === 'hidden') return
+    if (pumpPaused()) return
     const { quality: q, view: v } = useTwinStore.getState()
     const hz = scheduledHz(q, v, false)
     if (Number.isFinite(hz) && hz > 0) {
@@ -172,18 +182,15 @@ export function DemandLoop() {
       flushTwinInvalidate()
     })
     const unsubStore = useTwinStore.subscribe(() => {
-      if (document.visibilityState === 'hidden') return
+      if (pumpPaused()) return
       gatedInvalidate()
     })
     const onVis = () => {
       if (document.visibilityState === 'hidden') {
-        if (wake.current) {
-          window.clearTimeout(wake.current)
-          wake.current = 0
-        }
+        holdRef.current()
         return
       }
-      gatedInvalidate()
+      releaseRef.current()
     }
     document.addEventListener('visibilitychange', onVis)
     gatedInvalidate()
@@ -195,10 +202,44 @@ export function DemandLoop() {
     }
   }, [gatedInvalidate])
 
+  // T067：滚出视口和标签隐藏分开。先清掉已经排上的 hz 定时器，避免离屏后还补一帧。
+  // 回到视口沿用 soonestWakeMs，不另起一套闸门，也不和正在走的 wake 再排一个。
+  const holdDemandWake = () => {
+    if (!wake.current) return
+    window.clearTimeout(wake.current)
+    wake.current = 0
+  }
+  const releaseDemandWake = () => {
+    if (wake.current) return
+    if (pumpPaused()) return
+    const { quality: q, view: v } = useTwinStore.getState()
+    const hz = scheduledHz(q, v, false)
+    const now = performance.now()
+    const delay = soonestWakeMs(last.current, q, now, false, v)
+    if (hz === Number.POSITIVE_INFINITY || delay === 0) {
+      markDueChannels(last.current, q, now, v)
+      rawRef.current()
+      return
+    }
+    if (!Number.isFinite(delay) || hz <= 0) {
+      gatedInvalidate()
+      return
+    }
+    wake.current = window.setTimeout(() => {
+      wake.current = 0
+      if (pumpPaused()) return
+      markDueChannels(last.current, q, performance.now(), v)
+      rawRef.current()
+    }, delay)
+  }
+  holdRef.current = holdDemandWake
+  releaseRef.current = releaseDemandWake
+  useOffscreenPause(gl.domElement, holdDemandWake, releaseDemandWake)
+
   useFrame(({ clock, scene }) => {
     const { exploded: boom, view: liveView, quality: liveQuality, selectedFloor: liveFloor } = useTwinStore.getState()
     if (liveView === 'floor') ensureLabelWatch(scene)
-    if (liveQuality !== 'perf' && document.visibilityState !== 'hidden' && shadowBakePending()) {
+    if (liveQuality !== 'perf' && !pumpPaused() && shadowBakePending()) {
       const cutActive = cutElevation(liveView, liveFloor) != null
       const interiorMounted = liveView !== 'floor' || scene.getObjectByName('FloorInterior') != null
       const windowClosed = liveView !== 'floor' || labelWindowClosed()
@@ -233,7 +274,7 @@ export function DemandLoop() {
       explodeHold.current()
       explodeHold.current = null
     }
-    const hidden = document.visibilityState === 'hidden'
+    const hidden = pumpPaused()
     const hz = scheduledHz(liveQuality, liveView, hidden)
     window.__twinFrameCount = window.__twinFrames ?? 0
     window.__twinLastFrameAt = performance.now()
@@ -254,7 +295,7 @@ export function DemandLoop() {
     wake.current = window.setTimeout(() => {
       wake.current = 0
       markDueChannels(last.current, liveQuality, performance.now(), liveView)
-      if (document.visibilityState !== 'hidden') {
+      if (!pumpPaused()) {
         if (import.meta.env.DEV) markInv(`demand-hz-${hz}`)
         rawRef.current()
       }
