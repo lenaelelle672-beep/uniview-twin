@@ -11,6 +11,7 @@ const ROWS: Array<[LayerToggleKey, string]> = [
   ['badges', '圆标'],
   ['wireframe', '线框'],
   ['edges', '结构边'],
+  ['plaques', '铭牌'],
 ]
 
 function armStructureOverlay() {
@@ -41,7 +42,7 @@ export function LayerPanel() {
       <p className="layer-title">图层</p>
       <div className="layer-list">
         {ROWS.map(([key, label]) => {
-          const on = (layers as LayerFlags & { wireframe?: boolean })[key] === true
+          const on = (layers as LayerFlags & { wireframe?: boolean; plaques?: boolean })[key] === true
           return (
             <button
               key={key}

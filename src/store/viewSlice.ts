@@ -29,8 +29,8 @@ export interface LayerFlags {
 
 export type LayerKey = keyof LayerFlags
 
-/** T063。不放进 LayerFlags，避免缺省字段把图层判断的返回值变成 undefined。运行时由 setLayer 写入。 */
-export type LayerToggleKey = LayerKey | 'wireframe'
+/** T063 线框、T064 铭牌。不放进 LayerFlags，避免缺省字段把图层判断的返回值变成 undefined。运行时由 setLayer 写入。 */
+export type LayerToggleKey = LayerKey | 'wireframe' | 'plaques'
 
 export interface ViewSlice {
   view: ViewMode
@@ -119,7 +119,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
   setDayNight: (dayNight) => startTransition(() => set({ dayNight })),
   setQuality: (quality) => startTransition(() => set({ quality, downgradeSuppressed: true })),
   setLayer: (key, on) => {
-    const layers = get().layers as LayerFlags & { wireframe?: boolean }
+    const layers = get().layers as LayerFlags & { wireframe?: boolean; plaques?: boolean }
     if (layers[key] === on) return
     set({ layers: { ...layers, [key]: on } as LayerFlags })
   },

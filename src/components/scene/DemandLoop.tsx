@@ -29,6 +29,7 @@ import {
 } from '../../scene/frameSchedule'
 import { FocusFloatHost } from '../../scene/focusFloat/FocusFloatHost'
 import { demoEditActive, retainDemoEditParam } from '../../demo-edit/flag'
+import { plaquesWanted } from '../../demo-edit/plaqueGate'
 import { PICK_BVH_AFTER_FIRST_MS } from '../../scene/pick/pickBvhTiming'
 import { wireframeOverlayOn } from '../../scene/wire/latch'
 import { useTwinStore } from '../../store/store'
@@ -311,6 +312,7 @@ export function DemandLoop() {
       <OverviewGizmoHost />
       <PickBvhSlot />
       <DemoEditHost />
+      <DemoPlaqueHost />
       <WireframeHost />
     </>
   )
@@ -471,6 +473,44 @@ function PickBvhSlot() {
   }, [])
   if (!Host) return null
   return <Host />
+}
+
+/**
+ * T064：演示铭牌。默认关。单层且（图层 plaques 或 ?demoEdit=1）才在首帧 2600ms 之后 import。
+ * 单层会提前挂上 DemandLoop，这里再挡一次，朝向分包才不会进 hardGate / balancedFx。
+ */
+const PLAQUE_AFTER_FIRST_MS = 2600
+
+function DemoPlaqueHost() {
+  const view = useTwinStore((state) => state.view)
+  const layers = useTwinStore((state) => state.layers)
+  const want = view === 'floor' && plaquesWanted(view, layers)
+  const [Plaques, setPlaques] = useState<ComponentType | null>(null)
+
+  useEffect(() => {
+    if (!want) return
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (first != null && performance.now() - first >= PLAQUE_AFTER_FIRST_MS) {
+        void import('../../demo-edit/DemoPlaques').then((mod) => {
+          if (!cancelled) setPlaques(() => mod.DemoPlaques)
+        })
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [want])
+
+  if (!want || !Plaques) return null
+  return <Plaques />
 }
 
 /**
