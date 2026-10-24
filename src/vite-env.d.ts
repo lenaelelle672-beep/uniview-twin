@@ -800,4 +800,17 @@ interface Window {
     y: number | null
     fadeM: number | null
   }
+  /**
+   * T068：?demoEdit=1 的矩形面光。默认关。
+   * 打开后 count 不超过 cap，init 表示已经调用过 RectAreaLightUniformsLib.init()。
+   */
+  __twinRectArea?: {
+    author: boolean
+    on: boolean
+    init: boolean
+    cap: number
+    count: number
+    ids: string[]
+    helper: 'RectAreaLightHelper'
+  }
 }

@@ -23,6 +23,10 @@ void import('../grid/mount').then((mod) => {
 void import('../author/helpers/mount').then((mod) => {
   mod.mountAuthorHelpers()
 })
+// T068：面光。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../author-lights/mount').then((mod) => {
+  mod.mountRectAreaLights()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

@@ -1,6 +1,7 @@
 import { build as esbuild } from 'esbuild'
 import { authorHelpersAfterHash } from './scripts/authorHelpersPlugin'
 import { gridAxesAfterHash } from './scripts/gridAxesPlugin'
+import { rectAreaAfterHash } from './scripts/rectAreaPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -274,6 +275,7 @@ export default defineConfig({
     clipCaptureAfterHash(),
     gridAxesAfterHash(),
     authorHelpersAfterHash(),
+    rectAreaAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
