@@ -2,6 +2,7 @@ import { build as esbuild } from 'esbuild'
 import { authorHelpersAfterHash } from './scripts/authorHelpersPlugin'
 import { decalAfterHash } from './scripts/decalPlugin'
 import { gridAxesAfterHash } from './scripts/gridAxesPlugin'
+import { focusFitAfterHash } from './scripts/focusFitPlugin'
 import { motionPathAfterHash } from './scripts/motionPathPlugin'
 import { rectAreaAfterHash } from './scripts/rectAreaPlugin'
 import { segmentsAfterHash } from './scripts/segmentsPlugin'
@@ -282,6 +283,7 @@ export default defineConfig({
     motionPathAfterHash(),
     decalAfterHash(),
     segmentsAfterHash(),
+    focusFitAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

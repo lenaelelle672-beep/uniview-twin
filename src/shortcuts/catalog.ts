@@ -31,6 +31,14 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     ],
   },
   {
+    id: 'focus',
+    title: '对焦',
+    rows: [
+      { keys: 'C', action: '演示或讲解时，把当前层或选中工位装进视野。再按一次或 Esc 回到刚才的镜头。不包整栋楼' },
+      { keys: 'Shift+C', action: '讲解对焦。只在这一下装入，动画结束后交还现有镜头控制' },
+    ],
+  },
+  {
     id: 'search',
     title: '搜索',
     rows: [

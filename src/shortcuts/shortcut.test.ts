@@ -73,6 +73,7 @@ describe('速查目录', () => {
     expect(SHORTCUT_GROUPS.map((group) => group.id)).toEqual([
       'sheet',
       'scene',
+      'focus',
       'search',
       'layers',
       'measure',

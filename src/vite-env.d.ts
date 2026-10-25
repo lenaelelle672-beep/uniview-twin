@@ -844,6 +844,22 @@ interface Window {
     cap: number
     blocked: boolean
   }
+  /**
+   * T070：对焦装入。默认不挂 Center / Bounds。
+   * center / bounds 为真才表示对应组件正在画布里。
+   * handedBack 为假只发生在讲解对焦的 fit 动画期间。
+   */
+  __twinFocusFit?: {
+    resident: boolean
+    center: boolean
+    bounds: boolean
+    centerLoaded: boolean
+    boundsLoaded: boolean
+    mode: 'off' | 'center' | 'bounds'
+    subject: 'selection' | 'layer' | null
+    handedBack: boolean
+    blocked: '' | 'tour' | 'blueprint' | 'empty' | 'missing'
+  }
   /** T059：米制格网。默认关。打开后才挂 drei Grid 和 axesHelper。 */
   __twinGrid?: {
     on: boolean
