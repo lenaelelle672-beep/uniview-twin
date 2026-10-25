@@ -23,6 +23,10 @@ void import('../grid/mount').then((mod) => {
 void import('../decals/mount').then((mod) => {
   mod.mountWallDecals()
 })
+// T072：Segments 批辅线。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../segments/mount').then((mod) => {
+  mod.mountBatchSegments()
+})
 // T066：灯光和相机辅助。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../author/helpers/mount').then((mod) => {
   mod.mountAuthorHelpers()

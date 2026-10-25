@@ -789,6 +789,21 @@ interface Window {
   }
   /** T066：作者辅助节点。格网槽在刷新时把它和测距、格网画在一起。默认没有。 */
   __twinAuthorNode?: import('react').ReactNode
+  /** T072：批辅线节点。格网槽在刷新时把它和测距画在一起。默认没有。 */
+  __twinSegmentsNode?: import('react').ReactNode
+  /**
+   * T072：DEMO 分区辅线。默认关。打开后才挂 drei Segments。
+   * shown 不超过 limit；dropped 是超出上限、没有画出来的条数。
+   */
+  __twinSegments?: {
+    on: boolean
+    mounted: boolean
+    shown: number
+    limit: number
+    dropped: number
+    source: 'off' | 'overview' | 'floor'
+    floorId: string | null
+  }
   /** T059 格网挂上槽之后才有。返回 false 表示 Canvas 里的槽还没接上。 */
   __twinSceneOverlayFlush?: () => boolean
   /**

@@ -3,6 +3,7 @@ import { authorHelpersAfterHash } from './scripts/authorHelpersPlugin'
 import { decalAfterHash } from './scripts/decalPlugin'
 import { gridAxesAfterHash } from './scripts/gridAxesPlugin'
 import { rectAreaAfterHash } from './scripts/rectAreaPlugin'
+import { segmentsAfterHash } from './scripts/segmentsPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -278,6 +279,7 @@ export default defineConfig({
     authorHelpersAfterHash(),
     rectAreaAfterHash(),
     decalAfterHash(),
+    segmentsAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
