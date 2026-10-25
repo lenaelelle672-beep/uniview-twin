@@ -1,3 +1,5 @@
+import { demoEditActive } from '../demo-edit/flag'
+
 /**
  * T071 沿轨飞，和 T069 导览轨线预览共用这道门。
  * 默认关。观众地址两边都不打开，也不去拉各自的 drei 包。
@@ -55,4 +57,27 @@ export function tourPathGateOn(search?: string): boolean {
 export function isAlarmTourLabel(text: string | null | undefined): boolean {
   const label = (text ?? '').replace(/\s+/g, '')
   return label === '导览告警' || label === '停止导览'
+}
+
+/**
+ * T069：讲解相机轨预览开关。
+ * 不放进 LayerFlags 的初始对象。缺省即关。
+ * `layers.tourPath === true` 或地址 `?demoEdit=1` 才开。
+ * 用户关掉之后本次会话不再因为 demoEdit 自动打开。
+ */
+
+export const TOUR_PATH_LAYER = 'tourPath' as const
+
+export function tourPathLayerOn(layers: object | null | undefined): boolean {
+  if (!layers) return false
+  return (layers as { tourPath?: boolean }).tourPath === true
+}
+
+export function tourPathWanted(
+  layers: object | null | undefined,
+  search?: string,
+  dismissed = false,
+): boolean {
+  if (dismissed) return false
+  return tourPathLayerOn(layers) || demoEditActive(search)
 }

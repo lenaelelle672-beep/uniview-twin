@@ -29,8 +29,8 @@ export interface LayerFlags {
 
 export type LayerKey = keyof LayerFlags
 
-/** T063 线框、T064 铭牌、T065 贴花、T072 批线。不放进 LayerFlags，缺省即关，避免首屏初始对象变长，也避免缺省字段把图层判断的返回值变成 undefined。运行时由 setLayer 写入。 */
-export type LayerToggleKey = LayerKey | 'wireframe' | 'plaques' | 'decals' | 'segments'
+/** T063 线框、T064 铭牌、T065 贴花、T072 批线、T069 导览轨。不放进 LayerFlags，缺省即关，避免首屏初始对象变长，也避免缺省字段把图层判断的返回值变成 undefined。运行时由 setLayer 写入。 */
+export type LayerToggleKey = LayerKey | 'wireframe' | 'plaques' | 'decals' | 'segments' | 'tourPath'
 
 export interface ViewSlice {
   view: ViewMode
@@ -41,7 +41,7 @@ export interface ViewSlice {
   qualityPinned: boolean
   urlQuality: QualityTier | null
   downgradeSuppressed: boolean
-  /** 人流、标签、热力、描边、圆标默认开。结构边默认关。线框、铭牌和贴花另计，缺省关。 */
+  /** 人流、标签、热力、描边、圆标默认开。结构边默认关。线框、铭牌、贴花和导览轨另计，缺省关。 */
   layers: LayerFlags
   selectedFloor: string | null
   hoveredFloor: string | null
@@ -124,6 +124,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
       plaques?: boolean
       decals?: boolean
       segments?: boolean
+      tourPath?: boolean
     }
     if (layers[key] === on) return
     set({ layers: { ...layers, [key]: on } as LayerFlags })
