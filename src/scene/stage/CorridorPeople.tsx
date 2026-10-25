@@ -2,7 +2,8 @@ import { Detailed } from '@react-three/drei/core/Detailed'
 import { useAnimations } from '@react-three/drei/core/useAnimations'
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
-import { Group, MeshStandardMaterial, SkinnedMesh } from 'three'
+import { Group, MeshStandardMaterial, SkinnedMesh, type LOD } from 'three'
+import { useDetailedLevelInvalidate } from '../props/useDetailedLevel'
 import { channelDue, channelIntervalMs, retainFrameChannel } from '../frameSchedule'
 import { useLayerShown } from '../layerGate'
 import { useTwinStore } from '../../store/store'
@@ -69,6 +70,17 @@ function Figure({ gltf, clip }: { gltf: GLTF; clip: string }) {
   )
 }
 
+function PersonLod({ hi, lo, clip }: { hi: GLTF; lo: GLTF; clip: string }) {
+  const lod = useRef<LOD>(null)
+  useDetailedLevelInvalidate(lod)
+  return (
+    <Detailed ref={lod} distances={[0, 80]}>
+      <Figure gltf={hi} clip={clip} />
+      <Figure gltf={lo} clip={clip} />
+    </Detailed>
+  )
+}
+
 function CorridorPeopleModels({ paths }: { paths: Point[][] }) {
   const loaded = useLoader(GLTFLoader, URLS, installMeshopt) as GLTF[]
   const [man, woman, manLod, womanLod] = loaded
@@ -119,10 +131,7 @@ function CorridorPeopleModels({ paths }: { paths: Point[][] }) {
             name={`Person-${index}`}
             scale={PERSON_SCALE[person.model]}
           >
-            <Detailed distances={[0, 80]}>
-              <Figure gltf={hi} clip={clip} />
-              <Figure gltf={lo} clip={clip} />
-            </Detailed>
+            <PersonLod hi={hi} lo={lo} clip={clip} />
           </group>
         )
       })}

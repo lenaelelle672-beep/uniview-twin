@@ -1,5 +1,5 @@
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
+import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
 import { canvasOffscreen } from '../../scene/offscreenPause'
 import { stepExplodeMotion } from '../../scene/explode'
@@ -314,6 +314,7 @@ export function DemandLoop() {
       <DemoEditHost />
       <DemoPlaqueHost />
       <WireframeHost />
+      <TreeLodHost />
     </>
   )
 }
@@ -548,6 +549,78 @@ function WireframeHost() {
 
   if (!on || !View) return null
   return <View />
+}
+
+/**
+ * T073：行道树 hi/lo 已经成对。均衡和高画质在首帧 2600ms 之后用 drei Detailed，
+ * 距离与走廊人物一样是 [0, 80]。性能档和白模不 import，避免把精细树和 Detailed 拉进首屏。
+ * 单层会提前挂上 DemandLoop，这里再等首帧，TreeLod 才可能进请求。
+ * 灯、屋面字和程序家具没有 lo，不造空壳。东立面格栅保持自己的近远切换。
+ */
+const TREE_LOD_AFTER_FIRST_MS = 2600
+
+function TreeLodHost() {
+  const quality = useTwinStore((state) => state.quality)
+  const presentation = useTwinStore((state) => state.presentation)
+  const enabled = quality !== 'perf' && presentation !== 'model'
+  const [View, setView] = useState<ComponentType | null>(null)
+
+  useEffect(() => {
+    if (!enabled) {
+      window.__twinTreeLod = {
+        on: false,
+        reason: quality === 'perf' ? 'perf' : 'model',
+        distances: [0, 80],
+        hysteresis: 0.1,
+        level: null,
+        stockHidden: 0,
+        hiFaces: 0,
+        loFaces: 0,
+      }
+      return
+    }
+    if (!View) {
+      window.__twinTreeLod = {
+        on: false,
+        reason: 'wait',
+        distances: [0, 80],
+        hysteresis: 0.1,
+        level: null,
+        stockHidden: 0,
+        hiFaces: 0,
+        loFaces: 0,
+      }
+    }
+  }, [enabled, presentation, quality, View])
+
+  useEffect(() => {
+    if (!enabled) return
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (first != null && performance.now() - first >= TREE_LOD_AFTER_FIRST_MS) {
+        void import('../../scene/props/TreeLod').then((mod) => {
+          if (!cancelled) setView(() => mod.TreeLod)
+        })
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [enabled])
+
+  if (!enabled || !View) return null
+  return (
+    <Suspense fallback={null}>
+      <View />
+    </Suspense>
+  )
 }
 
 export default DemandLoop
