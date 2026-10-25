@@ -1,5 +1,6 @@
 import { createElement, Fragment, type ReactNode } from 'react'
 import { useTwinStore } from '../store/store'
+import { withTourMotion } from '../tour-path/overlay'
 import type { GridAxesProps } from './GridAxes'
 import { acceptsGridKey, GRID_AXIS_M, GRID_CELL_M, GRID_SECTION_M, gridPlane } from './metrics'
 
@@ -82,7 +83,7 @@ function flush(): boolean {
   if (!rawSlot) return false
   const props = planeProps()
   gridNode = props && GridComp ? createElement(GridComp, props) : null
-  rawSlot(composeOverlay(measureNode, gridNode, window.__twinAuthorNode ?? null, window.__twinSegmentsNode ?? null))
+  rawSlot(withTourMotion(composeOverlay(measureNode, gridNode, window.__twinAuthorNode ?? null, window.__twinSegmentsNode ?? null)))
   return true
 }
 

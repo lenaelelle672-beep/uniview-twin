@@ -35,6 +35,10 @@ void import('../author/helpers/mount').then((mod) => {
 void import('../author-lights/mount').then((mod) => {
   mod.mountRectAreaLights()
 })
+// T071：相机沿轨。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../tour-path/mount').then((mod) => {
+  mod.mountMotionPath()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
