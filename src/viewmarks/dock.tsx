@@ -27,6 +27,10 @@ void import('../decals/mount').then((mod) => {
 void import('../segments/mount').then((mod) => {
   mod.mountBatchSegments()
 })
+// T070：对焦装入。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../focus-fit/mount').then((mod) => {
+  mod.mountFocusFit()
+})
 // T066：灯光和相机辅助。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../author/helpers/mount').then((mod) => {
   mod.mountAuthorHelpers()
