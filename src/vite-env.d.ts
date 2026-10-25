@@ -494,6 +494,17 @@ interface Window {
     count: number
     names: string[]
   }
+  /** T073：行道树 Detailed 档位。性能档和白模不挂，on 为 false。 */
+  __twinTreeLod?: {
+    on: boolean
+    reason: string
+    distances: number[]
+    hysteresis: number
+    level: number | null
+    stockHidden: number
+    hiFaces: number
+    loFaces: number
+  }
   /** DemandLoop 里的测距挂载点。工具本体在懒包里。 */
   __twinMeasureSlot?: (node: import('react').ReactNode) => void
   __twinMeasureExit?: () => void
