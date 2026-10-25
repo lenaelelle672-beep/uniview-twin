@@ -549,6 +549,8 @@ interface Window {
     getTarget: (out: import('three').Vector3, receiveEndValue?: boolean) => import('three').Vector3
     getFocalOffset?: (out: import('three').Vector3, receiveEndValue?: boolean) => import('three').Vector3
     update: (delta: number) => boolean
+    /** camera-controls：false 只停拖曳。沿轨飞另外把 update 换成空函数。 */
+    enabled?: boolean
   }
   /** T041：?vp= 还原期间不要让取景和距离夹紧改掉眼点。 */
   __vpH?: boolean
@@ -556,6 +558,23 @@ interface Window {
   __vpT?: boolean
   /** T041：导览在画布外泵一帧。不进 cameraRest / frameSchedule。 */
   __vpP?: () => void
+  /**
+   * T071：导览沿轨播放节点。格网槽把它并进画布。
+   * 默认没有。观众地址不写它，也不加载 MotionPathControls。
+   */
+  __twinTourMotionNode?: import('react').ReactNode
+  /** T071：播放自然结束时清掉书签条上的「正在播」标记。 */
+  __twinMotionPathIdle?: () => void
+  /** T071：沿轨飞状态。播完 owner 交回 camera-controls。 */
+  __twinMotionPath?: {
+    playing: boolean
+    owner: 'motion-path' | 'camera-controls'
+    loop: boolean
+    offset: number
+    points: number
+    floors: string[]
+    handedBack: boolean
+  }
   /**
    * T060：结构边。默认不挂。
    * latch 固定为 edges-wins：结构边和 T063 Wireframe 同时开时只画 Edges。
