@@ -6,6 +6,7 @@ import { focusFitAfterHash } from './scripts/focusFitPlugin'
 import { motionPathAfterHash } from './scripts/motionPathPlugin'
 import { rectAreaAfterHash } from './scripts/rectAreaPlugin'
 import { segmentsAfterHash } from './scripts/segmentsPlugin'
+import { tourPathAfterHash } from './scripts/tourPathPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -284,6 +285,7 @@ export default defineConfig({
     decalAfterHash(),
     segmentsAfterHash(),
     focusFitAfterHash(),
+    tourPathAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

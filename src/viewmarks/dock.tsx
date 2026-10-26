@@ -31,6 +31,10 @@ void import('../segments/mount').then((mod) => {
 void import('../focus-fit/mount').then((mod) => {
   mod.mountFocusFit()
 })
+// T069：导览轨预览。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../tour-path/mount').then((mod) => {
+  mod.mountTourPath()
+})
 // T066：灯光和相机辅助。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../author/helpers/mount').then((mod) => {
   mod.mountAuthorHelpers()

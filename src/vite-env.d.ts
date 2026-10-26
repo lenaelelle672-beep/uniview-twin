@@ -871,6 +871,19 @@ interface Window {
     fadeM: number | null
   }
   /**
+   * T069：讲解相机轨预览。默认关。
+   * 图层 tourPath 或 ?demoEdit=1 打开后才挂 drei CatmullRomLine。关了 mounted 为 false。
+   */
+  __twinTourPath?: {
+    demo: true
+    on: boolean
+    mounted: boolean
+    points: number
+    segments: number
+    tension: number
+    curve: 'centripetal'
+  }
+  /**
    * T068：?demoEdit=1 的矩形面光。默认关。
    * 打开后 count 不超过 cap，init 表示已经调用过 RectAreaLightUniformsLib.init()。
    */
