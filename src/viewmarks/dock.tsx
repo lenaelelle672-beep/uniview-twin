@@ -47,6 +47,10 @@ void import('../author-lights/mount').then((mod) => {
 void import('../tour-path/mount').then((mod) => {
   mod.mountMotionPath()
 })
+// T077：GLTF 片段浅拷。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../fragment-clone/mount').then((mod) => {
+  mod.mountFragmentClones()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
