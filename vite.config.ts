@@ -5,6 +5,7 @@ import { gridAxesAfterHash } from './scripts/gridAxesPlugin'
 import { focusFitAfterHash } from './scripts/focusFitPlugin'
 import { motionPathAfterHash } from './scripts/motionPathPlugin'
 import { rectAreaAfterHash } from './scripts/rectAreaPlugin'
+import { screenVideoAfterHash } from './scripts/screenVideoPlugin'
 import { segmentsAfterHash } from './scripts/segmentsPlugin'
 import { tourPathAfterHash } from './scripts/tourPathPlugin'
 import { cloneAfterHash } from './scripts/clonePlugin'
@@ -288,6 +289,7 @@ export default defineConfig({
     focusFitAfterHash(),
     tourPathAfterHash(),
     cloneAfterHash(),
+    screenVideoAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

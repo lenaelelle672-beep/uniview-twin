@@ -51,6 +51,10 @@ void import('../tour-path/mount').then((mod) => {
 void import('../fragment-clone/mount').then((mod) => {
   mod.mountFragmentClones()
 })
+// T074：工位屏。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../screen-video/mount').then((mod) => {
+  mod.mountScreenVideo()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

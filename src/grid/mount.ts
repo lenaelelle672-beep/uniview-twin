@@ -67,14 +67,15 @@ function planeProps(): GridAxesProps | null {
   return plane
 }
 
-/** 测距、格网、T066 作者辅助、T072 批辅线共用一条槽。缺省节点不占位。 */
+/** 测距、格网、T066 作者辅助、T072 批辅线、T074 工位屏共用一条槽。缺省节点不占位。 */
 export function composeOverlay(
   measure: ReactNode,
   grid: ReactNode,
   author: ReactNode,
   segments: ReactNode = null,
+  screenVideo: ReactNode = null,
 ): ReactNode {
-  const parts = [measure, grid, author, segments].filter((node) => node != null)
+  const parts = [measure, grid, author, segments, screenVideo].filter((node) => node != null)
   if (parts.length > 1) return createElement(Fragment, null, ...parts)
   return parts[0] ?? null
 }
@@ -83,7 +84,17 @@ function flush(): boolean {
   if (!rawSlot) return false
   const props = planeProps()
   gridNode = props && GridComp ? createElement(GridComp, props) : null
-  rawSlot(withTourMotion(composeOverlay(measureNode, gridNode, window.__twinAuthorNode ?? null, window.__twinSegmentsNode ?? null)))
+  rawSlot(
+    withTourMotion(
+      composeOverlay(
+        measureNode,
+        gridNode,
+        window.__twinAuthorNode ?? null,
+        window.__twinSegmentsNode ?? null,
+        window.__twinScreenVideoNode ?? null,
+      ),
+    ),
+  )
   return true
 }
 

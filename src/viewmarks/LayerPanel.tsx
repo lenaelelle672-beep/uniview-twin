@@ -48,6 +48,7 @@ export function LayerPanel() {
             decals?: boolean
             segments?: boolean
             tourPath?: boolean
+            screenVideo?: boolean
           })[key] === true
           return (
             <button
