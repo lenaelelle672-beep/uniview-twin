@@ -55,6 +55,10 @@ void import('../fragment-clone/mount').then((mod) => {
 void import('../screen-video/mount').then((mod) => {
   mod.mountScreenVideo()
 })
+// T075：悬停指针。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../cursor/mount').then((mod) => {
+  mod.mountHoverCursor()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

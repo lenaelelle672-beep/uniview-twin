@@ -9,6 +9,7 @@ import { screenVideoAfterHash } from './scripts/screenVideoPlugin'
 import { segmentsAfterHash } from './scripts/segmentsPlugin'
 import { tourPathAfterHash } from './scripts/tourPathPlugin'
 import { cloneAfterHash } from './scripts/clonePlugin'
+import { hoverCursorAfterHash } from './scripts/hoverCursorPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -290,6 +291,7 @@ export default defineConfig({
     tourPathAfterHash(),
     cloneAfterHash(),
     screenVideoAfterHash(),
+    hoverCursorAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
