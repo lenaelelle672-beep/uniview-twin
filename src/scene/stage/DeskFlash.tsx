@@ -1,6 +1,7 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Color, InstancedMesh, Mesh } from 'three'
+import { blinkLive, subscribeBlink } from '../../frustum/blinkGate'
 import { retainFrameChannel } from '../frameSchedule'
 import { resolveWorkstationRef } from '../../locate/ref'
 import { useTwinStore } from '../../store/store'
@@ -58,9 +59,24 @@ export function DeskFlash({ floorId }: { floorId: string }) {
     }
   }, [deskId, focusSeq])
 
+  // T076：环离开视锥就松开运动续帧。标志没开时仍在闪烁的整段里占着 motion。
   useEffect(() => {
     if (!alive) return
-    return retainFrameChannel('motion')
+    let release: (() => void) | undefined
+    const sync = () => {
+      if (blinkLive('flash')) {
+        release ??= retainFrameChannel('motion')
+        return
+      }
+      release?.()
+      release = undefined
+    }
+    sync()
+    const stop = subscribeBlink(sync)
+    return () => {
+      stop()
+      release?.()
+    }
   }, [alive])
 
   useEffect(() => {
@@ -75,6 +91,7 @@ export function DeskFlash({ floorId }: { floorId: string }) {
       tintedIndex.current = -1
       return
     }
+    if (!blinkLive('flash')) return
     const elapsed = (performance.now() - started.current) / 1000
     if (tinted.current && (tinted.current !== mesh || tintedIndex.current !== deskIndex)) {
       restoreTint(tinted.current, tintedIndex.current)

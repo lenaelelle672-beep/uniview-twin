@@ -1,5 +1,6 @@
 import { useFrame } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { blinkLive, subscribeBlink } from '../../frustum/blinkGate'
 import { discreteAlarmLit, retainFrameChannel } from '../frameSchedule'
 import { useTwinStore } from '../../store/store'
 import { HiddenLayer, useLayerShown } from '../layerGate'
@@ -104,7 +105,25 @@ function DeviceBadgesLive({ floorId, devices }: { floorId: string; devices: Devi
   const time = useRef({ value: 0 })
   const discrete = useRef({ value: 0 })
   const hasAlarm = badges.some((badge) => badge.status === 'alarm')
-  useEffect(() => (hasAlarm ? retainFrameChannel('alarm') : undefined), [hasAlarm])
+  // T076：视锥外松开告警续帧。标志没开时 blinkLive 恒为真，跟原来一样占着 alarm。
+  useEffect(() => {
+    if (!hasAlarm) return
+    let release: (() => void) | undefined
+    const sync = () => {
+      if (blinkLive('alarm')) {
+        release ??= retainFrameChannel('alarm')
+        return
+      }
+      release?.()
+      release = undefined
+    }
+    sync()
+    const stop = subscribeBlink(sync)
+    return () => {
+      stop()
+      release?.()
+    }
+  }, [hasAlarm])
   const resources = useMemo(() => {
     const texture = createBadgeAtlas()
     const geometry = new PlaneGeometry(BADGE_SIZE, BADGE_SIZE)
@@ -152,6 +171,7 @@ function DeviceBadgesLive({ floorId, devices }: { floorId: string; devices: Devi
   }, [resources])
 
   useFrame(({ clock }) => {
+    if (!blinkLive('alarm')) return
     const quality = useTwinStore.getState().quality
     if (quality === 'perf') {
       discrete.current.value = 1
