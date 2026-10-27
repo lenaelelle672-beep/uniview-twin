@@ -7,6 +7,7 @@ import { motionPathAfterHash } from './scripts/motionPathPlugin'
 import { rectAreaAfterHash } from './scripts/rectAreaPlugin'
 import { screenVideoAfterHash } from './scripts/screenVideoPlugin'
 import { segmentsAfterHash } from './scripts/segmentsPlugin'
+import { meshBoundsAfterHash } from './scripts/meshBoundsPlugin'
 import { tourPathAfterHash } from './scripts/tourPathPlugin'
 import { cloneAfterHash } from './scripts/clonePlugin'
 import { hoverCursorAfterHash } from './scripts/hoverCursorPlugin'
@@ -292,6 +293,7 @@ export default defineConfig({
     tourPathAfterHash(),
     cloneAfterHash(),
     screenVideoAfterHash(),
+    meshBoundsAfterHash(),
     hoverCursorAfterHash(),
     frustumAfterHash(),
     isolateTransformControlsLeaves(),

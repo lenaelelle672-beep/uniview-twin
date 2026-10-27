@@ -624,3 +624,7 @@ function TreeLodHost() {
 }
 
 export default DemandLoop
+// T078：远距装饰密模的粗拾取。生产构建在 DemandLoop 哈希前摘掉这段，哈希定稿后再接独立分包。
+void import('../../scene/pick/meshBoundsMount').then((mod) => {
+  mod.mountCoarseMeshBounds()
+})
