@@ -810,6 +810,26 @@ interface Window {
   __twinAuthorNode?: import('react').ReactNode
   /** T072：批辅线节点。格网槽在刷新时把它和测距画在一起。默认没有。 */
   __twinSegmentsNode?: import('react').ReactNode
+  /** T074：工位屏节点。格网槽在刷新时把它和测距画在一起。默认没有。 */
+  __twinScreenVideoNode?: import('react').ReactNode
+  /**
+   * T074：工位显示器和摄像头预览。默认关。
+   * 图层 screenVideo、?screenVideo=1 或 ?demoEdit=1 打开后才挂 drei useVideoTexture。
+   * hls 为假：只播本地 mp4，不接 HLS / CDN。
+   */
+  __twinScreenVideo?: {
+    demo: true
+    on: boolean
+    mounted: boolean
+    src: string
+    muted: true
+    playsInline: true
+    loop: true
+    desks: number
+    camera: boolean
+    hls: false
+    impl: 'drei-useVideoTexture'
+  }
   /**
    * T072：DEMO 分区辅线。默认关。打开后才挂 drei Segments。
    * shown 不超过 limit；dropped 是超出上限、没有画出来的条数。
