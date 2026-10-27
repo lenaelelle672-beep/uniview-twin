@@ -896,4 +896,22 @@ interface Window {
     ids: string[]
     helper: 'RectAreaLightHelper'
   }
+  /**
+   * T077：?demoEdit=1 的路灯 GLTF 片段浅拷。默认关。
+   * deep 固定 false，几何和材质与已经实例化的路灯共用。
+   * 改材质会连带那些实例一起变。count 不超过 cap。不替代 Instanced / Batched 主路径。
+   */
+  __twinClone?: {
+    on: boolean
+    mounted: boolean
+    count: number
+    cap: number
+    dropped: number
+    deep: false
+    castShadow: true
+    receiveShadow: true
+    sharedMaterials: true
+    source: 'off' | 'street_lamp'
+    setOn?: (on: boolean) => void
+  }
 }
