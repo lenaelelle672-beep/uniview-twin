@@ -10,6 +10,7 @@ import { segmentsAfterHash } from './scripts/segmentsPlugin'
 import { tourPathAfterHash } from './scripts/tourPathPlugin'
 import { cloneAfterHash } from './scripts/clonePlugin'
 import { hoverCursorAfterHash } from './scripts/hoverCursorPlugin'
+import { frustumAfterHash } from './scripts/frustumPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -292,6 +293,7 @@ export default defineConfig({
     cloneAfterHash(),
     screenVideoAfterHash(),
     hoverCursorAfterHash(),
+    frustumAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

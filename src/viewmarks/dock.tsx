@@ -59,6 +59,10 @@ void import('../screen-video/mount').then((mod) => {
 void import('../cursor/mount').then((mod) => {
   mod.mountHoverCursor()
 })
+// T076：视锥暂停。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../frustum/mount').then((mod) => {
+  mod.mountFrustumPause()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

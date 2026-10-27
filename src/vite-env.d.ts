@@ -934,4 +934,10 @@ interface Window {
     source: 'off' | 'street_lamp'
     setOn?: (on: boolean) => void
   }
+  /**
+   * T076：视锥进出暂停远处路灯和告警闪烁。
+   * 均衡和高画质默认关。性能档默认开。`?frustum=1` / `?frustum=0` 盖过画质。
+   * 关着的时候不加载 drei useIntersect。alarm/flash/sign 为 null 表示宿主不在场景里。
+   */
+  __twinFrustumBlink?: import('./frustum/blinkGate').FrustumBlinkState
 }
