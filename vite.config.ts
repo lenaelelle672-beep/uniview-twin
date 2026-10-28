@@ -16,6 +16,7 @@ import { frustumAfterHash } from './scripts/frustumPlugin'
 import { screenImageAfterHash } from './scripts/screenImagePlugin'
 import { broadcastAfterHash } from './scripts/broadcastPlugin'
 import { speechAfterHash } from './scripts/speechPlugin'
+import { pipAfterHash } from './scripts/pipPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -288,6 +289,7 @@ export default defineConfig({
     alarmCueAfterHash(),
     speechAfterHash(),
     clipCaptureAfterHash(),
+    pipAfterHash(),
     gridAxesAfterHash(),
     authorHelpersAfterHash(),
     rectAreaAfterHash(),
