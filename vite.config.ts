@@ -14,6 +14,7 @@ import { dragAfterHash } from './scripts/dragPlugin'
 import { hoverCursorAfterHash } from './scripts/hoverCursorPlugin'
 import { frustumAfterHash } from './scripts/frustumPlugin'
 import { screenImageAfterHash } from './scripts/screenImagePlugin'
+import { broadcastAfterHash } from './scripts/broadcastPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -300,6 +301,7 @@ export default defineConfig({
     hoverCursorAfterHash(),
     frustumAfterHash(),
     screenImageAfterHash(),
+    broadcastAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
