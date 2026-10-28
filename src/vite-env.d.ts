@@ -955,6 +955,25 @@ interface Window {
     setOn?: (on: boolean) => void
   }
   /**
+   * T080：?demoEdit=1 或作者态的设备/家具落点拖摆。默认关。
+   * dragging 为真时 CameraControls 轨道和 T052 框选让路。松手交还。
+   * 观众默认 on 为 false，不加载 DragControls。
+   */
+  __twinDrag?: {
+    on: boolean
+    mounted: boolean
+    dragging: boolean
+    owner: 'drag' | 'camera-controls'
+    axisLock: 'y'
+    devices: number
+    furniture: number
+    count: number
+    latched: boolean
+    moved: number
+    places: { id: string; kind: 'device' | 'furniture'; x: number; y: number; z: number }[]
+    setOn?: (on: boolean) => void
+  }
+  /**
    * T076：视锥进出暂停远处路灯和告警闪烁。
    * 均衡和高画质默认关。性能档默认开。`?frustum=1` / `?frustum=0` 盖过画质。
    * 关着的时候不加载 drei useIntersect。alarm/flash/sign 为 null 表示宿主不在场景里。

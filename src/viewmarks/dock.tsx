@@ -67,6 +67,10 @@ void import('../frustum/mount').then((mod) => {
 void import('../screen-image/mount').then((mod) => {
   mod.mountScreenImage()
 })
+// T080：作者态拖摆。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../drag-placement/mount').then((mod) => {
+  mod.mountPlacementDrag()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

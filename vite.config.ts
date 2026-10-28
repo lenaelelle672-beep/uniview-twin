@@ -10,6 +10,7 @@ import { segmentsAfterHash } from './scripts/segmentsPlugin'
 import { meshBoundsAfterHash } from './scripts/meshBoundsPlugin'
 import { tourPathAfterHash } from './scripts/tourPathPlugin'
 import { cloneAfterHash } from './scripts/clonePlugin'
+import { dragAfterHash } from './scripts/dragPlugin'
 import { hoverCursorAfterHash } from './scripts/hoverCursorPlugin'
 import { frustumAfterHash } from './scripts/frustumPlugin'
 import { screenImageAfterHash } from './scripts/screenImagePlugin'
@@ -293,6 +294,7 @@ export default defineConfig({
     focusFitAfterHash(),
     tourPathAfterHash(),
     cloneAfterHash(),
+    dragAfterHash(),
     screenVideoAfterHash(),
     meshBoundsAfterHash(),
     hoverCursorAfterHash(),
