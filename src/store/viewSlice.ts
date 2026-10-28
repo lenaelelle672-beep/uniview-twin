@@ -29,8 +29,8 @@ export interface LayerFlags {
 
 export type LayerKey = keyof LayerFlags
 
-/** T063 线框、T064 铭牌、T065 贴花、T072 批线、T069 导览轨、T074 工位屏。不放进 LayerFlags，缺省即关，避免首屏初始对象变长，也避免缺省字段把图层判断的返回值变成 undefined。运行时由 setLayer 写入。 */
-export type LayerToggleKey = LayerKey | 'wireframe' | 'plaques' | 'decals' | 'segments' | 'tourPath' | 'screenVideo'
+/** T063 线框、T064 铭牌、T065 贴花、T072 批线、T069 导览轨、T074 工位屏、T079 屏海报。不放进 LayerFlags，缺省不写进初始对象，避免首屏变长，也避免缺省字段把图层判断的返回值变成 undefined。运行时由 setLayer 写入。T079 晚加载开关把缺省读成开。 */
+export type LayerToggleKey = LayerKey | 'wireframe' | 'plaques' | 'decals' | 'segments' | 'tourPath' | 'screenVideo' | 'screenImage'
 
 export interface ViewSlice {
   view: ViewMode
@@ -126,6 +126,7 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
       segments?: boolean
       tourPath?: boolean
       screenVideo?: boolean
+      screenImage?: boolean
     }
     if (layers[key] === on) return
     set({ layers: { ...layers, [key]: on } as LayerFlags })
