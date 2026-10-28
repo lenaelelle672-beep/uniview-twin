@@ -11,6 +11,10 @@ void import('../shortcuts/arm')
 void import('../audio/AlarmAudioCue').then((mod) => {
   mod.mountAlarmAudioCue()
 })
+// T082：告警语音。整段逻辑在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../audio/AlarmSpeech').then((mod) => {
+  mod.mountAlarmSpeech()
+})
 // T062：短视频录制。整段逻辑在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../capture/mountClip').then((mod) => {
   mod.mountClipCapture()

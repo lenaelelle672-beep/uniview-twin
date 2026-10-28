@@ -806,6 +806,27 @@ interface Window {
     played: number
     lastReason: 'enqueue' | 'focus' | null
   }
+  /**
+   * T082：告警语音。晚加载分包挂上后才有。
+   * 默认关。speech=1，或演示模式 demo=1 / demoEdit=1，才打开。
+   */
+  __twinAlarmSpeech?: {
+    enabled: boolean
+    muted: boolean
+    unlocked: boolean
+    ownsChannel: boolean
+    supported: boolean
+    spoken: number
+    cancelled: number
+    lastUtterance: string | null
+    voiceLang: string | null
+  }
+  /** T082 × T054：声道门闩。语音分包和提示音分包共用。 */
+  __twinAlarmChannel?: {
+    speechOwns: boolean
+    holder: 'tone' | 'speech' | null
+    until: number
+  }
   /** T066：作者辅助节点。格网槽在刷新时把它和测距、格网画在一起。默认没有。 */
   __twinAuthorNode?: import('react').ReactNode
   /** T072：批辅线节点。格网槽在刷新时把它和测距画在一起。默认没有。 */

@@ -1,4 +1,5 @@
 import { useTwinStore } from '../store/store'
+import { acquireChannel, decideToneOutput, setSpeechOwns } from './channelLatch'
 import {
   alarmFocusKey,
   createCueMemory,
@@ -8,12 +9,14 @@ import {
   type CueReason,
   type CueWatch,
 } from './cuePolicy'
-import { openCueContext, playAlarmCue, resumeCueContext, type CueAudioContext } from './dualTone'
+import { CUE_DURATION_MS, openCueContext, playAlarmCue, resumeCueContext, type CueAudioContext } from './dualTone'
+import { initialSpeechEnabled, initialSpeechMuted, speechSynthesisSupported } from './speechGate'
 
 /**
  * T054：告警提示音。
  * viewmarks/dock 在首帧 2600ms 之后才 import 本文件，不进 hardGate / balancedFx。
  * 不读时间轴回放，不碰 DeskFlash、描边、雾、镜头 smoothTime 和后处理。
+ * T082 语音接过声道时，这一声让出去，不和语音叠在一起响。
  */
 
 const BUTTON_STYLE =
@@ -79,7 +82,16 @@ function consider(force = false): void {
   memory = decision.memory
   let playedNow = false
   if (decision.play && decision.reason) {
-    if (playAlarmCue(context)) {
+    const output = decideToneOutput(now())
+    if (output === 'yield') {
+      lastReason = decision.reason
+    } else if (output === 'wait') {
+      memory = { ...memory, pending: decision.reason, lastCueAt: previousCueAt }
+      publish(false)
+      armRetry(280)
+      return
+    } else if (playAlarmCue(context)) {
+      acquireChannel('tone', now(), CUE_DURATION_MS)
       playedNow = true
       lastReason = decision.reason
       played += 1
@@ -157,11 +169,21 @@ function watchTopbar(): void {
   observer.observe(document.body, { childList: true, subtree: true })
 }
 
+/**
+ * 语音分包还没挂上时，先按地址栏把声道让出去。
+ * 语音已经挂上之后不再覆盖，避免把用户刚点的开关冲掉。
+ */
+function adoptSpeechChannel(): void {
+  if (window.__twinAlarmSpeech) return
+  setSpeechOwns(initialSpeechEnabled() && !initialSpeechMuted() && speechSynthesisSupported())
+}
+
 /** dock 晚加载之后调用。重复调用不会叠两套监听。 */
 export function mountAlarmAudioCue(): void {
   if (started || typeof window === 'undefined' || typeof document === 'undefined') return
   started = true
   muted = initialMuteAudio()
+  adoptSpeechChannel()
   memory = createCueMemory()
   ensureStyle()
   renderButton()
