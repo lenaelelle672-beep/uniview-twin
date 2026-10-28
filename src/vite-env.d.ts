@@ -979,4 +979,19 @@ interface Window {
    * 关着的时候不加载 drei useIntersect。alarm/flash/sign 为 null 表示宿主不在场景里。
    */
   __twinFrustumBlink?: import('./frustum/blinkGate').FrustumBlinkState
+  /**
+   * T081：同源多标签薄总线。晚加载分包挂上后才有。
+   * 只接力 focus / 视角令牌 / alarmId / 图层。不是 T049 的分享链接。
+   * `?bus=0` 或 setOn(false) 关掉，并 close() BroadcastChannel。
+   */
+  __twinBus?: {
+    on: boolean
+    channel: 'uniview-twin'
+    tab: string
+    sent: number
+    applied: number
+    dropped: number
+    closed: boolean
+    setOn?: (on: boolean) => void
+  }
 }
