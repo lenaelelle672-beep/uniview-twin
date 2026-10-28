@@ -19,6 +19,10 @@ void import('../audio/AlarmSpeech').then((mod) => {
 void import('../capture/mountClip').then((mod) => {
   mod.mountClipCapture()
 })
+// T083：画中画值守。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../pip/mount').then((mod) => {
+  mod.mountPipWatch()
+})
 // T059：网格和坐标轴。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../grid/mount').then((mod) => {
   mod.mountGridAxes()
