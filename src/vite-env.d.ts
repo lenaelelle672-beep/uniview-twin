@@ -812,6 +812,26 @@ interface Window {
   __twinSegmentsNode?: import('react').ReactNode
   /** T074：工位屏节点。格网槽在刷新时把它和测距画在一起。默认没有。 */
   __twinScreenVideoNode?: import('react').ReactNode
+  /** T079：屏海报节点。格网槽在刷新时把它和工位屏画在一起。默认没有。 */
+  __twinScreenImageNode?: import('react').ReactNode
+  /**
+   * T079：工位显示器和摄像头预览的静态海报。默认开。
+   * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
+   * 贴图只走 public/textures/screens 的 jpg/webp。视频关着时海报仍在。
+   * rounded 为假：drei Image 用普通 plane，半径保持 0。
+   */
+  __twinScreenImage?: {
+    demo: true
+    on: boolean
+    mounted: boolean
+    desks: number
+    camera: boolean
+    cap: number
+    deskSrc: string
+    cameraSrc: string
+    impl: 'drei-Image'
+    rounded: false
+  }
   /**
    * T074：工位显示器和摄像头预览。默认关。
    * 图层 screenVideo、?screenVideo=1 或 ?demoEdit=1 打开后才挂 drei useVideoTexture。

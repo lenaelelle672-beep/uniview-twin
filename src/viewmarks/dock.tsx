@@ -63,6 +63,10 @@ void import('../cursor/mount').then((mod) => {
 void import('../frustum/mount').then((mod) => {
   mod.mountFrustumPause()
 })
+// T079：工位屏静态海报。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../screen-image/mount').then((mod) => {
+  mod.mountScreenImage()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
