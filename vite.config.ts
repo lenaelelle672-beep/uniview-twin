@@ -18,6 +18,7 @@ import { broadcastAfterHash } from './scripts/broadcastPlugin'
 import { speechAfterHash } from './scripts/speechPlugin'
 import { notifyAfterHash } from './scripts/notifyPlugin'
 import { pipAfterHash } from './scripts/pipPlugin'
+import { wakeLockAfterHash } from './scripts/wakeLockPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -308,6 +309,7 @@ export default defineConfig({
     frustumAfterHash(),
     screenImageAfterHash(),
     broadcastAfterHash(),
+    wakeLockAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

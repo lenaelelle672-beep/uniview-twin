@@ -1030,4 +1030,18 @@ interface Window {
     closed: boolean
     setOn?: (on: boolean) => void
   }
+  /**
+   * T085：Screen Wake Lock 大屏常亮。晚加载分包挂上后才有。
+   * 默认关。`wakeLock=1`，或演示模式 `demo=1` / `demoEdit=1`，才打开。
+   * `wakeLock=0` 强制关。文档不可见时不申请。失败降级，不抛进主路径。
+   */
+  __twinWakeLock?: {
+    enabled: boolean
+    held: boolean
+    phase: 'off' | 'held' | 'armed' | 'degraded'
+    supported: boolean
+    visible: boolean
+    forceOff: boolean
+    setOn?: (on: boolean) => void
+  }
 }

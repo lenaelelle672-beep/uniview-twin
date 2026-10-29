@@ -87,6 +87,10 @@ void import('../drag-placement/mount').then((mod) => {
 void import('../bus/mount').then((mod) => {
   mod.mountBroadcastBus(() => import('../components/scene/vp'))
 })
+// T085：大屏常亮。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../wake-lock/mount').then((mod) => {
+  mod.mountScreenWakeLock()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
