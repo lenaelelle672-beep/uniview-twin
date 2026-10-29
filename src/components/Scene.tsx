@@ -33,6 +33,9 @@ const FacadeSamples = lazy(() =>
 )
 const PrewarmGate = lazy(() => import('../scene/prewarm/PrewarmGate').then((mod) => ({ default: mod.PrewarmGate })))
 const DemandLoop = lazy(() => import('./scene/DemandLoop'))
+const PreloadLayer = lazy(() =>
+  import('../shader-preload/PreloadLayer').then((mod) => ({ default: mod.PreloadLayer })),
+)
 
 const SOFTWARE = /swiftshader|llvmpipe|softpipe|software|basic render driver/i
 
@@ -104,6 +107,7 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
   const extrasReady = useBalancedWarmup(quality, composerLive)
   const [softShadowChunkOn, setSoftShadowChunkOn] = useState(false)
   const [loopOn, setLoopOn] = useState(false)
+  const [preloadOn, setPreloadOn] = useState(false)
   const view = useTwinStore((state) => state.view)
   const exploded = useTwinStore((state) => state.exploded)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
@@ -166,6 +170,8 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
       if (cancelled) return
       const first = window.__twinFirstFrameAt
       const prefetchDone = window.__twinFirstPrefetchDone
+      // T090：与 T032 加载条同一道首帧窗口。到点才拉 Preload，躲开首帧前的同步 compile。
+      if (first != null && performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS) setPreloadOn(true)
       // D195：等 textRuntime 预取 import() 完成，再挂 FacadeSamples / IdlePrewarm。
       // DemandLoop 也等它。textRuntime 在 floorDecor 落定之后才发，躲开 cutoff。
       // #22 楼层标记走 FloorList，不进这条 prefetch 链。
@@ -253,6 +259,12 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
         <ExplodedLayout />
         <FloorStage />
         <RenderProbe />
+        {/* T090：挂在首屏 Suspense 内。内层 fallback 为空，不增加空白计数，AssetLoadOverlay 进度叙事不变。 */}
+        {preloadOn ? (
+          <Suspense fallback={null}>
+            <PreloadLayer />
+          </Suspense>
+        ) : null}
       </Suspense>
       {/* 合成器首帧出来之前继续由 MainScenePass 画主场景。 */}
       {!composerLive && <MainScenePass renderPriority={1} />}

@@ -210,6 +210,8 @@ interface Window {
   __twinHdrReadyUnixMs?: number
   __twinTreeLoReadyAt?: number
   __twinFirstFrameAt?: number
+  /** T090：drei Preload all 在首帧窗口之后跑完。不写 __twinReady。 */
+  __twinShaderPreload?: { all: true; at: number }
   __twinFirstFrameUnixMs?: number
   __twinPrefetchAt?: number
   /** 楼层壳 chunk 开始 import 的时刻。总览应晚于首帧 + FLOOR_SHELL_AFTER_FIRST_MS。 */
