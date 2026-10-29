@@ -27,6 +27,11 @@ export interface SpeechWatch {
   supported: boolean
   /** 提示音还占着声道。 */
   toneBusy: boolean
+  /**
+   * T084：文档 hidden，桌面通知接手。
+   * 这一批记成已经听到，不再开口，避免和桌面通知叠在一起。
+   */
+  notifyCovering?: boolean
   facts: readonly SpeechFact[]
 }
 
@@ -34,6 +39,8 @@ export interface SpeechDecision {
   memory: SpeechMemory
   /** 这一次要说的短句。 */
   utterance: string | null
+  /** 文档 hidden，桌面通知接手。挂载点应 cancel()，并且不要开口。 */
+  yieldToNotify?: boolean
   /** 说之前，或丢掉待播时，调用 cancel() 清队列。 */
   cancel: boolean
   /** 功能关、静音，或合成不可用。 */
@@ -229,6 +236,13 @@ export function watchSpeech(memory: SpeechMemory, watch: SpeechWatch): SpeechDec
     return emptyDecision(
       { ...base, merged: [] },
       { cancel: memory.merged.length > 0, silenced: true, ownsChannel: false },
+    )
+  }
+
+  if (watch.notifyCovering) {
+    return emptyDecision(
+      { ...base, merged: [] },
+      { cancel: memory.merged.length > 0, ownsChannel: true, yieldToNotify: true },
     )
   }
 

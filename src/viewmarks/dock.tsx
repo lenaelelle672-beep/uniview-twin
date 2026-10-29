@@ -15,6 +15,10 @@ void import('../audio/AlarmAudioCue').then((mod) => {
 void import('../audio/AlarmSpeech').then((mod) => {
   mod.mountAlarmSpeech()
 })
+// T084：告警桌面通知。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../notify/AlarmNotify').then((mod) => {
+  mod.mountAlarmNotify()
+})
 // T062：短视频录制。整段逻辑在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../capture/mountClip').then((mod) => {
   mod.mountClipCapture()
