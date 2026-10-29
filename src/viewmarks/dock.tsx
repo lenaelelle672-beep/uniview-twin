@@ -99,6 +99,10 @@ void import('../cycle-raycast/mount').then((mod) => {
 void import('../document-watch/mount').then((mod) => {
   mod.mountDocumentWatch()
 })
+// T088：另存为。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../fs-access/mount').then((mod) => {
+  mod.mountFileSave()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

@@ -59,7 +59,7 @@ function browserMime(): string | null {
   return pickClipMime((mime) => MediaRecorder.isTypeSupported(mime))
 }
 
-function downloadClip(blob: Blob, filename: string): void {
+export function downloadClip(blob: Blob, filename: string): void {
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.href = url
