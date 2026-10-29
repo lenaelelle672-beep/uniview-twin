@@ -663,6 +663,16 @@ interface Window {
   }
   __twinFlyEnd?: { deskId: string; x: number; y: number; z: number; started: number }
   __twinExplode?: TwinExplodeStats
+  /** T091：工位拆解。与楼层 __twinExplode 分开。徽标和标签读同一份 progress。 */
+  __twinStationExplode?: {
+    progress: number
+    animating: boolean
+    active: boolean
+    count: number
+    gap: number
+    /** 这一帧置过 instanceMatrix.needsUpdate 的网格数。每个网格一次，不是每个实例一次。 */
+    needsUpdate: number
+  }
   __twinMonitorBoxes?: TwinMonitorBoxes
   __twinFacadeBoxes?: TwinFacadeBoxes
   __twinSetExploded?: (exploded: boolean) => void
