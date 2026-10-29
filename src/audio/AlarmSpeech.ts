@@ -1,5 +1,5 @@
 import { useTwinStore } from '../store/store'
-import { acquireChannel, channelBusy, releaseChannel, setSpeechOwns } from './channelLatch'
+import { acquireChannel, channelBusy, notifyCoversHidden, releaseChannel, setSpeechOwns } from './channelLatch'
 import { initialSpeechEnabled, initialSpeechMuted, speechSynthesisSupported } from './speechGate'
 import {
   clearSpeechQueue,
@@ -16,6 +16,7 @@ import {
  * T082：告警语音。
  * viewmarks/dock 在首帧 2600ms 之后才 import 本文件，不进 hardGate / balancedFx。
  * 短句只有级别和位置。和 T054 提示音共用声道门闩，不同时出声。
+ * 文档 hidden 且 T084 桌面通知接手时，这一句让出去。
  * 不读时间轴回放，不碰雾、镜头 smoothTime、后处理和 D310。
  */
 
@@ -156,10 +157,19 @@ function consider(force = false): void {
     muted,
     unlocked,
     supported: speechSynthesisSupported(),
-    toneBusy: channelBusy(now()) === 'tone',
+    toneBusy: channelBusy(now()) === 'tone' || channelBusy(now()) === 'notify',
+    notifyCovering: notifyCoversHidden(),
     facts,
   })
   memory = decision.memory
+  if (decision.yieldToNotify) {
+    if (channelOn || decision.cancel) stopSpeaking()
+    channelOn = false
+    setSpeechOwns(true)
+    publish()
+    armRetry(null)
+    return
+  }
   if (decision.silenced) {
     if (channelOn || decision.cancel) stopSpeaking()
     channelOn = false

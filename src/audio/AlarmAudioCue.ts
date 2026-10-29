@@ -17,6 +17,7 @@ import { initialSpeechEnabled, initialSpeechMuted, speechSynthesisSupported } fr
  * viewmarks/dock 在首帧 2600ms 之后才 import 本文件，不进 hardGate / balancedFx。
  * 不读时间轴回放，不碰 DeskFlash、描边、雾、镜头 smoothTime 和后处理。
  * T082 语音接过声道时，这一声让出去，不和语音叠在一起响。
+ * T084 桌面通知在文档 hidden 且已允许时接过这一次，这一声也让出去。
  */
 
 const BUTTON_STYLE =

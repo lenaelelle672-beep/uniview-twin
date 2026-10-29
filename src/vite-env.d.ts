@@ -821,11 +821,26 @@ interface Window {
     lastUtterance: string | null
     voiceLang: string | null
   }
-  /** T082 × T054：声道门闩。语音分包和提示音分包共用。 */
+  /** T082 × T054 × T084：声道门闩。语音、提示音、桌面通知分包共用。 */
   __twinAlarmChannel?: {
     speechOwns: boolean
-    holder: 'tone' | 'speech' | null
+    /** 桌面通知开着且已经允许。文档 hidden 时由它接手。 */
+    notifyCovers?: boolean
+    holder: 'tone' | 'speech' | 'notify' | null
     until: number
+  }
+  /**
+   * T084：告警桌面通知。晚加载分包挂上后才有。
+   * 默认关。notify=1，或演示模式 demo=1 / demoEdit=1，才打开。notify=0 强制关。
+   * 只在文档 hidden 时弹一条。权限拒绝或非安全上下文时 permission 不会是 granted。
+   */
+  __twinAlarmNotify?: {
+    enabled: boolean
+    permission: 'granted' | 'denied' | 'default' | 'unsupported'
+    supported: boolean
+    hidden: boolean
+    shown: number
+    lastBody: string | null
   }
   /** T066：作者辅助节点。格网槽在刷新时把它和测距、格网画在一起。默认没有。 */
   __twinAuthorNode?: import('react').ReactNode
