@@ -2,6 +2,7 @@ import type { Device } from '../../types'
 import type { Point } from './corridor'
 import { CorridorPeople } from './CorridorPeople'
 import { DeviceBadges } from './DeviceBadges'
+import { PeopleTextureSuspense } from './peopleTextureSuspense'
 import { RoomLabels } from './RoomLabels'
 import { WalkPaths } from './WalkPaths'
 import type { RoomLabel } from './roomLabels'
@@ -35,7 +36,11 @@ export function FloorHeavyDecor({
   return (
     <>
       <DeviceBadges floorId={floorId} devices={devices} />
-      {showPeople ? <CorridorPeople enabled paths={paths} /> : null}
+      {showPeople ? (
+        <PeopleTextureSuspense paths={paths}>
+          <CorridorPeople enabled paths={paths} />
+        </PeopleTextureSuspense>
+      ) : null}
     </>
   )
 }

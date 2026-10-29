@@ -112,7 +112,7 @@ describe('实例矩阵批更', () => {
     expect(batch).toMatch(/const DynamicDrawUsage = 35048/)
     expect(batch).not.toMatch(/import \{[^}]*DynamicDrawUsage/)
 
-    const stations = readFileSync(new URL('./stage/Workstations.tsx', import.meta.url), 'utf8')
+    const stations = readFileSync(new URL('./stage/instancedSlots.tsx', import.meta.url), 'utf8')
     const stationLoop = stations.slice(stations.indexOf('slots.forEach'), stations.indexOf('mesh.count = slots.length'))
     expect(stationLoop).not.toMatch(/needsUpdate/)
     expect(stations).toMatch(/markInstanceMatrixDynamic/)
