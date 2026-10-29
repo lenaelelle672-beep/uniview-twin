@@ -73,14 +73,19 @@ function scheduleInteriorPrewarm(): void {
   })
 }
 
-function startFloorShellNow(): void {
-  if (window.__twinFloorShellAt == null) window.__twinFloorShellAt = performance.now()
+function releaseShellWave(): void {
   void import('../../viewmarks/dock')
-  void import('./floorDecor')
   void import('../labels/ProgressiveRoomLabels')
   void prefetchClickChunks()
   scheduleInteriorPrewarm()
   scheduleGlyphChunk()
+  prefetchLazyChunks()
+}
+
+function startFloorShellNow(immediate?: boolean): void {
+  if (window.__twinFloorShellAt == null) window.__twinFloorShellAt = performance.now()
+  void import('./floorDecor').then(releaseShellWave, releaseShellWave)
+  if (immediate) releaseShellWave()
 }
 
 /** 总览：等过首帧截止再做。进层路径不走这里。 */
@@ -130,15 +135,13 @@ function startWhenReady(): void {
     await waitUntil(() => window.__twinFirstFrameAt != null)
     await nextFrame()
     if (preferImmediate || window.__twinView === 'floor') {
-      startFloorShellNow()
-      prefetchLazyChunks()
+      startFloorShellNow(true)
       return
     }
     // textRuntime 静态带上 disableTroikaCdn / troika-three-text。
-    // 总览不能在首帧后的空闲回调里拉：锁机 cutoff 是首帧 + 64ms，空闲经常落在里面。
-    // 与楼层壳同一道门再拉，首屏同步图不引用这两个包。
+    // 总览不能在首帧后的空闲回调里拉：锁机 cutoff 会跟到 floorDecor 的 responseEnd。
+    // floorDecor 先单独落定，dock 与 textRuntime 在它的 import 完成后再发，避免抬高 cutoff。
     scheduleFloorShellAfterCutoff()
-    scheduleAfterCutoff(prefetchLazyChunks)
   }
 
   void run()
@@ -163,8 +166,7 @@ export function ensurePrefetchStarted(): void {
   preferImmediate = true
   if (typeof window === 'undefined') return
   if (window.__twinReady === true && window.__twinFirstFrameAt != null) {
-    startFloorShellNow()
-    if (window.__twinPrefetchAt == null) prefetchLazyChunks()
+    startFloorShellNow(true)
     return
   }
   schedulePrefetchAfterFirstFrame()

@@ -138,7 +138,8 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
           extrasReady: true,
           firstFrameAt: window.__twinFirstFrameAt,
           now: performance.now(),
-        })
+        }) &&
+        window.__twinFirstPrefetchDone
       ) {
         setSoftShadowChunkOn(true)
         // 过渡续帧包和软阴影同一窗口再拉，避免进 hardGate cutoff。
@@ -164,14 +165,14 @@ function SceneBody({ mode }: { mode: SurfaceMode }) {
     const tick = () => {
       if (cancelled) return
       const first = window.__twinFirstFrameAt
-      // 锁机 cutoff 比首帧宽，首帧后十几毫秒的 DemandLoop 会把
-      // cameraRest / frameSchedule 一起卷进 hardGateFiles。与软阴影同一道门再挂。
-      if (first != null && performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS) {
+      const prefetchDone = window.__twinFirstPrefetchDone
+      // D195：等 textRuntime 预取 import() 完成，再挂 FacadeSamples / IdlePrewarm。
+      // DemandLoop 也等它。textRuntime 在 floorDecor 落定之后才发，躲开 cutoff。
+      // #22 楼层标记走 FloorList，不进这条 prefetch 链。
+      if (prefetchDone && first != null && performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS) {
         setLoopOn(true)
       }
-      // D195：等 textRuntime 预取 import() 完成，再挂 FacadeSamples / IdlePrewarm。
-      // #22 楼层标记走 FloorList，不进这条 prefetch 链。
-      if (window.__twinFirstPrefetchDone) {
+      if (prefetchDone) {
         requestAnimationFrame(() => {
           if (!cancelled) setPrefetchDone(true)
         })

@@ -1044,4 +1044,26 @@ interface Window {
     forceOff: boolean
     setOn?: (on: boolean) => void
   }
+  /**
+   * T086：密叠拾取轮询。默认关。
+   * DEMO（demoEdit / debugHelpers）或模型层（presentation=model）才挂 drei CycleRaycast。
+   * keyCode 固定 9（Tab）。scroll 固定 false，滚轮留给 CameraControls。
+   * 观众首屏不请求 CycleRaycast.js。
+   */
+  __twinCycle?: {
+    on: boolean
+    mounted: boolean
+    armed: boolean
+    keyCode: 9
+    scroll: false
+    hits: number
+    cycle: number
+    deskId: string | null
+    deviceId: string | null
+    instanceId: number | null
+    layer: 'demo' | 'dense' | null
+    blocked: string
+    hold: boolean
+    setOn?: (on: boolean) => void
+  }
 }

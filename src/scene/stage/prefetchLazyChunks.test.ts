@@ -158,10 +158,13 @@ describe('D223 prefetch 单例调度', () => {
     expect(idleQueue).toHaveLength(0)
 
     win.__twinFirstFrameAt = performance.now() - 2600 - 30
-    await pump(4)
-    expect(win.__twinPrefetchAt).toBeTypeOf('number')
+    await pump(1)
     expect(win.__twinFloorShellAt).toBeTypeOf('number')
+    expect(win.__twinPrefetchAt).toBeUndefined()
+    await pump(8)
+    expect(win.__twinPrefetchAt).toBeTypeOf('number')
     const prefetch = readFileSync(join(here, 'prefetchLazyChunks.ts'), 'utf8')
+    expect(prefetch).toMatch(/import\('\.\/floorDecor'\)\.then\(releaseShellWave, releaseShellWave\)/)
     expect(prefetch).toMatch(/FLOOR_SHELL_AFTER_FIRST_MS = 2600/)
     expect(prefetch).not.toMatch(/requestIdleCallback/)
   })
