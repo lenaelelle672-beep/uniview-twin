@@ -1,5 +1,7 @@
+import { useFrame, useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef } from 'react'
 import { Color, InstancedMesh, Material, Object3D, BufferGeometry } from 'three'
+import { commitInstanceMatrices, markInstanceMatrixDynamic, stepInstanceMesh } from '../instanceMatrix'
 import { ALARM_MARKER_ORDER, MONITOR_LAYER } from '../overlayOrder'
 import { MONITOR_DISPLAY_COLOR, chairMaterial, deskMaterial, monitorMaterial } from './materials'
 import type { Slot } from './layout'
@@ -37,10 +39,12 @@ export function InstancedSlots({
   layer?: number
 }) {
   const ref = useRef<InstancedMesh>(null)
+  const invalidate = useThree((state) => state.invalidate)
 
   useLayoutEffect(() => {
     const mesh = ref.current
     if (!mesh || slots.length === 0) return
+    markInstanceMatrixDynamic(mesh)
     slots.forEach((slot, index) => {
       dummy.position.set(slot.x, 0, slot.z)
       dummy.rotation.set(0, slot.rot, 0)
@@ -51,11 +55,15 @@ export function InstancedSlots({
       if (color) mesh.setColorAt(index, color)
     })
     mesh.count = slots.length
-    mesh.instanceMatrix.needsUpdate = true
-    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    commitInstanceMatrices(mesh, mesh.instanceColor != null)
     mesh.computeBoundingSphere()
     if (layer != null) mesh.layers.set(layer)
   }, [colors, layer, slots])
+
+  useFrame(() => {
+    const mesh = ref.current
+    if (mesh) stepInstanceMesh(mesh, invalidate)
+  })
 
   if (slots.length === 0) return null
   return (

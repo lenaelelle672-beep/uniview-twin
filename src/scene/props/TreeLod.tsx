@@ -5,6 +5,7 @@ import { Object3D, type InstancedMesh, type LOD, type Mesh } from 'three'
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { useTwinStore } from '../../store/store'
 import { installMeshopt } from '../meshopt'
+import { commitInstanceMatrices, markInstanceMatrixDynamic } from '../instanceMatrix'
 import { TREE_LOD_DISTANCES, TREE_LOD_HYSTERESIS, TREE_LOD_URL } from './treeLodPlan'
 
 const LEAF = 'tree_leaves'
@@ -53,11 +54,12 @@ function stockCount(root: Object3D): number {
 function copyInstances(from: InstancedMesh, to: InstancedMesh) {
   const count = Math.min(from.count, to.count)
   to.count = count
+  markInstanceMatrixDynamic(to)
   for (let index = 0; index < count; index += 1) {
     from.getMatrixAt(index, dummy.matrix)
     to.setMatrixAt(index, dummy.matrix)
   }
-  to.instanceMatrix.needsUpdate = true
+  commitInstanceMatrices(to)
   to.computeBoundingSphere()
   to.userData.twinTreeLod = true
 }

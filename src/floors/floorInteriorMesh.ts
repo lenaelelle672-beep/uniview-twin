@@ -25,6 +25,7 @@ import {
   woodMaterial,
   MONITOR_DISPLAY_COLOR,
 } from '../scene/stage/materials'
+import { commitInstanceMatrices, markInstanceMatrixDynamic } from '../scene/instanceMatrix'
 import { ALARM_MARKER_ORDER, MONITOR_LAYER } from '../scene/overlayOrder'
 import { INTERIOR_WALL_H } from './interiorWall'
 import type { FloorPlan, FloorWall } from './types'
@@ -88,8 +89,8 @@ function writeSlot(mesh: InstancedMesh, index: number, slot: Slot, colors?: Colo
 
 function finishInstances(mesh: InstancedMesh, count: number) {
   mesh.count = count
-  mesh.instanceMatrix.needsUpdate = true
-  if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+  markInstanceMatrixDynamic(mesh)
+  commitInstanceMatrices(mesh, mesh.instanceColor != null)
   mesh.computeBoundingSphere()
   mesh.frustumCulled = false
   mesh.castShadow = true
