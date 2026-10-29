@@ -21,6 +21,7 @@ import { notifyAfterHash } from './scripts/notifyPlugin'
 import { pipAfterHash } from './scripts/pipPlugin'
 import { wakeLockAfterHash } from './scripts/wakeLockPlugin'
 import { documentWatchAfterHash } from './scripts/documentWatchPlugin'
+import { shaderPreloadAfterHash } from './scripts/shaderPreloadPlugin'
 import { fsAccessAfterHash } from './scripts/fsAccessPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -316,6 +317,7 @@ export default defineConfig({
     broadcastAfterHash(),
     wakeLockAfterHash(),
     documentWatchAfterHash(),
+    shaderPreloadAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
