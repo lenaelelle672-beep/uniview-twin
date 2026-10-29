@@ -11,6 +11,7 @@ import { meshBoundsAfterHash } from './scripts/meshBoundsPlugin'
 import { tourPathAfterHash } from './scripts/tourPathPlugin'
 import { cloneAfterHash } from './scripts/clonePlugin'
 import { dragAfterHash } from './scripts/dragPlugin'
+import { cycleRaycastAfterHash } from './scripts/cycleRaycastPlugin'
 import { hoverCursorAfterHash } from './scripts/hoverCursorPlugin'
 import { frustumAfterHash } from './scripts/frustumPlugin'
 import { screenImageAfterHash } from './scripts/screenImagePlugin'
@@ -303,6 +304,7 @@ export default defineConfig({
     tourPathAfterHash(),
     cloneAfterHash(),
     dragAfterHash(),
+    cycleRaycastAfterHash(),
     screenVideoAfterHash(),
     meshBoundsAfterHash(),
     hoverCursorAfterHash(),

@@ -91,6 +91,10 @@ void import('../bus/mount').then((mod) => {
 void import('../wake-lock/mount').then((mod) => {
   mod.mountScreenWakeLock()
 })
+// T086：密叠拾取轮询。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../cycle-raycast/mount').then((mod) => {
+  mod.mountCycleRaycast()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
