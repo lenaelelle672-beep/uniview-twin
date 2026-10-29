@@ -95,6 +95,10 @@ void import('../wake-lock/mount').then((mod) => {
 void import('../cycle-raycast/mount').then((mod) => {
   mod.mountCycleRaycast()
 })
+// T087：文档画中画值守。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../document-watch/mount').then((mod) => {
+  mod.mountDocumentWatch()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

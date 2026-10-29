@@ -1066,4 +1066,33 @@ interface Window {
     hold: boolean
     setOn?: (on: boolean) => void
   }
+  /**
+   * T087：文档画中画值守。晚加载分包挂上后才有。
+   * 默认可以点开。`?docpip=0` 关掉。没有 documentPictureInPicture 时按钮停用，不抛错。
+   * 小窗只有告警 DOM。不是 T083 的视频值守，也不把画面搬进小窗。
+   * 不是 T081 的多标签：这里不往总线上发焦点、视角或图层。
+   */
+  __twinDocumentWatch?: {
+    phase: 'idle' | 'open'
+    supported: boolean
+    disabled: boolean
+    alarms: number
+  }
+  __twinDocumentWatchStore?: {
+    getState: () => {
+      alarms?: readonly { id?: string; floorId?: string; deviceId?: string; message?: string }[]
+      floors?: readonly { id?: string; name?: string }[]
+      focusedDeviceId?: string | null
+      focusDevice?: (target: { floor: string; deskId: string | null; deviceId?: string | null }) => void
+    }
+    subscribe: (listener: () => void) => () => void
+  }
+  /** 文档画中画。Chrome 系才有。没有时文档值守停用。 */
+  documentPictureInPicture?: {
+    requestWindow?: (options?: {
+      width?: number
+      height?: number
+      disallowReturnToOpener?: boolean
+    }) => Promise<Window>
+  }
 }
