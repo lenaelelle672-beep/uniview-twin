@@ -103,6 +103,10 @@ void import('../document-watch/mount').then((mod) => {
 void import('../fs-access/mount').then((mod) => {
   mod.mountFileSave()
 })
+// T091：工位级爆炸。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../station-explode/mount').then((mod) => {
+  mod.mountStationExplode()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

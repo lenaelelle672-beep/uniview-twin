@@ -10,6 +10,7 @@ const specs = listFloorSpecs()
 /**
  * 爆炸只改各层 group 的 position.y（屋面跟着顶层走）。
  * 不新增网格。离开总览时立刻回到原位，避免单层剖切对着错位的外壳。
+ * 工位不在这里改 position。工位矩阵由晚加载分包写到已有实例上。
  */
 export function ExplodedLayout() {
   const scene = useThree((state) => state.scene)

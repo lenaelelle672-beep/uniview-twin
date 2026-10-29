@@ -109,3 +109,40 @@ export function readExplodeMotion(): ExplodeMotion {
   if (motionClock.start < 0) return { progress: 0, animating: false }
   return { progress: motionClock.progress, animating: motionClock.progress !== motionClock.to }
 }
+
+let stationClock: MotionClock = { from: 0, to: 0, start: -1, progress: 0 }
+
+/** 测试重置。运行时不要调用。楼层时钟不动。 */
+export function resetStationExplodeMotion(): void {
+  stationClock = { from: 0, to: 0, start: -1, progress: 0 }
+}
+
+/**
+ * 工位拆解复用 explodeProgress 和 0.8 秒，但时钟与楼层外壳分开。
+ * 只在单层里走向 exploded。离开楼层立刻回到 0，不再补间。
+ * 徽标和标签读同一份 progress。
+ */
+export function stepStationExplodeMotion(exploded: boolean, view: string, now: number): ExplodeMotion {
+  if (view !== 'floor') {
+    stationClock = { from: 0, to: 0, start: now, progress: 0 }
+    return { progress: 0, animating: false }
+  }
+  const target = exploded ? 1 : 0
+  if (stationClock.to !== target || stationClock.start < 0) {
+    const from = stationClock.progress
+    stationClock = {
+      from,
+      to: target,
+      start: now,
+      progress: explodeProgress(from, target, 0),
+    }
+  } else {
+    stationClock.progress = explodeProgress(stationClock.from, stationClock.to, now - stationClock.start)
+  }
+  return { progress: stationClock.progress, animating: stationClock.progress !== target }
+}
+
+export function readStationExplodeMotion(): ExplodeMotion {
+  if (stationClock.start < 0) return { progress: 0, animating: false }
+  return { progress: stationClock.progress, animating: stationClock.progress !== stationClock.to }
+}
