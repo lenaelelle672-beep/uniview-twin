@@ -1,6 +1,7 @@
 import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
+import { armRepeatedInstanceMatrices } from '../../scene/instanceMatrix'
 import { canvasOffscreen } from '../../scene/offscreenPause'
 import { stepExplodeMotion } from '../../scene/explode'
 import { isCameraRested } from '../../scene/stage/cameraRest'
@@ -154,6 +155,23 @@ export function DemandLoop() {
   }, [gl, selectedFloor, view])
 
   useEffect(() => subscribeLabelWindowOpen(() => rawRef.current()), [])
+
+  // 重复件动态缓冲在这条晚循环上补，不进 early index。
+  useLayoutEffect(() => {
+    let raf = 0
+    const run = () => {
+      const scene = window.__twinScene
+      if (!scene) {
+        raf = requestAnimationFrame(run)
+        return
+      }
+      armRepeatedInstanceMatrices(scene)
+    }
+    run()
+    return () => {
+      if (raf !== 0) cancelAnimationFrame(raf)
+    }
+  }, [])
 
   useEffect(() => {
     const rig = controls as { addEventListener?: (type: string, fn: () => void) => void; removeEventListener?: (type: string, fn: () => void) => void } | null

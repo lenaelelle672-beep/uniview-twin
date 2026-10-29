@@ -104,20 +104,20 @@ export function InstancedProp({
  * 远景树叶平时不可见，只在 shadowMap.render 里短暂打开。
  */
 function bindShadowOnly(mesh: InstancedMesh, shadowMap: WebGLShadowMap) {
-  const map = shadowMap as WebGLShadowMap & { __foliage?: Set<InstancedMesh> }
-  if (!map.__foliage) {
-    map.__foliage = new Set()
+  const map = shadowMap as WebGLShadowMap & { __f?: Set<InstancedMesh> }
+  if (!map.__f) {
+    map.__f = new Set()
     const render = map.render.bind(map)
     map.render = (lights: Light[], scene: Scene, camera: Camera) => {
-      for (const item of map.__foliage!) item.visible = true
+      for (const item of map.__f!) item.visible = true
       render(lights, scene, camera)
-      for (const item of map.__foliage!) item.visible = false
+      for (const item of map.__f!) item.visible = false
     }
   }
   mesh.visible = false
-  map.__foliage.add(mesh)
+  map.__f.add(mesh)
   return () => {
-    map.__foliage?.delete(mesh)
+    map.__f?.delete(mesh)
   }
 }
 

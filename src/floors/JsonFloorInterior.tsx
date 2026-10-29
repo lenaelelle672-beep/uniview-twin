@@ -20,6 +20,7 @@ import { MonitorDepthProxies } from '../scene/stage/MonitorDepthProxies'
 import { InstancedSlots, Workstations } from '../scene/stage/Workstations'
 import { glyphTimingProbeEnabled } from '../scene/stage/glyphProbe'
 import { roomLabelCharacters, type RoomLabel } from '../scene/stage/roomLabels'
+import { InstanceMatrixMotion } from '../scene/instanceMatrixMotion'
 import { paintMonitorColors, peekPrebuiltInterior, type PrebuiltInterior } from './floorInteriorMesh'
 import { loadFloorPlan, peekFloorPlan } from './loadFloor'
 import { INTERIOR_WALL_H } from './interiorWall'
@@ -385,6 +386,7 @@ function PrebuiltFloorInterior({
       onDoubleClick={(event) => event.stopPropagation()}
     >
       <primitive object={prebuilt.content} dispose={null} />
+      <InstanceMatrixMotion root={prebuilt.content} />
       <MeasureSurface name="PickBvh:measure-slab" target={slabMesh} />
       <ZoneHeat floorId={spec.id} />
       <CameraFov floorId={spec.id} />
