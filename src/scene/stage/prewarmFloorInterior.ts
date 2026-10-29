@@ -2,6 +2,7 @@ import { type Mesh, type Object3D, type WebGLRenderer } from 'three'
 import { floorSpec } from '../../data/floors'
 import { buildPrebuiltInteriorSliced, markInteriorUploaded, peekPrebuiltInterior } from '../../floors/floorInteriorMesh'
 import { loadFloorPlan } from '../../floors/loadFloor'
+import { uploadGpuInBatches, yieldMain } from '../openPathChunk'
 import { compileClippedShellMaterials, glyphTimingProbeEnabled } from './glyphProbe'
 
 /**
@@ -54,24 +55,33 @@ async function waitTurn(pointerDown: () => boolean) {
 }
 
 /**
- * 只把几何和实例矩阵交给 GPU，不调用 render。
+ * 只把几何和贴图交给 GPU，不调用 render。
+ * texImage 与 uploadObject 分批，批间让出主线程。
  * 空场景绘制会另编程序，SwiftShader 上 GetProgramiv 能把一帧拖到几百毫秒。
  * 程序预热仍走 compileAsync(root, camera, 主场景)。
  */
 async function uploadMeshes(renderer: WebGLRenderer, root: Object3D, pointerDown: () => boolean) {
   const upload = (renderer as WebGLRenderer & { uploadObject?: (object: Object3D) => void }).uploadObject
-  if (!upload) return 0
   const meshes: Mesh[] = []
   root.traverse((object) => {
     const mesh = object as Mesh
     if (mesh.isMesh) meshes.push(mesh)
   })
-  for (const mesh of meshes) {
-    await waitTurn(pointerDown)
-    mesh.frustumCulled = false
-    upload.call(renderer, mesh)
-    await nextFrame()
-  }
+  for (const mesh of meshes) mesh.frustumCulled = false
+  const uploaded = await uploadGpuInBatches({
+    renderer: {
+      initTexture: (texture) => {
+        renderer.initTexture(texture as never)
+      },
+      uploadObject: upload ? (object) => upload.call(renderer, object as Object3D) : undefined,
+    },
+    meshes,
+    yieldTurn: async () => {
+      await waitTurn(pointerDown)
+      await yieldMain()
+    },
+  })
+  if (!upload && uploaded.textures === 0) return 0
   return meshes.length
 }
 
@@ -118,7 +128,7 @@ async function run(pointerDown: () => boolean) {
     const parseStart = performance.now()
     plans.set(floorId, await loadFloorPlan(floorId))
     parseMsByFloor.set(floorId, Math.round(performance.now() - parseStart))
-    await nextFrame()
+    await yieldMain()
   }
   await compileClippedShellMaterials()
   for (const floorId of FLOORS) {
@@ -129,7 +139,7 @@ async function run(pointerDown: () => boolean) {
     let buildMs = 0
     const built = await buildPrebuiltInteriorSliced(floorSpec(floorId), plan, async () => {
       buildMs += Math.round(performance.now() - step)
-      await nextFrame()
+      await yieldMain()
       await waitTurn(pointerDown)
       step = performance.now()
     })

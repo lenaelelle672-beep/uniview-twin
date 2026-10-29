@@ -14,6 +14,7 @@ import {
   type RoomLabel,
 } from './roomLabels'
 import { labelLiftY } from '../../floors/interiorWall'
+import { uploadGpuInBatches, yieldMain } from '../openPathChunk'
 import { holdLabelPaint, releaseLabelPaint } from './labelPaintHold'
 
 disableTroikaCdnFallback()
@@ -276,7 +277,7 @@ export function BatchedRoomLabels({
           batch.addText(text)
           members.push(text)
           if (i > 0 && i % 40 === 0) {
-            await nextFrame()
+            await yieldMain()
             if (cancelled) return
           }
         }
@@ -302,7 +303,7 @@ export function BatchedRoomLabels({
           batch.addText(text)
           clusterMembers.push(text)
         }
-        await nextFrame()
+        await yieldMain()
         if (cancelled || !batch) return
         window.__twinLabelBatchSyncStartedAt = performance.now()
         await new Promise<void>((resolve) => {
@@ -313,6 +314,15 @@ export function BatchedRoomLabels({
           })
         })
         if (cancelled || !batch) return
+        await uploadGpuInBatches({
+          renderer: {
+            initTexture: (texture) => {
+              gl.initTexture(texture as never)
+            },
+          },
+          meshes: [batch],
+          yieldTurn: yieldMain,
+        })
         await nextFrame()
         if (cancelled || !batch) return
         const materials = Array.isArray(batch.material) ? batch.material : [batch.material]
