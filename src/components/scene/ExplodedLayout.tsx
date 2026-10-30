@@ -16,7 +16,6 @@ export function ExplodedLayout() {
   const scene = useThree((state) => state.scene)
   const invalidate = useThree((state) => state.invalidate)
   const cache = useRef(new Map<string, Object3D>())
-  const wasAnimating = useRef(false)
   const wake = useRef(0)
 
   const askFrame = () => {
@@ -33,9 +32,8 @@ export function ExplodedLayout() {
     const target = exploded && view === 'building' ? 1 : 0
     // 与徽标共用 stepExplodeMotion。同一帧再调一次，进度不变。
     const { progress, animating } = stepExplodeMotion(exploded, view, clock.elapsedTime)
+    // 这一帧已经把外壳写到终点。再补一帧会拖过截图，落进停稳窗。
     if (animating) askFrame()
-    else if (wasAnimating.current) askFrame()
-    wasAnimating.current = animating
     const floors: NonNullable<Window['__twinExplode']>['floors'] = []
 
     specs.forEach((spec, index) => {

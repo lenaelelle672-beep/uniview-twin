@@ -1,5 +1,4 @@
-import { useThree } from '@react-three/fiber'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { useTwinStore } from '../../store/store'
 import type { RoomLabel } from '../stage/roomLabels'
 import { beginLabelPack } from './labelPackTiming'
@@ -34,12 +33,40 @@ function publishMount(floorId: string, queue: LabelMountQueue) {
   }
 }
 
+function queueAt(
+  floorId: string,
+  ordered: readonly RoomLabel[],
+  priorityIds: string[],
+  firstCount: number,
+  released: number,
+): LabelMountQueue {
+  const mountedCount = Math.min(ordered.length, firstCount + released)
+  const firstBatch = ordered.slice(0, firstCount)
+  const extra = ordered.slice(firstCount, mountedCount)
+  const slices: LabelMountSlice[] = []
+  if (firstBatch.length > 0) {
+    slices.push({ key: `${floorId}:priority`, labels: firstBatch })
+  }
+  for (let index = 0; index < extra.length; index += LABEL_MOUNT_PER_FRAME) {
+    const batch = extra.slice(index, index + LABEL_MOUNT_PER_FRAME)
+    slices.push({ key: `${floorId}:b${index / LABEL_MOUNT_PER_FRAME}`, labels: batch })
+  }
+  return {
+    slices,
+    priorityIds,
+    firstBatchIds: firstBatch.map((label) => label.id),
+    mountedIds: ordered.slice(0, mountedCount).map((label) => label.id),
+    total: ordered.length,
+    done: mountedCount >= ordered.length,
+  }
+}
+
 /**
- * 只控制「这一批挂不挂」。不写 opacity / visible，方便叠 #19 的近目标淡出。
+ * 只控制「这一批挂不挂」的探针。不写 opacity / visible，方便叠 #19 的近目标淡出。
  * 告警、选中、搜索命中的目标标签放进第一批，不进后续帧队列。
+ * 绘制是一份 BatchedRoomLabels。探针用 rAF 推进，不再 setState，避免每 30 个标签向 demand 要一帧。
  */
 export function useLabelMountQueue(floorId: string, labels: readonly RoomLabel[]): LabelMountQueue {
-  const invalidate = useThree((state) => state.invalidate)
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
   const focusedDeviceId = useTwinStore((state) => state.focusedDeviceId)
   const searchQuery = useTwinStore((state) => state.searchQuery)
@@ -56,55 +83,33 @@ export function useLabelMountQueue(floorId: string, labels: readonly RoomLabel[]
 
   const firstCount = Math.max(priority.length, Math.min(LABEL_MOUNT_PER_FRAME, ordered.length))
   const packKey = `${floorId}:${ordered.map((label) => label.id).join('|')}`
-  const [epoch, setEpoch] = useState({ packKey, released: 0 })
+  const releasedRef = useRef(0)
+  const packKeyRef = useRef(packKey)
   const packStartedFor = useRef<string | null>(null)
-  if (epoch.packKey !== packKey) {
-    setEpoch({ packKey, released: 0 })
+  if (packKeyRef.current !== packKey) {
+    packKeyRef.current = packKey
+    releasedRef.current = 0
   }
   if (packStartedFor.current !== packKey) {
     packStartedFor.current = packKey
     beginLabelPack(floorId)
   }
-  const released = epoch.packKey === packKey ? epoch.released : 0
+
+  const queue = queueAt(floorId, ordered, priorityIds, firstCount, releasedRef.current)
+  publishMount(floorId, queue)
 
   useEffect(() => {
     const remaining = Math.max(0, ordered.length - firstCount)
-    if (released >= remaining) return
-    let cancelled = false
-    const id = window.requestAnimationFrame(() => {
-      if (cancelled) return
-      setEpoch((current) => {
-        if (current.packKey !== packKey) return current
-        return { packKey, released: Math.min(current.released + LABEL_MOUNT_PER_FRAME, remaining) }
-      })
-      invalidate()
-    })
-    return () => {
-      cancelled = true
-      window.cancelAnimationFrame(id)
+    if (releasedRef.current >= remaining) return
+    let raf = 0
+    const tick = () => {
+      releasedRef.current = Math.min(releasedRef.current + LABEL_MOUNT_PER_FRAME, remaining)
+      publishMount(floorId, queueAt(floorId, ordered, priorityIds, firstCount, releasedRef.current))
+      if (releasedRef.current < remaining) raf = window.requestAnimationFrame(tick)
     }
-  }, [firstCount, invalidate, ordered.length, packKey, released])
+    raf = window.requestAnimationFrame(tick)
+    return () => window.cancelAnimationFrame(raf)
+  }, [firstCount, floorId, ordered, priorityIds, packKey])
 
-  const mountedCount = Math.min(ordered.length, firstCount + released)
-  const firstBatch = ordered.slice(0, firstCount)
-  const extra = ordered.slice(firstCount, mountedCount)
-  const slices: LabelMountSlice[] = []
-  if (firstBatch.length > 0) {
-    slices.push({ key: `${floorId}:priority`, labels: firstBatch })
-  }
-  for (let index = 0; index < extra.length; index += LABEL_MOUNT_PER_FRAME) {
-    const batch = extra.slice(index, index + LABEL_MOUNT_PER_FRAME)
-    slices.push({ key: `${floorId}:b${index / LABEL_MOUNT_PER_FRAME}`, labels: batch })
-  }
-
-  const queue: LabelMountQueue = {
-    slices,
-    priorityIds,
-    firstBatchIds: firstBatch.map((label) => label.id),
-    mountedIds: ordered.slice(0, mountedCount).map((label) => label.id),
-    total: ordered.length,
-    done: mountedCount >= ordered.length,
-  }
-  publishMount(floorId, queue)
   return queue
 }

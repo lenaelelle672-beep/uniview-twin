@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { floorIdList, floorSpec, listFloorSpecs } from '../data/floors'
 import {
   EXPLODE_DURATION_S,
@@ -11,7 +11,9 @@ import {
   explodeProgress,
   floorWorldSpan,
   resetExplodeMotion,
+  resetStationExplodeMotion,
   stepExplodeMotion,
+  stepStationExplodeMotion,
 } from './explode'
 
 describe('爆炸位移', () => {
@@ -95,5 +97,60 @@ describe('爆炸位移', () => {
     expect(closed).toEqual({ progress: 0, animating: false })
     expect(badgeExplodeOffset('F18', closed.progress)).toBe(0)
     resetExplodeMotion()
+  })
+})
+
+describe('爆炸进度目标', () => {
+  afterEach(() => {
+    delete (globalThis as { __ea?: number }).__ea
+    delete (globalThis as { __es?: boolean }).__es
+    resetExplodeMotion()
+    resetStationExplodeMotion()
+  })
+
+  it('没写目标时布尔开关仍走到 1，写了 0.5 就停在一半', () => {
+    resetExplodeMotion()
+    const opened = stepExplodeMotion(true, 'building', 2)
+    expect(opened).toEqual({ progress: 0, animating: true })
+    const full = stepExplodeMotion(true, 'building', 2 + EXPLODE_DURATION_S)
+    expect(full).toEqual({ progress: 1, animating: false })
+
+    resetExplodeMotion()
+    ;(globalThis as { __ea?: number }).__ea = 0.5
+    const start = stepExplodeMotion(true, 'building', 4)
+    expect(start).toEqual({ progress: 0, animating: true })
+    const mid = stepExplodeMotion(true, 'building', 4 + EXPLODE_DURATION_S / 2)
+    expect(mid.progress).toBeGreaterThan(0.25)
+    expect(mid.progress).toBeLessThan(0.5)
+    const held = stepExplodeMotion(true, 'building', 4 + EXPLODE_DURATION_S)
+    expect(held).toEqual({ progress: 0.5, animating: false })
+    const stayed = stepExplodeMotion(true, 'building', 4 + EXPLODE_DURATION_S + 1)
+    expect(stayed).toEqual({ progress: 0.5, animating: false })
+  })
+
+  it('滑杆直接落到目标，键盘档仍补间；两套时钟互不覆盖', () => {
+    resetExplodeMotion()
+    resetStationExplodeMotion()
+    const host = globalThis as { __ea?: number; __es?: boolean }
+    host.__ea = 0.4
+    host.__es = true
+    expect(stepExplodeMotion(true, 'building', 8)).toEqual({ progress: 0.4, animating: false })
+    expect(stepStationExplodeMotion(true, 'floor', 8)).toEqual({ progress: 0.4, animating: false })
+
+    host.__es = false
+    host.__ea = 1
+    const floor = stepExplodeMotion(true, 'building', 9)
+    expect(floor.animating).toBe(true)
+    expect(floor.progress).toBe(0.4)
+    const station = stepStationExplodeMotion(true, 'floor', 9)
+    expect(station.progress).toBe(0.4)
+    expect(station.animating).toBe(true)
+
+    const floorDone = stepExplodeMotion(true, 'building', 9 + EXPLODE_DURATION_S)
+    expect(floorDone).toEqual({ progress: 1, animating: false })
+    const stationLeft = stepStationExplodeMotion(true, 'building', 9.1)
+    expect(stationLeft).toEqual({ progress: 0, animating: false })
+    const floorStill = stepExplodeMotion(true, 'building', 9 + EXPLODE_DURATION_S + 0.2)
+    expect(floorStill.progress).toBe(1)
   })
 })

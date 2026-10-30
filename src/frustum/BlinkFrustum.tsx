@@ -1,8 +1,8 @@
 import { useFrame, useThree } from '@react-three/fiber'
 import { useIntersect } from '@react-three/drei/core/useIntersect.js'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { emitBlink, type FrustumBlinkState } from './blinkGate'
-import { afterRender, useFrustumLoop } from './loopBind'
+import { useFrustumLoop } from './loopBind'
 import {
   FAR_LAMP_CAP,
   FLASH_SENTINEL_RADIUS,
@@ -22,6 +22,8 @@ import {
  * 这不是页面级画布可见性（那条只观察 DOM），也不按距离换模型。
  * useIntersect 只收一个可见回调。
  * demand 停帧后检测也会停。重新进入视锥时补一帧，闪烁和被藏起的远距道具才能回来。
+ * 初始可见性在发现宿主的那一帧里用投影视锥算完，不再把哨兵放大再缩回来。
+ * 哨兵槽在视锥组件挂上时一次建完。宿主晚到（出齐窗后的圆标）只改位置，不再 setState。
  */
 
 interface SceneNode {
@@ -46,7 +48,52 @@ interface SentinelProps {
   onVisible: (visible: boolean) => void
 }
 
-const PRIME_SCALE = 100000
+const clip = new Float64Array(16)
+
+function sentinelRadius(point: SpherePoint, scale: number): number {
+  return Math.max(point.r * scale, 0.4)
+}
+
+function planeDistance(a: number, b: number, c: number, d: number, x: number, y: number, z: number): number {
+  return (a * x + b * y + c * z + d) / (Math.hypot(a, b, c) || 1)
+}
+
+/** 与 three Frustum.setFromProjectionMatrix + intersectsSphere 同一套裁剪平面。不把 three 打进视锥分包。 */
+function sphereInView(
+  camera: {
+    projectionMatrix: { elements: ArrayLike<number> }
+    matrixWorldInverse: { elements: ArrayLike<number> }
+  },
+  point: SpherePoint,
+  scale: number,
+): boolean {
+  const p = camera.projectionMatrix.elements
+  const v = camera.matrixWorldInverse.elements
+  for (let col = 0; col < 4; col += 1) {
+    for (let row = 0; row < 4; row += 1) {
+      let sum = 0
+      for (let k = 0; k < 4; k += 1) sum += (p[k * 4 + row] ?? 0) * (v[col * 4 + k] ?? 0)
+      clip[col * 4 + row] = sum
+    }
+  }
+  const m3 = clip[3] ?? 0
+  const m7 = clip[7] ?? 0
+  const m11 = clip[11] ?? 0
+  const m15 = clip[15] ?? 0
+  const radius = sentinelRadius(point, scale)
+  const x = point.x
+  const y = point.y
+  const z = point.z
+  const outside = (a: number, b: number, c: number, d: number) => planeDistance(a, b, c, d, x, y, z) < -radius
+  return !(
+    outside(m3 - (clip[0] ?? 0), m7 - (clip[4] ?? 0), m11 - (clip[8] ?? 0), m15 - (clip[12] ?? 0)) ||
+    outside(m3 + (clip[0] ?? 0), m7 + (clip[4] ?? 0), m11 + (clip[8] ?? 0), m15 + (clip[12] ?? 0)) ||
+    outside(m3 + (clip[1] ?? 0), m7 + (clip[5] ?? 0), m11 + (clip[9] ?? 0), m15 + (clip[13] ?? 0)) ||
+    outside(m3 - (clip[1] ?? 0), m7 - (clip[5] ?? 0), m11 - (clip[9] ?? 0), m15 - (clip[13] ?? 0)) ||
+    outside(m3 - (clip[2] ?? 0), m7 - (clip[6] ?? 0), m11 - (clip[10] ?? 0), m15 - (clip[14] ?? 0)) ||
+    outside(m3 + (clip[2] ?? 0), m7 + (clip[6] ?? 0), m11 + (clip[10] ?? 0), m15 + (clip[14] ?? 0))
+  )
+}
 
 function materialNames(material: SceneNode['material']): string[] {
   if (!material) return []
@@ -85,72 +132,36 @@ function Sentinel({ place, scale, onVisible }: SentinelProps) {
   placeRef.current = place
   scaleRef.current = scale
   onRef.current = onVisible
-  const phase = useRef<'huge' | 'gap' | 'live'>('huge')
-  const arm = useRef(false)
+  const placed = useRef(false)
   const ref = useIntersect((visible: boolean) => {
-    if (phase.current !== 'live') return
+    if (!placed.current) return
     onRef.current(visible)
   })
-  const invalidate = useThree((state) => state.invalidate)
 
-  const apply = (prime: boolean) => {
+  const apply = () => {
     const mesh = ref.current as {
+      visible: boolean
       position: { set: (x: number, y: number, z: number) => void }
       scale: { setScalar: (value: number) => void }
     } | null
     if (!mesh) return
     const sphere = placeRef.current()
-    if (sphere) mesh.position.set(sphere.x, sphere.y, sphere.z)
-    const radius = Math.max((sphere?.r ?? 1) * scaleRef.current, 0.4)
-    mesh.scale.setScalar(prime ? PRIME_SCALE : radius)
+    if (!sphere) {
+      mesh.visible = false
+      return
+    }
+    mesh.visible = true
+    mesh.position.set(sphere.x, sphere.y, sphere.z)
+    mesh.scale.setScalar(sentinelRadius(sphere, scaleRef.current))
+    placed.current = true
   }
 
   useLayoutEffect(() => {
-    phase.current = 'huge'
-    arm.current = false
-    apply(true)
-    let stop = () => {}
-    stop = afterRender(() => {
-      arm.current = true
-      stop()
-      // 停帧循环在 after-effect 里直接 invalidate 会把已经排好的下一帧取消掉。
-      // 拖到下一轮任务再要帧，真实半径才会被画进去。
-      requestAnimationFrame(() => invalidate())
-    })
-    invalidate()
-    return () => stop()
-  }, [invalidate])
+    apply()
+  }, [])
 
   useFrame(() => {
-    if (!arm.current) return
-    const mesh = ref.current as { visible: boolean } | null
-    if (!mesh) return
-    if (phase.current === 'huge') {
-      // 先离开画面一帧，useIntersect 内部的「上次可见」才会回到 false。
-      // 下一帧真实半径无论进或出，都能变成一次可见性变化。
-      mesh.visible = false
-      phase.current = 'gap'
-      requestAnimationFrame(() => invalidate())
-      return
-    }
-    if (phase.current === 'gap') {
-      mesh.visible = true
-      apply(false)
-      phase.current = 'live'
-      let reported = false
-      const previous = onRef.current
-      const wrapped = (visible: boolean) => {
-        reported = true
-        previous(visible)
-      }
-      onRef.current = wrapped
-      afterRender(() => {
-        if (onRef.current === wrapped) onRef.current = previous
-        if (!reported) previous(false)
-      })
-      return
-    }
-    apply(false)
+    apply()
   })
 
   return (
@@ -188,6 +199,13 @@ function samePublish(left: FrustumBlinkState, right: FrustumBlinkState): boolean
   )
 }
 
+const SENTINEL_KEYS = [
+  'alarm',
+  'flash',
+  'sign',
+  ...Array.from({ length: FAR_LAMP_CAP }, (_, index) => `lamp:${index}`),
+]
+
 const meshIds = new WeakMap<object, number>()
 let meshSerial = 1
 
@@ -210,7 +228,11 @@ export function BlinkFrustum({
 }) {
   useFrustumLoop()
   const scene = useThree((state) => state.scene) as unknown as SceneNode
-  const camera = useThree((state) => state.camera) as { position: { x: number; y: number; z: number } }
+  const camera = useThree((state) => state.camera) as {
+    position: { x: number; y: number; z: number }
+    projectionMatrix: { elements: ArrayLike<number> }
+    matrixWorldInverse: { elements: ArrayLike<number> }
+  }
   const invalidate = useThree((state) => state.invalidate)
   const wake = useRef(0)
   const published = useRef<FrustumBlinkState | null>(null)
@@ -227,14 +249,20 @@ export function BlinkFrustum({
   const places = useRef(new Map<string, () => SpherePoint | null>())
   const handlers = useRef(new Map<string, (visible: boolean) => void>())
   const keySig = useRef('')
+  const suppressFrame = useRef(false)
   const scaleRef = useRef(scale)
   const reasonRef = useRef(reason)
   scaleRef.current = scale
   reasonRef.current = reason
-  const [keys, setKeys] = useState<string[]>([])
-
   const askFrame = () => {
     if (wake.current) return
+    // 单层时钟已停时，这一帧里的矩阵改动会进当前提交。再排一帧只会落进 1.8 秒窗。
+    // 不引 store：视锥分包的 react/store 是垫片，拉进 viewSlice 会拆掉生产构建。
+    const motion = window.__twinSchedule?.holds?.motion ?? 0
+    const current = window.event
+    const type = current && typeof current === 'object' && 'type' in current ? String((current as Event).type) : ''
+    const gesturing = type === 'keydown' || type === 'pointerdown' || type === 'click' || type === 'input' || type === 'wheel'
+    if (window.__twinView === 'floor' && window.__twinStationExplode?.animating !== true && motion === 0 && !gesturing) return
     wake.current = requestAnimationFrame(() => {
       wake.current = 0
       invalidate()
@@ -257,6 +285,8 @@ export function BlinkFrustum({
     if (published.current && samePublish(published.current, next)) return
     published.current = next
     emitBlink(next)
+    // 发现宿主时这一帧还没画完，矩阵改动会进当前帧。再要一帧只会堆进停稳窗口。
+    if (suppressFrame.current) return
     askFrame()
   }
 
@@ -436,17 +466,32 @@ export function BlinkFrustum({
       )
     }
 
+    for (const key of [...places.current.keys()]) {
+      if (!nextKeys.includes(key)) {
+        places.current.delete(key)
+        handlers.current.delete(key)
+      }
+    }
     const signature = nextKeys.join('|')
     if (signature !== keySig.current) {
       keySig.current = signature
-      setKeys(nextKeys)
-      askFrame()
+      // 槽位已经在树上。这里再 setState 会在出齐窗那一帧之后再交一帧，1024 停稳窗装不下。
+      suppressFrame.current = true
+      try {
+        for (const key of nextKeys) {
+          const sphere = places.current.get(key)?.() ?? null
+          const visible = sphere ? sphereInView(camera, sphere, scaleRef.current) : false
+          handlers.current.get(key)?.(visible)
+        }
+      } finally {
+        suppressFrame.current = false
+      }
     }
   })
 
   return (
     <group name="FrustumPause">
-      {keys.map((key) => (
+      {SENTINEL_KEYS.map((key) => (
         <Sentinel
           key={key}
           scale={scale}

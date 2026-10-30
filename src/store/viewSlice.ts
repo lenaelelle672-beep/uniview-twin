@@ -35,6 +35,8 @@ export type LayerToggleKey = LayerKey | 'wireframe' | 'plaques' | 'decals' | 'se
 export interface ViewSlice {
   view: ViewMode
   exploded: boolean
+  /** 爆炸目标 0..1。大于 0 时 exploded 为真。首屏对象不写这个字段，晚加载再装。 */
+  explodeProgress: number
   dayNight: DayNight
   presentation: Presentation
   quality: QualityTier
@@ -55,6 +57,8 @@ export interface ViewSlice {
   posNotice: string | null
   setView: (view: ViewMode) => void
   setExploded: (exploded: boolean) => void
+  /** 滑杆和键盘档写这里。0 收拢，1 完全展开。晚加载才挂上。 */
+  setExplodeProgress: (value: number) => void
   setDayNight: (dayNight: DayNight) => void
   setQuality: (quality: QualityTier) => void
   setLayer: (key: LayerToggleKey, on: boolean) => void
@@ -116,7 +120,12 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
     releaseHeldViewpoint()
     set(dropped({ exploded }))
   },
-  setDayNight: (dayNight) => startTransition(() => set({ dayNight })),
+  setDayNight: (dayNight) => {
+    if (get().dayNight === dayNight) return
+    // 跟进层一样同步写。startTransition 会把夜景材质、灯和雾让到主线程空闲，
+    // 截图把线程占满时，这轮提交会掉进工位停稳后的 1.8 秒。
+    set({ dayNight })
+  },
   setQuality: (quality) => startTransition(() => set({ quality, downgradeSuppressed: true })),
   setLayer: (key, on) => {
     const layers = get().layers as LayerFlags & {
@@ -214,4 +223,4 @@ export const createViewSlice: StateCreator<TwinStore, [], [], ViewSlice> = (set,
       focusedDeviceId: pos === undefined || pos === state.focusedDeskId ? state.focusedDeviceId : null,
     }))
   },
-})
+} as ViewSlice)

@@ -60,8 +60,16 @@ export function PickBvhHost() {
         }
         await yieldMain()
         if (stop) return
-        const next = growBvhMount(mountedRef.current, targetRef.current, pickGroupSignature)
-        if (next === mountedRef.current) continue
+        // 一组一帧会把还没挂完的树拖进工位停稳窗。先在内存里追到当前目标，再一次提交。
+        let next = mountedRef.current
+        const desired = targetRef.current
+        for (let guard = 0; guard < 8; guard += 1) {
+          if (pickGroupSignature(next) === pickGroupSignature(desired)) break
+          const grown = growBvhMount(next, desired, pickGroupSignature)
+          if (grown === next) break
+          next = grown
+        }
+        if (pickGroupSignature(next) === pickGroupSignature(mountedRef.current)) continue
         mountedRef.current = next
         setGroups(next)
       }

@@ -26,7 +26,9 @@ export const SHORTCUT_GROUPS: ShortcutGroup[] = [
     id: 'scene',
     title: '场景',
     rows: [
-      { keys: 'Esc', action: '没有浮层时，单层视图返回总览' },
+      { keys: 'Esc', action: '没有浮层时，单层视图返回总览。刚动过爆炸滑杆或档位时，第一次只留在单层' },
+      { keys: 'E', action: '展开或收拢当前爆炸。总览动楼层，单层动工位' },
+      { keys: '[ ]', action: '爆炸进度在收拢、一半、完全展开之间退一档或进一档' },
       { keys: '鼠标', action: '左键旋转，右键平移，滚轮缩放。不接 WASD 漫游' },
     ],
   },

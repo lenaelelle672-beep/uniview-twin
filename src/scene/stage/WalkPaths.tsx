@@ -1,5 +1,5 @@
 import { Line } from '@react-three/drei/core/Line'
-import { useThree } from '@react-three/fiber'
+import { useStore } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef, useSyncExternalStore } from 'react'
 import { useTwinStore } from '../../store/store'
 import type { Point } from './corridor'
@@ -108,7 +108,7 @@ export function WalkPaths({ floorId, paths }: { floorId: string; paths?: readonl
   const devices = useTwinStore((state) => state.devices)
   const layer = useTwinStore(selectWalkLayer)
   const pref = useSyncExternalStore(subscribeWalkPathPref, walkPathPref, walkPathPref)
-  const invalidate = useThree((state) => state.invalidate)
+  const store = useStore()
   const alarms = playbackAlarms ?? liveAlarms
   const geoRef = useRef<WalkGeometryCache>({ key: '\0', floorId: '', paths: undefined, lines: [] })
   const sampleRef = useRef<WalkSampleCache>(emptyWalkSamples())
@@ -141,12 +141,12 @@ export function WalkPaths({ floorId, paths }: { floorId: string; paths?: readonl
         setOccupancy: (on) => setWalkPathPref({ occupancy: on }),
       }
     }
-    invalidate()
+    store.getState().invalidate()
     return () => {
       delete window.__twinWalkPaths
-      invalidate()
+      store.getState().invalidate()
     }
-  }, [colors, floorId, geometry, invalidate, pref.occupancy, shown])
+  }, [colors, floorId, geometry, pref.occupancy, shown, store])
 
   if (!shown) return null
   return (

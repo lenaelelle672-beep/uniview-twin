@@ -157,6 +157,7 @@ export function BatchedRoomLabels({
   const palette = roomLabelColors(quality, labelTone)
   const paletteRef = useRef(palette)
   paletteRef.current = palette
+  const toneRef = useRef(`${palette.color}|${palette.outline}`)
   const signature = labels.map((label) => `${label.id}|${label.text}|${label.label.join(',')}`).join(';')
   const clusters = clusterTemplates(labels)
   const appliedPackRef = useRef('')
@@ -343,6 +344,7 @@ export function BatchedRoomLabels({
         window.__twinLabelPaintAt = performance.now()
         if (!window.__twinLabelReadyAt) window.__twinLabelReadyAt = performance.now()
         setPackGen((value) => value + 1)
+        // 回调不在 useFrame 里，同步 invalidate 只排一帧，并和同一轮提交合在一起。
         invalidate()
       })
       .catch(() => {})
@@ -364,6 +366,9 @@ export function BatchedRoomLabels({
   }, [characters, fontSize, gl, outlineWidth, invalidate, signature])
 
   useLayoutEffect(() => {
+    const tone = `${palette.color}|${palette.outline}`
+    const toneChanged = toneRef.current !== tone
+    toneRef.current = tone
     const batch = batchRef.current
     const members = membersRef.current
     const clusterMembers = clustersRef.current
@@ -373,7 +378,8 @@ export function BatchedRoomLabels({
       text.outlineColor = palette.outline
     }
     applyMemberFades(members, fadesRef.current)
-    invalidate()
+    // 批次刚挂上时异步回调已经要过一帧。颜色没变就不再要，避免停稳窗里连着两帧。
+    if (toneChanged) invalidate()
   }, [fadesRef, invalidate, packGen, palette.color, palette.outline])
 
   useLayoutEffect(() => {
@@ -506,8 +512,8 @@ export function BatchedRoomLabels({
       if (row.visible) sig += `c${key}:${row.local?.join(',') ?? ''};`
     }
     if (sig === appliedPackRef.current) return
+    // 矩阵在这次渲染前已经写完。再 invalidate 会让标签上屏后再交一帧。
     writePack(pack)
-    invalidate()
   })
 
   return <group ref={groupRef} name="RoomLabelBatch" />

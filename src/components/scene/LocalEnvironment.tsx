@@ -1,4 +1,4 @@
-import { useThree } from '@react-three/fiber'
+import { useStore, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useState } from 'react'
 import {
   EquirectangularReflectionMapping,
@@ -146,7 +146,7 @@ export function LocalEnvironment({
 }) {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
-  const invalidate = useThree((state) => state.invalidate)
+  const store = useStore()
   const [dayMap, setDayMap] = useState<Texture | null>(null)
   const [nightMap, setNightMap] = useState<Texture | null>(null)
   const nightMapLive = nightHdrActive(night, quality) && nightMap != null
@@ -166,13 +166,13 @@ export function LocalEnvironment({
     } else {
       delete window.__twinEnv
     }
-    invalidate()
+    store.getState().invalidate()
     if (!enabled) {
       markHdrNotRequired()
       return
     }
     if (dayMap) markHdrPmremReady()
-  }, [dayMap, enabled, invalidate, night, nightMap, nightMapLive, scene])
+  }, [dayMap, enabled, night, nightMap, nightMapLive, scene, store])
 
   useEffect(() => {
     if (!enabled) {
