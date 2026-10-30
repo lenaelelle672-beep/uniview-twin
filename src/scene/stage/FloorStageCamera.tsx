@@ -1,5 +1,5 @@
 import { type CameraControls as CameraControlsImpl } from '@react-three/drei/core/CameraControls'
-import { useFrame, useThree } from '@react-three/fiber'
+import { addTail, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { Box3, Object3D, PerspectiveCamera, Vector3 } from 'three'
 import { resolveWorkstationRef } from '../../locate/ref'
@@ -10,6 +10,14 @@ import { workstationPosition } from './workstationPosition'
 import { retainFrameChannel } from '../frameSchedule'
 import { beginCameraMove, markCameraRested, watchCameraRest } from './cameraRest'
 import { USER_CAMERA_SMOOTH_TIME, floorFramingGlide } from './cameraTransition'
+import { nextStationExplodeFit, stationExplodeFitTailDue, type ExplodeFitMark } from './explodeFitGate'
+import {
+  STATION_FIT_PADDING,
+  explodeFramingHeld,
+  frameExplodedStationBox,
+  refreshStationExplodeBounds,
+  stationBlocksPlateFit,
+} from './stationExplodeFit'
 
 type VisibleFocusApi = typeof import('./visibleFocus')
 let visibleFocusApi: VisibleFocusApi | null = null
@@ -250,6 +258,11 @@ export function FloorStageCamera() {
   const framing = useRef({ active: '', focusSeq: -1, width: 0, height: 0 })
   const flightToken = useRef(0)
   const flightHandoff = useRef(false)
+  const explodeMark = useRef<ExplodeFitMark | null>(null)
+  const explodeBusy = useRef(false)
+  const explodeAlive = useRef(true)
+  const considerExplodeFit = useRef<() => void>(() => {})
+  const plateFlight = useRef(0)
 
   useEffect(() => {
     const rig = controls as (FocusRig & {
@@ -283,7 +296,7 @@ export function FloorStageCamera() {
     const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
     const deskId = focused && focused.floorId === active ? focused.deskId : null
     const key = `${active}:${deskId ?? 'slab'}:${focusSeq}:${size.width}x${size.height}`
-    if (window.__vpH || window.__vpT) {
+    if (explodeFramingHeld()) {
       framedKey.current = key
       return
     }
@@ -297,6 +310,10 @@ export function FloorStageCamera() {
       watchCameraRest(rig, invalidate)
       return
     }
+    if (stationBlocksPlateFit()) {
+      framedKey.current = key
+      return
+    }
     const plate = scene.getObjectByName('FloorPlate')
     if (!plate) return
     framedKey.current = key
@@ -307,8 +324,19 @@ export function FloorStageCamera() {
       targetChanged: !sameFloor,
       resizeOnly: false,
     })
-    void frameSlab(rig, camera as PerspectiveCamera, plate, active, gl.domElement, glide, invalidate, () => false).then((ok) => {
-      if (ok) watchCameraRest(rig, invalidate)
+    const plateTicket = ++plateFlight.current
+    void frameSlab(
+      rig,
+      camera as PerspectiveCamera,
+      plate,
+      active,
+      gl.domElement,
+      glide,
+      invalidate,
+      () => plateFlight.current !== plateTicket || stationBlocksPlateFit(),
+    ).then((ok) => {
+      if (plateFlight.current !== plateTicket || !ok) return
+      watchCameraRest(rig, invalidate)
     })
   })
 
@@ -327,9 +355,17 @@ export function FloorStageCamera() {
     const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
     const deskId = active && focused && focused.floorId === active ? focused.deskId : null
     const key = active ? `${active}:${deskId ?? 'slab'}:${focusSeq}:${size.width}x${size.height}` : ''
-    if (window.__vpH || window.__vpT) {
+    if (explodeFramingHeld()) {
       if (key) framedKey.current = key
       return
+    }
+    if (!deskId && stationBlocksPlateFit()) {
+      if (key) framedKey.current = key
+      framing.current = nextFrame
+      flightHandoff.current = true
+      return () => {
+        flightHandoff.current = false
+      }
     }
     // 同一取景被 invalidate / controls 重跑时，不要取消已经发出的 setLookAt(true)。
     if (key && framedKey.current === key) {
@@ -339,7 +375,7 @@ export function FloorStageCamera() {
         const token = flightToken.current
         queueMicrotask(() => {
           if (flightHandoff.current || flightToken.current !== token) return
-          if (window.__vpH || window.__vpT) return
+          if (explodeFramingHeld()) return
           flightToken.current += 1
           framedKey.current = ''
           resetFocalOffset(rig)
@@ -383,6 +419,10 @@ export function FloorStageCamera() {
         watchCameraRest(rig, invalidate)
         return
       }
+      if (stationBlocksPlateFit()) {
+        framedKey.current = key
+        return
+      }
       const plate = scene.getObjectByName('FloorPlate')
       if (!plate) {
         if (attempts < 90) {
@@ -413,13 +453,115 @@ export function FloorStageCamera() {
       const token = mine
       queueMicrotask(() => {
         if (flightHandoff.current || flightToken.current !== token) return
-        if (window.__vpH || window.__vpT) return
+        if (explodeFramingHeld()) return
         flightToken.current += 1
         framedKey.current = ''
         resetFocalOffset(rig)
       })
     }
   }, [active, camera, controls, focusSeq, focusedDeskId, gl, invalidate, scene, size.height, size.width])
+
+  // 优先级保持 0。正优先级会关掉 R3F 自己的渲染。
+  // 工位时钟往往比这次回调更晚写完。1920 昼景停稳后 demand 不再交帧，
+  // open fit 不能留到下一帧，否则 afterOpen.fit 一直是 null，距离停在进层。
+  const considerStationExplodeFit = () => {
+    const rig = controls as FocusRig | null
+    if (!explodeAlive.current || !rig || !active || explodeBusy.current || explodeFramingHeld()) return
+    const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null
+    if (focused && focused.floorId === active) return
+    const stats = window.__twinStationExplode
+    const decision = nextStationExplodeFit(
+      {
+        view: 'floor',
+        active: stats?.active === true,
+        progress: stats?.progress ?? 0,
+        animating: stats?.animating === true,
+        now: performance.now(),
+        held: false,
+        floorId: active,
+        width: size.width,
+        height: size.height,
+      },
+      explodeMark.current,
+    )
+    if (!decision.fit || decision.mark == null || decision.kind === '') {
+      explodeMark.current = decision.mark
+      return
+    }
+    if (typeof rig.fitToBox !== 'function' || typeof rig.dollyTo !== 'function' || typeof rig.update !== 'function') return
+    const perspective = camera as PerspectiveCamera
+    const canvas = gl.domElement
+    const mark = decision.mark
+    const cancelled = () => explodeFramingHeld()
+    const takeOverPlateFlight = () => {
+      flightToken.current += 1
+      plateFlight.current += 1
+    }
+    if (decision.kind === 'close') {
+      const plate = scene.getObjectByName('FloorPlate')
+      if (!plate) return
+      takeOverPlateFlight()
+      explodeBusy.current = true
+      beginCameraMove('station-explode')
+      void frameSlab(rig, perspective, plate, active, canvas, false, invalidate, cancelled)
+        .then((ok) => {
+          if (!ok || cancelled()) return
+          explodeMark.current = mark
+          window.__twinStationExplodeFit = { kind: 'close', progress: 0, dolly: false }
+          watchCameraRest(rig, invalidate)
+        })
+        .finally(() => {
+          explodeBusy.current = false
+        })
+      return
+    }
+    const box = refreshStationExplodeBounds(scene)
+    if (!box) return
+    takeOverPlateFlight()
+    const kind = decision.kind === 'scrub' ? 'scrub' : 'open'
+    explodeBusy.current = true
+    beginCameraMove('station-explode')
+    void frameExplodedStationBox(rig, box, {
+      polarDip: POLAR_DIP,
+      padding: STATION_FIT_PADDING,
+      smoothTime: USER_CAMERA_SMOOTH_TIME,
+      cancelled,
+      afterFit: () => {
+        applyVisibleFocalOffset(rig, perspective, canvas, false)
+      },
+      widthRatio: () => projectBox(perspective, box).widthRatio,
+    })
+      .then((result) => {
+        if (!result.ok || cancelled()) return
+        explodeMark.current = mark
+        window.__twinStationExplodeFit = { kind, progress: mark.progress, dolly: result.dolly }
+        markCameraRested('setLookAt')
+        watchCameraRest(rig, invalidate)
+      })
+      .finally(() => {
+        explodeBusy.current = false
+      })
+  }
+
+  considerExplodeFit.current = considerStationExplodeFit
+
+  useEffect(() => {
+    explodeAlive.current = true
+    // 循环要停时才跑，排在全部 useFrame 之后。不把 frameloop 改成 always。
+    const stop = addTail(() => {
+      if (!explodeAlive.current) return
+      if (!stationExplodeFitTailDue(window.__twinStationExplode, explodeMark.current)) return
+      considerExplodeFit.current()
+    })
+    return () => {
+      explodeAlive.current = false
+      stop()
+    }
+  }, [])
+
+  useFrame(() => {
+    considerStationExplodeFit()
+  })
 
   return null
 }

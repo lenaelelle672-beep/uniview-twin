@@ -697,6 +697,12 @@ interface Window {
     anchorZ: number,
     inheritFloorLift: boolean,
   ) => { x: number; y: number; z: number }
+  /** T096：工位炸开后的取景。导览或书签占着镜头时不会写。 */
+  __twinStationExplodeFit?: {
+    kind: 'open' | 'scrub' | 'close'
+    progress: number
+    dolly: boolean
+  }
   __twinMonitorBoxes?: TwinMonitorBoxes
   __twinFacadeBoxes?: TwinFacadeBoxes
   __twinSetExploded?: (exploded: boolean) => void
