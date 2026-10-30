@@ -1,5 +1,5 @@
 import { Bvh } from '@react-three/drei/core/Bvh'
-import { createPortal, useThree } from '@react-three/fiber'
+import { createPortal, useStore, useThree } from '@react-three/fiber'
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { BufferGeometry, Group, Mesh, type Object3D } from 'three'
 import { pickBvhHomeOf } from './pickBvhHome'
@@ -72,11 +72,23 @@ function setSharedFirstHit(raycaster: object, on: boolean) {
   if (on) (raycaster as { firstHitOnly?: boolean }).firstHitOnly = true
 }
 
+let unmountPaint = false
+
+function paintAfterUnmount(invalidate: () => void) {
+  if (unmountPaint) return
+  unmountPaint = true
+  queueMicrotask(() => {
+    unmountPaint = false
+    invalidate()
+  })
+}
+
 function Reparent({ targets }: { targets: readonly Object3D[] }) {
   const marker = useRef<Group>(null)
-  const invalidate = useThree((state) => state.invalidate)
+  const movedRef = useRef<Object3D[]>([])
+  const store = useStore()
   const raycaster = useThree((state) => state.raycaster)
-  useEffect(() => {
+  useLayoutEffect(() => {
     const bvhGroup = marker.current?.parent
     if (!bvhGroup) return
     const moved: Object3D[] = []
@@ -88,18 +100,24 @@ function Reparent({ targets }: { targets: readonly Object3D[] }) {
       bvhGroup.add(target)
       moved.push(target)
     }
+    movedRef.current = moved
     bvhGroup.updateMatrixWorld(true)
-    invalidate()
+    // 读 store 上当前的 invalidate。需求环包过之后，停稳窗里的重复调用会并成一帧。
+    store.getState().invalidate()
+  }, [store, targets])
+  useEffect(() => {
+    const moved = movedRef.current
+    const bvhGroup = marker.current?.parent
     return () => {
       for (const target of moved) {
         restoreHome(target)
         silenceBoxProxies(target)
       }
-      if (bvhGroup.parent) bvhGroup.removeFromParent()
+      if (bvhGroup?.parent) bvhGroup.removeFromParent()
       if (mounted > 0) setSharedFirstHit(raycaster, true)
-      invalidate()
+      paintAfterUnmount(() => store.getState().invalidate())
     }
-  }, [invalidate, raycaster, targets])
+  }, [raycaster, store, targets])
   return <group ref={marker} name="PickBvh:anchor" />
 }
 

@@ -31,7 +31,6 @@ export function IdlePrewarm() {
   const gl = useThree((state) => state.gl)
   const scene = useThree((state) => state.scene)
   const camera = useThree((state) => state.camera)
-  const invalidate = useThree((state) => state.invalidate)
 
   useEffect(() => {
     let cancelled = false
@@ -146,7 +145,7 @@ export function IdlePrewarm() {
       }
 
       snapshotPrograms(gl, 'prewarmed')
-      invalidate()
+      // 字形和着色器已经在离屏编完。再要一帧只会在单层收拢后的停稳窗里多记一次提交。
       markDone({
         startedAt,
         doneAt: performance.now(),
@@ -174,7 +173,7 @@ export function IdlePrewarm() {
       cancelled = true
       yieldCtl.dispose()
     }
-  }, [camera, gl, invalidate, scene])
+  }, [camera, gl, scene])
 
   return null
 }

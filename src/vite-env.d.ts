@@ -274,6 +274,8 @@ interface Window {
   __twinFloorFontChunks?: number
   __twinLabelFading?: boolean
   __twinCameraRested?: boolean
+  /** 楼层或工位时钟这一帧还在走。夜景空闲门用来和告警/人物持有分开。 */
+  __twinClocksBusy?: boolean
   __twinCameraRestReason?: string
   __twinCameraRestAt?: number
   __twinCameraMoveAt?: number
@@ -676,6 +678,13 @@ interface Window {
   __twinMonitorBoxes?: TwinMonitorBoxes
   __twinFacadeBoxes?: TwinFacadeBoxes
   __twinSetExploded?: (exploded: boolean) => void
+  /** T094：滑杆目标 0..1。没写过时布尔开关仍走向 1。短名是为了少占首屏。 */
+  __ea?: number
+  /** 为真时这一下直接落到目标。 */
+  __es?: boolean
+  /** 单层里用户动过进度之后，工位时钟才跟随。离开单层会关掉。 */
+  __twinExplodeFollow?: boolean
+  __twinSetExplodeProgress?: (value: number) => void
   __twinOverlayBudget?: {
     extraTargets: number
     extraBytes: number

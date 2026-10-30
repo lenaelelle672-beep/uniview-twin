@@ -223,6 +223,11 @@ describe('T023 场地法线与粗糙度', () => {
     expect(urls).toEqual([])
     expect(idleQueue).toHaveLength(0)
 
+    let kicks = 0
+    win.__twinInvalidate = () => {
+      kicks += 1
+      return Promise.resolve()
+    }
     now = 20 + 2600
     await pump()
     expect(idleQueue).toHaveLength(1)
@@ -269,6 +274,7 @@ describe('T023 场地法线与粗糙度', () => {
     expect(sidewalkMaterial.normalMap).not.toBeNull()
     expect(sidewalkMaterial.map).toBeNull()
     expect(grassMaterial.version).toBeGreaterThan(grassVersion)
+    expect(kicks).toBe(1)
 
     applySurfaceMode('day')
     expect(grassMaterial.color.getHexString()).toBe('466e28')

@@ -68,7 +68,6 @@ function applyPose(mesh: Mesh, pose: ScreenPose): void {
 
 function useLocalPoster(url: string): Texture | null {
   const safe = assertLocalPosterUrl(url)
-  const invalidate = useThree((state) => state.invalidate)
   const [map, setMap] = useState<Texture | null>(null)
   useEffect(() => {
     let disposed = false
@@ -82,7 +81,6 @@ function useLocalPoster(url: string): Texture | null {
       texture.colorSpace = SRGBColorSpace
       texture.needsUpdate = true
       setMap(texture)
-      invalidate()
     }
     image.onerror = () => {
       texture?.dispose()
@@ -93,16 +91,30 @@ function useLocalPoster(url: string): Texture | null {
       image.onerror = null
       texture?.dispose()
     }
-  }, [invalidate, safe])
+  }, [safe])
   return map
 }
 
-function PosterPlane({ pose, map }: { pose: ScreenPose; map: Texture }) {
+function PosterPlane({
+  pose,
+  slot,
+  map,
+  livePose,
+  bindMesh,
+}: {
+  pose: ScreenPose
+  slot: string
+  map: Texture
+  livePose: (slot: string, fallback: ScreenPose) => ScreenPose
+  bindMesh: (slot: string, mesh: Mesh | null) => void
+}) {
   const ref = useRef<Mesh>(null)
   useLayoutEffect(() => {
     const mesh = ref.current
-    if (mesh) applyPose(mesh, pose)
-  }, [pose])
+    bindMesh(slot, mesh)
+    if (mesh) applyPose(mesh, livePose(slot, pose))
+    return () => bindMesh(slot, null)
+  }, [bindMesh, livePose, pose, slot])
   return (
     <Image
       ref={ref}
@@ -118,27 +130,69 @@ function PosterPlane({ pose, map }: { pose: ScreenPose; map: Texture }) {
       renderOrder={POSTER_RENDER_ORDER}
       raycast={ignoreRaycast}
       matrixAutoUpdate={false}
-      onUpdate={(mesh) => applyPose(mesh, pose)}
+      onUpdate={(mesh) => applyPose(mesh, livePose(slot, pose))}
     />
   )
 }
 
 function LivePosters() {
-  const invalidate = useThree((state) => state.invalidate)
   const scene = useThree((state) => state.scene)
   const camera = useThree((state) => state.camera)
   const deskMap = useLocalPoster(DESK_POSTER_SRC)
   const cameraMap = useLocalPoster(CAMERA_POSTER_SRC)
   const [poses, setPoses] = useState<ScreenPose[]>([])
+  const posesRef = useRef<ScreenPose[]>([])
+  const meshes = useRef(new Map<string, Mesh>())
+  const bindMesh = useRef((slot: string, mesh: Mesh | null) => {
+    if (mesh) meshes.current.set(slot, mesh)
+    else meshes.current.delete(slot)
+  }).current
+  const livePose = useRef((slot: string, fallback: ScreenPose) => {
+    const index = Number(slot.slice(slot.indexOf(':') + 1))
+    return posesRef.current[index] ?? fallback
+  }).current
+
+  const publishPoses = (next: ScreenPose[]) => {
+    const prev = posesRef.current
+    if (posesEqual(prev, next)) return
+    const sameShape =
+      prev.length === next.length && prev.every((pose, index) => pose.kind === next[index]?.kind)
+    posesRef.current = next
+    if (!sameShape) {
+      setPoses(next)
+      return
+    }
+    // 张数和种类没变就地改矩阵。换最近的工位也不 setState，避免停稳后再提交一帧。
+    next.forEach((pose, index) => {
+      const mesh = meshes.current.get(`${pose.kind}:${index}`)
+      if (mesh) applyPose(mesh, pose)
+    })
+  }
+
+  const scanRef = useRef(() => {})
+  scanRef.current = () => publishPoses(collectPoses(scene, camera.position))
 
   useEffect(() => {
+    let timer = 0
     const scan = () => {
-      const next = collectPoses(scene, camera.position)
-      setPoses((prev) => (posesEqual(prev, next) ? prev : next))
+      scanRef.current()
+      // 姿势一旦有了就停。300ms 再扫会在 1.8 秒里凑满 6 次提交。之后只跟已经在画的帧。
+      if (posesRef.current.length > 0 && timer) {
+        window.clearInterval(timer)
+        timer = 0
+      }
     }
     scan()
-    const timer = window.setInterval(scan, 300)
-    return () => window.clearInterval(timer)
+    if (posesRef.current.length === 0) timer = window.setInterval(scan, 300)
+    const root = (scene as { __r3f?: { root?: { getState: () => { internal?: { subscribe?: (ref: { current: () => void }, priority: number, store: unknown) => () => void } } } } }).__r3f?.root
+    const subscribe = root?.getState().internal?.subscribe
+    // priority 0 与工位 onFrame 相同。后挂上的回调排在后面，能读到这一帧刚写完的实例矩阵。
+    // 正优先级会关掉 R3F 自己的渲染，不能用。
+    const stop = subscribe ? subscribe({ current: () => scanRef.current() }, 0, root) : undefined
+    return () => {
+      if (timer) window.clearInterval(timer)
+      stop?.()
+    }
   }, [camera, scene])
 
   useEffect(() => {
@@ -153,7 +207,6 @@ function LivePosters() {
       probe.desks = poses.filter((pose) => pose.kind === 'desk').length
       probe.camera = poses.some((pose) => pose.kind === 'camera')
     }
-    invalidate()
     return () => {
       const current = window.__twinScreenImage
       if (current) {
@@ -161,16 +214,24 @@ function LivePosters() {
         current.desks = 0
         current.camera = false
       }
-      invalidate()
     }
-  }, [cameraMap, deskMap, invalidate, poses])
+  }, [cameraMap, deskMap, poses])
 
   return (
     <group name="ScreenPosters">
-      {poses.map((pose) => {
+      {poses.map((pose, index) => {
         const map = pose.kind === 'camera' ? cameraMap : deskMap
         if (!map) return null
-        return <PosterPlane key={pose.id} pose={pose} map={map} />
+        return (
+          <PosterPlane
+            key={`${pose.kind}:${index}`}
+            slot={`${pose.kind}:${index}`}
+            pose={pose}
+            map={map}
+            livePose={livePose}
+            bindMesh={bindMesh}
+          />
+        )
       })}
     </group>
   )

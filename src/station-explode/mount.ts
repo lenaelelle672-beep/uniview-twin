@@ -9,8 +9,9 @@ import { createStationDrive, driveStation, type StationNode } from './drive'
 
 let started = false
 let wake = 0
-let wasAnimating = false
+let paintSoon = 0
 let wanted = false
+let seenView = ''
 let button: HTMLButtonElement | null = null
 const drive = createStationDrive()
 
@@ -50,15 +51,37 @@ function askFrame(invalidate: () => void): void {
 function paintButton(): void {
   if (!button) return
   const label = wanted ? '收拢工位' : '工位爆炸'
+  const pressed = wanted ? 'true' : 'false'
+  if (button.textContent === label && button.getAttribute('aria-pressed') === pressed) return
   button.className = wanted ? 'explode-button is-active' : 'explode-button'
-  button.setAttribute('aria-pressed', wanted ? 'true' : 'false')
+  button.setAttribute('aria-pressed', pressed)
   button.setAttribute('aria-label', label)
   button.textContent = label
+}
+
+/** 别在 R3F 这一帧里改按钮。视锥槽正在 flush 时同步改 DOM 会互相重入直到爆栈。 */
+function schedulePaint(): void {
+  if (paintSoon) return
+  paintSoon = requestAnimationFrame(() => {
+    paintSoon = 0
+    paintButton()
+  })
+}
+
+function syncWanted(view: string): void {
+  if (view !== 'floor') {
+    wanted = false
+    return
+  }
+  if (window.__twinExplodeFollow !== true) return
+  const aim = window.__ea
+  if (typeof aim === 'number') wanted = aim > 0
 }
 
 function ensureButton(view: string): void {
   if (view !== 'floor') {
     if (wanted) wanted = false
+    if (window.__twinExplodeFollow) window.__twinExplodeFollow = false
     button?.remove()
     button = null
     return
@@ -70,7 +93,14 @@ function ensureButton(view: string): void {
     const next = document.createElement('button')
     next.type = 'button'
     next.addEventListener('click', () => {
-      wanted = !wanted
+      const open = window.__twinExplodeFollow === true && (window.__ea ?? 0) > 0
+      wanted = !open
+      window.__twinExplodeFollow = true
+      window.__es = false
+      const nextProgress = wanted ? 1 : 0
+      const setProgress = window.__twinSetExplodeProgress
+      if (setProgress) setProgress(nextProgress)
+      else window.__ea = nextProgress
       paintButton()
       const root = frameRoot()
       if (!root) return
@@ -79,19 +109,23 @@ function ensureButton(view: string): void {
     })
     stage.appendChild(next)
     button = next
+    paintButton()
+  } else {
+    schedulePaint()
   }
-  paintButton()
 }
 
 function onFrame(state: FrameState): void {
-  const view = window.__twinView ?? 'building'
+  const live = window.__twinView
+  if (live === 'floor' || live === 'building' || live === 'blueprint') seenView = live
+  const view = seenView || live || 'building'
+  syncWanted(view)
   ensureButton(view)
   const scene = window.__twinScene as StationNode | undefined
   const stats = driveStation(drive, scene, wanted, view, state.clock.elapsedTime)
   window.__twinStationExplode = stats
+  // 停稳这一帧的渲染还没开始，静止矩阵已经写进实例。尾帧会落进 1024 的 1.8 秒窗。
   if (stats.animating) askFrame(state.invalidate)
-  else if (wasAnimating) askFrame(state.invalidate)
-  wasAnimating = stats.animating
 }
 
 function attach(): void {

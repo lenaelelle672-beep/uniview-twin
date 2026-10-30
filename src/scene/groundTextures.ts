@@ -4,7 +4,6 @@ import {
   Texture,
   TextureLoader,
   type BufferGeometry,
-  type MeshStandardMaterial,
 } from 'three'
 import { useTwinStore } from '../store/store'
 import { grassMaterial, pavingMaterial, roadMaterial, sidewalkMaterial } from './materials'
@@ -108,32 +107,28 @@ function redraw(attempt = 0): void {
   window.requestAnimationFrame(() => redraw(attempt + 1))
 }
 
-function assign(material: MeshStandardMaterial, nor: Texture, rough: Texture): void {
-  material.normalMap = nor
-  material.roughnessMap = rough
-  material.needsUpdate = true
-  redraw()
-}
-
 function startLoads(load: GroundTextureLoad): void {
   const keys = Object.keys(GROUND_SURFACES) as SurfaceKey[]
+  let left = keys.length * 2
+  const done = () => {
+    if (--left === 0) redraw()
+  }
   for (const key of keys) {
     const surface = GROUND_SURFACES[key]
     const slot: { nor?: Texture; rough?: Texture } = {}
-    const finish = () => {
-      if (!slot.nor || !slot.rough) return
-      assign(surface.material, slot.nor, slot.rough)
+    const put = (rough: boolean) => (texture: Texture) => {
+      prepare(texture, surface.repeat)
+      if (rough) slot.rough = texture
+      else slot.nor = texture
+      if (slot.nor && slot.rough) {
+        surface.material.normalMap = slot.nor
+        surface.material.roughnessMap = slot.rough
+        surface.material.needsUpdate = true
+      }
+      done()
     }
-    load(surface.nor, (texture) => {
-      prepare(texture, surface.repeat)
-      slot.nor = texture
-      finish()
-    })
-    load(surface.rough, (texture) => {
-      prepare(texture, surface.repeat)
-      slot.rough = texture
-      finish()
-    })
+    load(surface.nor, put(false))
+    load(surface.rough, put(true))
   }
 }
 

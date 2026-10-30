@@ -301,6 +301,7 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
   const invalidate = useThree((state) => state.invalidate)
   const [fontSize, setFontSize] = useState(0)
   const sizedRef = useRef(false)
+  const fontBoxRef = useRef('')
   const pxRef = useRef(0)
   const fadesRef = useRef<number[]>([])
   const packRef = useRef<LabelPackState>({ byId: {}, clusters: {} })
@@ -356,15 +357,16 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
       const api = measureRef.current
       if (api?.applyOpacity) api.applyOpacity()
       else api?.applyPack(packRef.current)
-      // F7：松开后的第一帧只画楼层。标签批次下一帧再进同一条绘制，避免和冷启动叠在一起。
-      if (floorId === 'F7') api?.setBatchVisible(false)
+      // 透明度在同步那一帧已经写成目标值。这里再 invalidate 会落进 1024 停稳窗。
+      // F7 仍把批次让出一帧，只画楼层，下一帧再把字加回来。
       releaseLabelPaint()
-      invalidate()
       if (floorId === 'F7') {
+        api?.setBatchVisible(false)
+        invalidate()
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             measureRef.current?.setBatchVisible(true)
-            invalidate()
+            askFrame()
           })
         })
       }
@@ -564,6 +566,7 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
       invalidate()
     }
     const onLeave = () => {
+      if (!pointerOnCanvasRef.current && hoverIdRef.current == null) return
       pointerOnCanvasRef.current = false
       invalidate()
     }
@@ -614,11 +617,17 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
       const { maxPx } = maxProjectedEmPx(host ?? null, labels, perspective, size, 0.78)
       if (maxPx > 1e-6) {
         const next = worldFontSizeFromProjectedEm(0.78, maxPx)
-        if (fontSize <= 0 || Math.abs(next - fontSize) / Math.max(fontSize, 0.01) > 0.08) setFontSize(next)
+        const box = `${size.width}x${size.height}`
+        const drift = fontSize > 0 && Math.abs(next - fontSize) / Math.max(fontSize, 0.01) > 0.08
+        // 停稳后投影还会在 8% 附近来回跳，每次 setState 都重建批次再要一帧。同一次视口只提交一次。
+        if (fontSize <= 0 || (drift && (!isCameraRested() || fontBoxRef.current !== box))) {
+          fontBoxRef.current = box
+          setFontSize(next)
+        }
         sizedRef.current = true
       } else if (!sizedRef.current && slabReady) {
+        sizedRef.current = true
         setFontSize((prev) => prev || 0.78)
-        askFrame()
       }
     }
     window.__twinLabelBatchPresent = Boolean(api?.ready)
@@ -626,7 +635,6 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
       return
     }
     if (!sizedRef.current || fontSize <= 0) {
-      askFrame()
       return
     }
     let shouldPack = false
@@ -637,11 +645,9 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
       shouldPack = true
     }
     if (shouldPack && !api?.ready) {
-      askFrame()
       return
     }
     if (packStepRef.current === 'sync' && (!api?.ready || !packedRef.current)) {
-      askFrame()
       return
     }
     if (shouldPack && api?.ready && packStepRef.current === 'idle') {
@@ -817,8 +823,6 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
         maxFrameAvoid: avoidMs,
         packStep: 'sync',
       }
-      askFrame()
-      return
     }
     if (packStepRef.current === 'sync' && packedRef.current && api?.ready) {
       const syncStart = performance.now()
@@ -826,11 +830,9 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
       packRef.current = layoutRef.current
       const fades = fadesRef.current
       const targets = targetFadesRef.current
-      if (pendingFadeRef.current) {
-        for (let i = 0; i < Math.max(fades.length, targets.length, labels.length); i += 1) fades[i] = 0
-        window.__twinLabelFading = true
-      } else {
-        for (let i = 0; i < Math.max(fades.length, targets.length, labels.length); i += 1) fades[i] = targets[i] ?? 1
+      // 目标透明度直接写进当前这一帧。先写成 0 再等 80ms，会在停稳窗里多交一帧。
+      for (let i = 0; i < Math.max(fades.length, targets.length, labels.length); i += 1) fades[i] = targets[i] ?? 1
+      if (!pendingFadeRef.current) {
         fadeInRef.current = 0
         window.__twinLabelFading = false
       }
@@ -845,8 +847,6 @@ function RoomLabelsLive({ floorId, labels }: { floorId: string; labels: RoomLabe
         packStep: 'fade',
       }
       packStepRef.current = 'fade'
-      askFrame()
-      return
     }
     if (packStepRef.current === 'fade' && pendingFadeRef.current && fadeInRef.current === 0) {
       startFadeLoop()

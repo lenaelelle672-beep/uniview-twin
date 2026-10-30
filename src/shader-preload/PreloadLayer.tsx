@@ -14,13 +14,13 @@ function dueNow(): boolean {
  * 只在首帧窗口之后才渲染。不挂全屏 Loader，也不写 AssetLoadOverlay 的进度。
  */
 function PreloadNow() {
-  const invalidate = useThree((state) => state.invalidate)
+  const scene = useThree((state) => state.scene)
   useLayoutEffect(() => {
     window.__twinShaderPreload = { all: true, at: performance.now() }
-  }, [])
-  useEffect(() => {
-    invalidate()
-  }, [invalidate])
+    // 子级 Preload 的 layout 已经 compile。读当前 invalidate，停稳窗里和别的空闲帧并在一起。
+    const root = (scene as { __r3f?: { root?: { getState: () => { invalidate: () => void } } } }).__r3f?.root
+    root?.getState().invalidate()
+  }, [scene])
   return <Preload all />
 }
 

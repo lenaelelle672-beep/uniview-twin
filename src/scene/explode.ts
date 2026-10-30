@@ -23,9 +23,7 @@ export const EXPLODE_DURATION_S = 0.8
  * progress 为 0 时每层都是 0，位置与未爆炸时完全一致。
  */
 export function explodeOffset(index: number, progress: number): number {
-  if (index < 0 || index >= FLOOR_COUNT) {
-    throw new Error(`楼层序号超出 0～${FLOOR_COUNT - 1}：${index}`)
-  }
+  if (index < 0 || index >= FLOOR_COUNT) throw new Error('楼层序号')
   return (EXPLODE_GROUND_CLEARANCE_M + index * EXPLODE_GAP_M) * progress
 }
 
@@ -50,9 +48,7 @@ export function explodeProgress(from: number, to: number, elapsed: number): numb
 export function explodeFloorIndex(id: string): number {
   if (id === 'B1') return 0
   const level = Number(id.slice(1))
-  if (!Number.isInteger(level) || level < 1 || level > FLOOR_COUNT - 1) {
-    throw new Error(`楼层序号超出 0～${FLOOR_COUNT - 1}：${id}`)
-  }
+  if (!Number.isInteger(level) || level < 1 || level > FLOOR_COUNT - 1) throw new Error('楼层序号')
   return level
 }
 
@@ -86,19 +82,15 @@ export function resetExplodeMotion(): void {
  * 离开总览时立刻回到 0，与原来的 ExplodedLayout 一致。
  */
 export function stepExplodeMotion(exploded: boolean, view: string, now: number): ExplodeMotion {
-  const target = exploded && view === 'building' ? 1 : 0
+  // 没写过 __ea 时 ?? 1，原来的布尔开关仍走到完全展开。__es 时这一下直接落到目标。
+  const target = exploded && view === 'building' ? ((globalThis as { __ea?: number }).__ea ?? 1) : 0
   if (view !== 'building') {
     motionClock = { from: 0, to: 0, start: now, progress: 0 }
     return { progress: 0, animating: false }
   }
   if (motionClock.to !== target || motionClock.start < 0) {
-    const from = motionClock.progress
-    motionClock = {
-      from,
-      to: target,
-      start: now,
-      progress: explodeProgress(from, target, 0),
-    }
+    const from = (globalThis as { __es?: boolean }).__es ? target : motionClock.progress
+    motionClock = { from, to: target, start: now, progress: explodeProgress(from, target, 0) }
   } else {
     motionClock.progress = explodeProgress(motionClock.from, motionClock.to, now - motionClock.start)
   }
@@ -127,15 +119,10 @@ export function stepStationExplodeMotion(exploded: boolean, view: string, now: n
     stationClock = { from: 0, to: 0, start: now, progress: 0 }
     return { progress: 0, animating: false }
   }
-  const target = exploded ? 1 : 0
+  const target = exploded ? ((globalThis as { __ea?: number }).__ea ?? 1) : 0
   if (stationClock.to !== target || stationClock.start < 0) {
-    const from = stationClock.progress
-    stationClock = {
-      from,
-      to: target,
-      start: now,
-      progress: explodeProgress(from, target, 0),
-    }
+    const from = (globalThis as { __es?: boolean }).__es ? target : stationClock.progress
+    stationClock = { from, to: target, start: now, progress: explodeProgress(from, target, 0) }
   } else {
     stationClock.progress = explodeProgress(stationClock.from, stationClock.to, now - stationClock.start)
   }

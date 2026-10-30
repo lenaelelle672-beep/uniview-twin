@@ -1,10 +1,11 @@
-import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
+import { addAfterEffect, useFrame, useStore, useThree } from '@react-three/fiber'
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ComponentType, type ReactNode } from 'react'
 import { bindTwinInvalidate, flushTwinInvalidate } from '../../scene/demandInvalidate'
+import { frameInputActive, installIdleFrameGate, settleNightCamera } from '../../scene/idleFrames'
 import { armRepeatedInstanceMatrices } from '../../scene/instanceMatrix'
 import { canvasOffscreen } from '../../scene/offscreenPause'
 import { stepExplodeMotion } from '../../scene/explode'
-import { isCameraRested } from '../../scene/stage/cameraRest'
+import { isCameraRested, shouldRetainCameraWake, snapActiveCameraRest } from '../../scene/stage/cameraRest'
 import { cutElevation } from '../../scene/stage/cut'
 import {
   commitShadowBake,
@@ -21,6 +22,7 @@ import {
 } from '../../scene/stage/shadowBake'
 import {
   bumpTwinFrames,
+  clearFrameChannel,
   emptyChannelClock,
   holdSnapshot,
   markDueChannels,
@@ -57,6 +59,7 @@ function pumpPaused(): boolean {
 
 export function DemandLoop() {
   const rawInvalidate = useThree((state) => state.invalidate)
+  const store = useStore()
   const gl = useThree((state) => state.gl)
   const quality = useTwinStore((state) => state.quality)
   const selectedFloor = useTwinStore((state) => state.selectedFloor)
@@ -69,10 +72,13 @@ export function DemandLoop() {
   const wake = useRef(0)
   const lastGate = useRef(0)
   const explodeHold = useRef<(() => void) | null>(null)
+  const wasBusy = useRef(false)
   const rawRef = useRef(rawInvalidate)
   const holdRef = useRef<() => void>(() => {})
   const releaseRef = useRef<() => void>(() => {})
-  rawRef.current = rawInvalidate
+  // 走 store 上当前的 invalidate。空闲门在 layout 里装上之后，贴图和 store 订阅都进同一道合并。
+  rawRef.current = () => store.getState().invalidate()
+  void rawInvalidate
 
   const gatedInvalidate = useRef(() => {
     if (pumpPaused()) return
@@ -88,7 +94,8 @@ export function DemandLoop() {
   }).current
 
   useLayoutEffect(() => {
-    bindTwinInvalidate(() => rawRef.current())
+    installIdleFrameGate(store.getState())
+    bindTwinInvalidate(() => store.getState().invalidate())
     if (window.__twinFrames == null) window.__twinFrames = 0
     gl.shadowMap.autoUpdate = false
     if (quality === 'perf') {
@@ -105,7 +112,7 @@ export function DemandLoop() {
     if (requestShadowBake('quality', defer) === 'bake-now') {
       commitShadowBake(gl, 'quality', { rested: isCameraRested(), interior: false, deferred: false })
     }
-  }, [gl, quality])
+  }, [gl, quality, store])
 
   useLayoutEffect(() => {
     if (quality === 'perf') return
@@ -154,7 +161,14 @@ export function DemandLoop() {
     }
   }, [gl, selectedFloor, view])
 
-  useEffect(() => subscribeLabelWindowOpen(() => rawRef.current()), [])
+  // 吊顶那次 setState 自己会提交。这里再 invalidate 会在停稳窗里多交一帧。
+  useEffect(
+    () =>
+      subscribeLabelWindowOpen(() => {
+        /* 提交由 useAfterLabelWindow 负责 */
+      }),
+    [],
+  )
 
   // 重复件动态缓冲在这条晚循环上补，不进 early index。
   useLayoutEffect(() => {
@@ -180,6 +194,13 @@ export function DemandLoop() {
     const remove = rig.removeEventListener.bind(rig)
     let release: (() => void) | null = null
     const hold = () => {
+      const action = (controls as { currentAction?: number } | null)?.currentAction ?? 0
+      const station = window.__twinStationExplode?.animating === true
+      if (!shouldRetainCameraWake(action, station, frameInputActive())) {
+        release?.()
+        release = null
+        return
+      }
       if (!release) release = retainFrameChannel('motion')
     }
     const drop = () => {
@@ -256,7 +277,8 @@ export function DemandLoop() {
   useOffscreenPause(gl.domElement, holdDemandWake, releaseDemandWake)
 
   useFrame(({ clock, scene }) => {
-    const { exploded: boom, view: liveView, quality: liveQuality, selectedFloor: liveFloor } = useTwinStore.getState()
+    const { exploded: boom, view: liveView, quality: liveQuality, selectedFloor: liveFloor, dayNight: liveDayNight } =
+      useTwinStore.getState()
     if (liveView === 'floor') ensureLabelWatch(scene)
     if (liveQuality !== 'perf' && !pumpPaused() && shadowBakePending()) {
       const cutActive = cutElevation(liveView, liveFloor) != null
@@ -292,6 +314,34 @@ export function DemandLoop() {
     } else if (explodeHold.current) {
       explodeHold.current()
       explodeHold.current = null
+    }
+    // 工位 onFrame 在优先级 0，这一拍要等下一帧才看见 animating=false。
+    // 只在忙→闲的沿上收镜头。进层第一拍本来就是闲，不能把飞入滑轨掐掉。
+    const stationAnimating = window.__twinStationExplode?.animating === true
+    const busy = animating || stationAnimating
+    window.__twinClocksBusy = busy
+    if (wasBusy.current && !busy && liveView === 'floor') {
+      const action = (controls as { currentAction?: number } | null)?.currentAction ?? 0
+      if (action === 0 && !isCameraRested()) {
+        snapActiveCameraRest()
+        clearFrameChannel('motion')
+      } else if (action === 0 && holdSnapshot().motion > 0) {
+        // 镜头已经标停，wake 的运动持有还在。性能档会在停稳窗里按 30Hz 把画得完的帧都交完。
+        clearFrameChannel('motion')
+      }
+    }
+    wasBusy.current = busy
+    // 忙→闲那一拍之后，夜景仍可能再 wake。已经 rest 就清掉运动持有；还没 rest 且没有持有，就收到终点。
+    if (!busy && liveView === 'floor') {
+      const action = (controls as { currentAction?: number } | null)?.currentAction ?? 0
+      if (action === 0 && !frameInputActive()) {
+        if (liveDayNight === 'night') {
+          settleNightCamera(controls as { stop?: () => void; _needsUpdate?: boolean; _hasRested?: boolean } | null)
+        }
+        const motion = holdSnapshot().motion
+        if (motion === 0 && !isCameraRested()) snapActiveCameraRest()
+        else if (motion > 0 && isCameraRested()) clearFrameChannel('motion')
+      }
     }
     const hidden = pumpPaused()
     const hz = scheduledHz(liveQuality, liveView, hidden)

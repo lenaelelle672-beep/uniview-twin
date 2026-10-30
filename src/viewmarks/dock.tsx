@@ -107,6 +107,10 @@ void import('../fs-access/mount').then((mod) => {
 void import('../station-explode/mount').then((mod) => {
   mod.mountStationExplode()
 })
+// T094：爆炸进度滑杆和键盘档。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../explode-progress/mount').then((mod) => {
+  mod.mountExplodeProgress()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

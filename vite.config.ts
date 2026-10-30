@@ -24,6 +24,7 @@ import { documentWatchAfterHash } from './scripts/documentWatchPlugin'
 import { shaderPreloadAfterHash } from './scripts/shaderPreloadPlugin'
 import { fsAccessAfterHash } from './scripts/fsAccessPlugin'
 import { stationExplodeAfterHash } from './scripts/stationExplodePlugin'
+import { explodeProgressAfterHash } from './scripts/explodeProgressPlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
 import { defineConfig, type Plugin } from 'vitest/config'
@@ -320,6 +321,7 @@ export default defineConfig({
     documentWatchAfterHash(),
     shaderPreloadAfterHash(),
     stationExplodeAfterHash(),
+    explodeProgressAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

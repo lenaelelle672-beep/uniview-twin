@@ -19,6 +19,11 @@ export function resetFrameChannels(): void {
   holds.alarm = 0
 }
 
+/** 飞入 Promise 还没走到 finally 时，把这一路持有直接清掉。之后的 release 再减也停在 0。 */
+export function clearFrameChannel(channel: FrameChannel): void {
+  holds[channel] = 0
+}
+
 export function channelHeld(channel: FrameChannel): boolean {
   return holds[channel] > 0
 }

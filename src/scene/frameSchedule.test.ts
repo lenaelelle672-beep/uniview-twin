@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   bumpTwinFrames,
   channelDue,
+  clearFrameChannel,
   discreteAlarmLit,
   emptyChannelClock,
   holdSnapshot,
@@ -109,5 +110,16 @@ describe('D180 续帧调度', () => {
     expect(last.alarm).toBe(5000)
     stop()
     expect(holdSnapshot().alarm).toBe(0)
+  })
+
+  it('clearFrameChannel 把未释放的持有清掉，之后的 release 停在 0', () => {
+    const stop = retainFrameChannel('motion')
+    retainFrameChannel('motion')
+    expect(holdSnapshot().motion).toBe(2)
+    clearFrameChannel('motion')
+    expect(holdSnapshot().motion).toBe(0)
+    expect(scheduledHz('perf', 'floor', false)).toBe(0)
+    stop()
+    expect(holdSnapshot().motion).toBe(0)
   })
 })
