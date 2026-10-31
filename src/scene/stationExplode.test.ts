@@ -18,6 +18,7 @@ import {
 import { STATION_EXPLODE_SOURCE_BLOCK } from '../../scripts/stationExplodePlugin'
 import { createStationDrive, driveStation, type StationNode } from '../station-explode/drive'
 import { bindStationView, paceStationClock, resetStationFrameClock, STATION_FRAME_STEP_S } from '../station-explode/mount'
+import { explodePickProbe, resetExplodePickForTests } from './pick/explodePick'
 
 function read(path: string): string {
   return readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -203,9 +204,14 @@ describe('工位进度', () => {
 describe('场景驱动', () => {
   it('桌椅徽标同源进度，每帧每个网格只 needsUpdate 一次，离开楼层写回 rest', () => {
     resetStationExplodeMotion()
+    resetExplodePickForTests()
     const desks = sinkFrom([identityAt(0, 0, 0), identityAt(2, 0, 2.2)])
     const chairs = sinkFrom([identityAt(0, 0, 0, 0.2), identityAt(2, 0, 2.2, 0.2)])
     const badges = sinkFrom([identityAt(2, 1.88, 2.2)])
+    let spheres = 0
+    const markSphere = () => {
+      spheres += 1
+    }
     const labelZ = [0, 2.2]
     const members = labelZ.map((z) => ({
       matrix: { elements: identityAt(3, 1.2, z).elements },
@@ -215,9 +221,9 @@ describe('场景驱动', () => {
     let syncs = 0
     const scene: StationNode = {
       getObjectByName(name: string) {
-        if (name === 'WorkstationDesks') return { name, ...desks, isInstancedMesh: true }
-        if (name === 'WorkstationChairs') return { name, ...chairs, isInstancedMesh: true }
-        if (name === 'DeviceBadges') return { name, ...badges, isInstancedMesh: true }
+        if (name === 'WorkstationDesks') return { name, ...desks, isInstancedMesh: true, computeBoundingSphere: markSphere }
+        if (name === 'WorkstationChairs') return { name, ...chairs, isInstancedMesh: true, computeBoundingSphere: markSphere }
+        if (name === 'DeviceBadges') return { name, ...badges, isInstancedMesh: true, computeBoundingSphere: markSphere }
         if (name === 'RoomLabelBatchedText') return { name, _members: members, sync: () => { syncs += 1 } }
         return undefined
       },
@@ -226,6 +232,8 @@ describe('场景驱动', () => {
     const start = driveStation(drive, scene, true, 'floor', 1)
     expect(start.animating).toBe(true)
     expect(start.needsUpdate).toBe(3)
+    expect(spheres).toBe(3)
+    expect(explodePickProbe()).toMatchObject({ built: 0, animating: true, refreshed: 3 })
     expect(desks.needs).toBe(1)
     expect(chairs.needs).toBe(1)
     expect(badges.needs).toBe(1)
@@ -238,6 +246,8 @@ describe('场景驱动', () => {
     expect(done.progress).toBe(1)
     expect(done.animating).toBe(false)
     expect(done.needsUpdate).toBe(3)
+    expect(spheres).toBe(6)
+    expect(explodePickProbe().built).toBe(0)
     const deskShift = translation(desks.array, 1).z - 2.2
     const badgeShift = translation(badges.array, 0).z - 2.2
     const labelShift = (members[1]?.matrix.elements[14] ?? 0) - 2.2
@@ -247,6 +257,8 @@ describe('场景驱动', () => {
     const held = driveStation(drive, scene, true, 'floor', 1 + EXPLODE_DURATION_S + 1)
     expect(held.needsUpdate).toBe(0)
     expect(held.progress).toBe(1)
+    expect(spheres).toBe(6)
+    expect(explodePickProbe()).toMatchObject({ built: 0, animating: false })
     desks.needs = 0
     const left = driveStation(drive, scene, true, 'building', 9)
     expect(left.progress).toBe(0)
@@ -257,7 +269,10 @@ describe('场景驱动', () => {
     expect(members[1]?.matrix.elements[14]).toBeCloseTo(2.2, 5)
     expect(members[1]?.matrixAutoUpdate).toBe(true)
     expect(desks.needs).toBe(1)
+    expect(spheres).toBe(9)
+    expect(explodePickProbe().built).toBe(0)
     resetStationExplodeMotion()
+    resetExplodePickForTests()
   })
 
   it('圆标和标签记下 rest 后跟同一进度，每个圆标网格只 needsUpdate 一次', () => {
@@ -463,6 +478,13 @@ describe('工位分包不进首屏', () => {
     expect(mount).toMatch(/bindStationView\(window/)
     expect(mount).not.toMatch(/from 'three'|from 'zustand'|gsap|anime|@react-spring/)
     expect(drive).not.toMatch(/from 'three'|from 'zustand'/)
+    expect(drive).toMatch(/syncExplodeInstancePick/)
+    expect(drive).toMatch(/allowBuild: !tick\.motion\.animating/)
+    expect(drive).not.toMatch(/computeBoundsTree|disposeBoundsTree|three-mesh-bvh|\.refit\(/)
+    const pick = read('./pick/explodePick.ts')
+    expect(pick).not.toMatch(/from ['"]three['"]|from ['"]three-mesh-bvh['"]/)
+    expect(pick).not.toMatch(/\.refit\s*\(/)
+    expect(pick).toMatch(/allowBuild/)
     expect(math).not.toMatch(/from 'three'/)
     expect(mount).toMatch(/instanceMatrix|setMatrixAt/)
     const deps = { ...pkg.dependencies, ...pkg.devDependencies }
