@@ -1,4 +1,5 @@
 import { badgeExplodeDelta, syncFloorBadgeLifts } from '../scene/badgeExplodePose'
+import { floorExplodeAnimating, syncExplodeInstancePick } from '../scene/pick/explodePick'
 import {
   STATION_EXPLODE_GAP_M,
   applyMemberProgress,
@@ -150,7 +151,6 @@ function capture(drive: StationDrive, scene: StationNode | null | undefined): vo
     drive.meshes.push({ name: node.name ?? '', pairs: baked.pairs, dynamic: false })
     const sink = asSink(node)
     if (sink) markStationDynamic(sink)
-    node.computeBoundingSphere?.()
   }
   if (members.length > 0) {
     drive.members = bakeStationPairs(readMembers(members), frame).pairs
@@ -293,6 +293,12 @@ export function driveStation(
     drive.frame = null
   }
   publishStationPose(drive.frame)
+  // 矩阵写完再刷新包围球。动画中 allowBuild 为假，不补、也不重建局部 BVH。
+  const floor = typeof window === 'undefined' ? undefined : window.__twinExplode
+  syncExplodeInstancePick(scene, STATION_MESH_NAMES, {
+    refresh: tick.write,
+    allowBuild: !tick.motion.animating && !floorExplodeAnimating(floor),
+  })
   const gap = (drive.frame?.gap ?? STATION_EXPLODE_GAP_M) * tick.motion.progress
   return { progress: tick.motion.progress, animating: tick.motion.animating, active, count, gap, needsUpdate }
 }

@@ -715,6 +715,13 @@ interface Window {
     progress: number
     dolly: boolean
   }
+  /** T098：炸开后的实例拾取。built 只在落定后增加，动画帧里不变。 */
+  __twinExplodePick?: {
+    armed: number
+    refreshed: number
+    built: number
+    animating: boolean
+  }
   __twinMonitorBoxes?: TwinMonitorBoxes
   __twinFacadeBoxes?: TwinFacadeBoxes
   __twinSetExploded?: (exploded: boolean) => void
