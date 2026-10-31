@@ -17,6 +17,7 @@ import {
 } from './stationExplode'
 import { STATION_EXPLODE_SOURCE_BLOCK } from '../../scripts/stationExplodePlugin'
 import { createStationDrive, driveStation, type StationNode } from '../station-explode/drive'
+import { bindStationView } from '../station-explode/mount'
 
 function read(path: string): string {
   return readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -258,6 +259,119 @@ describe('场景驱动', () => {
     expect(desks.needs).toBe(1)
     resetStationExplodeMotion()
   })
+
+  it('圆标和标签记下 rest 后跟同一进度，每个圆标网格只 needsUpdate 一次', () => {
+    resetExplodeMotion()
+    resetStationExplodeMotion()
+    const desks = sinkFrom([identityAt(0, 0, 0), identityAt(2, 0, 2.2)])
+    const badges = sinkFrom([identityAt(2, 1.88, 2.2)])
+    const badgeNode = {
+      name: 'DeviceBadges',
+      ...badges,
+      isInstancedMesh: true,
+      userData: {
+        badgePoseOwned: true,
+        badgeFloorId: 'F4',
+        badgeRests: [{ x: 2, y: 1.88, z: 2.2 }],
+      },
+    }
+    const members = [
+      {
+        matrix: { elements: identityAt(3.4, 1.2, 2.05).elements },
+        matrixAutoUpdate: true,
+        matrixWorldNeedsUpdate: false,
+        position: {
+          x: 3.4,
+          y: 1.2,
+          z: 2.05,
+          set(x: number, y: number, z: number) {
+            this.x = x
+            this.y = y
+            this.z = z
+          },
+        },
+        updateMatrix() {
+          this.matrix.elements[12] = this.position.x
+          this.matrix.elements[13] = this.position.y
+          this.matrix.elements[14] = this.position.z
+        },
+        userData: {
+          labelPoseOwned: true,
+          inheritFloorLift: true,
+          explodeRest: [3.4, 1.2, 2.05] as [number, number, number],
+          explodeAnchor: [3, 2.2] as [number, number],
+        },
+      },
+    ]
+    const scene: StationNode = {
+      getObjectByName(name: string) {
+        if (name === 'WorkstationDesks') return { name, ...desks, isInstancedMesh: true }
+        if (name === 'DeviceBadges') return badgeNode
+        if (name === 'RoomLabelBatchedText') return { name, _members: members }
+        return undefined
+      },
+    }
+    const drive = createStationDrive()
+    driveStation(drive, scene, true, 'floor', 5)
+    desks.needs = 0
+    badges.needs = 0
+    const done = driveStation(drive, scene, true, 'floor', 5 + EXPLODE_DURATION_S)
+    expect(done.progress).toBe(1)
+    expect(badges.needs).toBe(1)
+    const deskShift = translation(desks.array, 1).z - 2.2
+    const badgeShift = translation(badges.array, 0).z - 2.2
+    expect(badgeShift).toBeCloseTo(deskShift, 5)
+    expect(translation(badges.array, 0).x).toBeCloseTo(2, 5)
+    expect(badges.array[13]).toBeCloseTo(1.88, 5)
+    const labelShift = (members[0]?.matrix.elements[14] ?? 0) - 2.05
+    expect(labelShift).toBeCloseTo(deskShift, 5)
+    expect(members[0]?.matrix.elements[12]).not.toBeCloseTo(3, 5)
+    const held = driveStation(drive, scene, true, 'floor', 5 + EXPLODE_DURATION_S + 1)
+    expect(held.needsUpdate).toBe(0)
+    expect(badges.needs).toBe(1)
+    resetExplodeMotion()
+    resetStationExplodeMotion()
+  })
+
+  it('单层收拢这一帧就落到 rest，圆标不再停在 cubic.out 尾巴上', () => {
+    resetExplodeMotion()
+    resetStationExplodeMotion()
+    const desks = sinkFrom([identityAt(0, 0, 0), identityAt(2, 0, 2.2)])
+    const badges = sinkFrom([identityAt(2, 1.88, 2.2)])
+    const badgeNode = {
+      name: 'DeviceBadges',
+      ...badges,
+      isInstancedMesh: true,
+      userData: {
+        badgePoseOwned: true,
+        badgeFloorId: 'F4',
+        badgeRests: [{ x: 2, y: 1.88, z: 2.2 }],
+      },
+    }
+    const scene: StationNode = {
+      getObjectByName(name: string) {
+        if (name === 'WorkstationDesks') return { name, ...desks, isInstancedMesh: true }
+        if (name === 'DeviceBadges') return badgeNode
+        return undefined
+      },
+    }
+    const drive = createStationDrive()
+    driveStation(drive, scene, true, 'floor', 5)
+    driveStation(drive, scene, true, 'floor', 5 + EXPLODE_DURATION_S)
+    const closed = driveStation(drive, scene, false, 'floor', 5 + EXPLODE_DURATION_S + 0.05)
+    expect(closed.progress).toBe(0)
+    expect(closed.animating).toBe(false)
+    expect(closed.active).toBe(false)
+    const badge = translation(badges.array, 0)
+    const desk = translation(desks.array, 1)
+    expect(Math.abs(badge.x - 2)).toBeLessThanOrEqual(0.08)
+    expect(Math.abs(badge.z - 2.2)).toBeLessThanOrEqual(0.08)
+    expect(Math.abs((badges.array[13] ?? 0) - 1.88)).toBeLessThanOrEqual(0.08)
+    expect(Math.abs(desk.x - 2)).toBeLessThanOrEqual(0.08)
+    expect(Math.abs(desk.z - 2.2)).toBeLessThanOrEqual(0.08)
+    resetExplodeMotion()
+    resetStationExplodeMotion()
+  })
 })
 
 describe('工位分包不进首屏', () => {
@@ -284,6 +398,7 @@ describe('工位分包不进首屏', () => {
     expect(layout).not.toMatch(/setMatrixAt\(/)
     expect(layout).toMatch(/position\.y/)
     expect(mount).toMatch(/internal\?\.subscribe\?\.\(ref, 0, root\.store\)/)
+    expect(mount).toMatch(/bindStationView\(window/)
     expect(mount).not.toMatch(/from 'three'|from 'zustand'|gsap|anime|@react-spring/)
     expect(drive).not.toMatch(/from 'three'|from 'zustand'/)
     expect(math).not.toMatch(/from 'three'/)
@@ -294,5 +409,23 @@ describe('工位分包不进首屏', () => {
     expect(deps['@react-spring/three']).toBeUndefined()
     expect(deps.three).toBe('0.186.1')
     expect(deps['@react-three/drei']).toBe('10.7.9')
+  })
+})
+
+describe('离开单层卸工位按钮', () => {
+  it('视图写成总览或蓝图时当场回调，停在单层或短暂缺值时不动', () => {
+    const host: { __twinView?: string } = { __twinView: 'floor' }
+    const left: string[] = []
+    bindStationView(host, (view) => left.push(view))
+    bindStationView(host, () => left.push('second'))
+    host.__twinView = 'floor'
+    host.__twinView = undefined
+    expect(host.__twinView).toBeUndefined()
+    expect(left).toEqual([])
+    host.__twinView = 'building'
+    expect(host.__twinView).toBe('building')
+    expect(left).toEqual(['building'])
+    host.__twinView = 'blueprint'
+    expect(left).toEqual(['building', 'blueprint'])
   })
 })

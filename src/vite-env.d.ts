@@ -675,6 +675,28 @@ interface Window {
     /** 这一帧置过 instanceMatrix.needsUpdate 的网格数。每个网格一次，不是每个实例一次。 */
     needsUpdate: number
   }
+  /** T095：工位分包公布的分层。圆标和标签用它算增量，不另建时钟。 */
+  __twinStationFrame?: {
+    axis: 'x' | 'z'
+    band: number
+    gap: number
+    keys: number[]
+    radial: boolean
+    originX: number
+    originZ: number
+  } | null
+  /**
+   * 首屏那份楼层时钟。工位分包另有一份 explode.ts，不能拿它的 readExplodeMotion 当外壳进度。
+   * 没挂上时，分包改读 __twinExplode.progress。
+   */
+  __twinReadExplodeMotion?: () => { progress: number; animating: boolean }
+  /** T095：写圆标矩阵或标签 Y 时读。实现在工位分包，内部走 badgeExplodeOffset / readExplodeMotion / readStationExplodeMotion。 */
+  __twinBadgeExplodeDelta?: (
+    floorId: string,
+    anchorX: number,
+    anchorZ: number,
+    inheritFloorLift: boolean,
+  ) => { x: number; y: number; z: number }
   __twinMonitorBoxes?: TwinMonitorBoxes
   __twinFacadeBoxes?: TwinFacadeBoxes
   __twinSetExploded?: (exploded: boolean) => void

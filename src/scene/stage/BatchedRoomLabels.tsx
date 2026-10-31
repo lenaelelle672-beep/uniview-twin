@@ -98,21 +98,49 @@ function applyWrap(text: Text, fontSize: number) {
   text.whiteSpace = 'normal'
 }
 
+const ZERO_DELTA = { x: 0, y: 0, z: 0 }
+
+function labelDelta(floorId: string, anchorX: number, anchorZ: number, inheritFloorLift: boolean) {
+  if (typeof window === 'undefined') return ZERO_DELTA
+  return window.__twinBadgeExplodeDelta?.(floorId, anchorX, anchorZ, inheritFloorLift) ?? ZERO_DELTA
+}
+
+function labelPoseKey(): string {
+  if (typeof window === 'undefined') return '0'
+  const station = window.__twinStationExplode
+  const floor = window.__twinExplode
+  const frame = window.__twinStationFrame
+  const hooked = typeof window.__twinBadgeExplodeDelta === 'function' ? 1 : 0
+  return `${hooked}|${station?.progress ?? 0}|${floor?.progress ?? 0}|${frame?.axis ?? ''}|${frame?.keys.length ?? 0}|${frame?.radial ? 1 : 0}`
+}
+
+/**
+ * 避让后的本地点再叠加爆炸增量。
+ * 增量按房间锚点分层，不按挤开后的点。挂在楼层外壳上时不再加竖直偏移。
+ * 图层或避让隐藏只改透明和缩放，不在这里改成可见。
+ */
 function applyPlacement(
   text: Text,
-  base: [number, number, number],
+  anchor: [number, number, number],
+  local: [number, number, number],
   placement: LabelPlacementState | undefined,
   fade: number,
   show: boolean,
   fontSize: number,
+  floorId: string,
+  inheritFloorLift: boolean,
 ) {
   const visible = show && placement?.visible === true
   text.fillOpacity = visible ? fade : 0
   text.outlineOpacity = visible ? fade * ROOM_LABEL_OUTLINE_OPACITY : 0
   text.scale.setScalar(visible ? 1 : 0.001)
-  const local = placement?.local ?? base
   const y = Math.max(local[1], labelLiftY(fontSize))
-  text.position.set(local[0], y, local[2])
+  const delta = labelDelta(floorId, anchor[0], anchor[2], inheritFloorLift)
+  text.position.set(local[0] + delta.x, y + delta.y, local[2] + delta.z)
+  text.userData.explodeRest = [local[0], y, local[2]]
+  text.userData.explodeAnchor = [anchor[0], anchor[2]]
+  text.userData.inheritFloorLift = inheritFloorLift
+  text.userData.labelPoseOwned = true
   text.updateMatrix()
 }
 
@@ -161,17 +189,32 @@ export function BatchedRoomLabels({
   const signature = labels.map((label) => `${label.id}|${label.text}|${label.label.join(',')}`).join(';')
   const clusters = clusterTemplates(labels)
   const appliedPackRef = useRef('')
+  const poseKeyRef = useRef('')
+  const inheritFloorLiftRef = useRef(false)
 
   const writePack = (pack: LabelPackState) => {
     const members = membersRef.current
     if (members.length === 0) return
     applyMemberFades(members, fadesRef.current)
     const fades = fadesRef.current
+    const floor = floorId
+    const inherit = inheritFloorLiftRef.current
     for (let i = 0; i < members.length; i += 1) {
       const label = labels[i]
       const text = members[i]
       if (!label || !text) continue
-      applyPlacement(text, label.label, pack.byId[label.id], fades[i] ?? 1, true, fontSizeRef.current)
+      const place = pack.byId[label.id]
+      applyPlacement(
+        text,
+        label.label,
+        place?.local ?? label.label,
+        place,
+        fades[i] ?? 1,
+        true,
+        fontSizeRef.current,
+        floor,
+        inherit,
+      )
     }
     for (let i = 0; i < clustersRef.current.length; i += 1) {
       const cluster = clusters[i]
@@ -179,20 +222,24 @@ export function BatchedRoomLabels({
       if (!cluster || !text) continue
       const state = pack.clusters[cluster.key]
       const show = Boolean(state?.visible)
-      const base = state?.local ?? state?.world ?? cluster.label
+      const anchor = state?.world ?? cluster.label
+      const local = state?.local ?? anchor
       applyPlacement(
         text,
-        base,
+        anchor,
+        local,
         {
           visible: show,
           cluster: cluster.key,
           offsetX: state?.offsetX ?? 0,
           offsetY: state?.offsetY ?? 0,
-          local: state?.local ?? state?.world,
+          local,
         },
         1,
         show,
         fontSizeRef.current,
+        floor,
+        inherit,
       )
     }
     let sig = ''
@@ -223,7 +270,9 @@ export function BatchedRoomLabels({
     }
     host.position.y = keepY
     shell.add(host)
+    inheritFloorLiftRef.current = true
     return () => {
+      inheritFloorLiftRef.current = false
       parent?.add(host)
       host.position.y = 0
     }
@@ -511,9 +560,14 @@ export function BatchedRoomLabels({
     for (const [key, row] of Object.entries(pack.clusters)) {
       if (row.visible) sig += `c${key}:${row.local?.join(',') ?? ''};`
     }
-    if (sig === appliedPackRef.current) return
+    const driveWriting = typeof window !== 'undefined' && window.__twinStationExplode?.animating === true
+    const pose = driveWriting ? poseKeyRef.current : labelPoseKey()
+    const packChanged = sig !== appliedPackRef.current
+    const poseChanged = pose !== poseKeyRef.current
+    if (!packChanged && !poseChanged) return
     // 矩阵在这次渲染前已经写完。再 invalidate 会让标签上屏后再交一帧。
     writePack(pack)
+    poseKeyRef.current = pose
   })
 
   return <group ref={groupRef} name="RoomLabelBatch" />
