@@ -183,6 +183,8 @@ export function CameraRig({
     const seen = effectEpoch.current
     keepDemandTransition(rig)
     window.__twinRig = rig as unknown as Window['__twinRig']
+    // 单层不在这里 fit。总览爆炸仍抬 bounds.max.y。
+    // 工位炸开后的包围盒、fit 和 dolly 在 FloorStageCamera；节流和导览让路在 explodeFitGate。
     if (view === 'floor') {
       rig.setBoundary(undefined)
       if (interrupted) noteRested()

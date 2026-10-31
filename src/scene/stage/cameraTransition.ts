@@ -66,3 +66,9 @@ export function floorFramingGlide(input: {
 }): boolean {
   return input.seen && input.targetChanged && !input.resizeOnly
 }
+
+/**
+ * 楼层工位爆炸的 fit 节流、落定和导览让路在 explodeFitGate.ts。
+ * 和这里共用同一条口径：爆炸 fitToBox 不打开过渡，避免距离上限和极角被拆开。
+ * 进度 scrub 与炸开落定走同一道门。那个文件只有楼层相机引用，不进首屏。
+ */
