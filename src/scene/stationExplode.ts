@@ -1,4 +1,4 @@
-import { EXPLODE_DURATION_S, stepStationExplodeMotion, type ExplodeMotion } from './explode'
+import { EXPLODE_DURATION_S, resetStationExplodeMotion, stepStationExplodeMotion, type ExplodeMotion } from './explode'
 
 /**
  * 工位级拆解。对标 APS「按层只沿一根轴拉开」：
@@ -223,6 +223,14 @@ export interface MemberSink {
   matrix: { elements: { [index: number]: number } }
   matrixAutoUpdate?: boolean
   matrixWorldNeedsUpdate?: boolean
+  position?: { set: (x: number, y: number, z: number) => void }
+  updateMatrix?: () => void
+  userData?: {
+    explodeRest?: [number, number, number]
+    explodeAnchor?: [number, number]
+    inheritFloorLift?: boolean
+    labelPoseOwned?: boolean
+  }
 }
 
 /** 标签成员没有实例槽时，直接改矩阵平移列。不碰 position，不逐个 needsUpdate。 */
@@ -246,6 +254,7 @@ export function applyMemberProgress(members: MemberSink[], pairs: StationPair[],
 /**
  * 决定这一帧写不写、要不要重新抓 rest。
  * 离开楼层时 stepStationExplodeMotion 已经把进度打成 0。
+ * 单层收拢不走 0.8 秒尾巴：昼景停稳后再要帧会被截住，采样时还剩大约 0.03，圆标离 rest 超过 0.08。
  */
 export function stationTick(
   posed: boolean,
@@ -255,7 +264,11 @@ export function stationTick(
   view: string,
   now: number,
 ): StationTick & { posed: boolean; captured: boolean; settled: boolean } {
-  const motion = stepStationExplodeMotion(exploded, view, now)
+  let motion = stepStationExplodeMotion(exploded, view, now)
+  if (view === 'floor' && !exploded && (motion.animating || motion.progress !== 0)) {
+    resetStationExplodeMotion()
+    motion = { progress: 0, animating: false }
+  }
   const live = motion.animating || motion.progress !== 0
   if (!live) {
     return { motion, write: posed, capture: false, posed: false, captured: false, settled: false }

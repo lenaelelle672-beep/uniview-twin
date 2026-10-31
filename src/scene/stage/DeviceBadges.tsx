@@ -8,7 +8,7 @@ import {
   CanvasTexture,
   InstancedBufferAttribute,
   InstancedMesh,
-  Object3D,
+  Matrix4,
   PlaneGeometry,
   SRGBColorSpace,
   ShaderMaterial,
@@ -16,7 +16,50 @@ import {
 import type { Device } from '../../types'
 import { BADGE_SIZE, BADGE_Y, deviceBadges, STATUS_GLYPH } from './badges'
 
-const dummy = new Object3D()
+const scratch = new Matrix4()
+const ZERO_DELTA = { x: 0, y: 0, z: 0 }
+
+function badgePoseKey(): string {
+  if (typeof window === 'undefined') return '0'
+  const station = window.__twinStationExplode
+  const floor = window.__twinExplode
+  const frame = window.__twinStationFrame
+  const hooked = typeof window.__twinBadgeExplodeDelta === 'function' ? 1 : 0
+  return `${hooked}|${station?.progress ?? 0}|${floor?.progress ?? 0}|${frame?.axis ?? ''}|${frame?.keys.length ?? 0}|${frame?.radial ? 1 : 0}`
+}
+
+function badgeDelta(floorId: string, x: number, z: number) {
+  if (typeof window === 'undefined') return ZERO_DELTA
+  return window.__twinBadgeExplodeDelta?.(floorId, x, z, false) ?? ZERO_DELTA
+}
+
+/**
+ * 一批 setMatrixAt，循环外只打一次 needsUpdate。
+ * 位移来自工位分包安装的读数：badgeExplodeOffset / readExplodeMotion / readStationExplodeMotion。
+ * 图层关掉时组件不挂，这里不改可见性。
+ */
+function writeDeviceBadgeMatrices(
+  mesh: InstancedMesh,
+  badges: ReturnType<typeof deviceBadges>,
+  geometry: PlaneGeometry,
+  floorId: string,
+) {
+  const attribute = geometry.getAttribute('aStatus') as InstancedBufferAttribute
+  const hook = typeof window !== 'undefined' && typeof window.__twinBadgeExplodeDelta === 'function'
+  mesh.userData.badgePoseOwned = hook
+  mesh.userData.badgeFloorId = floorId
+  mesh.userData.badgeRests = badges.map((badge) => ({ x: badge.x, y: BADGE_Y, z: badge.z }))
+  badges.forEach((badge, index) => {
+    const delta = badgeDelta(floorId, badge.x, badge.z)
+    scratch.makeTranslation(badge.x + delta.x, BADGE_Y + delta.y, badge.z + delta.z)
+    mesh.setMatrixAt(index, scratch)
+    attribute.setX(index, STATUS_GLYPH[badge.status].index)
+  })
+  mesh.count = badges.length
+  mesh.instanceMatrix.needsUpdate = true
+  attribute.needsUpdate = true
+  mesh.computeBoundingSphere()
+}
 
 const vertexShader = /* glsl */ `
 attribute float aStatus;
@@ -102,6 +145,7 @@ function createBadgeAtlas(): CanvasTexture {
 function DeviceBadgesLive({ floorId, devices }: { floorId: string; devices: Device[] }) {
   const badges = useMemo(() => deviceBadges(floorId, devices), [devices, floorId])
   const meshRef = useRef<InstancedMesh>(null)
+  const poseKey = useRef('')
   const time = useRef({ value: 0 })
   const discrete = useRef({ value: 0 })
   const hasAlarm = badges.some((badge) => badge.status === 'alarm')
@@ -146,20 +190,9 @@ function DeviceBadgesLive({ floorId, devices }: { floorId: string; devices: Devi
   useLayoutEffect(() => {
     const mesh = meshRef.current
     if (!mesh || badges.length === 0) return
-    const attribute = resources.geometry.getAttribute('aStatus') as InstancedBufferAttribute
-    badges.forEach((badge, index) => {
-      dummy.position.set(badge.x, BADGE_Y, badge.z)
-      dummy.rotation.set(0, 0, 0)
-      dummy.scale.set(1, 1, 1)
-      dummy.updateMatrix()
-      mesh.setMatrixAt(index, dummy.matrix)
-      attribute.setX(index, STATUS_GLYPH[badge.status].index)
-    })
-    mesh.count = badges.length
-    mesh.instanceMatrix.needsUpdate = true
-    attribute.needsUpdate = true
-    mesh.computeBoundingSphere()
-  }, [badges, resources.geometry])
+    writeDeviceBadgeMatrices(mesh, badges, resources.geometry, floorId)
+    poseKey.current = badgePoseKey()
+  }, [badges, floorId, resources.geometry])
 
   useEffect(() => {
     const { texture, geometry, material } = resources
@@ -171,6 +204,20 @@ function DeviceBadgesLive({ floorId, devices }: { floorId: string; devices: Devi
   }, [resources])
 
   useFrame(({ clock }) => {
+    const mesh = meshRef.current
+    const hook = typeof window !== 'undefined' && typeof window.__twinBadgeExplodeDelta === 'function'
+    if (mesh && hook && badges.length > 0) {
+      mesh.userData.badgePoseOwned = true
+      // 动画中由工位分包写这一批，避免同一帧 needsUpdate 两次。落定或晚挂时在这里补上。
+      const driveWriting = window.__twinStationExplode?.animating === true
+      if (!driveWriting) {
+        const key = badgePoseKey()
+        if (key !== poseKey.current) {
+          writeDeviceBadgeMatrices(mesh, badges, resources.geometry, floorId)
+          poseKey.current = key
+        }
+      }
+    }
     if (!blinkLive('alarm')) return
     const quality = useTwinStore.getState().quality
     if (quality === 'perf') {

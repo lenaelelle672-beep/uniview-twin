@@ -1,3 +1,4 @@
+import { installBadgePoseHooks } from '../scene/badgeExplodePose'
 import { createStationDrive, driveStation, type StationNode } from './drive'
 
 /**
@@ -12,8 +13,34 @@ let wake = 0
 let paintSoon = 0
 let wanted = false
 let seenView = ''
+let framing = 0
 let button: HTMLButtonElement | null = null
 const drive = createStationDrive()
+
+/**
+ * `__twinView` 写成 building / blueprint 时立刻卸工位按钮。
+ * 昼景停稳后 demand 不再交帧，卸按钮若只放在 onFrame，宽屏昼景离开单层后按钮会留在总览。
+ * 值短暂缺失时不调用 onLeave，仍沿用上一帧 seenView，不把跟随闩清掉。
+ */
+export function bindStationView(
+  host: { __twinView?: string },
+  onLeave: (view: 'building' | 'blueprint') => void,
+): void {
+  const desc = Object.getOwnPropertyDescriptor(host, '__twinView')
+  if (desc?.set) return
+  let current = host.__twinView
+  Object.defineProperty(host, '__twinView', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      return current
+    },
+    set(next: string | undefined) {
+      current = next
+      if (next === 'building' || next === 'blueprint') onLeave(next)
+    },
+  })
+}
 
 interface FrameState {
   clock: { elapsedTime: number }
@@ -78,12 +105,65 @@ function syncWanted(view: string): void {
   if (typeof aim === 'number') wanted = aim > 0
 }
 
+function dropStationButtons(): void {
+  if (button) {
+    button.hidden = true
+    button.remove()
+    button = null
+  }
+  if (typeof document === 'undefined') return
+  const nodes = document.querySelectorAll('button.explode-button')
+  for (const node of nodes) {
+    const label = `${node.getAttribute('aria-label') ?? ''} ${node.textContent ?? ''}`
+    if (!label.includes('工位')) continue
+    node.remove()
+  }
+}
+
+/** 已经确认不在单层。取消还没落地的文案刷新，避免 rAF 把「收拢工位」写回去。 */
+function releaseFloorControl(next: 'building' | 'blueprint'): void {
+  seenView = next
+  wanted = false
+  if (window.__twinExplodeFollow) window.__twinExplodeFollow = false
+  if (paintSoon) {
+    cancelAnimationFrame(paintSoon)
+    paintSoon = 0
+  }
+  dropStationButtons()
+}
+
+function noteLeave(view: 'building' | 'blueprint'): void {
+  if (framing) {
+    queueMicrotask(() => {
+      const live = window.__twinView
+      if (live === 'building' || live === 'blueprint') releaseFloorControl(live)
+    })
+    return
+  }
+  releaseFloorControl(view)
+}
+
+function installLeaveHook(): void {
+  bindStationView(window, noteLeave)
+}
+
+function recheckLeave(): void {
+  installLeaveHook()
+  const live = window.__twinView
+  if (live === 'building' || live === 'blueprint') noteLeave(live)
+}
+
+function armLeaveRecheck(): void {
+  const schedule = () => {
+    queueMicrotask(recheckLeave)
+  }
+  window.addEventListener('click', schedule, true)
+  window.addEventListener('keydown', schedule, true)
+}
+
 function ensureButton(view: string): void {
   if (view !== 'floor') {
-    if (wanted) wanted = false
-    if (window.__twinExplodeFollow) window.__twinExplodeFollow = false
-    button?.remove()
-    button = null
+    releaseFloorControl(view === 'blueprint' ? 'blueprint' : 'building')
     return
   }
   const stage = document.querySelector('main.stage')
@@ -116,16 +196,22 @@ function ensureButton(view: string): void {
 }
 
 function onFrame(state: FrameState): void {
-  const live = window.__twinView
-  if (live === 'floor' || live === 'building' || live === 'blueprint') seenView = live
-  const view = seenView || live || 'building'
-  syncWanted(view)
-  ensureButton(view)
-  const scene = window.__twinScene as StationNode | undefined
-  const stats = driveStation(drive, scene, wanted, view, state.clock.elapsedTime)
-  window.__twinStationExplode = stats
-  // 停稳这一帧的渲染还没开始，静止矩阵已经写进实例。尾帧会落进 1024 的 1.8 秒窗。
-  if (stats.animating) askFrame(state.invalidate)
+  framing += 1
+  try {
+    installLeaveHook()
+    const live = window.__twinView
+    if (live === 'floor' || live === 'building' || live === 'blueprint') seenView = live
+    const view = seenView || live || 'building'
+    syncWanted(view)
+    ensureButton(view)
+    const scene = window.__twinScene as StationNode | undefined
+    const stats = driveStation(drive, scene, wanted, view, state.clock.elapsedTime)
+    window.__twinStationExplode = stats
+    // 停稳这一帧的渲染还没开始，静止矩阵已经写进实例。尾帧会落进 1024 的 1.8 秒窗。
+    if (stats.animating) askFrame(state.invalidate)
+  } finally {
+    framing -= 1
+  }
 }
 
 function attach(): void {
@@ -143,5 +229,9 @@ function attach(): void {
 export function mountStationExplode(): void {
   if (started) return
   started = true
+  installBadgePoseHooks()
+  installLeaveHook()
+  armLeaveRecheck()
+  recheckLeave()
   attach()
 }
