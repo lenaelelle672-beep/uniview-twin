@@ -1,3 +1,4 @@
+/* T104 令牌：--muted #3a4a5c；--line #8aa0b8；--lift 0 1px 0 #fff, 0 8px 16px #0c234038；--hud 0 1px 0 #fff6, 0 8px 14px #0c234059；--glass blur(6px)，只铺在横幅上。 */
 :root {
   color: #122033;
   background: #e7eef6;
@@ -38,7 +39,6 @@ button {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
   clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
@@ -142,14 +142,15 @@ button {
   width: 100%;
   height: 32px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid #ffffff59;
+  background: #ffffff1a;
+  box-shadow: inset 0 1px 2px #0006;
   color: #fff;
   padding: 0 10px;
 }
 
 .search::placeholder {
-  color: rgba(255, 255, 255, 0.82);
+  color: #fffffff2;
 }
 
 .search-list {
@@ -161,10 +162,11 @@ button {
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: #fff;
+  background: #ffffffeb;
   color: #122033;
+  border: 1px solid #8aa0b8;
   border-radius: 8px;
-  box-shadow: 0 10px 28px rgba(12, 24, 40, 0.28);
+  box-shadow: 0 1px 0 #fff, 0 8px 16px #0c234038;
 }
 
 .search-option,
@@ -201,7 +203,7 @@ button {
   display: grid;
   gap: 2px;
   padding: 8px 0;
-  border-bottom: 1px solid #e6edf5;
+  border-bottom: 1px solid #8aa0b8;
 }
 
 .workspace {
@@ -229,8 +231,9 @@ button {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border-color: #d5deea;
+  border-color: #8aa0b8;
   border-style: solid;
+  box-shadow: 0 1px 0 #fff, 0 8px 16px #0c234038;
 }
 
 .floor-panel {
@@ -243,12 +246,6 @@ button {
   flex: none;
   border-width: 0 1px 0 0;
   transform: translateZ(0);
-}
-
-.floor-panel.is-collapsed {
-  width: 0;
-  border-width: 0;
-  overflow: hidden;
 }
 
 .floor-panel.is-overview-compact,
@@ -356,7 +353,7 @@ button {
   min-height: 0;
   padding: 0 10px 12px;
   scrollbar-width: thin;
-  scrollbar-color: #0c2340 #d5deea;
+  scrollbar-color: #0c2340 #8aa0b8;
 }
 
 .floor-item {
@@ -365,7 +362,7 @@ button {
   grid-template-columns: auto 1fr;
   gap: 2px 8px;
   text-align: left;
-  border: 1px solid #c5d4e4;
+  border: 1px solid #8aa0b8;
   background: #eef4fa;
   color: #122033;
   border-radius: 8px;
@@ -376,7 +373,7 @@ button {
 .floor-item.is-selected {
   background: #b7d2f0;
   border-color: #0b6bcb;
-  box-shadow: inset 3px 0 0 #0b6bcb;
+  box-shadow: inset 3px 0 #0b6bcb, 0 1px 0 #fff;
   color: #0c2340;
   font-weight: 700;
 }
@@ -424,7 +421,7 @@ button {
 .panel-hint,
 .panel-note {
   margin: 0 0 10px;
-  color: #526070;
+  color: #3a4a5c;
 }
 
 .detail-list {
@@ -443,7 +440,7 @@ button {
   align-items: flex-start;
   gap: 12px;
   padding: 6px 0;
-  border-bottom: 1px solid #c5d3e2;
+  border-bottom: 1px solid #8aa0b8;
 }
 
 .detail-list dt {
@@ -465,7 +462,7 @@ button {
 
 .detail-panel .desk-devices li {
   color: #122033;
-  border-bottom-color: #c5d3e2;
+  border-bottom-color: #8aa0b8;
 }
 
 .stage {
@@ -493,7 +490,7 @@ button {
 
 .blueprint-empty {
   margin: auto;
-  color: #526070;
+  color: #3a4a5c;
 }
 
 .blueprint-toolbar {
@@ -505,7 +502,7 @@ button {
   min-width: 0;
   padding: 8px 12px;
   background: #fff;
-  border-bottom: 1px solid #d5deea;
+  border-bottom: 1px solid #8aa0b8;
 }
 
 .blueprint-toolbar p {
@@ -517,7 +514,7 @@ button {
 .blueprint-count {
   margin-left: 8px;
   font-weight: 650;
-  color: #526070;
+  color: #3a4a5c;
 }
 
 .blueprint-zoom {
@@ -527,14 +524,14 @@ button {
 }
 
 .blueprint-zoom button {
-  border: 1px solid #c5d0de;
+  border: 1px solid #8aa0b8;
   background: #fff;
   border-radius: 8px;
   padding: 4px 8px;
 }
 
 .blueprint-zoom button:disabled {
-  color: #98a2b3;
+  color: #5e6d7e;
   cursor: default;
 }
 
@@ -618,7 +615,7 @@ button {
   padding: 8px 12px;
   list-style: none;
   background: #fff;
-  border-top: 1px solid #d5deea;
+  border-top: 1px solid #8aa0b8;
   max-width: 100%;
 }
 
@@ -629,7 +626,6 @@ button {
   white-space: nowrap;
 }
 
-.scene-caption,
 .view-chip,
 .banner {
   position: absolute;
@@ -643,9 +639,10 @@ button {
   right: 12px;
   padding: 10px 12px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
+  background: #ffffffeb;
   color: #122033;
-  box-shadow: 0 6px 18px rgba(16, 32, 51, 0.12);
+  box-shadow: 0 1px 0 #fff, 0 8px 16px #0c234038;
+  backdrop-filter: blur(6px);
   overflow-wrap: anywhere;
 }
 
@@ -659,8 +656,7 @@ button {
   top: 64px;
 }
 
-.view-chip,
-.scene-caption {
+.view-chip {
   bottom: 12px;
   padding: 4px 8px;
   border-radius: 999px;
@@ -722,12 +718,12 @@ button {
   position: absolute;
   z-index: 3;
   top: 12px;
-  border: 0;
+  border: 1px solid #fff3;
   border-radius: 8px;
   padding: 8px 14px;
   background: #0c2340;
   color: #fff;
-  box-shadow: 0 6px 18px rgba(16, 32, 51, 0.2);
+  box-shadow: 0 1px 0 #fff6, 0 8px 14px #0c234059;
 }
 
 .back-button {
@@ -740,10 +736,6 @@ button {
 
 .explode-button.is-active {
   background: #9a3412;
-}
-
-.scene-caption {
-  right: 12px;
 }
 
 .fatal {
@@ -789,12 +781,6 @@ button {
 }
 
 @media (max-width: 1100px) {
-  .app:has(.floor-rail) .alarm-drawer:not(.is-floor-collapsed) {
-    left: 208px;
-    inset-inline-start: 208px;
-    width: min(560px, calc(100vw - 208px - 220px - 12px));
-  }
-
   .topbar {
     gap: 6px;
     padding: 6px 8px;
