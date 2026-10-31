@@ -25,6 +25,7 @@ import { shaderPreloadAfterHash } from './scripts/shaderPreloadPlugin'
 import { fsAccessAfterHash } from './scripts/fsAccessPlugin'
 import { stationExplodeAfterHash } from './scripts/stationExplodePlugin'
 import { explodeProgressAfterHash } from './scripts/explodeProgressPlugin'
+import { simreadyAfterHash } from './scripts/simreadyPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -324,6 +325,7 @@ export default defineConfig({
     shaderPreloadAfterHash(),
     stationExplodeAfterHash(),
     explodeProgressAfterHash(),
+    simreadyAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
