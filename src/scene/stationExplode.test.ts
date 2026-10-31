@@ -17,7 +17,7 @@ import {
 } from './stationExplode'
 import { STATION_EXPLODE_SOURCE_BLOCK } from '../../scripts/stationExplodePlugin'
 import { createStationDrive, driveStation, type StationNode } from '../station-explode/drive'
-import { bindStationView } from '../station-explode/mount'
+import { bindStationView, paceStationClock, resetStationFrameClock, STATION_FRAME_STEP_S } from '../station-explode/mount'
 
 function read(path: string): string {
   return readFileSync(new URL(path, import.meta.url), 'utf8')
@@ -370,6 +370,68 @@ describe('场景驱动', () => {
     expect(Math.abs(desk.x - 2)).toBeLessThanOrEqual(0.08)
     expect(Math.abs(desk.z - 2.2)).toBeLessThanOrEqual(0.08)
     resetExplodeMotion()
+    resetStationExplodeMotion()
+  })
+})
+
+describe('工位时钟空窗', () => {
+  it('一次跳过几秒也只走一拍，丢掉的时间不在下一帧补上', () => {
+    resetStationFrameClock()
+    resetStationExplodeMotion()
+    const drive = createStationDrive()
+    const opened = driveStation(drive, undefined, true, 'floor', paceStationClock(3))
+    expect(opened).toMatchObject({ progress: 0, animating: true })
+    const jumped = driveStation(drive, undefined, true, 'floor', paceStationClock(3 + 6))
+    expect(jumped.animating).toBe(true)
+    expect(jumped.progress).toBeCloseTo(explodeProgress(0, 1, STATION_FRAME_STEP_S), 5)
+    const follow = driveStation(drive, undefined, true, 'floor', paceStationClock(3 + 6 + 0.02))
+    expect(follow.animating).toBe(true)
+    expect(follow.progress).toBeGreaterThan(jumped.progress)
+    expect(follow.progress).toBeCloseTo(explodeProgress(0, 1, STATION_FRAME_STEP_S + 0.02), 5)
+    resetStationFrameClock()
+    resetStationExplodeMotion()
+  })
+
+  it('帧距落在一拍以内时仍按真实时间在 0.8 秒收完', () => {
+    resetStationFrameClock()
+    resetStationExplodeMotion()
+    const drive = createStationDrive()
+    let elapsed = 1
+    let stats = driveStation(drive, undefined, true, 'floor', paceStationClock(elapsed))
+    let steps = 0
+    while (stats.animating && steps < 40) {
+      elapsed += 0.05
+      stats = driveStation(drive, undefined, true, 'floor', paceStationClock(elapsed))
+      steps += 1
+    }
+    expect(stats).toMatchObject({ progress: 1, animating: false })
+    expect(steps).toBe(EXPLODE_DURATION_S / 0.05)
+    expect(elapsed - 1).toBeCloseTo(EXPLODE_DURATION_S, 5)
+    resetStationFrameClock()
+    resetStationExplodeMotion()
+  })
+
+  it('空窗再大也要多帧才落到 1，纯函数的整段跳跃不变', () => {
+    resetStationFrameClock()
+    resetStationExplodeMotion()
+    const drive = createStationDrive()
+    let elapsed = 4
+    let stats = driveStation(drive, undefined, true, 'floor', paceStationClock(elapsed))
+    let steps = 0
+    while (stats.animating && steps < 20) {
+      elapsed += 5
+      stats = driveStation(drive, undefined, true, 'floor', paceStationClock(elapsed))
+      steps += 1
+    }
+    expect(steps).toBe(Math.ceil(EXPLODE_DURATION_S / STATION_FRAME_STEP_S))
+    expect(stats).toMatchObject({ progress: 1, animating: false })
+    const held = driveStation(drive, undefined, true, 'floor', paceStationClock(elapsed + 5))
+    expect(held).toMatchObject({ progress: 1, animating: false })
+    resetStationFrameClock()
+    resetStationExplodeMotion()
+    const direct = stepStationExplodeMotion(true, 'floor', 8)
+    expect(stepStationExplodeMotion(true, 'floor', 8 + EXPLODE_DURATION_S)).toEqual({ progress: 1, animating: false })
+    expect(direct.animating).toBe(true)
     resetStationExplodeMotion()
   })
 })

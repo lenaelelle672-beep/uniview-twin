@@ -185,6 +185,18 @@ interface Window {
     probeMs?: number
   }
   __twinInvalidate?: () => Promise<void>
+  /** T097：滑杆、徽标矩阵、fit 共用的 demand 续帧。动画结束即停。 */
+  __twinDemandFrame?: {
+    askFrame: (source: 'slider' | 'badge' | 'fit') => void
+    demandInvalidate: (source: 'slider' | 'badge' | 'fit') => void
+    hold: (source: 'slider' | 'badge' | 'fit') => () => void
+    ready: () => boolean
+    status: () => {
+      holds: { slider: number; badge: number; fit: number }
+      spinning: boolean
+      last: Array<'slider' | 'badge' | 'fit'>
+    }
+  }
   __twinInvalidateNext?: string
   __twinInvalidateLog?: Array<{ t: number; src: string }>
   __twinInvalidateCounts?: Record<string, number>

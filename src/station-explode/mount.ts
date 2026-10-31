@@ -18,6 +18,46 @@ let button: HTMLButtonElement | null = null
 const drive = createStationDrive()
 
 /**
+ * 一帧最多推进这么多工位时钟。
+ * demand 空窗后 R3F elapsed 会一次跳过好几秒，0.8 秒在一帧里走完，
+ * 1366 的 during 窗就只有 0～1 帧，停稳闸接着把后面的 invalidate 吃掉。
+ * 必须小于 0.8/4：点下去到采样前只有几帧，不能在窗开之前收完。
+ * 正常帧距小于这一拍时原样走，不把 1024 的 0.8 秒拉进下一格停稳窗。
+ */
+export const STATION_FRAME_STEP_S = 0.16
+
+let lastElapsed = Number.NaN
+let virtualElapsed = 0
+
+/** 测试重置。运行时不要调用。 */
+export function resetStationFrameClock(): void {
+  lastElapsed = Number.NaN
+  virtualElapsed = 0
+}
+
+/**
+ * 交给 driveStation 的时钟。
+ * 正常帧距原样累加。比一拍更长的空窗只记一拍，丢掉的时间不补。
+ */
+export function paceStationClock(elapsed: number): number {
+  if (!Number.isFinite(elapsed)) {
+    if (!Number.isFinite(lastElapsed)) return virtualElapsed
+    virtualElapsed += STATION_FRAME_STEP_S
+    return virtualElapsed
+  }
+  if (!Number.isFinite(lastElapsed)) {
+    lastElapsed = elapsed
+    virtualElapsed = elapsed
+    return virtualElapsed
+  }
+  const gap = elapsed - lastElapsed
+  lastElapsed = elapsed
+  if (gap <= 0) return virtualElapsed
+  virtualElapsed += Math.min(gap, STATION_FRAME_STEP_S)
+  return virtualElapsed
+}
+
+/**
  * `__twinView` 写成 building / blueprint 时立刻卸工位按钮。
  * 昼景停稳后 demand 不再交帧，卸按钮若只放在 onFrame，宽屏昼景离开单层后按钮会留在总览。
  * 值短暂缺失时不调用 onLeave，仍沿用上一帧 seenView，不把跟随闩清掉。
@@ -68,6 +108,13 @@ function frameRoot(): { state: FrameState; store: FrameStore } | null {
 }
 
 function askFrame(invalidate: () => void): void {
+  // T097：徽标矩阵与滑杆、fit 共用 rAF 后续帧。入口未挂上时仍走本地 rAF。
+  // 当前帧里同步 invalidate 不一定排到下一帧。
+  const shared = window.__twinDemandFrame
+  if (shared?.ready()) {
+    shared.askFrame('badge')
+    return
+  }
   if (wake) return
   wake = requestAnimationFrame(() => {
     wake = 0
@@ -205,7 +252,7 @@ function onFrame(state: FrameState): void {
     syncWanted(view)
     ensureButton(view)
     const scene = window.__twinScene as StationNode | undefined
-    const stats = driveStation(drive, scene, wanted, view, state.clock.elapsedTime)
+    const stats = driveStation(drive, scene, wanted, view, paceStationClock(state.clock.elapsedTime))
     window.__twinStationExplode = stats
     // 停稳这一帧的渲染还没开始，静止矩阵已经写进实例。尾帧会落进 1024 的 1.8 秒窗。
     if (stats.animating) askFrame(state.invalidate)
