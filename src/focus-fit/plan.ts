@@ -170,8 +170,37 @@ export function frameWithControls(rig: FrameRig, box: object, padding: number): 
   return fit
 }
 
-/** 过渡过程中泵 invalidate；promise 结束（或到点）后再 invalidate 一次。 */
+function sharedFitHold(): ((source: 'fit') => () => void) | null {
+  if (typeof window === 'undefined') return null
+  const api = window.__twinDemandFrame
+  if (typeof api?.ready !== 'function' || !api.ready()) return null
+  if (typeof api.hold !== 'function') return null
+  return api.hold
+}
+
+/**
+ * 过渡过程中泵 invalidate；promise 结束（或到点）后再 invalidate 一次。
+ * T097：共用入口就绪时，fit 走 hold('fit')，和滑杆、徽标矩阵合并成一次 rAF。
+ * 入口还没就绪就沿用本地 rAF。结束或到点后停。FixedFramePump 不经过这里。
+ */
 export function pumpUntilSettled(done: Promise<unknown>, invalidate: () => void, now: () => number = () => performance.now()): () => void {
+  const hold = sharedFitHold()
+  if (hold) {
+    let stopped = false
+    let timer = 0
+    const release = hold('fit')
+    const stop = () => {
+      if (stopped) return
+      stopped = true
+      if (timer) clearTimeout(timer)
+      timer = 0
+      release()
+      invalidate()
+    }
+    timer = window.setTimeout(stop, FIT_PUMP_MS)
+    void done.then(stop, stop)
+    return stop
+  }
   let stopped = false
   let raf = 0
   const started = now()
