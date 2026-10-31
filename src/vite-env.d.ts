@@ -310,7 +310,7 @@ interface Window {
     pumpFrames: number
     at: number
   }
-  /** T024：非 perf 档 drei SoftShadows 挂上之后写入，卸载时删掉。 */
+  /** T101：仅 balanced 档 drei SoftShadows 挂上之后写入，卸载时删掉。 */
   __twinSoftShadows?: {
     samples: number
     size: number

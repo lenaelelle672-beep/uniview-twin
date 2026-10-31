@@ -2,9 +2,9 @@ import { BasicShadowMap, PCFShadowMap, type ShadowMapType } from 'three'
 
 /**
  * drei `<SoftShadows>` 默认 samples 是 10，SwiftShader 上偏重。
- * 规格先落在 4–6。size / focus 用 drei 社区默认（25 / 0）。
+ * T101 用 4（规格是 4 或 6）。size / focus 用 drei 社区默认（25 / 0）。
  */
-export const SOFT_SHADOW_SAMPLES = 5
+export const SOFT_SHADOW_SAMPLES = 4
 export const SOFT_SHADOW_SIZE = 25
 export const SOFT_SHADOW_FOCUS = 0
 
@@ -32,8 +32,9 @@ export function resetSoftShadowsMountedForTests(): void {
   mounted = false
 }
 
+/** 只在均衡档挂 PCSS。性能档关闭阴影；高画质继续用 percentage PCF，不走 BasicShadowMap。 */
 export function softShadowsQualityOn(quality: string): boolean {
-  return quality !== 'perf'
+  return quality === 'balanced'
 }
 
 export type SoftShadowGateInput = {
@@ -56,9 +57,11 @@ export type SoftShadowChunkInput = {
  * 主包只留本文件。drei `<SoftShadows>` 在独立分包里。
  * extrasReady 可能早于首帧（预热的 compile 赶在 HDR / Suspense 之前），
  * 所以还要等过 d126 cutoff，import() 才不会进 before-cutoff。
+ * 这道晚窗口对高画质也开着，Scene 用它顺带预取 cameraMotion。
+ * 真正挂 `<SoftShadows>` 还要 softShadowsQualityOn。
  */
 export function softShadowChunkDue(input: SoftShadowChunkInput): boolean {
-  if (!softShadowsQualityOn(input.quality)) return false
+  if (input.quality === 'perf') return false
   if (!input.extrasReady) return false
   if (input.firstFrameAt == null) return false
   return input.now - input.firstFrameAt >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS

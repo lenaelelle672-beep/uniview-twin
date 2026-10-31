@@ -26,17 +26,16 @@ afterEach(() => {
 })
 
 describe('SoftShadows 门闩', () => {
-  it('samples 在 4–6，size / focus 用社区默认', () => {
-    expect(SOFT_SHADOW_SAMPLES).toBeGreaterThanOrEqual(4)
-    expect(SOFT_SHADOW_SAMPLES).toBeLessThanOrEqual(6)
+  it('samples 用 4，size / focus 用社区默认', () => {
+    expect(SOFT_SHADOW_SAMPLES).toBe(4)
     expect(SOFT_SHADOW_SIZE).toBe(25)
     expect(SOFT_SHADOW_FOCUS).toBe(0)
   })
 
-  it('perf 关，balanced 和 high 开', () => {
+  it('只在 balanced 开，perf 和 high 关', () => {
     expect(softShadowsQualityOn('perf')).toBe(false)
     expect(softShadowsQualityOn('balanced')).toBe(true)
-    expect(softShadowsQualityOn('high')).toBe(true)
+    expect(softShadowsQualityOn('high')).toBe(false)
   })
 
   it('首帧之前、烘影未完成、单层飞入中都不开门', () => {
@@ -53,6 +52,7 @@ describe('SoftShadows 门闩', () => {
     expect(softShadowGateOpen({ ...base, frames: undefined })).toBe(false)
     expect(softShadowGateOpen({ ...base, bakePending: true })).toBe(false)
     expect(softShadowGateOpen({ ...base, quality: 'perf' })).toBe(false)
+    expect(softShadowGateOpen({ ...base, quality: 'high' })).toBe(false)
     expect(softShadowGateOpen({ ...base, view: 'floor', cameraRested: false })).toBe(false)
     expect(softShadowGateOpen({ ...base, view: 'floor', cameraRested: true, bakePending: true })).toBe(false)
   })
@@ -66,17 +66,29 @@ describe('SoftShadows 门闩', () => {
       now: 1000 + SOFT_SHADOW_CHUNK_AFTER_FIRST_MS,
     }
     expect(softShadowChunkDue(due)).toBe(true)
+    // 高画质晚窗口仍开，Scene 用它预取 cameraMotion，但不挂 PCSS。
     expect(softShadowChunkDue({ ...due, quality: 'high' })).toBe(true)
+    expect(softShadowsQualityOn('high')).toBe(false)
     expect(softShadowChunkDue({ ...due, quality: 'perf' })).toBe(false)
     expect(softShadowChunkDue({ ...due, extrasReady: false })).toBe(false)
     expect(softShadowChunkDue({ ...due, firstFrameAt: null })).toBe(false)
     expect(softShadowChunkDue({ ...due, now: 1000 + SOFT_SHADOW_CHUNK_AFTER_FIRST_MS - 1 })).toBe(false)
   })
 
-  it('总览不要求相机停稳；单层停稳且烘影结束后才开', () => {
+  it('总览不要求相机停稳；单层停稳且烘影结束后才开；high 不开', () => {
     expect(
       softShadowGateOpen({
         quality: 'high',
+        firstFrameAt: 1,
+        frames: 1,
+        bakePending: false,
+        view: 'building',
+        cameraRested: false,
+      }),
+    ).toBe(false)
+    expect(
+      softShadowGateOpen({
+        quality: 'balanced',
         firstFrameAt: 1,
         frames: 1,
         bakePending: false,
@@ -129,7 +141,7 @@ describe('SoftShadows 门闩', () => {
     expect(chunk.includes('if ( frustumTest ) {')).toBe(true)
   })
 
-  it('Scene 只在非 perf 挂 SoftShadows，不进场地门', () => {
+  it('drei SoftShadows 只在 balanced 渲染，Scene 晚窗口不改，不进场地门', () => {
     const scene = readFileSync(join(here, '../components/Scene.tsx'), 'utf8')
     const gate = readFileSync(join(here, '../components/scene/BalancedSoftShadows.tsx'), 'utf8')
     const fx = readFileSync(join(here, '../components/scene/postfx/balancedFx.tsx'), 'utf8')
@@ -141,15 +153,24 @@ describe('SoftShadows 门闩', () => {
       /const BalancedSoftShadows = lazy\(\(\) =>\s*import\('\.\/scene\/BalancedSoftShadows'\)\.then\(\(mod\) => \(\{ default: mod\.BalancedSoftShadows \}\)\)/,
     )
     expect(scene).toMatch(/softShadowChunkDue/)
+    // T090 把摘掉 Preload 之后的 Scene 锁成逐字节基线。挂载开关放在分包里，不改这一文件。
+    expect(scene).toMatch(/setSoftShadowChunkOn\(true\)/)
     expect(scene).toMatch(/softShadowChunkOn \?/)
+    expect(scene).not.toMatch(/softShadowsQualityOn/)
+    expect(scene).toMatch(/import\('\.\.\/scene\/stage\/cameraMotion'\)/)
     expect(scene).toMatch(/SOFT_SHADOW_CHUNK_AFTER_FIRST_MS/)
     expect(scene).not.toMatch(/__twinFirstFrameAt != null\) setLoopOn\(true\)/)
     expect(scene).not.toMatch(/import \{ BalancedSoftShadows \}/)
     expect(scene).not.toMatch(/@react-three\/drei\/core\/softShadows/)
+    expect(helper).toMatch(/return quality === 'balanced'/)
+    expect(helper).not.toMatch(/quality !== 'perf'/)
     expect(helper).not.toMatch(/@react-three\/drei/)
     expect(warmup).not.toMatch(/@react-three\/drei\/core\/softShadows/)
     expect(gate).toMatch(/@react-three\/drei\/core\/softShadows/)
     expect(gate).toMatch(/samples=\{SOFT_SHADOW_SAMPLES\}/)
+    expect(gate).toMatch(/softShadowsQualityOn\(quality\)/)
+    expect(gate).toMatch(/const live = mounted && allowed/)
+    expect(gate).toMatch(/if \(!live\) return null/)
     expect(gate).toMatch(/softShadowGateOpen/)
     expect(gate).toMatch(/shadowTypeAfterSoftShadowsUnmount/)
     expect(gate).toMatch(/requestAnimationFrame/)
