@@ -111,6 +111,10 @@ void import('../station-explode/mount').then((mod) => {
 void import('../explode-progress/mount').then((mod) => {
   mod.mountExplodeProgress()
 })
+// T103：SimReady 试吃。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../simready/mount').then((mod) => {
+  mod.mountSimReady()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 

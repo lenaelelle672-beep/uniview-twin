@@ -918,6 +918,17 @@ interface Window {
   __twinScreenVideoNode?: import('react').ReactNode
   /** T079：屏海报节点。格网槽在刷新时把它和工位屏画在一起。默认没有。 */
   __twinScreenImageNode?: import('react').ReactNode
+  /** T103：SimReady 试吃节点。格网槽的第七个缺省位。默认没有。 */
+  __twinSimReadyNode?: import('react').ReactNode
+  /** T103：试吃探针。MeshoptDecoder 在晚加载分包里，不进 hardGate。 */
+  __twinSimReady?: {
+    on: boolean
+    mounted: number
+    failed: number
+    decoder: 'MeshoptDecoder'
+    credit: 'NVIDIA'
+    files: readonly string[]
+  }
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
