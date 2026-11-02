@@ -9,6 +9,7 @@ import {
   setSoftShadowsMounted,
   shadowTypeAfterSoftShadowsUnmount,
   softShadowGateOpen,
+  softShadowsQualityOn,
   SOFT_SHADOW_FOCUS,
   SOFT_SHADOW_SAMPLES,
   SOFT_SHADOW_SIZE,
@@ -38,17 +39,25 @@ function readGate(): SoftShadowGateInput {
 }
 
 /**
- * 仅 quality !== 'perf' 时由 Scene 挂上。
+ * Scene 在非 perf 的晚窗口挂上这个分包。drei `<SoftShadows>` 只在 quality === 'balanced' 渲染。
+ * perf 不进窗口。high 可以挂上分包，但不渲染 PCSS，阴影保持 percentage。
  * 首帧后的 DemandLoop 帧先走完 D286 烘影；单层还要等飞入停稳。门打开后再让出一帧才挂 drei SoftShadows。
  * 无贴图请求，不碰场地懒加载。
  */
 export function BalancedSoftShadows() {
   const gl = useThree((state) => state.gl)
   const invalidate = useThree((state) => state.invalidate)
+  const quality = useTwinStore((state) => state.quality)
+  const allowed = softShadowsQualityOn(quality)
   const [mounted, setMounted] = useState(false)
   const savedType = useRef<ShadowMapType>(gl.shadowMap.type)
+  const live = mounted && allowed
 
   useEffect(() => {
+    if (!allowed) {
+      setMounted(false)
+      return
+    }
     let cancelled = false
     let raf = 0
     const arm = () => {
@@ -72,17 +81,17 @@ export function BalancedSoftShadows() {
       cancelled = true
       cancelAnimationFrame(raf)
     }
-  }, [])
+  }, [allowed])
 
   useLayoutEffect(() => {
-    if (!mounted) return
+    if (!live) return
     savedType.current = capturePrePcssShadowType(savedType.current, gl.shadowMap.type)
     setSoftShadowsMounted(true)
     publishSoftShadowStamp()
-  }, [gl, mounted])
+  }, [gl, live])
 
   useEffect(() => {
-    if (!mounted) return
+    if (!live) return
     setSoftShadowsMounted(true)
     publishSoftShadowStamp()
     let cancelled = false
@@ -99,13 +108,14 @@ export function BalancedSoftShadows() {
       gl.shadowMap.type = shadowTypeAfterSoftShadowsUnmount(savedType.current, gl.shadowMap.type)
       setSoftShadowsMounted(false)
       delete window.__twinSoftShadows
+      // 卸到高画质时阴影还在，补一帧 percentage。perf 不再烘。
       if (useTwinStore.getState().quality !== 'perf' && !shadowBakePending()) {
         gl.shadowMap.autoUpdate = false
         gl.shadowMap.needsUpdate = true
       }
     }
-  }, [gl, invalidate, mounted])
+  }, [gl, invalidate, live])
 
-  if (!mounted) return null
+  if (!live) return null
   return <SoftShadows samples={SOFT_SHADOW_SAMPLES} size={SOFT_SHADOW_SIZE} focus={SOFT_SHADOW_FOCUS} />
 }
