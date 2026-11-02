@@ -92,11 +92,11 @@ function startFloorShellNow(immediate?: boolean): void {
 function scheduleAfterCutoff(run: () => void): void {
   const tick = () => {
     const first = window.__twinFirstFrameAt
-    if (first == null || performance.now() - first < FLOOR_SHELL_AFTER_FIRST_MS) {
-      window.requestAnimationFrame(tick)
+    if (window.__twinView === 'floor' || (first != null && performance.now() - first >= FLOOR_SHELL_AFTER_FIRST_MS)) {
+      run()
       return
     }
-    run()
+    window.requestAnimationFrame(tick)
   }
   window.requestAnimationFrame(tick)
 }
@@ -108,31 +108,18 @@ function scheduleFloorShellAfterCutoff(): void {
 
 function waitUntil(ok: () => boolean): Promise<void> {
   return new Promise((resolve) => {
-    if (ok()) {
-      resolve()
-      return
-    }
-    const tick = () => {
-      if (ok()) {
-        resolve()
-        return
-      }
-      window.requestAnimationFrame(tick)
-    }
-    window.requestAnimationFrame(tick)
+    const tick = () => (ok() ? resolve() : requestAnimationFrame(tick))
+    tick()
   })
 }
-
 function nextFrame(): Promise<void> {
-  return new Promise((resolve) => {
-    window.requestAnimationFrame(() => resolve())
-  })
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()))
 }
 
 function startWhenReady(): void {
   const run = async () => {
-    await waitUntil(() => window.__twinReady === true)
-    await waitUntil(() => window.__twinFirstFrameAt != null)
+    await waitUntil(() => window.__twinReady === true || window.__twinView === 'floor')
+    await waitUntil(() => window.__twinFirstFrameAt != null || window.__twinView === 'floor')
     await nextFrame()
     if (preferImmediate || window.__twinView === 'floor') {
       startFloorShellNow(true)
@@ -160,7 +147,7 @@ export function schedulePrefetchAfterFirstFrame(): void {
 
 /**
  * D223：进楼层或直接打开楼层 URL 时，若首次 prefetch 还没发出就立刻启动。
- * 仍必须等首帧；首帧未到则只把后续调度改成立即，不提前 import。
+ * 总览仍等首帧。人已经在单层上时，不等被清掉的总览就绪标记。
  */
 export function ensurePrefetchStarted(): void {
   preferImmediate = true

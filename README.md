@@ -71,3 +71,5 @@ npm test
 | `public/hdr/modern_buildings_night_1k.hdr` | [Modern Buildings Night](https://polyhaven.com/a/modern_buildings_night)，Poly Haven 1k 等距柱状 HDR（1024×512）。作者 Greg Zaal。柏林河边夜景。原始 1,655,510 字节，gzip 1,400,337 字节。只在均衡档和高画质切到夜景、并且首帧后再过 200ms 才请求 | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) |
 
 单层视图的房间标签使用本地字体 `public/fonts/NotoSansSC-Regular-subset.woff`（D133 的 Noto Sans SC 2.004 子集，woff，628,356 B，OFL）。许可全文在 `public/fonts/NotoSansCJK-copyright.txt`。总览不请求该字体。走廊人物在 `public/models/people/`，只在均衡档和高画质的单层视图里加载，性能档不请求这些 GLB。模型是 Poly Pizza 上的 CC0（Quaternius）：[Man in Suit](https://poly.pizza/m/mQnGoME1ez)、[Woman Casual](https://poly.pizza/m/jpKRgGDxhk)、[Animated Human](https://poly.pizza/m/c3Ibh9I3udk)。仓库私有，这些 GLB 不单独对外分发。
+
+单层工位的拟物桌椅种子在 `public/models/kenney/`，只在进层并且首帧之后才请求，总览不请求。模型来自 Kenney [Furniture Kit](https://kenney.nl/assets/furniture-kit)（[CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)）：`desk.glb`、`chairDesk.glb`。许可全文在该目录 `LICENSE.txt`。不是整包，也不含 Poly Pizza 上的 CC-BY 混装。

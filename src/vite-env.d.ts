@@ -929,6 +929,8 @@ interface Window {
     credit: 'NVIDIA'
     files: readonly string[]
   }
+  /** T102：Kenney CC0 桌椅节点。格网槽在刷新时把它和测距画在一起。默认没有。 */
+  __twinKenneyNode?: import('react').ReactNode
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
@@ -946,6 +948,22 @@ interface Window {
     cameraSrc: string
     impl: 'drei-Image'
     rounded: false
+  }
+  /**
+   * T102：单层工位的 Kenney 桌椅种子。总览、首帧之前、楼层爆炸或工位拆解期间不挂。
+   * 另一组实例，不写 WorkstationDesks / WorkstationChairs。
+   * 模型在 public/models/kenney，drei useGLTF，关掉 Draco / Meshopt。
+   */
+  __twinKenney?: {
+    on: boolean
+    mounted: boolean
+    floorId: string | null
+    desks: number
+    chairs: number
+    cap: number
+    deskUrl: string
+    chairUrl: string
+    impl: 'drei-useGLTF'
   }
   /**
    * T074：工位显示器和摄像头预览。默认关。
