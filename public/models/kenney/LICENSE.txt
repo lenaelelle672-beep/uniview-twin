@@ -1,0 +1,13 @@
+Furniture Kit (2.0)
+
+Created/distributed by Kenney (www.kenney.nl)
+Creation date: 20-10-2018
+
+License: Creative Commons Zero, CC0
+http://creativecommons.org/publicdomain/zero/1.0/
+
+This content is free to use in personal, educational and commercial projects.
+Support us by crediting Kenney or www.kenney.nl (this is not mandatory).
+
+Files kept in this directory: desk.glb, chairDesk.glb.
+Source pack: https://kenney.nl/assets/furniture-kit

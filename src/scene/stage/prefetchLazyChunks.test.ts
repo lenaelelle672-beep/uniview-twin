@@ -22,6 +22,7 @@ type TwinWindow = {
   __twinPrefetchUnixMs?: number
   __twinFirstPrefetchDone?: boolean
   __twinView?: string
+  __twinInterior?: { renderedDesks?: number }
   __twinFloorShellAt?: number
   requestAnimationFrame: (cb: FrameRequestCallback) => number
   requestIdleCallback: (cb: IdleRequestCallback, opts?: IdleRequestOptions) => number
@@ -167,6 +168,33 @@ describe('D223 prefetch 单例调度', () => {
     expect(prefetch).toMatch(/import\('\.\/floorDecor'\)\.then\(releaseShellWave, releaseShellWave\)/)
     expect(prefetch).toMatch(/FLOOR_SHELL_AFTER_FIRST_MS = 2600/)
     expect(prefetch).not.toMatch(/requestIdleCallback/)
+  })
+
+  it('进层后总览标记被清掉，仍然放行 dock', async () => {
+    const api = await loadPrefetch()
+    mountStage(api, 'building')
+    win.__twinReady = true
+    win.__twinFirstFrameAt = performance.now()
+    win.__twinView = 'building'
+    await pump()
+    expect(win.__twinFloorShellAt).toBeUndefined()
+    delete win.__twinFirstFrameAt
+    win.__twinReady = false
+    win.__twinView = 'floor'
+    api.ensurePrefetchStarted()
+    await pump(8)
+    expect(win.__twinFloorShellAt).toBeTypeOf('number')
+    expect(win.__twinPrefetchAt).toBeTypeOf('number')
+  })
+
+  it('单层工位已经画出而总览标记没回来时，仍然放行 dock', async () => {
+    const api = await loadPrefetch()
+    win.__twinView = 'floor'
+    win.__twinInterior = { renderedDesks: 8 }
+    mountStage(api, 'floor')
+    await pump()
+    expect(win.__twinFloorShellAt).toBeTypeOf('number')
+    expect(win.__twinPrefetchAt).toBeTypeOf('number')
   })
 
   it('直接 floor 启动也会 prefetch', async () => {
