@@ -931,6 +931,24 @@ interface Window {
   }
   /** T102：Kenney CC0 桌椅节点。格网槽在刷新时把它和测距画在一起。默认没有。 */
   __twinKenneyNode?: import('react').ReactNode
+  /** T106：总览云层节点。格网槽的第九个缺省位。默认没有。 */
+  __twinOverviewCloudNode?: import('react').ReactNode
+  /**
+   * T106：昼间总览的 drei Cloud。夜景、白模、单层不挂。
+   * texture 是站内路径。speed 为 0。cdn 为假：不请求 githack。
+   */
+  __twinOverviewClouds?: {
+    on: boolean
+    mounted: boolean
+    texture: string
+    speed: 0
+    growth: 0
+    limit: number
+    count: number
+    segments: number
+    impl: 'drei-cloud'
+    cdn: false
+  }
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
