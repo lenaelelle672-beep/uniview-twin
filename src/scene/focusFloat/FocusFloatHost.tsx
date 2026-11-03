@@ -13,7 +13,7 @@ const FOCUS_FLOAT_AFTER_FIRST_MS = 2600
 /**
  * 挂在 DemandLoop 里，这样实现不进首屏主包。
  * 没有工位落点、或取消聚焦时返回 null，卡片卸载。
- * drei Html 只活在下面那个懒包里，和测距的 Html 各走各的。
+ * drei Html 和 BBAnchor 只活在下面那个懒包里，和测距的 Html 各走各的。
  */
 export function FocusFloatHost() {
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
