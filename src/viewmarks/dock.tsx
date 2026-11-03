@@ -119,6 +119,10 @@ void import('../explode-progress/mount').then((mod) => {
 void import('../simready/mount').then((mod) => {
   mod.mountSimReady()
 })
+// T109：visualViewport 与 ResizeObserver。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../visual-viewport/mount').then((mod) => {
+  mod.mountVisualViewportHud()
+})
 // T102：室内工位 Kenney CC0 桌椅。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../kenney-furniture/mount').then((mod) => {
   mod.mountKenneyFurniture()
