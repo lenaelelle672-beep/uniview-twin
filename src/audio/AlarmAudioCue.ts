@@ -18,6 +18,7 @@ import { initialSpeechEnabled, initialSpeechMuted, speechSynthesisSupported } fr
  * 不读时间轴回放，不碰 DeskFlash、描边、雾、镜头 smoothTime 和后处理。
  * T082 语音接过声道时，这一声让出去，不和语音叠在一起响。
  * T084 桌面通知在文档 hidden 且已允许时接过这一次，这一声也让出去。
+ * T108 空间音认领同一声时，这一声也让出去，不和空间音叠在一起响。
  */
 
 const BUTTON_STYLE =
@@ -83,7 +84,7 @@ function consider(force = false): void {
   memory = decision.memory
   let playedNow = false
   if (decision.play && decision.reason) {
-    const output = decideToneOutput(now())
+    const output = decideToneOutput(now(), decision.reason)
     if (output === 'yield') {
       lastReason = decision.reason
     } else if (output === 'wait') {

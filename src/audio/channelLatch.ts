@@ -3,6 +3,8 @@
  * 几个晚加载分包各打一份这份逻辑，状态挂在 globalThis 上，所以仍是同一把锁。
  * 语音接过声道时提示音让出；语音正在说时提示音也不抢。
  * 桌面通知已允许时，文档 hidden 这一阵由通知接手，提示音和语音都不再出声。
+ * T108 空间音的认领函数也挂在 globalThis 上。各分包各打一份这份文件时，仍看见同一份认领。
+ * 认领成立时，非空间提示音让出这一声，由空间音占用 tone 声道。
  */
 
 export type AlarmChannel = 'tone' | 'speech' | 'notify'
@@ -16,6 +18,27 @@ export interface AlarmChannelState {
 }
 
 const KEY = '__twinAlarmChannel'
+const CLAIM = '__twinSpatialClaimsTone'
+
+export type SpatialToneClaim = (reason: 'enqueue' | 'focus') => boolean
+
+export function bindSpatialClaim(fn: SpatialToneClaim | null): void {
+  const host = globalThis as typeof globalThis & { [CLAIM]?: SpatialToneClaim }
+  if (fn) host[CLAIM] = fn
+  else delete host[CLAIM]
+}
+
+/** 空间音要接这一声时为真。没挂上认领函数时为假，提示音照旧。 */
+export function spatialClaimsTone(reason: 'enqueue' | 'focus' | null | undefined): boolean {
+  if (reason !== 'enqueue' && reason !== 'focus') return false
+  const fn = (globalThis as typeof globalThis & { [CLAIM]?: SpatialToneClaim })[CLAIM]
+  if (typeof fn !== 'function') return false
+  try {
+    return fn(reason) === true
+  } catch {
+    return false
+  }
+}
 
 function cell(): AlarmChannelState {
   const host = globalThis as typeof globalThis & { [KEY]?: AlarmChannelState }
@@ -27,8 +50,9 @@ function cell(): AlarmChannelState {
 }
 
 export function resetAlarmChannelForTests(): void {
-  const host = globalThis as typeof globalThis & { [KEY]?: AlarmChannelState }
+  const host = globalThis as typeof globalThis & { [KEY]?: AlarmChannelState; [CLAIM]?: SpatialToneClaim }
   host[KEY] = { speechOwns: false, notifyCovers: false, holder: null, until: 0 }
+  delete host[CLAIM]
 }
 
 export function readAlarmChannel(): AlarmChannelState {
@@ -104,13 +128,15 @@ export function releaseChannel(owner: AlarmChannel): void {
 
 /**
  * 提示音这一下怎么处理。
- * yield：语音或桌面通知接过了，不响，也不补响。
+ * yield：语音、桌面通知或空间音接过了，不响，也不补响。
  * wait：语音还在说，或通知还占着，过一会儿再试。
  * play：声道空着，可以响。
+ * reason 只有提示音知道。空间音按这一声的原因认领，对不上就不抢。
  */
-export function decideToneOutput(now: number): 'yield' | 'wait' | 'play' {
+export function decideToneOutput(now: number, reason?: 'enqueue' | 'focus' | null): 'yield' | 'wait' | 'play' {
   if (notifyCoversHidden()) return 'yield'
   if (speechOwnsChannel()) return 'yield'
+  if (spatialClaimsTone(reason)) return 'yield'
   const busy = channelBusy(now)
   if (busy === 'speech' || busy === 'notify') return 'wait'
   return 'play'

@@ -17,6 +17,7 @@ import { frustumAfterHash } from './scripts/frustumPlugin'
 import { screenImageAfterHash } from './scripts/screenImagePlugin'
 import { broadcastAfterHash } from './scripts/broadcastPlugin'
 import { speechAfterHash } from './scripts/speechPlugin'
+import { positionalAfterHash } from './scripts/positionalPlugin'
 import { notifyAfterHash } from './scripts/notifyPlugin'
 import { pipAfterHash } from './scripts/pipPlugin'
 import { wakeLockAfterHash } from './scripts/wakeLockPlugin'
@@ -301,6 +302,7 @@ export default defineConfig({
   plugins: [
     alarmCueAfterHash(),
     speechAfterHash(),
+    positionalAfterHash(),
     notifyAfterHash(),
     clipCaptureAfterHash(),
     pipAfterHash(),
