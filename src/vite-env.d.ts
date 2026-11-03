@@ -1231,6 +1231,22 @@ interface Window {
     instants: number
     last: 'transition' | 'instant' | 'none'
   }
+  /**
+   * T109：visualViewport 宽高和 offset。晚加载分包挂上后才有。
+   * 驱动 .app 上的 --vv-* 。和布局视口重合时 identity 为真，不加 data-vv。
+   * 没有 visualViewport 时不写这个字段。不进 CameraRig，也不调用全屏 API。
+   */
+  __twinVisualViewport?: {
+    width: number
+    height: number
+    offsetLeft: number
+    offsetTop: number
+    insetLeft: number
+    insetTop: number
+    insetRight: number
+    insetBottom: number
+    identity: boolean
+  }
   /** 文档画中画。Chrome 系才有。没有时文档值守停用。 */
   documentPictureInPicture?: {
     requestWindow?: (options?: {
