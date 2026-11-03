@@ -889,7 +889,24 @@ interface Window {
     lastUtterance: string | null
     voiceLang: string | null
   }
-  /** T082 × T054 × T084：声道门闩。语音、提示音、桌面通知分包共用。 */
+  /**
+   * T108：告警空间音。晚加载分包挂上后才有。
+   * 默认关。spatial=1 才打开。muteAudio=1 静音。须用户手势后才出声。
+   * listener 为真表示相机上挂着 drei PositionalAudio 的那一只监听。
+   */
+  __twinPositionalAudio?: {
+    enabled: boolean
+    muted: boolean
+    unlocked: boolean
+    played: number
+    refDistance: number
+    claims: boolean
+    listener: boolean
+    floorId: string | null
+    deskId: string | null
+    place: { x: number; y: number; z: number } | null
+  }
+  /** T082 × T054 × T084：声道门闩。语音、提示音、桌面通知分包共用。T108 空间音认领时提示音让出。 */
   __twinAlarmChannel?: {
     speechOwns: boolean
     /** 桌面通知开着且已经允许。文档 hidden 时由它接手。 */
