@@ -27,6 +27,7 @@ import { stationExplodeAfterHash } from './scripts/stationExplodePlugin'
 import { explodeProgressAfterHash } from './scripts/explodeProgressPlugin'
 import { simreadyAfterHash } from './scripts/simreadyPlugin'
 import { kenneyFurnitureAfterHash } from './scripts/kenneyFurniturePlugin'
+import { viewTransitionAfterHash } from './scripts/viewTransitionPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -328,6 +329,7 @@ export default defineConfig({
     explodeProgressAfterHash(),
     simreadyAfterHash(),
     kenneyFurnitureAfterHash(),
+    viewTransitionAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

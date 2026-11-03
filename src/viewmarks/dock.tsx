@@ -119,6 +119,10 @@ void import('../simready/mount').then((mod) => {
 void import('../kenney-furniture/mount').then((mod) => {
   mod.mountKenneyFurniture()
 })
+// T105：楼层/视图的 DOM 过渡。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../view-transition/mount').then((mod) => {
+  mod.mountFloorViewTransition()
+})
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
