@@ -1184,6 +1184,18 @@ interface Window {
     }
     subscribe: (listener: () => void) => () => void
   }
+  /**
+   * T105：楼层 / 视图的 DOM 过渡。晚加载分包挂上后才有。
+   * 没有 document.startViewTransition，或用户偏好减少动效时，切换立刻完成。
+   * 这不是镜头阻尼。cameraTransition 的 smoothTime 仍是 0.42。
+   */
+  __twinViewTransition?: {
+    on: true
+    supported: boolean
+    transitions: number
+    instants: number
+    last: 'transition' | 'instant' | 'none'
+  }
   /** 文档画中画。Chrome 系才有。没有时文档值守停用。 */
   documentPictureInPicture?: {
     requestWindow?: (options?: {
