@@ -245,7 +245,7 @@ describe('着色接线', () => {
     expect(dock).toContain(SHELL_SHADER_SOURCE_BLOCK)
     expect(dock).toMatch(/mountRadialShadow\(\)\n\}\)\n\n\/\/ T121：/)
     expect(stripShellShaderSource(dock)).not.toMatch(/shell-shader|mountShellShader/)
-    expect(stripShellShaderSource(dock)).toMatch(/mountRadialShadow\(\)\n\}\)\n$/)
+    expect(stripShellShaderSource(dock)).toMatch(/mountRadialShadow\(\)\n\}\)\n\n\/\/ T122：/)
     expect(() => stripShellShaderSource('const dock = 1')).toThrow()
     expect(plugin).toContain(SHELL_SHADER_SOURCE_BLOCK)
     expect(plugin).toMatch(/name: 'shell-shader-after-hash'/)

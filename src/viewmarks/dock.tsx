@@ -219,3 +219,8 @@ void import('../radial-shadow/mount').then((mod) => {
 void import('../shell-shader/mount').then((mod) => {
   mod.mountShellShader()
 })
+
+// T122：圆角展台、设备基座和简易道具。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../rounded-box/mount').then((mod) => {
+  mod.mountRoundedBox()
+})
