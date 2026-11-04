@@ -38,6 +38,7 @@ import { screenSpaceAfterHash } from './scripts/screenSpacePlugin'
 import { resizeFitAfterHash } from './scripts/resizeFitPlugin'
 import { floorPlanAfterHash } from './scripts/floorPlanPlugin'
 import { sensorPointsAfterHash } from './scripts/sensorPointsPlugin'
+import { radialShadowAfterHash } from './scripts/radialShadowPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -350,6 +351,7 @@ export default defineConfig({
     resizeFitAfterHash(),
     floorPlanAfterHash(),
     sensorPointsAfterHash(),
+    radialShadowAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

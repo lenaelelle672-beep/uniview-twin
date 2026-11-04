@@ -1088,6 +1088,38 @@ interface Window {
   }
   /** T119：点云开关。传 false 等同 `?sensorPoints=0`。开关分包加载后才有。 */
   __twinSetSensorPoints?: (on: boolean) => void
+  /** T120：径向落地影节点。格网槽的第十五个缺省位，排在 T119 点云之后。默认没有。 */
+  __twinRadialShadowNode?: import('react').ReactNode
+  /**
+   * T120：少量家具 / 选中工位脚下的 drei Shadow。默认关。
+   * canvas 径向贴图平面，静止挂载。不代替 ContactShadows，也不代替 SoftShadows，不进 balancedFx。
+   */
+  __twinRadialShadow?: {
+    switchOn: boolean
+    on: boolean
+    mounted: boolean
+    state: import('./radial-shadow/plan').RadialShadowState
+    floorId: string | null
+    count: number
+    cap: number
+    deskIds: string[]
+    scale: number
+    opacity: number
+    colorStop: number
+    lift: number
+    polygonOffset: number
+    impl: 'drei-Shadow'
+    modules: readonly ['Shadow']
+    replacesContactShadows: false
+    replacesSoftShadows: false
+    balancedFx: false
+    useFrame: false
+    writesInstanceMatrix: false
+    layers: typeof import('./radial-shadow/plan').RADIAL_SHADOW_LAYERS
+    cdn: false
+  }
+  /** T120：落地影开关。传 true 等同 `?radialShadow=1`。开关分包加载后才有。 */
+  __twinSetRadialShadow?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
