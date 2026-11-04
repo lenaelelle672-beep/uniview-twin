@@ -32,6 +32,7 @@ import { viewTransitionAfterHash } from './scripts/viewTransitionPlugin'
 import { overviewCloudsAfterHash } from './scripts/overviewCloudsPlugin'
 import { visualViewportAfterHash } from './scripts/visualViewportPlugin'
 import { drawRangeRevealAfterHash } from './scripts/drawRangeRevealPlugin'
+import { gradientSkyAfterHash } from './scripts/gradientSkyPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -338,6 +339,7 @@ export default defineConfig({
     overviewCloudsAfterHash(),
     visualViewportAfterHash(),
     drawRangeRevealAfterHash(),
+    gradientSkyAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
