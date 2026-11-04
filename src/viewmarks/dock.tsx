@@ -196,3 +196,8 @@ function mount() {
 mount()
 const observer = new MutationObserver(mount)
 observer.observe(document.body, { childList: true, subtree: true })
+
+// T117：选中件 Resize 视口适配。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../resize-fit/mount').then((mod) => {
+  mod.mountResizeFit()
+})
