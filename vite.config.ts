@@ -40,6 +40,7 @@ import { floorPlanAfterHash } from './scripts/floorPlanPlugin'
 import { sensorPointsAfterHash } from './scripts/sensorPointsPlugin'
 import { radialShadowAfterHash } from './scripts/radialShadowPlugin'
 import { shellShaderAfterHash } from './scripts/shellShaderPlugin'
+import { roundedBoxAfterHash } from './scripts/roundedBoxPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -354,6 +355,7 @@ export default defineConfig({
     sensorPointsAfterHash(),
     radialShadowAfterHash(),
     shellShaderAfterHash(),
+    roundedBoxAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

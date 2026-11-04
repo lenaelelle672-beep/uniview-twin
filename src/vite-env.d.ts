@@ -1140,6 +1140,31 @@ interface Window {
   }
   /** T121：楼壳着色开关。传 false 等同 `?shellShader=0`。开关分包加载后才有。 */
   __twinSetShellShader?: (on: boolean) => void
+  /** T122：圆角载体节点。格网槽的第十六个缺省位，排在 T120 径向落地影之后。默认没有。 */
+  __twinRoundedBoxNode?: import('react').ReactNode
+  /**
+   * T122：单层休息态的 drei RoundedBox。只画展台、设备基座和两件简易道具。
+   * 锚在第 0 号工位屏幕前，不写实例矩阵，也不替换 Instanced 家具。
+   * 总览、爆炸、工位拆解不挂。`?roundedBox=0` 关掉。
+   */
+  __twinRoundedBox?: {
+    on: boolean
+    mounted: boolean
+    state: import('./rounded-box/plan').RoundedBoxState
+    floorId: string | null
+    count: number
+    cap: number
+    kinds: { plinth: number; 'device-base': number; prop: number }
+    anchor: 'workstation-0'
+    impl: 'drei-RoundedBox'
+    creasedNormals: 'three-stdlib'
+    replacesInstanced: false
+    writesInstanceMatrix: false
+    cdn: false
+    layers: typeof import('./rounded-box/plan').ROUNDED_BOX_LAYERS
+  }
+  /** T122：圆角开关。传 false 等同 `?roundedBox=0`。开关分包加载后才有。 */
+  __twinSetRoundedBox?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
