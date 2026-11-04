@@ -34,6 +34,7 @@ import { visualViewportAfterHash } from './scripts/visualViewportPlugin'
 import { drawRangeRevealAfterHash } from './scripts/drawRangeRevealPlugin'
 import { gradientSkyAfterHash } from './scripts/gradientSkyPlugin'
 import { discardProxyAfterHash } from './scripts/discardProxyPlugin'
+import { screenSpaceAfterHash } from './scripts/screenSpacePlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -342,6 +343,7 @@ export default defineConfig({
     drawRangeRevealAfterHash(),
     gradientSkyAfterHash(),
     discardProxyAfterHash(),
+    screenSpaceAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

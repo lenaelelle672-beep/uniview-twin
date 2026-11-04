@@ -968,7 +968,7 @@ interface Window {
     impl: 'drei-cloud'
     cdn: false
   }
-  /** T114：渐变天幕节点。格网槽的第十个缺省位，排在最后。默认没有。 */
+  /** T114：渐变天幕节点。格网槽的第十个缺省位。默认没有。 */
   __twinGradientSkyNode?: import('react').ReactNode
   /**
    * T114：昼间总览的 drei GradientTexture 天幕。夜景、白模、单层不挂。
@@ -1010,6 +1010,34 @@ interface Window {
     objectVisible: 'untouched'
     cdn: false
   }
+  /** T116：屏幕标注节点。格网槽的第十二个缺省位。默认没有。 */
+  __twinScreenMarkNode?: import('react').ReactNode
+  /**
+   * T116：总览实景里的一枚 drei ScreenSpace 标注。
+   * 钉在塔楼平面中心的屏幕位置上。DOM HUD、聚焦 Html、Billboard 铭牌、房间射影字号都不是它。
+   * 不用 ScreenSizer。白模、单层、爆炸不挂。cdn 为假。
+   */
+  __twinScreenMark?: {
+    on: boolean
+    mounted: boolean
+    state: import('./screen-space/plan').ScreenMarkState
+    placement: import('./screen-space/plan').ScreenMarkPlacementReason | 'hidden'
+    x: number
+    y: number
+    count: number
+    max: number
+    impl: 'drei-ScreenSpace'
+    anchor: typeof import('./screen-space/plan').SCREEN_MARK_ANCHOR
+    depth: number
+    order: number
+    label: string
+    bounds: typeof import('./screen-space/plan').SCREEN_MARK_BOUNDS
+    domHud: 'untouched'
+    screenSizer: 'forbidden'
+    cdn: false
+  }
+  /** T116：屏幕标注开关。传 false 等同 `?screenMark=0`。开关分包加载后才有。 */
+  __twinSetScreenMark?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
