@@ -1064,6 +1064,30 @@ interface Window {
   }
   /** T117：缩放开关。传 true 等同 `?resizeFit=1`。开关分包加载后才有。 */
   __twinSetResizeFit?: (on: boolean) => void
+  /** T119：传感器点云节点。格网槽的第十四个缺省位，排在 T117 选中件缩放之后。默认没有。 */
+  __twinSensorPointsNode?: import('react').ReactNode
+  /**
+   * T119：总览的 drei Points + PointMaterial。单层和蓝图不挂，不代替圆标，也不进告警 DOM。
+   * 颗数有硬顶。demand 下告警数字变了才 invalidate，爆炸只改点的 Y。
+   */
+  __twinSensorPoints?: {
+    on: boolean
+    mounted: boolean
+    state: import('./sensor-points/plan').SensorPointsState
+    impl: 'drei-Points+PointMaterial'
+    modules: readonly ['Points', 'PointMaterial']
+    count: number
+    cap: number
+    perFloor: number
+    alarmFloors: number
+    draws: 1
+    replacesBadges: false
+    dom: false
+    layers: typeof import('./sensor-points/plan').SENSOR_POINTS_LAYERS
+    cdn: false
+  }
+  /** T119：点云开关。传 false 等同 `?sensorPoints=0`。开关分包加载后才有。 */
+  __twinSetSensorPoints?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
