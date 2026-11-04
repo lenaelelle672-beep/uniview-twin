@@ -138,6 +138,10 @@ const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: m
 void import('../overview-clouds/mount').then((mod) => {
   mod.mountOverviewClouds()
 })
+// T112：进层 setDrawRange 渐进显形。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../drawrange-reveal/mount').then((mod) => {
+  mod.mountDrawRangeReveal()
+})
 
 let root: Root | null = null
 let host: HTMLElement | null = null

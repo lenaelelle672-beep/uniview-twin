@@ -31,6 +31,7 @@ import { kenneyFurnitureAfterHash } from './scripts/kenneyFurniturePlugin'
 import { viewTransitionAfterHash } from './scripts/viewTransitionPlugin'
 import { overviewCloudsAfterHash } from './scripts/overviewCloudsPlugin'
 import { visualViewportAfterHash } from './scripts/visualViewportPlugin'
+import { drawRangeRevealAfterHash } from './scripts/drawRangeRevealPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -336,6 +337,7 @@ export default defineConfig({
     viewTransitionAfterHash(),
     overviewCloudsAfterHash(),
     visualViewportAfterHash(),
+    drawRangeRevealAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
