@@ -134,6 +134,10 @@ void import('../view-transition/mount').then((mod) => {
 
 const LayerPanel = lazy(() => import('./LayerPanel').then((mod) => ({ default: mod.LayerPanel })))
 
+// T114：渐变天幕。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../gradient-sky/mount').then((mod) => {
+  mod.mountGradientSky()
+})
 // T106：总览云层。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../overview-clouds/mount').then((mod) => {
   mod.mountOverviewClouds()

@@ -968,6 +968,30 @@ interface Window {
     impl: 'drei-cloud'
     cdn: false
   }
+  /** T114：渐变天幕节点。格网槽的第十个缺省位，排在最后。默认没有。 */
+  __twinGradientSkyNode?: import('react').ReactNode
+  /**
+   * T114：昼间总览的 drei GradientTexture 天幕。夜景、白模、单层不挂。
+   * 不写 scene.background / scene.environment；云层盖在它上面；遇到 drei Sky 或 HDR 背景让位。
+   * stops / colors 是本地常量，cdn 为假。
+   */
+  __twinGradientSky?: {
+    on: boolean
+    mounted: boolean
+    state: import('./gradient-sky/plan').GradientSkyState
+    impl: 'drei-GradientTexture'
+    stops: readonly number[]
+    colors: readonly string[]
+    base: string
+    radius: number
+    order: number
+    layers: typeof import('./gradient-sky/plan').GRADIENT_SKY_LAYERS
+    background: 'untouched'
+    environment: 'untouched'
+    cdn: false
+  }
+  /** T114：天幕开关。传 false 等同 `?skyGradient=0`。开关分包加载后才有。 */
+  __twinSetGradientSky?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
