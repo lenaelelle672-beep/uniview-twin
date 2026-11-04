@@ -593,7 +593,9 @@ describe('分包不进首屏', () => {
     expect(dock).toMatch(/import\('\.\.\/drawrange-reveal\/mount'\)/)
     expect(dock).not.toMatch(/from '\.\.\/drawrange-reveal\/mount'/)
     expect(dock.replace(DRAW_RANGE_REVEAL_SOURCE_BLOCK, '')).not.toMatch(/drawrange-reveal|mountDrawRangeReveal/)
-    expect(dock.replace(DRAW_RANGE_REVEAL_SOURCE_BLOCK, '')).toMatch(/mountOverviewClouds\(\)\n\}\)\n\nlet root/)
+    expect(dock.replace(DRAW_RANGE_REVEAL_SOURCE_BLOCK, '')).toMatch(
+      /mountOverviewClouds\(\)\n\}\)\n\/\/ T115：拾取代理 MeshDiscardMaterial/,
+    )
     expect(plugin).toContain(DRAW_RANGE_REVEAL_SOURCE_BLOCK)
     expect(plugin).toMatch(/name: 'draw-range-reveal-after-hash'/)
     expect(plugin).toMatch(/apply: 'build'/)
