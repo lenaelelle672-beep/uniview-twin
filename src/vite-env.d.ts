@@ -1085,6 +1085,12 @@ interface Window {
     dom: false
     layers: typeof import('./sensor-points/plan').SENSOR_POINTS_LAYERS
     cdn: false
+    /** T124：drei Sampler / useSurfaceSampler，与点云同一道门闩，只采样一次。 */
+    sampler: 'useSurfaceSampler'
+    sampleOnce: true
+    sampleCount: number
+    sampled: boolean
+    sampleSource: 'floor-plate'
   }
   /** T119：点云开关。传 false 等同 `?sensorPoints=0`。开关分包加载后才有。 */
   __twinSetSensorPoints?: (on: boolean) => void

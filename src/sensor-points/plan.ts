@@ -20,6 +20,13 @@ export const SENSOR_Y_FRACTION = 0.62
 
 export const SENSOR_POINTS_PER_FLOOR = SENSOR_POINT_XZ.length
 
+/**
+ * T124：楼板表面一次采样的槽位。
+ * 与每层点数相同，总颗数仍是 SENSOR_CLOUD_COUNT，不超过 SENSOR_CLOUD_CAP。
+ * 采样失败时点云仍用本地 XZ，不另开一套坐标。
+ */
+export const SENSOR_SAMPLE_COUNT = SENSOR_POINTS_PER_FLOOR
+
 /** 硬顶。楼层变多也只画到这里，不允许按告警条数往上加。 */
 export const SENSOR_CLOUD_CAP = 96
 
