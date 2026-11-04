@@ -163,6 +163,11 @@ let root: Root | null = null
 let host: HTMLElement | null = null
 let mountMeasure: (() => void) | null = null
 
+// T119：传感器/告警点云。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../sensor-points/mount').then((mod) => {
+  mod.mountSensorPoints()
+})
+
 function mountMeasureSoon() {
   if (mountMeasure) {
     mountMeasure()

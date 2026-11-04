@@ -37,6 +37,7 @@ import { discardProxyAfterHash } from './scripts/discardProxyPlugin'
 import { screenSpaceAfterHash } from './scripts/screenSpacePlugin'
 import { resizeFitAfterHash } from './scripts/resizeFitPlugin'
 import { floorPlanAfterHash } from './scripts/floorPlanPlugin'
+import { sensorPointsAfterHash } from './scripts/sensorPointsPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -348,6 +349,7 @@ export default defineConfig({
     screenSpaceAfterHash(),
     resizeFitAfterHash(),
     floorPlanAfterHash(),
+    sensorPointsAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
