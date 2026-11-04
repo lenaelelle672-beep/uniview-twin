@@ -2,7 +2,7 @@ import { createElement, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Box3, Mesh, Vector3, type MeshStandardMaterial, type Object3D, type Texture } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
-import { installMeshopt } from '../scene/meshopt'
+import { installMeshopt, uploadMeshoptDecoded, type MeshoptUploadStats } from '../scene/meshopt'
 import {
   ATTRIBUTION_HREF,
   COMMUNITY_CONVERT_URL,
@@ -25,6 +25,7 @@ import {
  * 生产构建在 dock 哈希定稿前摘掉接线，定稿后再把独立分包接回去，不进 hardGate / balancedFx。
  * 节点交给格网槽的第七个缺省位。关掉或删掉这条接线，场景其余部分不动。
  * 网格不参与拾取，不投影，不挂进楼层，所以不碰爆炸、点选和 demand 的时钟。
+ * T111：道具解开后先按拍把贴图（四个共 24 张 1024²）和几何交给 GPU，再挂进场景。
  */
 
 interface Fitted {
@@ -43,6 +44,7 @@ let on = false
 let mounted = 0
 let failed = 0
 let creditHost: HTMLElement | null = null
+const upload: MeshoptUploadStats = { textures: 0, geometries: 0, turns: 0, ms: 0 }
 
 function readOn(): boolean {
   if (override !== null) return override
@@ -58,6 +60,19 @@ function publish(): void {
     decoder: 'MeshoptDecoder',
     credit: 'NVIDIA',
     files: SIMREADY_PROPS.map((prop) => prop.file),
+    upload: { ...upload },
+  }
+}
+
+async function uploadInFrames(object: Object3D): Promise<void> {
+  try {
+    const done = await uploadMeshoptDecoded(window.__twinRenderer, [object])
+    upload.textures += done.textures
+    upload.geometries += done.geometries
+    upload.turns += done.turns
+    upload.ms += done.ms
+  } catch {
+    // 交不上就留给首帧，照常挂。
   }
 }
 
@@ -102,6 +117,7 @@ async function ensureFitted(id: string, file: string): Promise<Fitted> {
     object.name = `SimReady:${id}`
     object.userData.simready = true
     const placed = fit(object)
+    await uploadInFrames(object)
     const row = { id, object, width: placed.width, lift: placed.lift }
     fitted.set(id, row)
     return row

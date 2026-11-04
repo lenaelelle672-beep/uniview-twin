@@ -945,6 +945,8 @@ interface Window {
     decoder: 'MeshoptDecoder'
     credit: 'NVIDIA'
     files: readonly string[]
+    /** T111：解码后按拍交给 GPU 的贴图、几何、让出拍数和耗时，累计四个道具。 */
+    upload: { textures: number; geometries: number; turns: number; ms: number }
   }
   /** T102：Kenney CC0 桌椅节点。格网槽在刷新时把它和测距画在一起。默认没有。 */
   __twinKenneyNode?: import('react').ReactNode
