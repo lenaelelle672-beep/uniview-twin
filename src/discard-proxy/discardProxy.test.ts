@@ -204,9 +204,9 @@ describe('分包不进首屏', () => {
 
     expect(dock).toContain(DISCARD_PROXY_SOURCE_BLOCK)
     expect(dock).toMatch(/mountDrawRangeReveal\(\)\n\}\)\n\/\/ T115：拾取代理 MeshDiscardMaterial/)
-    expect(dock).toMatch(/mountDiscardProxy\(\)\n\}\)\n\nlet root/)
+    expect(dock).toMatch(/mountDiscardProxy\(\)\n\}\)\n\/\/ T118：/)
     expect(stripDiscardProxySource(dock)).not.toMatch(/discard-proxy|mountDiscardProxy|MeshDiscardMaterial/)
-    expect(stripDiscardProxySource(dock)).toMatch(/mountDrawRangeReveal\(\)\n\}\)\n\nlet root/)
+    expect(stripDiscardProxySource(dock)).toMatch(/mountDrawRangeReveal\(\)\n\}\)\n\/\/ T118：/)
     expect(() => stripDiscardProxySource('const dock = 1')).toThrow()
     expect(plugin).toContain(DISCARD_PROXY_SOURCE_BLOCK)
     expect(plugin).toMatch(/name: 'discard-proxy-after-hash'/)

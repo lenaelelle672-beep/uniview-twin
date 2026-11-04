@@ -225,7 +225,7 @@ describe('缩放接线', () => {
     expect(dock).toMatch(/observe\(document\.body, \{ childList: true, subtree: true \}\)\n\n\/\/ T117：/)
     expect(stripResizeFitSource(dock)).not.toMatch(/resize-fit|mountResizeFit/)
     expect(stripResizeFitSource(dock)).toMatch(/mountOverviewClouds\(\)\n\}\)\n\/\/ T112：/)
-    expect(stripResizeFitSource(dock)).toMatch(/mountDiscardProxy\(\)\n\}\)\n\nlet root/)
+    expect(stripResizeFitSource(dock)).toMatch(/mountDiscardProxy\(\)\n\}\)\n\/\/ T118：/)
     expect(() => stripResizeFitSource('const dock = 1')).toThrow()
     expect(plugin).toContain(RESIZE_FIT_SOURCE_BLOCK)
     expect(plugin).toMatch(/name: 'resize-fit-after-hash'/)

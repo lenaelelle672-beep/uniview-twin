@@ -154,6 +154,10 @@ void import('../drawrange-reveal/mount').then((mod) => {
 void import('../discard-proxy/mount').then((mod) => {
   mod.mountDiscardProxy()
 })
+// T118：单层平面图俯视。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../floor-plan/mount').then((mod) => {
+  mod.mountFloorPlan()
+})
 
 let root: Root | null = null
 let host: HTMLElement | null = null

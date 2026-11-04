@@ -567,6 +567,10 @@ interface Window {
     update: (delta: number) => boolean
     /** camera-controls：false 只停拖曳。沿轨飞另外把 update 换成空函数。 */
     enabled?: boolean
+    /** T118：平面图俯视时停拖曳。不替换 update / setLookAt。 */
+    stop?: () => void
+    __twinPlanPaused?: boolean
+    __twinPlanEnabled?: boolean
   }
   /** T041：?vp= 还原期间不要让取景和距离夹紧改掉眼点。 */
   __vpH?: boolean
@@ -1358,6 +1362,30 @@ interface Window {
     completed: number
     last: string | null
   }
+  /**
+   * T118：单层平面图俯视。会话开关，默认关。晚加载分包挂上后才有。
+   * 正交相机是 drei OrthographicCamera，只在单层、首帧之后才成为默认相机。
+   * owner 一直是 camera-controls，framing 一直是 floor-stage。平面图不调用 setLookAt。
+   * held 为真时 FloorStageCamera 停手。卸下后默认相机回到原来的透视相机。
+   */
+  __twinFloorPlan?: {
+    on: boolean
+    mounted: boolean
+    held: boolean
+    impl: 'drei-OrthographicCamera'
+    mode: 'ortho' | 'perspective'
+    reason: import('./floor-plan/plan').FloorPlanReason
+    floorId: string | null
+    zoom: number | null
+    waiting: 'plate' | null
+    owner: 'camera-controls'
+    framing: 'floor-stage'
+    cdn: false
+  }
+  /** T118：平面图开关。传 true 打开这次会话的俯视。不写地址栏。 */
+  __twinSetFloorPlan?: (on: boolean) => void
+  /** T118：正交相机挂着时，每帧让开关再看一眼让路条件。 */
+  __twinFloorPlanSync?: () => void
   /** 文档画中画。Chrome 系才有。没有时文档值守停用。 */
   documentPictureInPicture?: {
     requestWindow?: (options?: {
