@@ -27,6 +27,49 @@ export interface DeskOutlinePose {
   rot: number
 }
 
+export interface DeskExplodeShift {
+  x: number
+  y: number
+  z: number
+}
+
+interface ExplodeShiftHost {
+  __twinBadgeExplodeDelta?: (floorId: string, anchorX: number, anchorZ: number, inheritFloorLift: boolean) => DeskExplodeShift
+}
+
+const REST_SHIFT: DeskExplodeShift = { x: 0, y: 0, z: 0 }
+
+function explodeShiftHost(): ExplodeShiftHost | undefined {
+  return (globalThis as { window?: ExplodeShiftHost }).window
+}
+
+/**
+ * 工位炸开后桌子相对 rest 的位移。
+ * 读工位分包装上的 __twinBadgeExplodeDelta：WorkstationDesks 的 setMatrixAt、圆标和标签用的是同一份时钟和分层。
+ * 载体和框选代理的 rest 就是桌子实例的平移，同一个 x/z 落在同一层。分包还没挂上时按收拢算。
+ * 室内只在单层挂，也不在楼层外壳组里，所以不继承外壳抬升。
+ */
+export function deskExplodeShift(
+  floorId: string,
+  x: number,
+  z: number,
+  host: ExplodeShiftHost | undefined = explodeShiftHost(),
+): DeskExplodeShift {
+  const delta = host?.__twinBadgeExplodeDelta
+  return typeof delta === 'function' ? delta(floorId, x, z, false) : REST_SHIFT
+}
+
+/** rest 加上炸开位移，写进 position。 */
+export function placeOnExplodedDesk(
+  target: { set: (x: number, y: number, z: number) => unknown },
+  floorId: string,
+  rest: { x: number; y: number; z: number },
+  host: ExplodeShiftHost | undefined = explodeShiftHost(),
+): void {
+  const shift = deskExplodeShift(floorId, rest.x, rest.z, host)
+  target.set(rest.x + shift.x, rest.y + shift.y, rest.z + shift.z)
+}
+
 export interface DeskOutlineShell {
   name: 'DeskOutline' | 'DeviceOutline'
   geometry: BufferGeometry

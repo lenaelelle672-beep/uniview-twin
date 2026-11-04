@@ -18,10 +18,12 @@ import {
   BOX_OUTLINE_COLOR,
   SEARCH_OUTLINE_COLOR,
   SEARCH_OUTLINE_HIT_LIMIT,
+  deskExplodeShift,
   deskOutlinePose,
   deviceOutlinePose,
   focusedOutlineShells,
   multiOutlineShells,
+  placeOnExplodedDesk,
 } from './deskOutline'
 
 hydrateFloorFromDisk('F12')
@@ -378,5 +380,52 @@ describe('进层告警和搜索多描边', () => {
       ['F12-3', 'BoxOutline', BOX_OUTLINE_COLOR],
       ['F12-5', 'BoxOutline', BOX_OUTLINE_COLOR],
     ])
+  })
+})
+describe('炸开后描边跟桌子', () => {
+  it('没有工位分包时按收拢，有了就按本层同一份位移，不继承外壳抬升', () => {
+    expect(deskExplodeShift('F12', 3, 4, undefined)).toEqual({ x: 0, y: 0, z: 0 })
+    expect(deskExplodeShift('F12', 3, 4, {})).toEqual({ x: 0, y: 0, z: 0 })
+    const calls: unknown[][] = []
+    const host = {
+      __twinBadgeExplodeDelta: (floorId: string, x: number, z: number, inherit: boolean) => {
+        calls.push([floorId, x, z, inherit])
+        return { x: 0.25, y: 0, z: -1.6 }
+      },
+    }
+    expect(deskExplodeShift('F12', 3, 4, host)).toEqual({ x: 0.25, y: 0, z: -1.6 })
+    const place = workstationPosition('F12', 'F12-66')
+    const target = {
+      x: 0,
+      y: 0,
+      z: 0,
+      set(x: number, y: number, z: number) {
+        this.x = x
+        this.y = y
+        this.z = z
+      },
+    }
+    placeOnExplodedDesk(target, 'F12', { x: place.x, y: 0.4, z: place.z }, host)
+    expect(target.x).toBeCloseTo(place.x + 0.25, 6)
+    expect(target.y).toBeCloseTo(0.4, 6)
+    expect(target.z).toBeCloseTo(place.z - 1.6, 6)
+    expect(calls).toEqual([
+      ['F12', 3, 4, false],
+      ['F12', place.x, place.z, false],
+    ])
+  })
+
+  it('载体在渲染开头的矩阵更新里贴桌子，框选代理在 Shift 按下时贴桌子', () => {
+    const outline = read('DeskOutline.tsx')
+    expect(outline).toMatch(/placeOnExplodedDesk\(mesh\.position, floorId, rest\)/)
+    expect(outline).toMatch(/mesh\.updateMatrix = \(\) =>/)
+    expect(outline).toMatch(/mesh\.updateMatrix = Mesh\.prototype\.updateMatrix/)
+    expect(outline).not.toMatch(/useFrame\(/)
+    expect(outline.match(/<OutlineCarrier[\s\S]*?floorId=\{floorId\}/g)?.length).toBe(2)
+    const box = read('DeskBoxSelect.tsx')
+    expect(box).toMatch(/placeOnExplodedDesk\(mesh\.position, floorId/)
+    expect(box).toMatch(/shouldSuspendCameraDrag\(event, canvas\)/)
+    expect(box).toMatch(/parent\.updateMatrixWorld\(true\)/)
+    expect(box).not.toMatch(/useFrame\(/)
   })
 })

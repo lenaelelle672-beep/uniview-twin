@@ -14,32 +14,45 @@ import {
   type CameraDragLock,
 } from './boxSelect'
 import { EMPTY_BOX_IDS, useBoxSelectStore } from './boxSelectStore'
+import { placeOnExplodedDesk } from './deskOutline'
 
 const proxyGeometry = new BoxGeometry(0.35, 0.35, 0.35)
 proxyGeometry.computeBoundingSphere()
 const proxyMaterial = new MeshBasicMaterial({ visible: false, depthWrite: false, toneMapped: false })
+const PROXY_Y = 0.4
 
 function ignoreRaycast() {}
 
-function DeskPickProxies({ proxies }: { proxies: ReturnType<typeof floorPickProxies> }) {
+interface PlacedProxy {
+  mesh: Mesh
+  proxy: ReturnType<typeof floorPickProxies>[number]
+}
+
+function DeskPickProxies({ floorId, proxies }: { floorId: string; proxies: ReturnType<typeof floorPickProxies> }) {
   const group = useRef<Group>(null)
+  const live = useRef<PlacedProxy[]>([])
   const retire = useRef<Mesh[]>([])
+  const gl = useThree((state) => state.gl)
   useLayoutEffect(() => {
     const parent = group.current
     if (!parent) return
     const created: Mesh[] = []
+    const placed: PlacedProxy[] = []
     for (const proxy of proxies) {
       const mesh = new Mesh(proxyGeometry, proxyMaterial)
       mesh.name = 'DeskPickProxy'
-      mesh.position.set(proxy.x, 0.4, proxy.z)
+      mesh.position.set(proxy.x, PROXY_Y, proxy.z)
       mesh.visible = false
       mesh.raycast = ignoreRaycast
       mesh.userData = { boxPickProxy: true, deskId: proxy.deskId, instanceIndex: proxy.instanceIndex }
       parent.add(mesh)
       created.push(mesh)
+      placed.push({ mesh, proxy })
     }
     parent.updateMatrixWorld(true)
+    live.current = placed
     return () => {
+      if (live.current === placed) live.current = []
       // 先留在组里。Bvh 的卸载 effect 还要 traverse 到这些网格，layout 里摘掉就卸不掉树。
       retire.current.push(...created)
     }
@@ -50,6 +63,23 @@ function DeskPickProxies({ proxies }: { proxies: ReturnType<typeof floorPickProx
       for (const mesh of stale) mesh.removeFromParent()
     }
   }, [proxies])
+  // SelectionBox 按代理的 matrixWorld 判框内。工位炸开后，Shift 按下时把代理挪到桌子现在的位置。
+  // 捕获阶段早于 drei Select 挂在 document 上的 pointerdown。
+  useEffect(() => {
+    const canvas = gl.domElement
+    const onDown = (event: PointerEvent) => {
+      const parent = group.current
+      if (!parent || !shouldSuspendCameraDrag(event, canvas)) return
+      for (const { mesh, proxy } of live.current) {
+        placeOnExplodedDesk(mesh.position, floorId, { x: proxy.x, y: PROXY_Y, z: proxy.z })
+      }
+      parent.updateMatrixWorld(true)
+    }
+    window.addEventListener('pointerdown', onDown, true)
+    return () => {
+      window.removeEventListener('pointerdown', onDown, true)
+    }
+  }, [floorId, gl])
   return <group ref={group} name="DeskPickProxies" />
 }
 
@@ -144,7 +174,7 @@ export function DeskBoxSelect({ floorId }: { floorId: string }) {
       onPointerMissed={swallowPointer}
     >
       <BoxPickBvh version={version}>
-        <DeskPickProxies proxies={proxies} />
+        <DeskPickProxies floorId={floorId} proxies={proxies} />
       </BoxPickBvh>
     </Select>
   )

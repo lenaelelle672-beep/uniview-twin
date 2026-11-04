@@ -17,6 +17,7 @@ import {
   SEARCH_OUTLINE_HIT_LIMIT,
   focusedOutlineShells,
   multiOutlineShells,
+  placeOnExplodedDesk,
   type DeskOutlinePose,
 } from './deskOutline'
 
@@ -57,6 +58,7 @@ function FocusedDeskOutlinesLive({ floorId }: { floorId: string }) {
       {shells.map((shell) => (
         <OutlineCarrier
           key={`${shell.name}:${shell.pose.x}:${shell.pose.z}:${shell.pose.rot}`}
+          floorId={floorId}
           name={shell.name}
           geometry={shell.geometry}
           pose={shell.pose}
@@ -124,6 +126,7 @@ function FloorMultiOutlinesLive({ floorId }: { floorId: string }) {
           {shells.map((shell) => (
             <OutlineCarrier
               key={`${shell.name}:${shell.deskId}`}
+              floorId={floorId}
               name={shell.name}
               geometry={shell.geometry}
               pose={shell.pose}
@@ -137,11 +140,13 @@ function FloorMultiOutlinesLive({ floorId }: { floorId: string }) {
 }
 
 function OutlineCarrier({
+  floorId,
   name,
   geometry,
   pose,
   color,
 }: {
+  floorId: string
   name: string
   geometry: BufferGeometry
   pose: DeskOutlinePose
@@ -157,6 +162,21 @@ function OutlineCarrier({
       owned.dispose()
     }
   }, [owned])
+
+  useLayoutEffect(() => {
+    const mesh = meshRef.current
+    if (!mesh) return
+    const rest = { x: pose.x, y: 0, z: pose.z }
+    // 不用 useFrame：深链接进层时载体比工位分包先挂，读到的是上一帧进度，scrub 停稳后又只出一帧。
+    // 渲染开头的矩阵更新晚于所有帧回调，这一帧桌子写到哪个进度，描边就跟到哪个进度。
+    mesh.updateMatrix = () => {
+      placeOnExplodedDesk(mesh.position, floorId, rest)
+      Mesh.prototype.updateMatrix.call(mesh)
+    }
+    return () => {
+      mesh.updateMatrix = Mesh.prototype.updateMatrix
+    }
+  }, [floorId, pose.x, pose.z])
 
   useLayoutEffect(() => {
     meshRef.current?.layers.set(OUTLINE_CARRIER_LAYER)
