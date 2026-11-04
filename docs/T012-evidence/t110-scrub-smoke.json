@@ -1,0 +1,465 @@
+{
+  "label": "t110",
+  "baseUrl": "http://127.0.0.1:5190",
+  "floor": "F4",
+  "cases": [
+    {
+      "width": 1024,
+      "theme": "day",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 5,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 24,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 14.08,
+          "deskRadius": 60.60242315307141,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 329,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 20.48,
+          "deskRadius": 66.0875699646754,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 1157,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 11.52,
+          "deskRadius": 58.405182074713416,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 1,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": []
+    },
+    {
+      "width": 1024,
+      "theme": "night",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 24,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 865,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 14.08,
+          "deskRadius": 60.60242315307141,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 1489,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 20.48,
+          "deskRadius": 66.0875699646754,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 37,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 11.52,
+          "deskRadius": 58.405182074713416,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 0,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": []
+    },
+    {
+      "width": 1366,
+      "theme": "day",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 938,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 990,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 14.08,
+          "deskRadius": 60.60242315307141,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 1569,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 20.48,
+          "deskRadius": 66.0875699646754,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 7,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 11.52,
+          "deskRadius": 58.405182074713416,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 2,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": []
+    },
+    {
+      "width": 1366,
+      "theme": "night",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 34,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 3233,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 14.08,
+          "deskRadius": 60.60242315307141,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 2161,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 20.48,
+          "deskRadius": 66.0875699646754,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 1102,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 11.52,
+          "deskRadius": 58.405182074713416,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 0,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": []
+    },
+    {
+      "width": 1920,
+      "theme": "day",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 9,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 7129,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 14.08,
+          "deskRadius": 60.60242315307141,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 4883,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 20.48,
+          "deskRadius": 66.0875699646754,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 5594,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 11.52,
+          "deskRadius": 58.405182074713416,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 1,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": []
+    },
+    {
+      "width": 1920,
+      "theme": "night",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 11,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 4952,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 14.08,
+          "deskRadius": 60.60242315307141,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 3536,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 20.48,
+          "deskRadius": 66.0875699646754,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 2261,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 11.52,
+          "deskRadius": 58.405182074713416,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 0,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": []
+    }
+  ],
+  "failures": [],
+  "ok": true
+}

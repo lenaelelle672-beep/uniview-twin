@@ -10,6 +10,7 @@ import {
   matrixFromArray,
   matrixHandle,
   matrixWithTranslation,
+  negativeScale,
   stationTick,
   type LevelFrame,
   type Mat4,
@@ -30,6 +31,7 @@ export interface StationNode {
   isInstancedMesh?: boolean
   isBatchedMesh?: boolean
   setMatrixAt?: (index: number, matrix: MatrixHandle) => void
+  getMatrixAt?: (index: number, matrix: MatrixReader) => unknown
   instanceMatrix?: {
     array?: ArrayLike<number>
     needsUpdate: boolean
@@ -37,6 +39,8 @@ export interface StationNode {
   }
   computeBoundingSphere?: () => void
   _matricesTexture?: { needsUpdate: boolean }
+  /** three r186 BatchedMesh 的实例表。删掉的槽 active 为 false，setMatrixAt 会抛。 */
+  _instanceInfo?: ArrayLike<{ active?: boolean } | undefined>
   _members?: MemberSink[] | Map<MemberSink, unknown>
   sync?: (callback?: () => void) => void
   getObjectByName?: (name: string) => StationNode | undefined
@@ -48,17 +52,24 @@ export interface StationNode {
   }
 }
 
+interface MatrixReader {
+  fromArray: (array: ArrayLike<number>, offset?: number) => MatrixReader
+}
+
 interface MeshHold {
   name: string
   pairs: StationPair[]
+  /** BatchedMesh 的实例 id，与 pairs 一一对应。实例网格为 null，下标即槽号。 */
+  ids: number[] | null
   dynamic: boolean
 }
 
 export interface StationDrive {
   posed: boolean
   captured: boolean
-  /** 已经写过进度 1 的那一帧。停在展开时不再每帧 setMatrixAt。 */
+  /** 停住之后已经按 written 写过一批。进度不变时不再每帧 setMatrixAt。 */
   settled: boolean
+  written: number
   frame: LevelFrame | null
   meshes: MeshHold[]
   members: StationPair[] | null
@@ -74,16 +85,54 @@ export interface StationStats {
 }
 
 export function createStationDrive(): StationDrive {
-  return { posed: false, captured: false, settled: false, frame: null, meshes: [], members: null }
+  return { posed: false, captured: false, settled: false, written: Number.NaN, frame: null, meshes: [], members: null }
 }
 
-function readInstances(node: StationNode): Mat4[] {
+function matrixReader(elements: number[]): MatrixReader {
+  const reader: MatrixReader = {
+    fromArray(array, offset = 0) {
+      for (let i = 0; i < 16; i += 1) elements[i] = Number(array[offset + i] ?? 0)
+      return reader
+    },
+  }
+  return reader
+}
+
+function liveBatchedId(node: StationNode, id: number): boolean {
+  const info = node._instanceInfo
+  if (!info || id < 0 || id >= info.length) return false
+  return info[id]?.active !== false
+}
+
+/**
+ * BatchedMesh 没有 instanceMatrix，count 继承自 Mesh 恒为 1。按实例表逐槽 getMatrixAt。
+ * 删掉的槽和带镜像缩放的槽不收，之后也不交给 setMatrixAt。
+ */
+function readBatched(node: StationNode): { rests: Mat4[]; ids: number[] } {
+  const rests: Mat4[] = []
+  const ids: number[] = []
+  const info = node._instanceInfo
+  if (!info || typeof node.getMatrixAt !== 'function') return { rests, ids }
+  for (let id = 0; id < info.length; id += 1) {
+    if (!liveBatchedId(node, id)) continue
+    const elements = new Array<number>(16).fill(0)
+    node.getMatrixAt(id, matrixReader(elements))
+    const rest = { elements }
+    if (negativeScale(rest)) continue
+    rests.push(rest)
+    ids.push(id)
+  }
+  return { rests, ids }
+}
+
+function readInstances(node: StationNode): { rests: Mat4[]; ids: number[] | null } {
+  if (node.isBatchedMesh) return readBatched(node)
   const array = node.instanceMatrix?.array
   const count = node.count ?? 0
-  if (!array || count <= 0) return []
+  if (!array || count <= 0) return { rests: [], ids: null }
   const rests: Mat4[] = []
   for (let index = 0; index < count; index += 1) rests.push(matrixFromArray(array, index))
-  return rests
+  return { rests, ids: null }
 }
 
 function memberList(node: StationNode | undefined): MemberSink[] {
@@ -111,9 +160,19 @@ function readMembers(members: MemberSink[]): Mat4[] {
 }
 
 function asSink(node: StationNode): { count: number; setMatrixAt: (index: number, matrix: MatrixHandle) => void; instanceMatrix?: StationNode['instanceMatrix'] } | null {
-  if (typeof node.setMatrixAt !== 'function') return null
-  if (!node.isInstancedMesh && !node.isBatchedMesh) return null
-  return { count: node.count ?? 0, setMatrixAt: node.setMatrixAt.bind(node), instanceMatrix: node.instanceMatrix }
+  const write = node.setMatrixAt
+  if (typeof write !== 'function') return null
+  if (node.isBatchedMesh) {
+    // 抓完 rest 之后槽可能被删。BatchedMesh.setMatrixAt 对删掉的槽会抛，这里跳过。
+    return {
+      count: node._instanceInfo?.length ?? 0,
+      setMatrixAt(id, matrix) {
+        if (liveBatchedId(node, id)) write.call(node, id, matrix)
+      },
+    }
+  }
+  if (!node.isInstancedMesh) return null
+  return { count: node.count ?? 0, setMatrixAt: write.bind(node), instanceMatrix: node.instanceMatrix }
 }
 
 function capture(drive: StationDrive, scene: StationNode | null | undefined): void {
@@ -129,7 +188,7 @@ function capture(drive: StationDrive, scene: StationNode | null | undefined): vo
     // 圆标自己写矩阵时不再烘焙，避免和消费端各加一次位移。
     if (node.userData?.badgePoseOwned) continue
     if (!asSink(node)) continue
-    if (readInstances(node).length === 0) continue
+    if (readInstances(node).rests.length === 0) continue
     found.push(node)
   }
   const label = scene.getObjectByName(STATION_LABEL_NAME)
@@ -139,16 +198,16 @@ function capture(drive: StationDrive, scene: StationNode | null | undefined): vo
   if (allMembers.length > 0) label?.sync?.()
 
   const desk = found.find((node) => node.name === 'WorkstationDesks') ?? found[0]
-  const seed = desk ? readInstances(desk) : members.length > 0 ? readMembers(members) : []
+  const seed = desk ? readInstances(desk).rests : members.length > 0 ? readMembers(members) : []
   if (seed.length === 0 && members.length === 0) return
   const frame = levelFrame(seed.map((matrix) => ({ x: matrix.elements[12], z: matrix.elements[14] })))
   drive.frame = frame
 
   for (const node of found) {
-    const rests = readInstances(node)
+    const { rests, ids } = readInstances(node)
     if (rests.length === 0) continue
     const baked = bakeStationPairs(rests, frame)
-    drive.meshes.push({ name: node.name ?? '', pairs: baked.pairs, dynamic: false })
+    drive.meshes.push({ name: node.name ?? '', pairs: baked.pairs, ids, dynamic: false })
     const sink = asSink(node)
     if (sink) markStationDynamic(sink)
   }
@@ -237,7 +296,7 @@ function write(drive: StationDrive, scene: StationNode, progress: number): { cou
       markStationDynamic(sink)
       hold.dynamic = true
     }
-    const written = applyStationProgress(sink, hold.pairs, progress)
+    const written = applyStationProgress(sink, hold.pairs, progress, hold.ids)
     count += written
     if (written > 0) {
       needsUpdate += 1
@@ -273,7 +332,7 @@ export function driveStation(
   now: number,
 ): StationStats {
   const active = exploded && view === 'floor'
-  const tick = stationTick(drive.posed, drive.captured, drive.settled, exploded, view, now)
+  const tick = stationTick(drive.posed, drive.captured, drive.settled, exploded, view, now, drive.written)
   if (tick.capture) capture(drive, scene)
   let count = 0
   let needsUpdate = 0
@@ -287,6 +346,7 @@ export function driveStation(
   drive.posed = tick.posed
   drive.captured = tick.captured
   drive.settled = tick.settled
+  drive.written = tick.written
   if (!tick.captured) {
     drive.meshes = []
     drive.members = null

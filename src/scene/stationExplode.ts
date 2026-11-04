@@ -36,10 +36,12 @@ export interface StationPair {
 
 export interface StationTick {
   motion: ExplodeMotion
-  /** 调用方本帧应当写矩阵。落到 0 或 1 之后不再每帧写。 */
+  /** 调用方本帧应当写矩阵。停住且已经按这个进度写过时不再每帧写。 */
   write: boolean
   /** 本帧要从当前实例重新烘焙。拉开刚开始时抓 rest，中途不从已拉开的矩阵再抓。 */
   capture: boolean
+  /** 最近一次写进实例的进度。还没写过为 NaN。 */
+  written: number
 }
 
 const scratch: Mat4 = { elements: new Array<number>(16).fill(0) }
@@ -58,6 +60,14 @@ export function matrixFromArray(array: ArrayLike<number>, index: number): Mat4 {
   const offset = index * 16
   for (let i = 0; i < 16; i += 1) elements[i] = array[offset + i] ?? 0
   return { elements }
+}
+
+/** 左上 3×3 行列式为负即带镜像缩放。BatchedMesh 不接这种矩阵。 */
+export function negativeScale(matrix: Mat4): boolean {
+  const e = matrix.elements
+  const det =
+    e[0] * (e[5] * e[10] - e[9] * e[6]) - e[4] * (e[1] * e[10] - e[9] * e[2]) + e[8] * (e[1] * e[6] - e[5] * e[2])
+  return det < 0
 }
 
 /** 列主序，绕 Y。只给测试和径向烘焙用。 */
@@ -200,16 +210,17 @@ export interface InstanceSink {
 
 /**
  * 一个网格一批 setMatrixAt，随后 instanceMatrix.needsUpdate 只置一次。
+ * ids 给 BatchedMesh：第 i 对写到实例 ids[i]，删掉的槽不在表里。实例网格不传，下标即槽号。
  * 返回写出的实例数。
  */
-export function applyStationProgress(sink: InstanceSink, pairs: StationPair[], progress: number): number {
-  const count = Math.min(sink.count, pairs.length)
+export function applyStationProgress(sink: InstanceSink, pairs: StationPair[], progress: number, ids?: readonly number[] | null): number {
+  const count = ids ? Math.min(ids.length, pairs.length) : Math.min(sink.count, pairs.length)
   const handle = matrixHandle(scratch.elements)
   for (let index = 0; index < count; index += 1) {
     const pair = pairs[index]
     if (!pair) continue
     lerpStationMatrix(pair.rest, pair.explode, progress, scratch)
-    sink.setMatrixAt(index, handle)
+    sink.setMatrixAt(ids ? ids[index] : index, handle)
   }
   if (count > 0 && sink.instanceMatrix) sink.instanceMatrix.needsUpdate = true
   return count
@@ -255,6 +266,8 @@ export function applyMemberProgress(members: MemberSink[], pairs: StationPair[],
  * 决定这一帧写不写、要不要重新抓 rest。
  * 离开楼层时 stepStationExplodeMotion 已经把进度打成 0。
  * 单层收拢不走 0.8 秒尾巴：昼景停稳后再要帧会被截住，采样时还剩大约 0.03，圆标离 rest 超过 0.08。
+ * 拖滑杆时 __es 让时钟当帧落到目标，motion 不算动画。进度和 written 不同就再写一批，
+ * 否则第一下之后桌椅停在旧进度，圆标和标签却按新进度走。
  */
 export function stationTick(
   posed: boolean,
@@ -263,6 +276,7 @@ export function stationTick(
   exploded: boolean,
   view: string,
   now: number,
+  written = Number.NaN,
 ): StationTick & { posed: boolean; captured: boolean; settled: boolean } {
   let motion = stepStationExplodeMotion(exploded, view, now)
   if (view === 'floor' && !exploded && (motion.animating || motion.progress !== 0)) {
@@ -271,10 +285,10 @@ export function stationTick(
   }
   const live = motion.animating || motion.progress !== 0
   if (!live) {
-    return { motion, write: posed, capture: false, posed: false, captured: false, settled: false }
+    return { motion, write: posed, capture: false, posed: false, captured: false, settled: false, written: Number.NaN }
   }
-  if (!motion.animating && settled) {
-    return { motion, write: false, capture: false, posed: true, captured: true, settled: true }
+  if (!motion.animating && settled && motion.progress === written) {
+    return { motion, write: false, capture: false, posed: true, captured: true, settled: true, written }
   }
   return {
     motion,
@@ -283,6 +297,7 @@ export function stationTick(
     posed: true,
     captured: true,
     settled: !motion.animating,
+    written: motion.progress,
   }
 }
 

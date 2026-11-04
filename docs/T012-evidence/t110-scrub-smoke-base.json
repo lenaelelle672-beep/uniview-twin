@@ -1,0 +1,580 @@
+{
+  "label": "base-04d7109",
+  "baseUrl": "http://127.0.0.1:5191",
+  "floor": "F4",
+  "cases": [
+    {
+      "width": 1024,
+      "theme": "day",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 714,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 960,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 6.4,
+            "WorkstationChairs": 6.4,
+            "WorkstationMonitors": 6.4
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 1081,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 12.8,
+            "WorkstationChairs": 12.8,
+            "WorkstationMonitors": 12.8
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 449,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 3.84,
+            "WorkstationChairs": 3.84,
+            "WorkstationMonitors": 3.84
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 2,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": [
+        "0.55: WorkstationDesks 离目标 6.4000 m",
+        "0.55: WorkstationChairs 离目标 6.4000 m",
+        "0.55: WorkstationMonitors 离目标 6.4000 m",
+        "0.8: WorkstationDesks 离目标 12.8000 m",
+        "0.8: WorkstationChairs 离目标 12.8000 m",
+        "0.8: WorkstationMonitors 离目标 12.8000 m",
+        "0.45: WorkstationDesks 离目标 3.8400 m",
+        "0.45: WorkstationChairs 离目标 3.8400 m",
+        "0.45: WorkstationMonitors 离目标 3.8400 m"
+      ]
+    },
+    {
+      "width": 1024,
+      "theme": "night",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 980,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 887,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 6.4,
+            "WorkstationChairs": 6.4,
+            "WorkstationMonitors": 6.4
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 679,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 12.8,
+            "WorkstationChairs": 12.8,
+            "WorkstationMonitors": 12.8
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 473,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 3.84,
+            "WorkstationChairs": 3.84,
+            "WorkstationMonitors": 3.84
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 1,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": [
+        "0.55: WorkstationDesks 离目标 6.4000 m",
+        "0.55: WorkstationChairs 离目标 6.4000 m",
+        "0.55: WorkstationMonitors 离目标 6.4000 m",
+        "0.8: WorkstationDesks 离目标 12.8000 m",
+        "0.8: WorkstationChairs 离目标 12.8000 m",
+        "0.8: WorkstationMonitors 离目标 12.8000 m",
+        "0.45: WorkstationDesks 离目标 3.8400 m",
+        "0.45: WorkstationChairs 离目标 3.8400 m",
+        "0.45: WorkstationMonitors 离目标 3.8400 m"
+      ]
+    },
+    {
+      "width": 1366,
+      "theme": "day",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 1048,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 1730,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 6.4,
+            "WorkstationChairs": 6.4,
+            "WorkstationMonitors": 6.4
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 1937,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 12.8,
+            "WorkstationChairs": 12.8,
+            "WorkstationMonitors": 12.8
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 1730,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 3.84,
+            "WorkstationChairs": 3.84,
+            "WorkstationMonitors": 3.84
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 3,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": [
+        "0.55: WorkstationDesks 离目标 6.4000 m",
+        "0.55: WorkstationChairs 离目标 6.4000 m",
+        "0.55: WorkstationMonitors 离目标 6.4000 m",
+        "0.8: WorkstationDesks 离目标 12.8000 m",
+        "0.8: WorkstationChairs 离目标 12.8000 m",
+        "0.8: WorkstationMonitors 离目标 12.8000 m",
+        "0.45: WorkstationDesks 离目标 3.8400 m",
+        "0.45: WorkstationChairs 离目标 3.8400 m",
+        "0.45: WorkstationMonitors 离目标 3.8400 m"
+      ]
+    },
+    {
+      "width": 1366,
+      "theme": "night",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 2199,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 3,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 6.4,
+            "WorkstationChairs": 6.4,
+            "WorkstationMonitors": 6.4
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 2343,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 12.8,
+            "WorkstationChairs": 12.8,
+            "WorkstationMonitors": 12.8
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 948,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 3.84,
+            "WorkstationChairs": 3.84,
+            "WorkstationMonitors": 3.84
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 0,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": [
+        "0.55: WorkstationDesks 离目标 6.4000 m",
+        "0.55: WorkstationChairs 离目标 6.4000 m",
+        "0.55: WorkstationMonitors 离目标 6.4000 m",
+        "0.8: WorkstationDesks 离目标 12.8000 m",
+        "0.8: WorkstationChairs 离目标 12.8000 m",
+        "0.8: WorkstationMonitors 离目标 12.8000 m",
+        "0.45: WorkstationDesks 离目标 3.8400 m",
+        "0.45: WorkstationChairs 离目标 3.8400 m",
+        "0.45: WorkstationMonitors 离目标 3.8400 m"
+      ]
+    },
+    {
+      "width": 1920,
+      "theme": "day",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 1770,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 1974,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 6.4,
+            "WorkstationChairs": 6.4,
+            "WorkstationMonitors": 6.4
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 3377,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 12.8,
+            "WorkstationChairs": 12.8,
+            "WorkstationMonitors": 12.8
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 3295,
+          "framesForStep": 3,
+          "worst": {
+            "WorkstationDesks": 3.84,
+            "WorkstationChairs": 3.84,
+            "WorkstationMonitors": 3.84
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 2,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": [
+        "0.55: WorkstationDesks 离目标 6.4000 m",
+        "0.55: WorkstationChairs 离目标 6.4000 m",
+        "0.55: WorkstationMonitors 离目标 6.4000 m",
+        "0.8: WorkstationDesks 离目标 12.8000 m",
+        "0.8: WorkstationChairs 离目标 12.8000 m",
+        "0.8: WorkstationMonitors 离目标 12.8000 m",
+        "0.45: WorkstationDesks 离目标 3.8400 m",
+        "0.45: WorkstationChairs 离目标 3.8400 m",
+        "0.45: WorkstationMonitors 离目标 3.8400 m"
+      ]
+    },
+    {
+      "width": 1920,
+      "theme": "night",
+      "counts": {
+        "WorkstationDesks": 278,
+        "WorkstationChairs": 278,
+        "WorkstationMonitors": 278
+      },
+      "steps": [
+        {
+          "value": 0.3,
+          "progress": 0.3,
+          "animating": false,
+          "settleMs": 1151,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 0,
+            "WorkstationChairs": 0,
+            "WorkstationMonitors": 0
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.55,
+          "progress": 0.55,
+          "animating": false,
+          "settleMs": 2025,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 6.4,
+            "WorkstationChairs": 6.4,
+            "WorkstationMonitors": 6.4
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.8,
+          "progress": 0.8,
+          "animating": false,
+          "settleMs": 3391,
+          "framesForStep": 2,
+          "worst": {
+            "WorkstationDesks": 12.8,
+            "WorkstationChairs": 12.8,
+            "WorkstationMonitors": 12.8
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        },
+        {
+          "value": 0.45,
+          "progress": 0.45,
+          "animating": false,
+          "settleMs": 970,
+          "framesForStep": 1,
+          "worst": {
+            "WorkstationDesks": 3.84,
+            "WorkstationChairs": 3.84,
+            "WorkstationMonitors": 3.84
+          },
+          "deskMoved": 7.68,
+          "deskRadius": 55.06561699108461,
+          "deskOutside": 0
+        }
+      ],
+      "idleFrames": 1,
+      "closedProgress": 0,
+      "pageErrors": 0,
+      "consoleErrors": 0,
+      "failures": [
+        "0.55: WorkstationDesks 离目标 6.4000 m",
+        "0.55: WorkstationChairs 离目标 6.4000 m",
+        "0.55: WorkstationMonitors 离目标 6.4000 m",
+        "0.8: WorkstationDesks 离目标 12.8000 m",
+        "0.8: WorkstationChairs 离目标 12.8000 m",
+        "0.8: WorkstationMonitors 离目标 12.8000 m",
+        "0.45: WorkstationDesks 离目标 3.8400 m",
+        "0.45: WorkstationChairs 离目标 3.8400 m",
+        "0.45: WorkstationMonitors 离目标 3.8400 m"
+      ]
+    }
+  ],
+  "failures": [
+    "1024 day 0.55: WorkstationDesks 离目标 6.4000 m",
+    "1024 day 0.55: WorkstationChairs 离目标 6.4000 m",
+    "1024 day 0.55: WorkstationMonitors 离目标 6.4000 m",
+    "1024 day 0.8: WorkstationDesks 离目标 12.8000 m",
+    "1024 day 0.8: WorkstationChairs 离目标 12.8000 m",
+    "1024 day 0.8: WorkstationMonitors 离目标 12.8000 m",
+    "1024 day 0.45: WorkstationDesks 离目标 3.8400 m",
+    "1024 day 0.45: WorkstationChairs 离目标 3.8400 m",
+    "1024 day 0.45: WorkstationMonitors 离目标 3.8400 m",
+    "1024 night 0.55: WorkstationDesks 离目标 6.4000 m",
+    "1024 night 0.55: WorkstationChairs 离目标 6.4000 m",
+    "1024 night 0.55: WorkstationMonitors 离目标 6.4000 m",
+    "1024 night 0.8: WorkstationDesks 离目标 12.8000 m",
+    "1024 night 0.8: WorkstationChairs 离目标 12.8000 m",
+    "1024 night 0.8: WorkstationMonitors 离目标 12.8000 m",
+    "1024 night 0.45: WorkstationDesks 离目标 3.8400 m",
+    "1024 night 0.45: WorkstationChairs 离目标 3.8400 m",
+    "1024 night 0.45: WorkstationMonitors 离目标 3.8400 m",
+    "1366 day 0.55: WorkstationDesks 离目标 6.4000 m",
+    "1366 day 0.55: WorkstationChairs 离目标 6.4000 m",
+    "1366 day 0.55: WorkstationMonitors 离目标 6.4000 m",
+    "1366 day 0.8: WorkstationDesks 离目标 12.8000 m",
+    "1366 day 0.8: WorkstationChairs 离目标 12.8000 m",
+    "1366 day 0.8: WorkstationMonitors 离目标 12.8000 m",
+    "1366 day 0.45: WorkstationDesks 离目标 3.8400 m",
+    "1366 day 0.45: WorkstationChairs 离目标 3.8400 m",
+    "1366 day 0.45: WorkstationMonitors 离目标 3.8400 m",
+    "1366 night 0.55: WorkstationDesks 离目标 6.4000 m",
+    "1366 night 0.55: WorkstationChairs 离目标 6.4000 m",
+    "1366 night 0.55: WorkstationMonitors 离目标 6.4000 m",
+    "1366 night 0.8: WorkstationDesks 离目标 12.8000 m",
+    "1366 night 0.8: WorkstationChairs 离目标 12.8000 m",
+    "1366 night 0.8: WorkstationMonitors 离目标 12.8000 m",
+    "1366 night 0.45: WorkstationDesks 离目标 3.8400 m",
+    "1366 night 0.45: WorkstationChairs 离目标 3.8400 m",
+    "1366 night 0.45: WorkstationMonitors 离目标 3.8400 m",
+    "1920 day 0.55: WorkstationDesks 离目标 6.4000 m",
+    "1920 day 0.55: WorkstationChairs 离目标 6.4000 m",
+    "1920 day 0.55: WorkstationMonitors 离目标 6.4000 m",
+    "1920 day 0.8: WorkstationDesks 离目标 12.8000 m",
+    "1920 day 0.8: WorkstationChairs 离目标 12.8000 m",
+    "1920 day 0.8: WorkstationMonitors 离目标 12.8000 m",
+    "1920 day 0.45: WorkstationDesks 离目标 3.8400 m",
+    "1920 day 0.45: WorkstationChairs 离目标 3.8400 m",
+    "1920 day 0.45: WorkstationMonitors 离目标 3.8400 m",
+    "1920 night 0.55: WorkstationDesks 离目标 6.4000 m",
+    "1920 night 0.55: WorkstationChairs 离目标 6.4000 m",
+    "1920 night 0.55: WorkstationMonitors 离目标 6.4000 m",
+    "1920 night 0.8: WorkstationDesks 离目标 12.8000 m",
+    "1920 night 0.8: WorkstationChairs 离目标 12.8000 m",
+    "1920 night 0.8: WorkstationMonitors 离目标 12.8000 m",
+    "1920 night 0.45: WorkstationDesks 离目标 3.8400 m",
+    "1920 night 0.45: WorkstationChairs 离目标 3.8400 m",
+    "1920 night 0.45: WorkstationMonitors 离目标 3.8400 m"
+  ],
+  "ok": false
+}
