@@ -992,6 +992,24 @@ interface Window {
   }
   /** T114：天幕开关。传 false 等同 `?skyGradient=0`。开关分包加载后才有。 */
   __twinSetGradientSky?: (on: boolean) => void
+  /** T115：拾取代理节点。格网槽的第十一个缺省位。默认没有。 */
+  __twinDiscardProxyNode?: import('react').ReactNode
+  /**
+   * T115：进层后把 boxPickProxy 换成 drei MeshDiscardMaterial。
+   * 不写颜色、不写深度。不改 mesh.visible，不改 raycast。总览不挂。
+   */
+  __twinDiscardProxy?: {
+    on: boolean
+    mounted: boolean
+    count: number
+    impl: 'drei-MeshDiscardMaterial'
+    colorWrite: false
+    depthWrite: false
+    materialVisible: true
+    raycast: 'untouched'
+    objectVisible: 'untouched'
+    cdn: false
+  }
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。

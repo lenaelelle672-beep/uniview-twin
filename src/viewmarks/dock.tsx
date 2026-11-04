@@ -146,6 +146,10 @@ void import('../overview-clouds/mount').then((mod) => {
 void import('../drawrange-reveal/mount').then((mod) => {
   mod.mountDrawRangeReveal()
 })
+// T115：拾取代理 MeshDiscardMaterial。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../discard-proxy/mount').then((mod) => {
+  mod.mountDiscardProxy()
+})
 
 let root: Root | null = null
 let host: HTMLElement | null = null
