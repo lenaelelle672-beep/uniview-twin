@@ -2,6 +2,7 @@ import {
   SENSOR_CLOUD_CAP,
   SENSOR_POINTS_LAYERS,
   SENSOR_POINTS_PER_FLOOR,
+  SENSOR_SAMPLE_COUNT,
   type SensorPointsState,
 } from './plan'
 
@@ -12,6 +13,7 @@ export function publishSensorPoints(patch: {
   state: SensorPointsState
   count?: number
   alarmFloors?: number
+  sampled?: boolean
 }): void {
   const prev = window.__twinSensorPoints
   window.__twinSensorPoints = {
@@ -29,5 +31,10 @@ export function publishSensorPoints(patch: {
     dom: false,
     layers: SENSOR_POINTS_LAYERS,
     cdn: false,
+    sampler: 'useSurfaceSampler',
+    sampleOnce: true,
+    sampleCount: SENSOR_SAMPLE_COUNT,
+    sampled: patch.sampled ?? prev?.sampled ?? false,
+    sampleSource: 'floor-plate',
   }
 }

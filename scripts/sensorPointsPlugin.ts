@@ -10,7 +10,8 @@ import { lookupThreeExports } from './segmentsPlugin'
  * 哈希定稿前把 dock 里的点云接线摘掉。
  * drei Points 和 PointMaterial 不进 vite 图，所以不会带动 index / balancedFx / dock 的哈希。
  * 定稿后再把开关分包、点云分包，以及这两个 drei 模块各自的分包接回。
- * 两个模块都在 dock 之后才请求，不进 hardGate / balancedFx。
+ * T124：Sampler 跟在点云分包后面单独成包。MeshSurfaceSampler 只从 three-stdlib 的那一个文件打进来。
+ * 这些模块都在 dock 之后、并且过了点云门闩才请求，不进 hardGate / balancedFx。
  */
 export const SENSOR_POINTS_SOURCE_BLOCK = `// T119：传感器/告警点云。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../sensor-points/mount').then((mod) => {
@@ -25,12 +26,105 @@ const DREI_POINTS = fileURLToPath(new URL('../node_modules/@react-three/drei/cor
 const DREI_POINT_MATERIAL = fileURLToPath(
   new URL('../node_modules/@react-three/drei/core/PointMaterial.js', import.meta.url),
 )
+const DREI_SAMPLER = fileURLToPath(new URL('../node_modules/@react-three/drei/core/Sampler.js', import.meta.url))
+const MESH_SURFACE_SAMPLER = fileURLToPath(
+  new URL('../node_modules/three-stdlib/math/MeshSurfaceSampler.js', import.meta.url),
+)
+const SURFACE_ENTRY = fileURLToPath(new URL('../src/sensor-points/SurfaceSample.tsx', import.meta.url))
 
 /** 入口包和 balancedFx、DemandLoop、哈希前的 dock 里都不许出现这些。 */
 const GATE_MARKERS =
-  /sensor-points|mountSensorPoints|SensorCloud|__twinSensorPoints|sensorPoints|PointMaterialImpl|PointsBuffer|PositionPoint/
+  /sensor-points|mountSensorPoints|SensorCloud|__twinSensorPoints|sensorPoints|PointMaterialImpl|PointsBuffer|PositionPoint|useSurfaceSampler|MeshSurfaceSampler|SensorSampler|SensorSamplePlate/
 
-const STUB_OK = new Set(['Matrix4', 'Ray', 'Sphere', 'DynamicDrawUsage', 'PointsMaterial', 'Material'])
+const STUB_OK = new Set([
+  'Matrix4',
+  'Ray',
+  'Sphere',
+  'DynamicDrawUsage',
+  'PointsMaterial',
+  'Material',
+  'InstancedBufferAttribute',
+  'Object3D',
+  'Triangle',
+])
+
+/**
+ * MeshSurfaceSampler 只调用 getArea / getNormal。
+ * 面积必须和 three.Triangle 一致，两片楼板三角形的权重才不会偏。
+ * 单测用这份字符串对 three.Triangle。
+ */
+export const TRIANGLE_CLASS = `class Triangle {
+  constructor(a, b, c) {
+    this.a = a || new Vector3()
+    this.b = b || new Vector3()
+    this.c = c || new Vector3()
+  }
+  getArea() {
+    const ax = this.c.x - this.b.x
+    const ay = this.c.y - this.b.y
+    const az = this.c.z - this.b.z
+    const bx = this.a.x - this.b.x
+    const by = this.a.y - this.b.y
+    const bz = this.a.z - this.b.z
+    const cx = ay * bz - az * by
+    const cy = az * bx - ax * bz
+    const cz = ax * by - ay * bx
+    return Math.hypot(cx, cy, cz) * 0.5
+  }
+  getNormal(target) {
+    const ax = this.c.x - this.b.x
+    const ay = this.c.y - this.b.y
+    const az = this.c.z - this.b.z
+    const bx = this.a.x - this.b.x
+    const by = this.a.y - this.b.y
+    const bz = this.a.z - this.b.z
+    const cx = ay * bz - az * by
+    const cy = az * bx - ax * bz
+    const cz = ax * by - ay * bx
+    const length = Math.hypot(cx, cy, cz)
+    if (length > 0) return target.set(cx / length, cy / length, cz / length)
+    return target.set(0, 0, 0)
+  }
+}`
+
+const OBJECT3D_CLASS = `class Object3D {
+  constructor() {
+    this.position = new Vector3()
+    const elements = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
+    this.matrix = {
+      elements,
+      toArray(target, offset = 0) {
+        target.set(elements, offset)
+        return target
+      },
+    }
+  }
+  updateMatrix() {
+    const elements = this.matrix.elements
+    elements[12] = this.position.x
+    elements[13] = this.position.y
+    elements[14] = this.position.z
+  }
+  updateMatrixWorld() {
+    this.updateMatrix()
+  }
+}`
+
+const INSTANCED_ATTRIBUTE_CLASS = `class InstancedBufferAttribute {
+  constructor(array, itemSize) {
+    this.array = array
+    this.itemSize = itemSize
+    this.count = array.length / itemSize
+    this.needsUpdate = false
+  }
+  copy(source) {
+    this.array = source.array
+    this.itemSize = source.itemSize
+    this.count = source.count ?? source.array.length / source.itemSize
+    this.needsUpdate = true
+    return this
+  }
+}`
 
 interface BundleChunk {
   type: string
@@ -47,11 +141,8 @@ function chunksOf(bundle: Record<string, { type: string }>): BundleChunk[] {
   return Object.values(bundle).filter(isChunk)
 }
 
-/** drei 两个模块经 `THREE.` 用到的，加上点云组件按名导入的 three。 */
-export function threeImportNames(): string[] {
-  const names = new Set<string>(['Color', 'Group', 'Vector3', 'MeshBasicMaterial', 'REVISION'])
-  const live = readFileSync(LIVE_ENTRY, 'utf8')
-  for (const match of live.matchAll(/import\s+(type\s+)?\{([^}]+)\}\s+from\s+['"]three['"]/g)) {
+function addNamedThreeImports(source: string, names: Set<string>): void {
+  for (const match of source.matchAll(/import\s+(type\s+)?\{([^}]+)\}\s+from\s+['"]three['"]/g)) {
     if (match[1]) continue
     for (const part of (match[2] ?? '').split(',')) {
       const piece = part.trim()
@@ -60,11 +151,25 @@ export function threeImportNames(): string[] {
       if (name) names.add(name)
     }
   }
+}
+
+function addNamespaceThreeImports(source: string, names: Set<string>): void {
+  for (const match of source.matchAll(/\bTHREE\.([A-Za-z_$][\w$]*)/g)) {
+    if (match[1]) names.add(match[1])
+  }
+}
+
+/**
+ * drei Points / PointMaterial 走 `THREE.`。
+ * Sampler 和 MeshSurfaceSampler 走具名导入。警告字符串里的 `THREE.MeshSurfaceSampler` 不是导出。
+ */
+export function threeImportNames(): string[] {
+  const names = new Set<string>(['Color', 'Group', 'Vector3', 'MeshBasicMaterial', 'REVISION'])
+  for (const file of [LIVE_ENTRY, SURFACE_ENTRY, DREI_POINTS, DREI_POINT_MATERIAL, DREI_SAMPLER, MESH_SURFACE_SAMPLER]) {
+    addNamedThreeImports(readFileSync(file, 'utf8'), names)
+  }
   for (const file of [DREI_POINTS, DREI_POINT_MATERIAL]) {
-    const source = readFileSync(file, 'utf8')
-    for (const match of source.matchAll(/\bTHREE\.([A-Za-z_$][\w$]*)/g)) {
-      if (match[1]) names.add(match[1])
-    }
+    addNamespaceThreeImports(readFileSync(file, 'utf8'), names)
   }
   return [...names].sort()
 }
@@ -134,6 +239,9 @@ function threeShim(indexFile: string, found: Record<string, string>, missing: st
   }
   if (!found.DynamicDrawUsage) lines.push('export const DynamicDrawUsage = 35048')
   if (!found.PointsMaterial) lines.push(pointsMaterialClass(Boolean(found.Material)))
+  if (!found.InstancedBufferAttribute) lines.push(`export ${INSTANCED_ATTRIBUTE_CLASS}`)
+  if (!found.Object3D) lines.push(`export ${OBJECT3D_CLASS}`)
+  if (!found.Triangle) lines.push(`export ${TRIANGLE_CLASS}`)
   return lines.join('\n')
 }
 
@@ -145,6 +253,7 @@ export const useState = React.useState
 export const useEffect = React.useEffect
 export const useLayoutEffect = React.useLayoutEffect
 export const useMemo = React.useMemo
+export const useCallback = React.useCallback
 export const useRef = React.useRef
 export const useContext = React.useContext
 export const useImperativeHandle = React.useImperativeHandle
@@ -180,7 +289,11 @@ export { useTwinStore }
 `
 }
 
-function shimPlugin(names: GridBindings, three: { found: Record<string, string>; missing: string[] }, kind: 'mount' | 'live' | 'module'): EsbuildPlugin {
+function shimPlugin(
+  names: GridBindings,
+  three: { found: Record<string, string>; missing: string[] },
+  kind: 'mount' | 'live' | 'module' | 'sampler',
+): EsbuildPlugin {
   return {
     name: 'sensor-points-shims',
     setup(build) {
@@ -202,6 +315,15 @@ function shimPlugin(names: GridBindings, three: { found: Record<string, string>;
         build.onResolve({ filter: /(?:^|\/)PointMaterial(?:\.js)?$/ }, () => ({
           path: './SensorPointMaterial.js',
           external: true,
+        }))
+        build.onResolve({ filter: /(?:^|\/)Sampler(?:\.js)?$/ }, (args) => {
+          if (args.path.includes('MeshSurfaceSampler')) return null
+          return { path: './SensorSampler.js', external: true }
+        })
+      }
+      if (kind === 'sampler') {
+        build.onResolve({ filter: /^three-stdlib$/ }, () => ({
+          path: MESH_SURFACE_SAMPLER,
         }))
       }
       build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'points-shim' }))
@@ -228,7 +350,7 @@ function shimPlugin(names: GridBindings, three: { found: Record<string, string>;
 
 async function bundleEntry(
   entry: string,
-  kind: 'mount' | 'live' | 'module',
+  kind: 'mount' | 'live' | 'module' | 'sampler',
   names: GridBindings,
   three: { found: Record<string, string>; missing: string[] },
 ): Promise<string> {
@@ -324,15 +446,18 @@ export function sensorPointsAfterHash(): Plugin {
       let live = ''
       let points = ''
       let material = ''
+      let sampler = ''
       try {
         mount = await bundleEntry(MOUNT_ENTRY, 'mount', names, looked)
         live = await bundleEntry(LIVE_ENTRY, 'live', names, looked)
         points = await bundleEntry(DREI_POINTS, 'module', names, looked)
         material = await bundleEntry(DREI_POINT_MATERIAL, 'module', names, looked)
+        sampler = await bundleEntry(DREI_SAMPLER, 'sampler', names, looked)
         assertSyntax(mount, 'SensorPointsMount')
         assertSyntax(live, 'SensorCloud')
         assertSyntax(points, 'SensorPoints')
         assertSyntax(material, 'SensorPointMaterial')
+        assertSyntax(sampler, 'SensorSampler')
       } catch (error) {
         this.error(error instanceof Error ? error.message : `T119：分包失败 ${error}`)
         return
@@ -346,8 +471,14 @@ export function sensorPointsAfterHash(): Plugin {
       if (!live.includes('./SensorPoints.js') || !live.includes('./SensorPointMaterial.js')) {
         this.error('T119：点云分包没有分开引用 Points 和 PointMaterial')
       }
-      if (live.includes('gl_PointCoord') || live.includes('distanceSqToPoint')) {
+      if (!live.includes('./SensorSampler.js')) {
+        this.error('T124：点云分包没有分开引用 Sampler')
+      }
+      if (live.includes('gl_PointCoord') || live.includes('distanceSqToPoint') || live.includes('THREE.MeshSurfaceSampler')) {
         this.error('T119：点云分包把 drei 模块内联了')
+      }
+      if (mount.includes('./SensorSampler.js') || mount.includes('MeshSurfaceSampler') || mount.includes('captureSurfaceSample')) {
+        this.error('T124：开关分包把采样打进去了')
       }
       if (!points.includes('distanceSqToPoint') || points.includes('gl_PointCoord')) {
         this.error('T119：Points 模块分包不对')
@@ -355,7 +486,13 @@ export function sensorPointsAfterHash(): Plugin {
       if (!material.includes('gl_PointCoord') || material.includes('distanceSqToPoint')) {
         this.error('T119：PointMaterial 模块分包不对')
       }
-      const bundled = mount + live + points + material
+      if (!sampler.includes('THREE.MeshSurfaceSampler')) {
+        this.error('T124：Sampler 分包没有带上 MeshSurfaceSampler')
+      }
+      if (/GLTFLoader|RGBELoader|three-stdlib/.test(sampler)) {
+        this.error('T124：Sampler 分包把 three-stdlib 整包打进去了')
+      }
+      const bundled = mount + live + points + material + sampler
       if (!bundled.includes(`./${names.indexFile}`)) {
         this.error('T119：点云分包没有复用入口包')
       }
@@ -365,15 +502,22 @@ export function sensorPointsAfterHash(): Plugin {
       if (/https?:|\/\/cdn|githack|jsdelivr|unpkg|\.hdr\b/.test(bundled)) {
         this.error('T119：点云分包带了外链或 HDR')
       }
-      if (mount.length > 16_000 || live.length > 16_000 || points.length > 24_000 || material.length > 24_000) {
+      if (
+        mount.length > 16_000 ||
+        live.length > 16_000 ||
+        points.length > 24_000 ||
+        material.length > 24_000 ||
+        sampler.length > 48_000
+      ) {
         this.error(
-          `T119：点云分包过大 mount=${mount.length} live=${live.length} points=${points.length} material=${material.length}`,
+          `T119：点云分包过大 mount=${mount.length} live=${live.length} points=${points.length} material=${material.length} sampler=${sampler.length}`,
         )
       }
       bundle['assets/SensorPointsMount.js'] = asset('assets/SensorPointsMount.js', mount)
       bundle['assets/SensorCloud.js'] = asset('assets/SensorCloud.js', live)
       bundle['assets/SensorPoints.js'] = asset('assets/SensorPoints.js', points)
       bundle['assets/SensorPointMaterial.js'] = asset('assets/SensorPointMaterial.js', material)
+      bundle['assets/SensorSampler.js'] = asset('assets/SensorSampler.js', sampler)
       dock.code += `\nvoid import("./SensorPointsMount.js").then((m)=>{m.mountSensorPoints()});\n`
     },
   }
