@@ -1462,6 +1462,19 @@ interface Window {
   __twinSetFloorPlan?: (on: boolean) => void
   /** T118：正交相机挂着时，每帧让开关再看一眼让路条件。 */
   __twinFloorPlanSync?: () => void
+  /**
+   * T123：正交会话里的本地 SVG 叠层。drei Svg 在平面图相机之后的懒包里。
+   * 离开正交会话时 mounted 为 false。src 永远是站内路径，cdn 永远是 false。
+   */
+  __twinFloorPlanSvg?: {
+    mounted: boolean
+    impl: 'drei-Svg'
+    src: '/floor-plan/floor.svg'
+    cdn: false
+    triangles: number
+    shapes: number
+    reason: import('./floor-plan/svgPlan').FloorPlanSvgReason
+  }
   /** 文档画中画。Chrome 系才有。没有时文档值守停用。 */
   documentPictureInPicture?: {
     requestWindow?: (options?: {
