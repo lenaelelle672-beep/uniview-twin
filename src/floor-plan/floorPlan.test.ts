@@ -235,6 +235,7 @@ describe('平面图接线', () => {
     expect(plugin).toMatch(/apply: 'build'/)
     expect(plugin).toMatch(/assets\/FloorPlanMount\.js/)
     expect(plugin).toMatch(/assets\/FloorPlanCamera\.js/)
+    expect(plugin).toMatch(/assets\/FloorPlanSvg\.js/)
     expect(threeImportNames()).toEqual([
       'Box3',
       'DepthTexture',
@@ -273,6 +274,22 @@ describe('平面图接线', () => {
     expect(live).not.toMatch(/https?:|githack|jsdelivr|unpkg/)
     expect(live).toMatch(/FloorPlate/)
     expect(live).toMatch(/upZ: -1|frame\.upZ/)
+    expect(live).toMatch(/import\('\.\/FloorPlanSvg'\)/)
+    expect(live).not.toMatch(/core\/Svg|SVGLoader|three-stdlib|extrude/)
+
+    const overlay = read('./FloorPlanSvg.tsx')
+    const planSvg = read('./svgPlan.ts')
+    expect(overlay).toMatch(/from '@react-three\/drei\/core\/Svg'/)
+    expect(overlay).not.toMatch(/from '@react-three\/drei'["']/)
+    expect(overlay).toMatch(/skipStrokes/)
+    expect(overlay).toMatch(/FLOOR_PLAN_SVG_URL/)
+    expect(overlay).toMatch(/reason: 'unmounted'/)
+    expect(overlay).not.toMatch(/jsdelivr|unpkg|githack|https?:/)
+    expect(overlay).not.toMatch(/from '\.\.\/scene\/extrude'|from '\.\/extrude'/)
+    expect(planSvg).toMatch(/extrude\.ts/)
+    expect(planSvg).toMatch(/FLOOR_PLAN_SVG_URL = '\/floor-plan\/floor\.svg'/)
+    expect(planSvg).not.toMatch(/jsdelivr|unpkg|githack/)
+    expect(mount).not.toMatch(/FloorPlanSvg|core\/Svg/)
 
     expect(rig).toMatch(/from '@react-three\/drei\/core\/CameraControls'/)
     expect(rig).toMatch(/makeDefault/)

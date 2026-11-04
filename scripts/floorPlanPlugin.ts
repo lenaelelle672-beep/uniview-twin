@@ -10,6 +10,7 @@ import { lookupThreeExports } from './segmentsPlugin'
  * 哈希定稿前把 dock 里的平面图接线摘掉。
  * drei OrthographicCamera 不进 vite 图，所以不会带动 index / balancedFx / dock 的哈希。
  * 定稿后再把开关分包和相机分包接回 dock。相机要等会话打开并且已经在单层里才请求。
+ * T123：Svg 再从相机分包里动态拆出去。SVGLoader 不进相机包，也不进 vite 图。
  */
 export const FLOOR_PLAN_SOURCE_BLOCK = `// T118：单层平面图俯视。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../floor-plan/mount').then((mod) => {
@@ -20,6 +21,7 @@ void import('../floor-plan/mount').then((mod) => {
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const MOUNT_ENTRY = fileURLToPath(new URL('../src/floor-plan/mount.ts', import.meta.url))
 const LIVE_ENTRY = fileURLToPath(new URL('../src/floor-plan/FloorPlanCamera.tsx', import.meta.url))
+const SVG_ENTRY = fileURLToPath(new URL('../src/floor-plan/FloorPlanSvg.tsx', import.meta.url))
 const DREI_FBO = fileURLToPath(new URL('../node_modules/@react-three/drei/core/Fbo.js', import.meta.url))
 
 /** 入口包、balancedFx、DemandLoop、哈希前的 dock 里都不许出现这些。 */
@@ -129,6 +131,10 @@ function shimPlugin(
           external: true,
         }))
       }
+      build.onResolve({ filter: /^\.\/FloorPlanSvg(?:\.tsx)?$/ }, () => ({
+        path: './FloorPlanSvg.js',
+        external: true,
+      }))
       build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'plan-shim' }))
       build.onResolve({ filter: /^react\/jsx-runtime$/ }, () => ({ path: 'jsx', namespace: 'plan-shim' }))
       build.onResolve({ filter: /^@react-three\/fiber$/ }, () => ({ path: 'fiber', namespace: 'plan-shim' }))
@@ -178,6 +184,107 @@ async function bundleEntry(
   const file = built.outputFiles[0]
   if (!file || built.outputFiles.length !== 1) throw new Error('T118：平面图分包没有打成单个文件')
   return file.text
+}
+
+function svgFiberShim(indexFile: string, names: GridBindings): string {
+  const from = JSON.stringify(`./${indexFile}`)
+  return `import { ${names.useThree} as useThree } from ${from}
+export { useThree }
+const cache = new Map()
+export function useLoader(LoaderCtor, url) {
+  const key = String(url)
+  const hit = cache.get(key)
+  if (hit && typeof hit.then !== 'function') return hit
+  if (!hit) {
+    const loader = new LoaderCtor()
+    const pending = new Promise((resolve, reject) => {
+      loader.load(key, resolve, undefined, reject)
+    }).then(
+      (value) => {
+        cache.set(key, value)
+        return value
+      },
+      (error) => {
+        cache.delete(key)
+        throw error
+      },
+    )
+    cache.set(key, pending)
+    throw pending
+  }
+  throw hit
+}
+useLoader.preload = () => {}
+useLoader.clear = (_loader, input) => {
+  const keys = Array.isArray(input) ? input : [input]
+  for (const key of keys) cache.delete(String(key))
+}
+`
+}
+
+function svgShimPlugin(names: GridBindings): EsbuildPlugin {
+  return {
+    name: 'floor-plan-svg-shims',
+    setup(build) {
+      build.onResolve({ filter: /^\.\/index-[^/]+\.js$/ }, (args) => ({
+        path: args.path,
+        external: true,
+      }))
+      build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'svg-shim' }))
+      build.onResolve({ filter: /^react\/jsx-runtime$/ }, () => ({ path: 'jsx', namespace: 'svg-shim' }))
+      build.onResolve({ filter: /^@react-three\/fiber$/ }, () => ({ path: 'fiber', namespace: 'svg-shim' }))
+      build.onLoad({ filter: /.*/, namespace: 'svg-shim' }, (args) => {
+        const contents =
+          args.path === 'react'
+            ? reactShim(names.indexFile, names.react)
+            : args.path === 'jsx'
+              ? jsxShim(names.indexFile, names.react, names.jsx)
+              : svgFiberShim(names.indexFile, names)
+        return { contents, loader: 'js', resolveDir: ROOT }
+      })
+    },
+  }
+}
+
+async function bundleSvg(names: GridBindings): Promise<string> {
+  const built = await esbuild({
+    absWorkingDir: ROOT,
+    entryPoints: [SVG_ENTRY],
+    bundle: true,
+    format: 'esm',
+    platform: 'browser',
+    target: 'es2022',
+    minify: true,
+    legalComments: 'none',
+    charset: 'utf8',
+    write: false,
+    jsx: 'automatic',
+    logLevel: 'silent',
+    plugins: [svgShimPlugin(names)],
+  })
+  if (built.warnings.length > 0) {
+    throw new Error(`T123：Svg 分包有警告 ${built.warnings.map((item) => item.text).join('; ')}`)
+  }
+  const file = built.outputFiles[0]
+  if (!file || built.outputFiles.length !== 1) throw new Error('T123：Svg 分包没有打成单个文件')
+  return file.text
+}
+
+function assertSvgChunk(source: string): void {
+  if (!source.includes('drei-Svg') || !source.includes('createShapes') || !source.includes('/floor-plan/floor.svg')) {
+    throw new Error('T123：Svg 分包里没有 drei Svg 或本地图纸')
+  }
+  if (source.includes('WebGLRenderer') || source.includes('GLTFLoader') || source.includes('OrthographicCamera')) {
+    throw new Error('T123：Svg 分包带进了渲染器、GLTF 或正交相机')
+  }
+  if (/from["']three["']|@react-three\/drei["']|jsdelivr|unpkg|githack|cdn\.jsdelivr|rawcdn/.test(source)) {
+    throw new Error('T123：Svg 分包带了 three 入口、drei 桶或外链')
+  }
+  const urls = source.match(/https?:\/\/[^"'\\\s)]+/g) ?? []
+  for (const url of urls) {
+    if (!url.startsWith('http://www.w3.org/')) throw new Error(`T123：Svg 分包有外链 ${url}`)
+  }
+  if (source.length > 420_000) throw new Error(`T123：Svg 分包过大 ${source.length}`)
 }
 
 function asset(fileName: string, source: string) {
@@ -249,11 +356,17 @@ export function floorPlanAfterHash(): Plugin {
       const looked = lookupThreeExports(index.code, threeImportNames())
       let mount = ''
       let live = ''
+      let svg = ''
       try {
-        mount = await bundleEntry(MOUNT_ENTRY, true, names, looked)
-        live = await bundleEntry(LIVE_ENTRY, false, names, looked)
+        ;[mount, live, svg] = await Promise.all([
+          bundleEntry(MOUNT_ENTRY, true, names, looked),
+          bundleEntry(LIVE_ENTRY, false, names, looked),
+          bundleSvg(names),
+        ])
         assertSyntax(mount, 'FloorPlanMount')
         assertSyntax(live, 'FloorPlanCamera')
+        assertSyntax(svg, 'FloorPlanSvg')
+        assertSvgChunk(svg)
       } catch (error) {
         this.error(error instanceof Error ? error.message : `T118：分包失败 ${error}`)
         return
@@ -266,6 +379,12 @@ export function floorPlanAfterHash(): Plugin {
       }
       if (!live.includes('orthographicCamera') || !live.includes('makeDefault')) {
         this.error('T118：相机分包里没有 drei OrthographicCamera')
+      }
+      if (!live.includes('./FloorPlanSvg.js')) {
+        this.error('T123：相机分包没有延迟加载 Svg')
+      }
+      if (live.includes('drei-Svg') || live.includes('createShapes') || live.includes('SVGLoader')) {
+        this.error('T123：相机分包把 Svg 打进去了')
       }
       if (!live.includes(`./${names.indexFile}`) || !mount.includes(`./${names.indexFile}`)) {
         this.error('T118：平面图分包没有复用入口包')
@@ -285,6 +404,7 @@ export function floorPlanAfterHash(): Plugin {
       }
       bundle['assets/FloorPlanMount.js'] = asset('assets/FloorPlanMount.js', mount)
       bundle['assets/FloorPlanCamera.js'] = asset('assets/FloorPlanCamera.js', live)
+      bundle['assets/FloorPlanSvg.js'] = asset('assets/FloorPlanSvg.js', svg)
       dock.code += `\nvoid import("./FloorPlanMount.js").then((m)=>{m.mountFloorPlan()});\n`
     },
   }
