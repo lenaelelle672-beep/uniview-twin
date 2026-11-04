@@ -1249,6 +1249,23 @@ interface Window {
     insetBottom: number
     identity: boolean
   }
+  /**
+   * T112：进层时 FloorSlab / FloorCores 的 setDrawRange 渐进显形。晚加载分包挂上后才有。
+   * drawRange 只在这两块网格自己那次绘制里收窄，帧与帧之间几何上是原值。
+   * last 是上一次结束或跳过的原因。
+   */
+  __twinDrawRangeReveal?: {
+    mounted: true
+    impl: 'setDrawRange'
+    ms: number
+    active: boolean
+    progress: number
+    floorId: string | null
+    meshes: string[]
+    runs: number
+    completed: number
+    last: string | null
+  }
   /** 文档画中画。Chrome 系才有。没有时文档值守停用。 */
   documentPictureInPicture?: {
     requestWindow?: (options?: {
