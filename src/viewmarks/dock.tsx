@@ -123,6 +123,10 @@ void import('../simready/mount').then((mod) => {
 void import('../visual-viewport/mount').then((mod) => {
   mod.mountVisualViewportHud()
 })
+// T116：屏幕空间标注。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../screen-space/mount').then((mod) => {
+  mod.mountScreenMark()
+})
 // T102：室内工位 Kenney CC0 桌椅。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../kenney-furniture/mount').then((mod) => {
   mod.mountKenneyFurniture()

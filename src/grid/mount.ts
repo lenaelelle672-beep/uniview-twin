@@ -67,7 +67,7 @@ function planeProps(): GridAxesProps | null {
   return plane
 }
 
-/** 测距、格网、T066 作者辅助、T072 批辅线、T074 工位屏、T079 屏海报、T103 试吃、T102 Kenney 桌椅、T106 总览云层、T114 天幕、T115 拾取代理共用一条槽。缺省节点不占位。 */
+/** 测距、格网、T066 作者辅助、T072 批辅线、T074 工位屏、T079 屏海报、T103 试吃、T102 Kenney 桌椅、T106 总览云层、T114 天幕、T115 拾取代理、T116 屏幕标注共用一条槽。缺省节点不占位。 */
 export function composeOverlay(
   measure: ReactNode,
   grid: ReactNode,
@@ -80,8 +80,9 @@ export function composeOverlay(
   clouds: ReactNode = null,
   sky: ReactNode = null,
   discard: ReactNode = null,
+  screenMark: ReactNode = null,
 ): ReactNode {
-  const parts = [measure, grid, author, segments, screenVideo, screenImage, simready, kenney, clouds, sky, discard].filter(
+  const parts = [measure, grid, author, segments, screenVideo, screenImage, simready, kenney, clouds, sky, discard, screenMark].filter(
     (node) => node != null,
   )
   if (parts.length > 1) return createElement(Fragment, null, ...parts)
@@ -106,6 +107,7 @@ function flush(): boolean {
         window.__twinOverviewCloudNode ?? null,
         window.__twinGradientSkyNode ?? null,
         window.__twinDiscardProxyNode ?? null,
+        window.__twinScreenMarkNode ?? null,
       ),
     ),
   )
