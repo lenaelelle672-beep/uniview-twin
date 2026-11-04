@@ -1038,6 +1038,28 @@ interface Window {
   }
   /** T116：屏幕标注开关。传 false 等同 `?screenMark=0`。开关分包加载后才有。 */
   __twinSetScreenMark?: (on: boolean) => void
+  /** T117：选中件缩放节点。格网槽的第十三个缺省位。默认没有。 */
+  __twinResizeFitNode?: import('react').ReactNode
+  /**
+   * T117：单枚选中工位的 drei Resize 视口适配。默认关。
+   * 只缩放自己的演示载体。不写实例矩阵，炸开和对焦装入时让位，不套 Html。
+   */
+  __twinResizeFit?: {
+    switchOn: boolean
+    on: boolean
+    mounted: boolean
+    state: import('./resize-fit/plan').ResizeFitState
+    deskId: string | null
+    floorId: string | null
+    meters: number | null
+    fill: number
+    impl: 'drei-Resize'
+    html: false
+    writesInstanceMatrix: false
+    layers: typeof import('./resize-fit/plan').RESIZE_FIT_LAYERS
+  }
+  /** T117：缩放开关。传 true 等同 `?resizeFit=1`。开关分包加载后才有。 */
+  __twinSetResizeFit?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
