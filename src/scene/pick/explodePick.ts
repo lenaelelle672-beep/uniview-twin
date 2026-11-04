@@ -232,8 +232,16 @@ function rememberBuilder(scene: PickScene | null | undefined): void {
   if (!borrowedBuild) borrowAttempts += 1
 }
 
+/**
+ * vite 把 three-mesh-bvh 要的 BatchedMesh 换成了 bvhBatchedMeshStub，加速射线只补在空子类上。
+ * 真 BatchedMesh 仍走 three 自己的逐实例射线，合批几何上建树用不上，只占内存。
+ */
+function batchedNode(node: object): boolean {
+  return (node as { isBatchedMesh?: boolean }).isBatchedMesh === true
+}
+
 function ensureLocalTree(node: object, allowBuild: boolean): void {
-  if (!allowBuild || !borrowedBuild) return
+  if (!allowBuild || !borrowedBuild || batchedNode(node)) return
   const geometry = geometryOf(node)
   if (!geometry || geometry.boundsTree || geometry.isBufferGeometry !== true || failedTrees.has(geometry)) return
   geometry.computeBoundsTree = borrowedBuild

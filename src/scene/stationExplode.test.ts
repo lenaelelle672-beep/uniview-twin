@@ -185,19 +185,46 @@ describe('工位进度', () => {
     expect(start.write).toBe(true)
     expect(start.capture).toBe(true)
     expect(start.motion.animating).toBe(true)
-    const done = stationTick(posed, captured, settled, true, 'floor', 8 + EXPLODE_DURATION_S)
+    const done = stationTick(posed, captured, settled, true, 'floor', 8 + EXPLODE_DURATION_S, start.written)
     posed = done.posed
     captured = done.captured
     settled = done.settled
     expect(done.motion).toEqual({ progress: 1, animating: false })
     expect(done.write).toBe(true)
-    const held = stationTick(posed, captured, settled, true, 'floor', 8 + EXPLODE_DURATION_S + 2)
+    expect(done.written).toBe(1)
+    const held = stationTick(posed, captured, settled, true, 'floor', 8 + EXPLODE_DURATION_S + 2, done.written)
     expect(held.write).toBe(false)
     expect(held.motion.progress).toBe(1)
-    const away = stationTick(held.posed, held.captured, held.settled, true, 'site', 30)
+    const away = stationTick(held.posed, held.captured, held.settled, true, 'site', 30, held.written)
     expect(away).toMatchObject({ write: true, posed: false, captured: false, settled: false })
     expect(away.motion.progress).toBe(0)
+    expect(away.written).toBeNaN()
     resetStationExplodeMotion()
+  })
+
+  it('拖滑杆时每个新进度都写一批，同一进度停住不再写', () => {
+    resetStationExplodeMotion()
+    const hint = globalThis as { __ea?: number; __es?: boolean }
+    hint.__es = true
+    try {
+      hint.__ea = 0.3
+      const first = stationTick(false, false, false, true, 'floor', 2)
+      expect(first).toMatchObject({ write: true, capture: true, settled: true, written: 0.3 })
+      expect(first.motion).toEqual({ progress: 0.3, animating: false })
+      hint.__ea = 0.55
+      const second = stationTick(first.posed, first.captured, first.settled, true, 'floor', 2.02, first.written)
+      expect(second).toMatchObject({ write: true, capture: false, settled: true, written: 0.55 })
+      const still = stationTick(second.posed, second.captured, second.settled, true, 'floor', 2.04, second.written)
+      expect(still).toMatchObject({ write: false, capture: false, written: 0.55 })
+      hint.__ea = 0.9
+      const third = stationTick(still.posed, still.captured, still.settled, true, 'floor', 2.06, still.written)
+      expect(third).toMatchObject({ write: true, capture: false, written: 0.9 })
+      expect(third.motion.progress).toBe(0.9)
+    } finally {
+      delete hint.__ea
+      delete hint.__es
+      resetStationExplodeMotion()
+    }
   })
 })
 
