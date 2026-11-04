@@ -282,6 +282,8 @@ export function FloorStageCamera() {
 
   useFrame(() => {
     presented.current = true
+    // T118：平面图占着默认相机时，这里不改透视机位，也不用正交相机的位置判断飞到没到。
+    if (window.__twinFloorPlan?.held === true) return
     const end = window.__twinFlyEnd
     if (end && window.__twinLocate?.deskId !== end.deskId) {
       const perspective = camera as PerspectiveCamera
@@ -341,6 +343,13 @@ export function FloorStageCamera() {
   })
 
   useLayoutEffect(() => {
+    // T118：正交俯视挂着时把这次取景交回去，framedKey 保持原样，退出后透视还在进平面图之前的那一镜。
+    if (window.__twinFloorPlan?.held === true) {
+      flightHandoff.current = true
+      return () => {
+        flightHandoff.current = false
+      }
+    }
     const rig = controls as FocusRig | null
     let stopRetry = false
     let attempts = 0
@@ -465,6 +474,7 @@ export function FloorStageCamera() {
   // 工位时钟往往比这次回调更晚写完。1920 昼景停稳后 demand 不再交帧，
   // open fit 不能留到下一帧，否则 afterOpen.fit 一直是 null，距离停在进层。
   const considerStationExplodeFit = () => {
+    if (window.__twinFloorPlan?.held === true) return
     const rig = controls as FocusRig | null
     if (!explodeAlive.current || !rig || !active || explodeBusy.current || explodeFramingHeld()) return
     const focused = focusedDeskId ? resolveWorkstationRef(focusedDeskId) : null

@@ -36,6 +36,7 @@ import { gradientSkyAfterHash } from './scripts/gradientSkyPlugin'
 import { discardProxyAfterHash } from './scripts/discardProxyPlugin'
 import { screenSpaceAfterHash } from './scripts/screenSpacePlugin'
 import { resizeFitAfterHash } from './scripts/resizeFitPlugin'
+import { floorPlanAfterHash } from './scripts/floorPlanPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -346,6 +347,7 @@ export default defineConfig({
     discardProxyAfterHash(),
     screenSpaceAfterHash(),
     resizeFitAfterHash(),
+    floorPlanAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

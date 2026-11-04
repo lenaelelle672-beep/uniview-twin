@@ -113,7 +113,11 @@ export function CameraRig({
   const spread = view === 'building' && exploded
   const controls = useRef<CameraControls>(null)
   const distanceCap = useRef(CAMERA_LIMITS.maxDistance)
-  const camera = useThree((state) => state.camera)
+  // 平面图会换掉默认相机。这里始终拿着最初那台透视相机，不跟着换。
+  const activeCamera = useThree((state) => state.camera)
+  const pinnedCamera = useRef(activeCamera)
+  if ((activeCamera as PerspectiveCamera).isPerspectiveCamera) pinnedCamera.current = activeCamera
+  const camera = pinnedCamera.current
   const size = useThree((state) => state.size)
   const invalidate = useThree((state) => state.invalidate)
   const gl = useThree((state) => state.gl)
@@ -339,5 +343,5 @@ export function CameraRig({
     applyCameraLimits(rig, distanceCap.current)
   }, -2)
 
-  return <CameraControls ref={controls} makeDefault smoothTime={USER_CAMERA_SMOOTH_TIME} />
+  return <CameraControls ref={controls} camera={camera} makeDefault smoothTime={USER_CAMERA_SMOOTH_TIME} />
 }
