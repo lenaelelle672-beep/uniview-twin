@@ -210,3 +210,7 @@ observer.observe(document.body, { childList: true, subtree: true })
 void import('../resize-fit/mount').then((mod) => {
   mod.mountResizeFit()
 })
+// T120：家具/选中件径向投影阴影。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../radial-shadow/mount').then((mod) => {
+  mod.mountRadialShadow()
+})

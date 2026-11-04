@@ -67,7 +67,7 @@ function planeProps(): GridAxesProps | null {
   return plane
 }
 
-/** 测距、格网、T066 作者辅助、T072 批辅线、T074 工位屏、T079 屏海报、T103 试吃、T102 Kenney 桌椅、T106 总览云层、T114 天幕、T115 拾取代理、T116 屏幕标注、T117 选中件缩放、T119 点云共用一条槽。缺省节点不占位。 */
+/** 测距、格网、T066 作者辅助、T072 批辅线、T074 工位屏、T079 屏海报、T103 试吃、T102 Kenney 桌椅、T106 总览云层、T114 天幕、T115 拾取代理、T116 屏幕标注、T117 选中件缩放、T119 点云、T120 径向落地影共用一条槽。缺省节点不占位。 */
 export function composeOverlay(
   measure: ReactNode,
   grid: ReactNode,
@@ -83,8 +83,9 @@ export function composeOverlay(
   screenMark: ReactNode = null,
   resize: ReactNode = null,
   points: ReactNode = null,
+  shadow: ReactNode = null,
 ): ReactNode {
-  const parts = [measure, grid, author, segments, screenVideo, screenImage, simready, kenney, clouds, sky, discard, screenMark, resize, points].filter(
+  const parts = [measure, grid, author, segments, screenVideo, screenImage, simready, kenney, clouds, sky, discard, screenMark, resize, points, shadow].filter(
     (node) => node != null,
   )
   if (parts.length > 1) return createElement(Fragment, null, ...parts)
@@ -112,6 +113,7 @@ function flush(): boolean {
         window.__twinScreenMarkNode ?? null,
         window.__twinResizeFitNode ?? null,
         window.__twinSensorPointsNode ?? null,
+        window.__twinRadialShadowNode ?? null,
       ),
     ),
   )
