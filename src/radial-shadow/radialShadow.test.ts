@@ -172,10 +172,10 @@ describe('落地影接线', () => {
     const fx = read('../components/scene/postfx/balancedFx.tsx')
     const soft = read('../components/scene/BalancedSoftShadows.tsx')
 
-    expect(dock.endsWith(RADIAL_SHADOW_SOURCE_BLOCK)).toBe(true)
+    expect(dock).toContain(RADIAL_SHADOW_SOURCE_BLOCK)
     expect(dock).toMatch(/mod\.mountResizeFit\(\)\n\}\)\n\/\/ T120：/)
     const stripped = stripRadialShadowSource(dock)
-    expect(stripped.endsWith('mod.mountResizeFit()\n})\n')).toBe(true)
+    expect(stripped).toMatch(/mod\.mountResizeFit\(\)\n\}\)\n\n\/\/ T121：/)
     expect(stripped).not.toMatch(/radial-shadow|mountRadialShadow|radialShadow/)
     expect(() => stripRadialShadowSource('const dock = 1')).toThrow()
     expect(plugin).toContain(RADIAL_SHADOW_SOURCE_BLOCK)

@@ -214,3 +214,8 @@ void import('../resize-fit/mount').then((mod) => {
 void import('../radial-shadow/mount').then((mod) => {
   mod.mountRadialShadow()
 })
+
+// T121：楼壳着色 shaderMaterial。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../shell-shader/mount').then((mod) => {
+  mod.mountShellShader()
+})

@@ -1121,6 +1121,26 @@ interface Window {
   /** T120：落地影开关。传 true 等同 `?radialShadow=1`。开关分包加载后才有。 */
   __twinSetRadialShadow?: (on: boolean) => void
   /**
+   * T121：总览实体壳上的 drei shaderMaterial 叠色。
+   * 只加告警色和夜间自发光，不替换 solidMaterial。白模、单层、蓝图不挂。
+   * 与 T115 拾取代理不是同一条着色路径。cdn 为假。
+   */
+  __twinShellShader?: {
+    on: boolean
+    mounted: boolean
+    state: import('./shell-shader/plan').ShellShaderState
+    impl: 'drei-shaderMaterial'
+    meshes: number
+    alarmMix: number
+    nightMix: number
+    roughness: 0.62
+    metalness: 0.05
+    replacesSolid: false
+    cdn: false
+  }
+  /** T121：楼壳着色开关。传 false 等同 `?shellShader=0`。开关分包加载后才有。 */
+  __twinSetShellShader?: (on: boolean) => void
+  /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
    * 贴图只走 public/textures/screens 的 jpg/webp。视频关着时海报仍在。
