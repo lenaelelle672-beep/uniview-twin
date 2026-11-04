@@ -22,6 +22,7 @@ import {
   SENSOR_POINT_SIZE,
   SENSOR_POINT_XZ,
   SENSOR_POINTS_AFTER_FIRST_MS,
+  SENSOR_SAMPLE_COUNT,
   SENSOR_POINTS_LAYERS,
   SENSOR_POINTS_PER_FLOOR,
   SENSOR_Y_FRACTION,
@@ -91,6 +92,7 @@ describe('点位与告警色', () => {
   it('颗数按楼层封顶，不随告警条数变长', () => {
     expect(specs).toHaveLength(23)
     expect(SENSOR_POINTS_PER_FLOOR).toBe(3)
+    expect(SENSOR_SAMPLE_COUNT).toBe(SENSOR_POINTS_PER_FLOOR)
     expect(SENSOR_CLOUD_COUNT).toBe(69)
     expect(SENSOR_CLOUD_COUNT).toBeLessThanOrEqual(SENSOR_CLOUD_CAP)
     expect(SENSOR_POINT_XZ).toHaveLength(3)
@@ -216,6 +218,8 @@ describe('点云接线', () => {
     const dock = read('../viewmarks/dock.tsx')
     const mount = read('./mount.ts')
     const live = read('./SensorCloud.tsx')
+    const surface = read('./SurfaceSample.tsx')
+    const sample = read('./sample.ts')
     const plan = read('./plan.ts')
     const probe = read('./probe.ts')
     const follow = read('./follow.ts')
@@ -241,8 +245,22 @@ describe('点云接线', () => {
     expect(plugin).toMatch(/assets\/SensorPointMaterial\.js/)
     expect(plugin).toMatch(/assets\/SensorCloud\.js/)
     expect(plugin).toMatch(/assets\/SensorPointsMount\.js/)
+    expect(plugin).toMatch(/assets\/SensorSampler\.js/)
+    expect(plugin).toMatch(/three-stdlib\/math\/MeshSurfaceSampler\.js/)
     expect(threeImportNames()).toEqual(
-      expect.arrayContaining(['Color', 'DynamicDrawUsage', 'Group', 'Matrix4', 'PointsMaterial', 'Ray', 'Sphere', 'Vector3']),
+      expect.arrayContaining([
+        'Color',
+        'DynamicDrawUsage',
+        'Group',
+        'InstancedBufferAttribute',
+        'Matrix4',
+        'Object3D',
+        'PointsMaterial',
+        'Ray',
+        'Sphere',
+        'Triangle',
+        'Vector3',
+      ]),
     )
 
     const plugins = vite.slice(vite.lastIndexOf('plugins: ['))
@@ -282,6 +300,20 @@ describe('点云接线', () => {
     expect(live).not.toMatch(/https?:|githack|jsdelivr|unpkg|setFrameloop/)
     expect(live).toMatch(/useFrame\(\(\) => \{\s*followSensorExplode\(/)
     expect(live).not.toMatch(/useFrame\(\(\) => \{[^}]*invalidate/)
+    expect(live).toMatch(/<SurfaceSample/)
+    expect(live).toMatch(/applySurfaceSamples\(/)
+    expect(surface).toMatch(/from '@react-three\/drei\/core\/Sampler'/)
+    expect(surface).not.toMatch(/from '@react-three\/drei'['"]/)
+    expect(surface).not.toMatch(/useFrame/)
+    expect(surface.indexOf('<SampleRandomSeed')).toBeLessThan(surface.indexOf('<Sampler'))
+    expect(surface.indexOf('<Sampler')).toBeLessThan(surface.indexOf('<SampleRandomRestore'))
+    expect(surface).toMatch(/transform=\{captureSurfaceSample\}/)
+    expect(surface).toMatch(/count=\{SENSOR_SAMPLE_COUNT\}/)
+    expect(surface).toMatch(/visible=\{false\}/)
+    expect(sample).not.toMatch(/useFrame|badgeAnchor|BADGE_COLUMN|DeviceBadges|from '@react-three\/drei'|from 'three'/)
+    expect(probe).toMatch(/useSurfaceSampler/)
+    expect(probe).toMatch(/sampleOnce: true/)
+    expect(probe).toMatch(/sampleSource: 'floor-plate'/)
     expect(SENSOR_POINT_SIZE).toBeGreaterThan(0)
     expect(SENSOR_POINTS_LAYERS).toEqual({
       badges: 'separate',
@@ -307,7 +339,9 @@ describe('点云接线', () => {
       '../overview-clouds/OverviewClouds.tsx',
     ]
     for (const file of eager) {
-      expect(read(file), file).not.toMatch(/SensorCloud|mountSensorPoints|sensor-points|PointMaterial|sensorPoints/)
+      expect(read(file), file).not.toMatch(
+        /SensorCloud|mountSensorPoints|sensor-points|PointMaterial|sensorPoints|useSurfaceSampler|SensorSampler|SensorSamplePlate/,
+      )
     }
 
     expect(pkg.dependencies['@react-three/drei']).toBe('10.7.9')
