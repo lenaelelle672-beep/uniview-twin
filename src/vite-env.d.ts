@@ -1204,6 +1204,36 @@ interface Window {
   }
   /** T125：关系弧开关。传 true 等同 `?relationArc=1`。开关分包加载后才有。 */
   __twinSetRelationArcs?: (on: boolean) => void
+  /** T127：室内盒投影节点。格网槽的第十八个缺省位，排在 T125 设备告警关系弧之后。默认没有。 */
+  __twinBoxProjectedEnvNode?: import('react').ReactNode
+  /**
+   * T127：进入的楼层房间用 drei useBoxProjectedEnv 改室内材质的 onBeforeCompile。
+   * 环境贴图仍是 LocalEnvironment 的本地 HDR。幕墙 envMapIntensity 不动。
+   * 钩子没有 useFrame。离开房间后 mounted 为 false。
+   */
+  __twinBoxProjectedEnv?: {
+    on: boolean
+    mounted: boolean
+    state: import('./box-projected-env/plan').BoxEnvState
+    floorId: string | null
+    impl: 'drei-useBoxProjectedEnv'
+    modules: readonly ['useBoxProjectedEnv']
+    useFrame: false
+    hdr: string | null
+    hdrOwner: 'LocalEnvironment'
+    position: [number, number, number] | null
+    size: [number, number, number] | null
+    materials: number
+    curtainTouched: false
+    envMapIntensityWrites: 0
+    balancedFx: false
+    cdn: false
+    reflector: false
+    transmission: false
+    layers: typeof import('./box-projected-env/plan').BOX_ENV_LAYERS
+  }
+  /** T127：盒投影开关。传 false 等同 `?boxProjectedEnv=0`。开关分包加载后才有。 */
+  __twinSetBoxProjectedEnv?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。

@@ -229,3 +229,8 @@ void import('../rounded-box/mount').then((mod) => {
 void import('../relation-arcs/mount').then((mod) => {
   mod.mountRelationArcs()
 })
+
+// T127：室内盒投影环境。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../box-projected-env/mount').then((mod) => {
+  mod.mountBoxProjectedEnv()
+})
