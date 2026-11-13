@@ -23,6 +23,10 @@ void import('../audio/mountPositional').then((mod) => {
 void import('../notify/AlarmNotify').then((mod) => {
   mod.mountAlarmNotify()
 })
+// T129：近场立方体贴图探针。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../cube-probe/mount').then((mod) => {
+  mod.mountCubeProbe()
+})
 // T062：短视频录制。整段逻辑在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../capture/mountClip').then((mod) => {
   mod.mountClipCapture()
