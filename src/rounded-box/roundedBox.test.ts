@@ -175,7 +175,7 @@ describe('圆角接线', () => {
     expect(dock).toMatch(/mod\.mountShellShader\(\)\n\}\)\n\n\/\/ T122：/)
     expect(stripRoundedBoxSource(dock)).not.toMatch(/rounded-box|mountRoundedBox/)
     expect(stripRoundedBoxSource(dock)).toMatch(/observe\(document\.body, \{ childList: true, subtree: true \}\)\n\n\/\/ T117：/)
-    expect(stripRoundedBoxSource(dock).endsWith('mod.mountShellShader()\n})\n')).toBe(true)
+    expect(stripRoundedBoxSource(dock)).toMatch(/mod\.mountShellShader\(\)\n\}\)\n\n\/\/ T125：/)
     expect(() => stripRoundedBoxSource('const dock = 1')).toThrow()
     expect(plugin).toContain(ROUNDED_BOX_SOURCE_BLOCK)
     expect(plugin).toMatch(/name: 'rounded-box-after-hash'/)

@@ -224,3 +224,8 @@ void import('../shell-shader/mount').then((mod) => {
 void import('../rounded-box/mount').then((mod) => {
   mod.mountRoundedBox()
 })
+
+// T125：设备与告警的静态贝塞尔关系弧。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../relation-arcs/mount').then((mod) => {
+  mod.mountRelationArcs()
+})
