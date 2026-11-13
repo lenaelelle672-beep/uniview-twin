@@ -246,7 +246,7 @@ describe('关系弧接线', () => {
     expect(dock).toContain(RELATION_ARC_SOURCE_BLOCK)
     expect(dock).toMatch(/mod\.mountRoundedBox\(\)\n\}\)\n\n\/\/ T125：/)
     expect(stripRelationArcSource(dock)).not.toMatch(/relation-arcs|mountRelationArcs/)
-    expect(stripRelationArcSource(dock).endsWith('mod.mountRoundedBox()\n})\n')).toBe(true)
+    expect(stripRelationArcSource(dock)).toMatch(/mod\.mountRoundedBox\(\)\n\}\)\n\n\/\/ T127：室内盒投影环境/)
     expect(() => stripRelationArcSource('const dock = 1')).toThrow()
     expect(plugin).toContain(RELATION_ARC_SOURCE_BLOCK)
     expect(plugin).toMatch(/name: 'relation-arc-after-hash'/)
