@@ -1204,6 +1204,36 @@ interface Window {
   }
   /** T125：关系弧开关。传 true 等同 `?relationArc=1`。开关分包加载后才有。 */
   __twinSetRelationArcs?: (on: boolean) => void
+  /** T129：近场探针节点。格网槽的第十八个缺省位，排在 T125 设备告警关系弧之后。默认没有。 */
+  __twinCubeProbeNode?: import('react').ReactNode
+  /**
+   * T129：单层房间玻璃的一次立方体贴图。
+   * frames 固定为 1。烘完 stopped 为真，不再 camera.update。
+   * 总览、蓝图、爆炸、工位拆解、巡游不挂。`?cubeProbe=1` 才打开。
+   */
+  __twinCubeProbe?: {
+    switchOn: boolean
+    on: boolean
+    mounted: boolean
+    baked: boolean
+    stopped: boolean
+    updates: number
+    frames: 1
+    resolution: 128
+    near: 0.1
+    state: import('./cube-probe/plan').CubeProbeState
+    floorId: string | null
+    mesh: string | null
+    far: number | null
+    continuous: false
+    impl: 'drei-cube-camera'
+    cdn: false
+    reflector: false
+    transmissive: false
+    layers: typeof import('./cube-probe/plan').CUBE_PROBE_LAYERS
+  }
+  /** T129：探针开关。传 true 等同 `?cubeProbe=1`。开关分包加载后才有。 */
+  __twinSetCubeProbe?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。

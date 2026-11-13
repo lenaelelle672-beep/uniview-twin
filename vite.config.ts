@@ -42,6 +42,7 @@ import { radialShadowAfterHash } from './scripts/radialShadowPlugin'
 import { shellShaderAfterHash } from './scripts/shellShaderPlugin'
 import { roundedBoxAfterHash } from './scripts/roundedBoxPlugin'
 import { relationArcAfterHash } from './scripts/relationArcPlugin'
+import { cubeProbeAfterHash } from './scripts/cubeProbePlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -358,6 +359,7 @@ export default defineConfig({
     shellShaderAfterHash(),
     roundedBoxAfterHash(),
     relationArcAfterHash(),
+    cubeProbeAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),
