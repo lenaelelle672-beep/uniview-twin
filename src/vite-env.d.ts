@@ -1171,6 +1171,39 @@ interface Window {
   }
   /** T122：圆角开关。传 false 等同 `?roundedBox=0`。开关分包加载后才有。 */
   __twinSetRoundedBox?: (on: boolean) => void
+  /** T125：设备-告警关系弧节点。格网槽的第十七个缺省位，排在 T122 圆角载体之后。默认没有。 */
+  __twinRelationArcNode?: import('react').ReactNode
+  /**
+   * T125：少量静态二次 / 三次贝塞尔，连接告警电脑和它的告警圆标。
+   * 默认关。`?relationArc=1` 才打开。点列只在快照变化时生成一次，不逐帧改。
+   * drei CubicBezierLine / QuadraticBezierLine 经 Line.js，不进 hardGate / balancedFx。
+   */
+  __twinRelationArcs?: {
+    switchOn: boolean
+    on: boolean
+    mounted: boolean
+    state: import('./relation-arcs/plan').RelationArcState
+    floorId: string | null
+    count: number
+    cap: number
+    quadratic: number
+    cubic: number
+    lineWidth: number
+    segments: number
+    impl: 'drei-CubicBezierLine+QuadraticBezierLine'
+    modules: readonly ['CubicBezierLine', 'QuadraticBezierLine', 'Line']
+    useFrame: false
+    mutatesPoints: false
+    replacesTourPath: false
+    replacesMeasure: false
+    replacesWalkPaths: false
+    replacesRoomLabels: false
+    replacesBatchSegments: false
+    cdn: false
+    separate: typeof import('./relation-arcs/plan').RELATION_ARC_SEPARATE
+  }
+  /** T125：关系弧开关。传 true 等同 `?relationArc=1`。开关分包加载后才有。 */
+  __twinSetRelationArcs?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
