@@ -229,3 +229,8 @@ void import('../rounded-box/mount').then((mod) => {
 void import('../relation-arcs/mount').then((mod) => {
   mod.mountRelationArcs()
 })
+
+// T126：电缆桥架和管道。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../cable-tray/mount').then((mod) => {
+  mod.mountCableTray()
+})

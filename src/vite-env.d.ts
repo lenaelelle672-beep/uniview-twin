@@ -1204,6 +1204,38 @@ interface Window {
   }
   /** T125：关系弧开关。传 true 等同 `?relationArc=1`。开关分包加载后才有。 */
   __twinSetRelationArcs?: (on: boolean) => void
+  /** T126：桥架节点。格网槽的第十八个缺省位，排在 T125 设备告警关系弧之后。默认没有。 */
+  __twinCableTrayNode?: import('react').ReactNode
+  /**
+   * T126：地上单层休息态的 drei Tube。三根静态管，args 只建一次。
+   * 锚在 FloorInterior，不写实例矩阵，也不替换 Instanced 家具。
+   * 总览、蓝图、地下一层、爆炸、工位拆解不挂。`?cableTray=0` 关掉。
+   * shapes.js 懒加载，不进 hardGate。
+   */
+  __twinCableTray?: {
+    on: boolean
+    mounted: boolean
+    state: import('./cable-tray/plan').CableTrayState
+    floorId: string | null
+    count: number
+    cap: number
+    impl: 'drei-Tube'
+    module: 'drei-shapes'
+    useFrame: false
+    argsOnce: true
+    replacesInstanced: false
+    writesInstanceMatrix: false
+    cdn: false
+    layers: typeof import('./cable-tray/plan').CABLE_TRAY_LAYERS
+    segments: Array<{
+      id: string
+      tubularSegments: number
+      radialSegments: number
+      points: number
+    }>
+  }
+  /** T126：桥架开关。传 false 等同 `?cableTray=0`。开关分包加载后才有。 */
+  __twinSetCableTray?: (on: boolean) => void
   /**
    * T079：工位显示器和摄像头预览的静态海报。默认开。
    * 图层 screenImage 缺省为开；?screenImage=0 关掉；?screenImage=1 或 ?demoEdit=1 打开。
