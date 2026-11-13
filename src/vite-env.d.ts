@@ -1330,6 +1330,19 @@ interface Window {
     curve: 'centripetal'
   }
   /**
+   * T128：巡游体。只在导览会话里挂 drei CurveModifier。
+   * 会话结束 driving 为 false，不再逐帧 invalidate。
+   */
+  __twinCurvePatrolNode?: import('react').ReactNode
+  __twinCurvePatrol?: {
+    active: boolean
+    mounted: boolean
+    driving: boolean
+    offset: number
+    points: number
+    curve: 'centripetal'
+  }
+  /**
    * T068：?demoEdit=1 的矩形面光。默认关。
    * 打开后 count 不超过 cap，init 表示已经调用过 RectAreaLightUniformsLib.init()。
    */

@@ -4,6 +4,7 @@ import { decalAfterHash } from './scripts/decalPlugin'
 import { gridAxesAfterHash } from './scripts/gridAxesPlugin'
 import { focusFitAfterHash } from './scripts/focusFitPlugin'
 import { motionPathAfterHash } from './scripts/motionPathPlugin'
+import { curvePatrolAfterHash } from './scripts/curvePatrolPlugin'
 import { rectAreaAfterHash } from './scripts/rectAreaPlugin'
 import { screenVideoAfterHash } from './scripts/screenVideoPlugin'
 import { segmentsAfterHash } from './scripts/segmentsPlugin'
@@ -323,6 +324,7 @@ export default defineConfig({
     authorHelpersAfterHash(),
     rectAreaAfterHash(),
     motionPathAfterHash(),
+    curvePatrolAfterHash(),
     decalAfterHash(),
     segmentsAfterHash(),
     focusFitAfterHash(),
