@@ -43,6 +43,7 @@ import { shellShaderAfterHash } from './scripts/shellShaderPlugin'
 import { roundedBoxAfterHash } from './scripts/roundedBoxPlugin'
 import { relationArcAfterHash } from './scripts/relationArcPlugin'
 import { cableTrayAfterHash } from './scripts/cableTrayPlugin'
+import { boxProjectedEnvAfterHash } from './scripts/boxProjectedEnvPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -360,6 +361,7 @@ export default defineConfig({
     roundedBoxAfterHash(),
     relationArcAfterHash(),
     cableTrayAfterHash(),
+    boxProjectedEnvAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

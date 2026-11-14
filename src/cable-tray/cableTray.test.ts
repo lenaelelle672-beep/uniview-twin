@@ -182,7 +182,7 @@ describe('桥架接线', () => {
     expect(dock).toContain(CABLE_TRAY_SOURCE_BLOCK)
     expect(dock).toMatch(/mod\.mountRelationArcs\(\)\n\}\)\n\n\/\/ T126：/)
     expect(stripCableTraySource(dock)).not.toMatch(/cable-tray|mountCableTray/)
-    expect(stripCableTraySource(dock)).toMatch(/mod\.mountRelationArcs\(\)\n\}\)\n$/)
+    expect(stripCableTraySource(dock)).toMatch(/mod\.mountRelationArcs\(\)\n\}\)\n\n\/\/ T127：室内盒投影环境/)
     expect(() => stripCableTraySource('const dock = 1')).toThrow()
     expect(plugin).toContain(CABLE_TRAY_SOURCE_BLOCK)
     expect(plugin).toMatch(/name: 'cable-tray-after-hash'/)
