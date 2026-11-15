@@ -63,6 +63,10 @@ void import('../author-lights/mount').then((mod) => {
 void import('../tour-path/mount').then((mod) => {
   mod.mountMotionPath()
 })
+// T128：巡游体沿导览轨。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../tour-path/curveMount').then((mod) => {
+  mod.mountCurvePatrol()
+})
 // T077：GLTF 片段浅拷。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
 void import('../fragment-clone/mount').then((mod) => {
   mod.mountFragmentClones()
