@@ -2,7 +2,7 @@ import { Color, DoubleSide, FrontSide, MeshBasicMaterial, MeshPhysicalMaterial, 
 
 export type SurfaceMode = 'day' | 'night' | 'model'
 
-const GRID_KEY = 'twin-curtain-v2'
+const GRID_KEY = 'twin-curtain-v3'
 const GRILLE_KEY = 'twin-grille-v1'
 
 function injectPositionVarying(shader: { vertexShader: string; fragmentShader: string }, fragmentHeader = '') {
@@ -32,6 +32,7 @@ function facadeUv(): string {
   `
 }
 
+/** T135：程序化格线周期 1.4 m，与塔楼铝翅对齐；4.2 m 层高正好 3 格。原 1.55 m。 */
 export function createCurtainMaterial(): MeshPhysicalMaterial {
   const grid = new Color('#3d5870')
   const strength = { value: 0.78 }
@@ -39,7 +40,7 @@ export function createCurtainMaterial(): MeshPhysicalMaterial {
     color: '#4a4e52',
     metalness: 0.8,
     roughness: 0.06,
-    envMapIntensity: 1.15,
+    envMapIntensity: 1.75,
     side: FrontSide,
   })
   material.userData.grid = grid
@@ -52,11 +53,11 @@ export function createCurtainMaterial(): MeshPhysicalMaterial {
       '#include <opaque_fragment>',
       `#include <opaque_fragment>
        ${facadeUv()}
-       vec2 fr = fract(guv / 1.55);
+       vec2 fr = fract(guv / 1.4);
        float vEdge = min(fr.x, 1.0 - fr.x);
        float hEdge = min(fr.y, 1.0 - fr.y);
-       float vLine = 1.0 - smoothstep(0.028, 0.07, vEdge);
-       float hLine = 1.0 - smoothstep(0.045, 0.1, hEdge);
+       float vLine = 1.0 - smoothstep(0.032, 0.08, vEdge);
+       float hLine = 1.0 - smoothstep(0.05, 0.11, hEdge);
        float line = max(vLine, hLine * 0.42);
        gl_FragColor.rgb = mix(gl_FragColor.rgb, uGrid, line * uLine);`,
     )
@@ -203,10 +204,10 @@ export function applySurfaceMode(mode: SurfaceMode) {
   } else if (mode === 'night') {
     curtainMaterial.color.set('#173a64')
     curtainMaterial.metalness = 0.48
-    curtainMaterial.roughness = 0.2
-    curtainMaterial.envMapIntensity = 0.42
+    curtainMaterial.roughness = 0.24
+    curtainMaterial.envMapIntensity = 0.62
     curtainMaterial.emissive.set('#1b4f88')
-    curtainMaterial.emissiveIntensity = 0.68
+    curtainMaterial.emissiveIntensity = 0.52
     grid.set('#d7e7f6')
     strength.value = 0.5
     grilleMaterial.color.set('#8d949c')
@@ -250,7 +251,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     curtainMaterial.color.set('#5f84b6')
     curtainMaterial.metalness = 0.98
     curtainMaterial.roughness = 0.036
-    curtainMaterial.envMapIntensity = 1.57
+    curtainMaterial.envMapIntensity = 1.75
     curtainMaterial.emissive.set('#000000')
     curtainMaterial.emissiveIntensity = 0
     grid.set('#142636')

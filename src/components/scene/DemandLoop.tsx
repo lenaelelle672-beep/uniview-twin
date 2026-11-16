@@ -37,6 +37,7 @@ import { PICK_BVH_AFTER_FIRST_MS } from '../../scene/pick/pickBvhTiming'
 import { wireframeOverlayOn } from '../../scene/wire/latch'
 import { useTwinStore } from '../../store/store'
 import { useOffscreenPause } from './useOffscreenPause'
+import { TowerFins } from './TowerFins'
 
 function markInv(src: string) {
   if (!import.meta.env.DEV) return
@@ -383,6 +384,8 @@ export function DemandLoop() {
       <DemoPlaqueHost />
       <WireframeHost />
       <TreeLodHost />
+      {/* T135：塔楼 FinRow。DemandLoop 已在 hardGate 外（首帧约 2600ms），静态挂载不进首屏。 */}
+      <TowerFins />
     </>
   )
 }
