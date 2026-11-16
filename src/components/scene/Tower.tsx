@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { listFloorSpecs } from '../../data/floors'
 import { TOWER_PARAPET_TOP_M, TOWER_ROOF_M } from '../../data/levels'
 import { extrudeUp } from '../../scene/extrude'
@@ -15,9 +15,43 @@ import { createRingBand, TOWER_BAND } from '../../scene/shell/facade'
 import { TOWER_OUTLINE_OVERVIEW } from '../../scene/shell/rings'
 import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
 import { createTowerGlass } from '../../scene/towerGlass'
+import { SOFT_SHADOW_CHUNK_AFTER_FIRST_MS } from '../../scene/softShadows'
 import { useTwinStore } from '../../store/store'
-import { RoofSign } from './RoofSign'
 import { useFloorActions } from './floorPick'
+
+/**
+ * T132：替换后的 roof-sign.glb 约 32 KB，必须晚于 __twinReady / 首帧 hardGate 窗口再挂。
+ * 静态立刻挂载会在首屏 Suspense 里请求 GLB。内层 Suspense 避免回落到 BlankSuspenseFallback。
+ */
+const RoofSign = lazy(() => import('./RoofSign').then((mod) => ({ default: mod.RoofSign })))
+
+function LateRoofSign({ night, position }: { night: boolean; position: [number, number, number] }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (window.__twinReady === true && first != null && performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS) {
+        setOn(true)
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+  if (!on) return null
+  return (
+    <Suspense fallback={null}>
+      <RoofSign night={night} position={position} />
+    </Suspense>
+  )
+}
 
 function FloorShell({
   id,
@@ -87,7 +121,7 @@ export function Tower({ night }: { night: boolean }) {
       <group name="RoofAssembly" visible={!roofHidden}>
         <mesh geometry={roof} material={solidMaterial} castShadow receiveShadow />
         <mesh name="RoofParapet" geometry={parapet} material={grilleMaterial} castShadow receiveShadow />
-        <RoofSign night={night} position={sign} />
+        <LateRoofSign night={night} position={sign} />
       </group>
     </group>
   )

@@ -7,8 +7,6 @@ import { installMeshopt } from '../../scene/meshopt'
 
 const SIGN = '/models/roof-sign.glb'
 
-useLoader.preload(GLTFLoader, SIGN, installMeshopt)
-
 export function RoofSign({ night, position }: { night: boolean; position: [number, number, number] }) {
   const gltf = useLoader(GLTFLoader, SIGN, installMeshopt)
   const sign = useMemo(() => gltf.scene.clone(true), [gltf])
