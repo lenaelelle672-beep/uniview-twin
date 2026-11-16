@@ -152,6 +152,7 @@ export function scheduleGroundTextures(load: GroundTextureLoad = defaultLoad): v
     await nextFrame()
     await idle()
     startLoads(load)
+    void import('./nearfieldLawn').then((mod) => mod.mountNearfieldLawn())
   }
   void run()
 }
