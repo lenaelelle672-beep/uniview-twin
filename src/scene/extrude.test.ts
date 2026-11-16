@@ -124,4 +124,14 @@ describe('轮廓挤出', () => {
     expect(south.length).toBeGreaterThan(3)
     expect(south.length).toBeLessThanOrEqual(16)
   })
+
+  it('西南竖缝退让，南立面仍是完整直线', () => {
+    const southFace = TOWER_OUTLINE_OVERVIEW.filter(([, z]) => Math.abs(z - 17.1003) < 1e-4)
+    expect(southFace.length).toBeGreaterThanOrEqual(2)
+    expect(Math.min(...southFace.map(([x]) => x))).toBeCloseTo(-21.6806, 3)
+    const westWingSouth = TOWER_OUTLINE_OVERVIEW.filter(([x, z]) => x < -22 && z > 0)
+    expect(westWingSouth.length).toBeGreaterThan(0)
+    expect(Math.max(...westWingSouth.map(([, z]) => z))).toBeLessThanOrEqual(10)
+    expect(TOWER_OUTLINE_OVERVIEW.some(([x, z]) => x === -31.3093 && z === 10)).toBe(true)
+  })
 })
