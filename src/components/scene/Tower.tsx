@@ -103,8 +103,8 @@ export function Tower({ night }: { night: boolean }) {
   const floors = useMemo(() => listFloorSpecs().filter((floor) => floor.level >= 1), [])
   const roofHidden = useTwinStore((state) => isRoofHidden(state.view, state.selectedFloor))
   const parapet = useMemo(() => {
-    const height = TOWER_PARAPET_TOP_M - TOWER_ROOF_M
-    return createRingBand(TOWER_OUTLINE_OVERVIEW, TOWER_ROOF_M + height / 2, height, 0.36, 0.1, 'outer-top')
+    const height = TOWER_PARAPET_TOP_M - TOWER_ROOF_M + 0.8
+    return createRingBand(TOWER_OUTLINE_OVERVIEW, TOWER_PARAPET_TOP_M - height / 2, height, 0.36, 0.1, 'outer-top')
   }, [])
   const roof = useMemo(() => {
     const geometry = extrudeUp(TOWER_OUTLINE_OVERVIEW, 0.35, [], 'top')
