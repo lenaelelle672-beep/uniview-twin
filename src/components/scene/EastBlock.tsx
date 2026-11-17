@@ -1,4 +1,4 @@
-import { lazy, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { BoxGeometry } from 'three'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { preloadEastGrilleForQuality } from '../../scene/eastGrilleAssets'
@@ -30,6 +30,46 @@ import { FinRow } from './Fins'
 const eastGrilleImport = import('./EastGrille')
 const EastGrille = lazy(() => eastGrilleImport)
 preloadEastGrilleForQuality()
+
+/**
+ * T139：南入口雨棚单独分包。必须等 __twinReady、首帧后再过 2600ms 才 import / 挂载，
+ * 否则雨棚分包与被它拉起的石材 UV 工具会进 hardGate（D1460）。
+ * 数字留在本文件，避免为了这个常数去碰 prefetch 模块。
+ */
+const SOUTH_ENTRANCE_AFTER_FIRST_MS = 2600
+const SouthEntrance = lazy(() => import('./SouthEntrance'))
+
+function LateSouthEntrance({ model }: { model: boolean }) {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (
+        window.__twinReady === true &&
+        first != null &&
+        performance.now() - first >= SOUTH_ENTRANCE_AFTER_FIRST_MS
+      ) {
+        setOn(true)
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+  if (!on) return null
+  return (
+    <Suspense fallback={null}>
+      <SouthEntrance model={model} />
+    </Suspense>
+  )
+}
 
 const LOWER_TOP = EAST_LOWER_TOP_M
 
@@ -135,6 +175,7 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
       />
       {/* 与 Scene.tsx 外层 Suspense 同边界，__twinReady 等 chunk + lo GLB。 */}
       {!model && <EastGrille quality={quality} />}
+      <LateSouthEntrance model={model} />
     </group>
   )
 }
