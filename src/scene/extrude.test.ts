@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { Object3D, Vector3 } from 'three'
 import { extrudeUp } from './extrude'
 import { createRingBand } from './shell/facade'
-import { courtyardHole, eastGrilleMount, eastLowerOutline, eastUpperOutline, eastWall, podiumOutline } from './massing'
+import { courtyardHole, eastCantileverColumnPositions, eastCantileverRibXs, eastCantileverSoffitOutline, eastCantileverUndercroftBackOutline, eastGrilleMount, eastLowerOutline, eastUpperOutline, eastWall, EAST_CANTILEVER_M, EAST_CANTILEVER_SOFFIT_T_M, podiumOutline } from './massing'
 import { EAST_ROOF_M } from './siteGeometry'
 import { TOWER_OUTLINE_OVERVIEW } from './shell/rings'
 
@@ -43,6 +43,36 @@ describe('轮廓挤出', () => {
     expect(upper.boundingBox?.max.y).toBeCloseTo(EAST_ROOF_M, 4)
     expect(upper.boundingBox?.max.x ?? 0).toBeGreaterThan(lower.boundingBox?.max.x ?? 0)
     for (const geometry of [podium, court, upper, lower]) geometry.dispose()
+  })
+
+  it('下层南缘相对上层退 EAST_CANTILEVER_M，悬挑为 4 m', () => {
+    const upper = eastUpperOutline()
+    const lower = eastLowerOutline()
+    const uSouth = Math.max(...upper.map(([, z]) => z))
+    const lSouth = Math.max(...lower.map(([, z]) => z))
+    expect(EAST_CANTILEVER_M).toBe(4)
+    expect(uSouth - lSouth).toBeCloseTo(EAST_CANTILEVER_M, 5)
+    const soffit = eastCantileverSoffitOutline()
+    expect(soffit.length).toBeGreaterThanOrEqual(4)
+    expect(Math.max(...soffit.map(([, z]) => z))).toBeCloseTo(uSouth, 5)
+    expect(soffit.some(([, z]) => Math.abs(z - lSouth) < 1e-6)).toBe(true)
+    expect(EAST_CANTILEVER_SOFFIT_T_M).toBeGreaterThanOrEqual(0.6)
+    const back = eastCantileverUndercroftBackOutline()
+    expect(back.length).toBeGreaterThanOrEqual(4)
+    const backMax = Math.max(...back.map(([, z]) => z))
+    expect(back.some(([, z]) => Math.abs(z - lSouth) < 1e-6)).toBe(true)
+    expect(backMax).toBeCloseTo(lSouth + 0.08, 5)
+    expect(backMax).toBeLessThan(uSouth)
+    const ribs = eastCantileverRibXs()
+    expect(ribs.length).toBeGreaterThanOrEqual(4)
+    const cols = eastCantileverColumnPositions()
+    expect(cols).toHaveLength(4)
+    for (const [x, z] of cols) {
+      expect(z).toBeGreaterThan(lSouth)
+      expect(z).toBeLessThan(uSouth)
+      expect(x).toBeGreaterThan(40)
+      expect(x).toBeLessThan(100)
+    }
   })
 
   it('8F 东墙 102.26 m、南墙 59.06 m 直墙，格栅挂在南端', () => {

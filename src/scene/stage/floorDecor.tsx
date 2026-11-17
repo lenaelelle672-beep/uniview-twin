@@ -7,6 +7,9 @@ import { RoomLabels } from './RoomLabels'
 import { WalkPaths } from './WalkPaths'
 import type { RoomLabel } from './roomLabels'
 
+// T136：石材分包跟这座晚加载入口走，不进 hardGate。模块自己还要再过 __twinReady 门。
+void import('../stn').then((m) => m.arm())
+
 /**
  * D109：T009 人物、标签、圆标与它们用到的 drei Line / Billboard /
  * Detailed / useAnimations（以及因此拖进来的 three-stdlib）打成一个按需包。
