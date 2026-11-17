@@ -89,8 +89,9 @@ export function composeOverlay(
   tubes: ReactNode = null,
   boxEnv: ReactNode = null,
   probe: ReactNode = null,
+  court: ReactNode = null,
 ): ReactNode {
-  const parts = [measure, grid, author, segments, screenVideo, screenImage, simready, kenney, clouds, sky, discard, screenMark, resize, points, shadow, rounded, relations, tubes, boxEnv, probe].filter(
+  const parts = [measure, grid, author, segments, screenVideo, screenImage, simready, kenney, clouds, sky, discard, screenMark, resize, points, shadow, rounded, relations, tubes, boxEnv, probe, court].filter(
     (node) => node != null,
   )
   if (parts.length > 1) return createElement(Fragment, null, ...parts)
@@ -124,6 +125,7 @@ function flush(): boolean {
         window.__twinCableTrayNode ?? null,
         window.__twinBoxProjectedEnvNode ?? null,
         window.__twinCubeProbeNode ?? null,
+        window.__twinPodiumCourtNode ?? null,
       ),
     ),
   )

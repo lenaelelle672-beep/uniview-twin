@@ -62,7 +62,7 @@ export function Podium({ model }: { model: boolean }) {
     if (!merged) throw new Error('裙楼几何为空')
     return merged
   }, [outline])
-  const band = useMemo(() => extrudeUp(outset(outline, 0.16, focus), 0.42, [], 'top'), [focus, outline])
+  const band = useMemo(() => extrudeUp(outset(outline, 1, focus), 1.5, [], 'top'), [focus, outline])
   const basin = useMemo(() => makeBasin(), [])
   const arc = useMemo(() => podiumFrontArc(), [])
   const materials = model ? [solidMaterial, solidMaterial] : [solidMaterial, curtainMaterial]
@@ -71,9 +71,10 @@ export function Podium({ model }: { model: boolean }) {
     <group name="Podium">
       <mesh geometry={shell} material={materials} castShadow receiveShadow />
       <mesh
+        name="PodiumEave"
         geometry={band}
         material={model ? solidMaterial : eaveMaterial}
-        position={[0, PODIUM_HEIGHT_M - 0.45, 0]}
+        position={[0, PODIUM_HEIGHT_M - 1, 0]}
         castShadow
         receiveShadow
       />

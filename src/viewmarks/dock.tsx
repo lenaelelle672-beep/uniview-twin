@@ -3,6 +3,11 @@ import { createRoot, type Root } from 'react-dom/client'
 import { mountAlarmTimeline } from '../components/AlarmTimelineGate'
 import { ViewmarkDock } from './ViewmarkDock'
 
+// T134：裙房屋顶绿化与下沉庭院细部。整段在这条晚加载入口之后才 import，不进 hardGate / balancedFx。
+void import('../podium-court/mount').then((mod) => {
+  mod.mountPodiumCourt()
+})
+
 // T046：小地图跟这条晚加载入口走，不进首屏 hardGate / balancedFx。
 void import('../minimap/mount')
 // T051：问号监听跟同一条晚加载入口。面板本体仍等按下 ? 再拉。
