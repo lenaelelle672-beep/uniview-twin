@@ -95,6 +95,15 @@ export const solidMaterial = new MeshStandardMaterial({ color: '#f4f5f7', roughn
 export const jointMaterial = new MeshStandardMaterial({ color: '#fbfcfd', roughness: 0.5, metalness: 0.04 })
 jointMaterial.name = '接缝'
 export const revealMaterial = new MeshStandardMaterial({ color: '#5c6772', roughness: 0.72, metalness: 0.08 })
+/** 悬挑底空内表面。软件渲染也要自己够暗，不能只靠实时阴影。 */
+export const undercroftMaterial = new MeshStandardMaterial({
+  name: '悬挑底空',
+  color: '#1a1c20',
+  roughness: 0.96,
+  metalness: 0,
+  envMapIntensity: 0.12,
+  side: DoubleSide,
+})
 /** 选中层。728309f 在 ACES 下读数是 #f7eedd。不参与色调映射，AgX 不再改这个颜色。 */
 export const highlightCurtainMaterial = new MeshBasicMaterial({
   color: '#f7eedd',
@@ -127,6 +136,7 @@ export const baseMaterial = new MeshStandardMaterial({
   envMapIntensity: 0.2,
 })
 export const stoneMaterial = new MeshStandardMaterial({ color: '#d7d2c8', roughness: 0.86, metalness: 0 })
+export const _s: { g?: import('three').BufferGeometry; h: number } = { h: 0 }
 export const courtWallMaterial = new MeshStandardMaterial({
   color: '#c4bfb4',
   roughness: 0.9,
