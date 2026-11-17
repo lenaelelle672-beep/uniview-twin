@@ -46,6 +46,7 @@ import { relationArcAfterHash } from './scripts/relationArcPlugin'
 import { cableTrayAfterHash } from './scripts/cableTrayPlugin'
 import { boxProjectedEnvAfterHash } from './scripts/boxProjectedEnvPlugin'
 import { cubeProbeAfterHash } from './scripts/cubeProbePlugin'
+import { podiumCourtAfterHash } from './scripts/podiumCourtPlugin'
 import { demandFrameAfterHash } from './scripts/demandFramePlugin'
 import { fileURLToPath } from 'node:url'
 import react from '@vitejs/plugin-react'
@@ -366,6 +367,7 @@ export default defineConfig({
     cableTrayAfterHash(),
     boxProjectedEnvAfterHash(),
     cubeProbeAfterHash(),
+    podiumCourtAfterHash(),
     isolateTransformControlsLeaves(),
     react(),
     stubTroikaUnicodeResolver(),

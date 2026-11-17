@@ -1268,6 +1268,14 @@ interface Window {
   __twinSetBoxProjectedEnv?: (on: boolean) => void
   /** T129：近场探针节点。格网槽的第二十个缺省位，排在 T127 室内盒投影之后。默认没有。 */
   __twinCubeProbeNode?: import('react').ReactNode
+  /** T134：裙房屋顶绿化与下沉庭院细部。格网槽的第二十一个缺省位，排在 T129 之后。首帧 +2600ms 才挂。 */
+  __twinPodiumCourtNode?: import('react').ReactNode
+  /** T134：晚到细部是否已过门闩。 */
+  __twinPodiumCourt?: {
+    on: boolean
+    mounted: boolean
+    afterFirstMs: number
+  }
   /**
    * T129：单层房间玻璃的一次立方体贴图。
    * frames 固定为 1。烘完 stopped 为真，不再 camera.update。
