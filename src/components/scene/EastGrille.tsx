@@ -1,7 +1,8 @@
 import { useFrame, useLoader, useThree } from '@react-three/fiber'
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useState, type ComponentType } from 'react'
 import { DoubleSide, Mesh, MeshStandardMaterial, Object3D, Vector3 } from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
+import { EAST_GRILLE_SHEET_MAX_X, eastFacadeBandsDueLatched } from '../../scene/eastFacadeBands'
 import {
   EAST_GRILLE_HI,
   EAST_GRILLE_INTENSITY,
@@ -15,6 +16,40 @@ import { installMeshopt } from '../../scene/meshopt'
 import type { QualityTier } from '../../types'
 
 export { EAST_GRILLE_HI, EAST_GRILLE_INTENSITY, EAST_GRILLE_LO }
+
+const SHEET_DISCARD_KEY = 'twin-east-grille-t140-sheet'
+
+function injectTwinPos(shader: { vertexShader: string; fragmentShader: string }) {
+  shader.vertexShader = shader.vertexShader.replace(
+    '#include <project_vertex>',
+    `#include <project_vertex>
+     vTwinPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`,
+  )
+  shader.vertexShader = shader.vertexShader.replace(
+    '#include <common>',
+    '#include <common>\nvarying vec3 vTwinPos;',
+  )
+  shader.fragmentShader = shader.fragmentShader.replace(
+    '#include <common>',
+    '#include <common>\nvarying vec3 vTwinPos;',
+  )
+}
+
+/** 丢掉贴墙玻璃片和上段背板，露出后衬幕墙；保留翅片、框和竖挺。 */
+function installSheetDiscard(material: MeshStandardMaterial) {
+  if (material.userData.twinSheetDiscard) return
+  material.userData.twinSheetDiscard = true
+  material.onBeforeCompile = (shader) => {
+    injectTwinPos(shader)
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <opaque_fragment>',
+      `#include <opaque_fragment>
+       if (vTwinPos.x < ${EAST_GRILLE_SHEET_MAX_X.toFixed(4)}) discard;`,
+    )
+  }
+  material.customProgramCacheKey = () => SHEET_DISCARD_KEY
+  material.needsUpdate = true
+}
 
 function tuneEastGrille(root: Object3D | null) {
   if (!root) return
@@ -30,6 +65,7 @@ function tuneEastGrille(root: Object3D | null) {
       if (material.name !== 'east_grille') continue
       material.envMapIntensity = EAST_GRILLE_INTENSITY
       material.side = DoubleSide
+      installSheetDiscard(material)
       if (material.envMap !== grilleMaterial.envMap) {
         material.envMap = grilleMaterial.envMap
         material.needsUpdate = true
@@ -124,11 +160,49 @@ function BalancedGrille() {
   return <GrilleModel url={!near || !hiReady ? EAST_GRILLE_LO : EAST_GRILLE_HI} />
 }
 
+/**
+ * 上段密肋单独分包：等 __twinReady + 首帧 + 2600ms 后再 import，不要在模块顶预拉。
+ * 否则会跟 EastGrille 首屏 chunk 一起进 hardGate（D1461）。
+ */
+function LateEastUpperGrilleFins() {
+  const [Fins, setFins] = useState<ComponentType | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    let timer = 0
+    const poll = () => {
+      if (cancelled) return
+      const due = eastFacadeBandsDueLatched(
+        false,
+        window.__twinReady === true,
+        window.__twinFirstFrameAt,
+        performance.now(),
+      )
+      if (due) {
+        void import('./EastUpperGrilleFins').then((mod) => {
+          if (!cancelled) setFins(() => mod.EastUpperGrilleFins)
+        })
+        return
+      }
+      timer = window.setTimeout(poll, 200)
+    }
+    poll()
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [])
+  if (!Fins) return null
+  return <Fins />
+}
+
 export function EastGrille({ quality }: { quality: QualityTier }) {
   const mount = eastGrilleMount()
   return (
-    <group name="EastGrille" position={mount.position} rotation={mount.rotation}>
-      {quality === 'perf' ? <GrilleModel url={EAST_GRILLE_LO} /> : <BalancedGrille />}
+    <group name="EastGrilleRoot">
+      <group name="EastGrille" position={mount.position} rotation={mount.rotation}>
+        {quality === 'perf' ? <GrilleModel url={EAST_GRILLE_LO} /> : <BalancedGrille />}
+      </group>
+      <LateEastUpperGrilleFins />
     </group>
   )
 }
