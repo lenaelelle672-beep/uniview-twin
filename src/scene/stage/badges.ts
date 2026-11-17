@@ -42,7 +42,13 @@ export function deviceBadges(floorId: string, devices: Device[]): DeviceBadge[] 
   }
   const badges: DeviceBadge[] = []
   for (const [deskId, status] of byDesk) {
-    const position = workstationPosition(floorId, deskId)
+    let position: { x: number; z: number }
+    try {
+      position = workstationPosition(floorId, deskId)
+    } catch {
+      // 切层时图纸可能尚未进缓存，不能把「楼层图纸尚未加载」抛到控制台。
+      continue
+    }
     const glyph = STATUS_GLYPH[status]
     badges.push({
       deskId,

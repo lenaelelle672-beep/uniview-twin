@@ -142,10 +142,16 @@ export function FloorStage() {
   const slots = useMemo(() => {
     if (!active || active === 'B1') return []
     if (hydratedFloor !== active || !isFloorHydrated(active)) return []
-    return floorDesks.map((desk) => {
-      const position = workstationPosition(desk.floorId, desk.id)
-      return { x: position.x, z: position.z, rot: 0 }
-    })
+    const next: { x: number; z: number; rot: number }[] = []
+    for (const desk of floorDesks) {
+      try {
+        const position = workstationPosition(desk.floorId, desk.id)
+        next.push({ x: position.x, z: position.z, rot: 0 })
+      } catch {
+        // 切到尚未缓存完的层时跳过，不把错误抛到控制台。
+      }
+    }
+    return next
   }, [active, floorDesks, hydratedFloor])
   const basementSlots = useMemo(() => {
     if (active !== 'B1') return []

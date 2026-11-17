@@ -207,13 +207,18 @@ function geometryFromJson(plan: FloorPlan): FloorPlanGeometry {
 
 /** 工位落点只走 workstationPosition。状态跟该工位电脑，和三维显示器同一套。 */
 export function planDesks(floorId: string, desks: Desk[], devices: Device[]): PlanDesk[] {
-  return desks
+  const marks: PlanDesk[] = []
+  for (const desk of desks
     .filter((desk) => desk.floorId === floorId)
-    .sort((desk, other) => desk.index - other.index)
-    .map((desk) => {
+    .sort((desk, other) => desk.index - other.index)) {
+    try {
       const position = workstationPosition(floorId, desk.id)
-      return { id: desk.id, x: position.x, z: position.z, status: pcStatusOf(devices, desk.id) }
-    })
+      marks.push({ id: desk.id, x: position.x, z: position.z, status: pcStatusOf(devices, desk.id) })
+    } catch {
+      // 切层时图纸可能尚未进缓存，不能把「楼层图纸尚未加载」抛到控制台。
+    }
+  }
+  return marks
 }
 
 export { COLUMN_SIZE_M }

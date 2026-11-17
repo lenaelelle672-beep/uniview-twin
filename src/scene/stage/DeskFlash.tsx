@@ -29,7 +29,14 @@ export function DeskFlash({ floorId }: { floorId: string }) {
     const ordered = desks.filter((desk) => desk.floorId === floorId).sort((left, right) => left.index - right.index)
     return ordered.findIndex((desk) => desk.id === deskId)
   }, [deskId, desks, floorId])
-  const place = deskId ? workstationPosition(floorId, deskId) : null
+  let place = null
+  if (deskId) {
+    try {
+      place = workstationPosition(floorId, deskId)
+    } catch {
+      place = null
+    }
+  }
 
   useEffect(() => {
     if (!deskId) return

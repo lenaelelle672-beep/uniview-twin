@@ -48,8 +48,8 @@ function measureShot(scene: Object3D, width: number, height: number): Shot | nul
   return { frame, plate: bounds }
 }
 
-function FloorPlanSvgSlot({ plate }: { plate: FloorPlanBox }) {
-  const [View, setView] = useState<ComponentType<{ plate: FloorPlanBox }> | null>(null)
+function FloorPlanSvgSlot({ plate, floorId }: { plate: FloorPlanBox; floorId: string }) {
+  const [View, setView] = useState<ComponentType<{ plate: FloorPlanBox; floorId: string }> | null>(null)
   useEffect(() => {
     let dead = false
     void import('./FloorPlanSvg')
@@ -64,7 +64,7 @@ function FloorPlanSvgSlot({ plate }: { plate: FloorPlanBox }) {
     }
   }, [])
   if (!View) return null
-  return <View plate={plate} />
+  return <View plate={plate} floorId={floorId} />
 }
 
 function Live({ frame, mask }: { frame: FloorPlanFrame; mask: number }) {
@@ -165,7 +165,7 @@ export function FloorPlanCamera({ floorId }: { floorId: string }) {
   return (
     <>
       <Live frame={shot.frame} mask={mask.current} />
-      <FloorPlanSvgSlot plate={shot.plate} />
+      <FloorPlanSvgSlot plate={shot.plate} floorId={floorId} />
     </>
   )
 }
