@@ -4,6 +4,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { preloadEastGrilleForQuality } from '../../scene/eastGrilleAssets'
 import { extrudeUp } from '../../scene/extrude'
 import { createRingBand } from '../../scene/shell/facade'
+import { eastFacadeBandPoses } from '../../scene/eastFacadeBands'
 import {
   eastFloorBandLevels,
   eastGrilleMount,
@@ -22,7 +23,7 @@ import {
 import { northWingTopM } from '../../data/levels'
 import { NORTH_WING_OUTLINE } from '../../scene/shell/rings'
 import { FOOTPRINT } from '../../scene/siteGeometry'
-import { _s, curtainMaterial, finMaterial, solidMaterial, stoneMaterial, undercroftMaterial } from '../../scene/materials'
+import { _s, curtainMaterial, eastFacadeGlassMaterial, finMaterial, solidMaterial, stoneMaterial, undercroftMaterial } from '../../scene/materials'
 import type { QualityTier } from '../../types'
 import { FinRow } from './Fins'
 
@@ -141,6 +142,25 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
     if (!merged) throw new Error('东楼分层线为空')
     return merged
   }, [focus, upperOutline])
+  const facadeBands = useMemo(() => {
+    const poses = eastFacadeBandPoses()
+    const glassParts = [poses.mid, poses.upper].map((pose) => {
+      const geometry = new BoxGeometry(...pose.size)
+      geometry.translate(...pose.position)
+      return geometry
+    })
+    const glass = mergeGeometries(glassParts)
+    glassParts.forEach((geometry) => geometry.dispose())
+    const frameParts = [poses.beam, poses.sill].map((pose) => {
+      const geometry = new BoxGeometry(...pose.size)
+      geometry.translate(...pose.position)
+      return geometry
+    })
+    const frames = mergeGeometries(frameParts)
+    frameParts.forEach((geometry) => geometry.dispose())
+    if (!glass || !frames) throw new Error('东立面分层为空')
+    return { glass, frames }
+  }, [])
   const glass = model ? solidMaterial : curtainMaterial
   const grille = eastGrilleMount()
 
@@ -149,6 +169,25 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
       <object3D name="eastGrilleMount" position={grille.position} rotation={grille.rotation} />
       <mesh geometry={bodies[0]} material={solidMaterial} castShadow receiveShadow />
       <mesh geometry={bodies[1]} material={model ? solidMaterial : stoneMaterial} castShadow receiveShadow />
+      {!model ? (
+        <group name="EastFacadeBands">
+          <mesh
+            name="EastFacadeGlass"
+            geometry={facadeBands.glass}
+            material={eastFacadeGlassMaterial}
+            // 分层靠几何与材质，不靠实时阴影；软件渲染下接阴影会把中段吃成黑带。
+            castShadow={false}
+            receiveShadow={false}
+          />
+          <mesh
+            name="EastFacadeBandFrames"
+            geometry={facadeBands.frames}
+            material={finMaterial}
+            castShadow
+            receiveShadow
+          />
+        </group>
+      ) : null}
       {undercroft ? (
         <group name="EastCantileverUndercroft">
           <mesh name="EastCantileverSoffit" geometry={undercroft.soffit} material={undercroftMaterial} castShadow receiveShadow />

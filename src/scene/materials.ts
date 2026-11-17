@@ -120,6 +120,14 @@ export const finMaterial = new MeshStandardMaterial({
   metalness: 0.48,
   envMapIntensity: 0.42,
 })
+/** T140：东立面后衬玻璃。不用幕墙密格，避免中段和上段密肋读成同一面。 */
+export const eastFacadeGlassMaterial = new MeshStandardMaterial({
+  name: '东立面玻璃',
+  color: '#7d93a8',
+  roughness: 0.18,
+  metalness: 0.62,
+  envMapIntensity: 1.2,
+})
 /** 弧形檐口铝板带。只赋给裙房那条带，避免把实体墙一起刷白。 */
 export const eaveMaterial = new MeshStandardMaterial({
   name: '檐口',
@@ -190,6 +198,12 @@ export function applySurfaceMode(mode: SurfaceMode) {
     finMaterial.metalness = 0.08
     finMaterial.roughness = 0.5
     finMaterial.envMapIntensity = 0.2
+    eastFacadeGlassMaterial.color.set('#f2f3f4')
+    eastFacadeGlassMaterial.metalness = 0.02
+    eastFacadeGlassMaterial.roughness = 0.8
+    eastFacadeGlassMaterial.envMapIntensity = 0.04
+    eastFacadeGlassMaterial.emissive.set('#000000')
+    eastFacadeGlassMaterial.emissiveIntensity = 0
     eaveMaterial.color.set('#f4f5f6')
     eaveMaterial.metalness = 0.04
     eaveMaterial.roughness = 0.55
@@ -231,6 +245,12 @@ export function applySurfaceMode(mode: SurfaceMode) {
     finMaterial.metalness = 0.4
     finMaterial.roughness = 0.46
     finMaterial.envMapIntensity = 0.2
+    eastFacadeGlassMaterial.color.set('#173a64')
+    eastFacadeGlassMaterial.metalness = 0.48
+    eastFacadeGlassMaterial.roughness = 0.24
+    eastFacadeGlassMaterial.envMapIntensity = 0.62
+    eastFacadeGlassMaterial.emissive.set('#1b4f88')
+    eastFacadeGlassMaterial.emissiveIntensity = 0.4
     eaveMaterial.color.set('#c5ced4')
     eaveMaterial.metalness = 0.2
     eaveMaterial.roughness = 0.5
@@ -280,6 +300,12 @@ export function applySurfaceMode(mode: SurfaceMode) {
     finMaterial.metalness = 0.22
     finMaterial.roughness = 0.5
     finMaterial.envMapIntensity = 0.36
+    eastFacadeGlassMaterial.color.set('#7d93a8')
+    eastFacadeGlassMaterial.metalness = 0.62
+    eastFacadeGlassMaterial.roughness = 0.18
+    eastFacadeGlassMaterial.envMapIntensity = 1.2
+    eastFacadeGlassMaterial.emissive.set('#000000')
+    eastFacadeGlassMaterial.emissiveIntensity = 0
     eaveMaterial.color.set('#f4f8fa')
     eaveMaterial.metalness = 0.42
     eaveMaterial.roughness = 0.32
@@ -315,6 +341,7 @@ export function applySurfaceMode(mode: SurfaceMode) {
     jointMaterial,
     revealMaterial,
     finMaterial,
+    eastFacadeGlassMaterial,
     eaveMaterial,
     baseMaterial,
     stoneMaterial,
