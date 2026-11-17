@@ -1646,7 +1646,7 @@ interface Window {
   __twinFloorPlanSvg?: {
     mounted: boolean
     impl: 'drei-Svg'
-    src: '/floor-plan/floor.svg'
+    src: import('./floor-plan/svgPlan').FloorPlanSvgSrc
     cdn: false
     triangles: number
     shapes: number

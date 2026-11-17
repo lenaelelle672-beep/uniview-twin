@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { floorDeskCount } from '../floors/deskCounts'
+import { clearFloorCache } from '../floors/cache'
 import { hydrateAllAboveGrade } from '../floors/hydrateForTests'
 import { createMockData, DESKS_PER_FLOOR } from '../data/mockData'
 import { b1SlabBounds, b1SlabOutline } from '../scene/stage/b1Plan'
@@ -71,4 +72,20 @@ describe('蓝图平面', () => {
       expect(STATUS_COLOR[status].getHexString()).toBe(STATUS_HEX[status].slice(1))
     }
   })
+
+  it('图纸尚未加载时 planDesks 不抛「楼层图纸尚未加载」，只跳过落点', () => {
+    const data = createMockData()
+    const desks = data.desks
+      .filter((desk) => desk.floorId === 'F12')
+      .slice(0, 3)
+      .map((desk, index) => ({ ...desk, floorId: 'F9', id: `F9-${index + 1}`, index: index + 1 }))
+    clearFloorCache('F9')
+    try {
+      expect(() => planDesks('F9', desks, data.devices)).not.toThrow()
+      expect(planDesks('F9', desks, data.devices)).toEqual([])
+    } finally {
+      hydrateAllAboveGrade()
+    }
+  })
+
 })

@@ -95,8 +95,9 @@ export function FloorMinimap() {
   const focusedDeskId = useTwinStore((state) => state.focusedDeskId)
   const show = minimapShows(view, selectedFloor)
   const floorId = show ? selectedFloor : null
-  const [ready, setReady] = useState(false)
+  const [readyFor, setReadyFor] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
+  const ready = readyFor === floorId
   const [cone, setCone] = useState<ConeView | null>(null)
   const heading = useRef({ x: 0, z: 1 })
 
@@ -110,17 +111,17 @@ export function FloorMinimap() {
     if (!floorId || !isFloorId(floorId)) return
     setCone(null)
     if (floorId === 'B1') {
-      setReady(true)
+      setReadyFor(floorId)
       setFailed(false)
       return
     }
     let cancelled = false
-    setReady(false)
+    setReadyFor(null)
     setFailed(false)
     void import('../floors/loadFloor')
       .then((mod) => mod.loadFloorPlan(floorId))
       .then(() => {
-        if (!cancelled) setReady(true)
+        if (!cancelled) setReadyFor(floorId)
       })
       .catch(() => {
         if (!cancelled) setFailed(true)

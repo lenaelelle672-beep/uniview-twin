@@ -119,8 +119,12 @@ export function deskOutlinePose(floorId: string, focusedDeskId: string | null): 
   if (!focusedDeskId) return null
   const target = resolveWorkstationRef(focusedDeskId)
   if (!target || target.floorId !== floorId) return null
-  const place = workstationPosition(floorId, target.deskId)
-  return { x: place.x, z: place.z, rot: place.rot }
+  try {
+    const place = workstationPosition(floorId, target.deskId)
+    return { x: place.x, z: place.z, rot: place.rot }
+  } catch {
+    return null
+  }
 }
 
 /** 有工位号的电脑 / 电话才有显示器网格。没有落点的设备不挂描边。 */

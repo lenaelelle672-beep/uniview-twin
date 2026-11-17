@@ -197,7 +197,12 @@ function flyToDesk(
   canvas: HTMLCanvasElement,
 ) {
   interior.updateWorldMatrix(true, false)
-  const local = workstationPosition(floorId, deskId)
+  let local: { x: number; z: number }
+  try {
+    local = workstationPosition(floorId, deskId)
+  } catch {
+    return false
+  }
   const target = new Vector3(local.x, 0.55, local.z)
   interior.localToWorld(target)
   const eye = target.clone().add(new Vector3(2.6, 5.4, 6.8))

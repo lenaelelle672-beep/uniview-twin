@@ -5,28 +5,33 @@ import { Box3, Matrix4, type Mesh, type Object3D } from 'three'
 import {
   FLOOR_PLAN_SVG_LIFT_M,
   FLOOR_PLAN_SVG_RUNTIME_MAX,
-  FLOOR_PLAN_SVG_URL,
   fitFloorPlanSvg,
+  floorPlanSvgUrl,
   inspectFloorPlanSvg,
+  isLocalFloorPlanSvg,
   type FloorPlateBox,
   type FloorPlanSvgReason,
+  type FloorPlanSvgSrc,
   type SvgContentBox,
   type SvgFit,
 } from './svgPlan'
 
 /**
- * T123：drei Svg 把本地平面图变成贴地网格。
+ * T123 / T137：drei Svg 把本地平面图变成贴地网格。
  * 只在正交相机会话里由 FloorPlanCamera 挂上，离开会话时一起卸下。
- * 不挤出楼体，不读标定轮廓，不请求 CDN。
+ * 按 floorId 换文件。不挤出楼体，不读标定轮廓，不请求 CDN。
  */
 
 function ignoreFloorPlanSvgRay(): void {}
 
-function publish(probe: { mounted: boolean; triangles: number; shapes: number; reason: FloorPlanSvgReason }): void {
+function publish(
+  probe: { mounted: boolean; triangles: number; shapes: number; reason: FloorPlanSvgReason },
+  src: FloorPlanSvgSrc,
+): void {
   window.__twinFloorPlanSvg = {
     mounted: probe.mounted,
     impl: 'drei-Svg',
-    src: FLOOR_PLAN_SVG_URL,
+    src,
     cdn: false,
     triangles: probe.triangles,
     shapes: probe.shapes,
@@ -89,7 +94,7 @@ function sameFit(prev: SvgFit | null, next: SvgFit): boolean {
   )
 }
 
-function Fitted({ plate, shapes }: { plate: FloorPlateBox; shapes: number }) {
+function Fitted({ plate, shapes, src }: { plate: FloorPlateBox; shapes: number; src: FloorPlanSvgSrc }) {
   const inner = useRef<Object3D>(null)
   const invalidate = useThree((state) => state.invalidate)
   const [placement, setPlacement] = useState<SvgFit | null>(null)
@@ -102,21 +107,21 @@ function Fitted({ plate, shapes }: { plate: FloorPlateBox; shapes: number }) {
     const triangles = countTriangles(root)
     if (triangles > FLOOR_PLAN_SVG_RUNTIME_MAX) {
       setDropped(true)
-      publish({ mounted: false, triangles, shapes, reason: 'over-budget' })
+      publish({ mounted: false, triangles, shapes, reason: 'over-budget' }, src)
       invalidate()
       return
     }
     const content = contentBounds(root)
     const fit = content ? fitFloorPlanSvg(content, plate, FLOOR_PLAN_SVG_LIFT_M) : null
     if (!fit || triangles <= 0) {
-      publish({ mounted: false, triangles, shapes, reason: 'empty' })
+      publish({ mounted: false, triangles, shapes, reason: 'empty' }, src)
       invalidate()
       return
     }
     setPlacement((prev) => (sameFit(prev, fit) ? prev : fit))
-    publish({ mounted: true, triangles, shapes, reason: 'on' })
+    publish({ mounted: true, triangles, shapes, reason: 'on' }, src)
     invalidate()
-  }, [dropped, invalidate, plate, shapes])
+  }, [dropped, invalidate, plate, shapes, src])
 
   if (dropped) return null
 
@@ -135,7 +140,7 @@ function Fitted({ plate, shapes }: { plate: FloorPlateBox; shapes: number }) {
     >
       <group ref={inner}>
         <Svg
-          src={FLOOR_PLAN_SVG_URL}
+          src={src}
           skipStrokes
           fillMaterial={{
             toneMapped: false,
@@ -156,39 +161,45 @@ function Fitted({ plate, shapes }: { plate: FloorPlateBox; shapes: number }) {
   )
 }
 
-export function FloorPlanSvg({ plate }: { plate: FloorPlateBox }) {
+export function FloorPlanSvg({ plate, floorId }: { plate: FloorPlateBox; floorId: string }) {
+  const src = floorPlanSvgUrl(floorId)
   const [shapes, setShapes] = useState<number | null>(null)
 
   useEffect(() => {
     let dead = false
-    publish({ mounted: false, triangles: 0, shapes: 0, reason: 'idle' })
+    setShapes(null)
+    publish({ mounted: false, triangles: 0, shapes: 0, reason: 'idle' }, src)
     void (async () => {
       try {
-        const response = await fetch(FLOOR_PLAN_SVG_URL)
+        if (!isLocalFloorPlanSvg(src)) {
+          if (!dead) publish({ mounted: false, triangles: 0, shapes: 0, reason: 'remote' }, src)
+          return
+        }
+        const response = await fetch(src)
         if (!response.ok) throw new Error('missing')
         const text = await response.text()
         if (dead) return
         const inspection = inspectFloorPlanSvg(text)
         if (!inspection.ok) {
           const reason = inspection.reason === 'on' ? 'empty' : inspection.reason
-          publish({ mounted: false, triangles: inspection.triangles, shapes: inspection.shapes, reason })
+          publish({ mounted: false, triangles: inspection.triangles, shapes: inspection.shapes, reason }, src)
           return
         }
         setShapes(inspection.shapes)
       } catch {
-        if (!dead) publish({ mounted: false, triangles: 0, shapes: 0, reason: 'missing' })
+        if (!dead) publish({ mounted: false, triangles: 0, shapes: 0, reason: 'missing' }, src)
       }
     })()
     return () => {
       dead = true
-      publish({ mounted: false, triangles: 0, shapes: 0, reason: 'unmounted' })
+      publish({ mounted: false, triangles: 0, shapes: 0, reason: 'unmounted' }, src)
     }
-  }, [])
+  }, [src])
 
   if (shapes == null) return null
   return (
     <Suspense fallback={null}>
-      <Fitted plate={plate} shapes={shapes} />
+      <Fitted key={src} plate={plate} shapes={shapes} src={src} />
     </Suspense>
   )
 }
