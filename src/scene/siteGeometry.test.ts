@@ -6,6 +6,7 @@ import {
   parcelAreaM2,
   placeStreetFurniture,
   roadRibbons,
+  sidewalkRibbons,
   TOWER,
   zebraStripes,
 } from './siteGeometry'
@@ -83,8 +84,27 @@ describe('总平面图轮廓换算', () => {
 
   it('规划路、月明路和东侧路都有路面，斑马线成组', () => {
     const roads = roadRibbons()
+    const sidewalks = sidewalkRibbons()
     expect(roads).toHaveLength(4)
+    expect(sidewalks).toHaveLength(roads.length)
+    // 规划路仍在场地北侧
     expect(roads[0].halfWidth).toBeGreaterThan(4)
+    expect(roads[0].a[1]).toBeLessThan(-30)
+    expect(roads[0].b[1]).toBeLessThan(-30)
+    // 月明路在红线以南，路幅按实拍校准到 16 m 量级
+    const south = roads[1]
+    expect(south.halfWidth).toBeCloseTo(8, 1)
+    expect((south.a[1] + south.b[1]) / 2).toBeGreaterThan(150)
+    expect(Math.min(south.a[0], south.b[0])).toBeLessThan(-40)
+    expect(Math.max(south.a[0], south.b[0])).toBeGreaterThan(140)
+    // 东侧路在东楼以东，供 ?cam=east 前景
+    const east = roads[2]
+    expect(east.halfWidth).toBeGreaterThan(8)
+    expect((east.a[0] + east.b[0]) / 2).toBeGreaterThan(140)
+    expect(sidewalks[1].halfWidth).toBeCloseTo(south.halfWidth + 3.2, 5)
     expect(zebraStripes().length).toBe(24)
+    const southZebras = zebraStripes().filter((stripe) => stripe.z > 150)
+    expect(southZebras).toHaveLength(8)
   })
+
 })

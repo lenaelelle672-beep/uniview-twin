@@ -93,7 +93,7 @@ const NORTH_ROAD = {
   yCurbSouth: 442,
   yCurbNorth: 367.3,
   x0: 1201.4,
-  x1: 2721.8,
+  x1: 2846.04,
 }
 
 function outwardPage(pageX: number, pageY: number): [number, number] {
@@ -211,22 +211,7 @@ export interface Ribbon {
   halfWidth: number
 }
 
-function offsetRibbon(
-  a: [number, number],
-  b: [number, number],
-  outwardM: number,
-  halfWidth: number,
-): Ribbon {
-  const [ox, oy] = segmentOutward(a, b)
-  const shift = outwardM * PT_PER_M
-  return {
-    a: pageToWorld(a[0] + ox * shift, a[1] + oy * shift),
-    b: pageToWorld(b[0] + ox * shift, b[1] + oy * shift),
-    halfWidth,
-  }
-}
-
-/** 规划路、月明路、东侧路的中心线（世界坐标）和半宽。 */
+/** 规划路、月明路、东侧路、西南沿红线路的中心线和半宽。转角与南入口见 nearfieldLawn。 */
 export function roadRibbons(): Ribbon[] {
   const northCenterY = (NORTH_ROAD.yCurbNorth + NORTH_ROAD.yCurbSouth) / 2
   const northHalf = Math.abs(NORTH_ROAD.yCurbSouth - NORTH_ROAD.yCurbNorth) / 2 / PT_PER_M
@@ -236,9 +221,12 @@ export function roadRibbons(): Ribbon[] {
       b: pageToWorld(NORTH_ROAD.x1, northCenterY),
       halfWidth: northHalf,
     },
-    offsetRibbon([1723.7, 1934.7], [2044.2, 1909.8], 9, 6),
-    offsetRibbon([2044.2, 1909.8], [2625.2, 1909.8], 9, 6),
-    offsetRibbon([2749.8, 1786.4], [2803.1, 957.4], 9, 5.5),
+    // 月明路：总平面双线约 4 m，按实拍居中 16 m（中线 y=2116.22）。
+    { a: pageToWorld(1000, 2116.22), b: pageToWorld(3014.16, 2116.22), halfWidth: 8 },
+    // 东侧路：总平面西缘 2846.04、东缘 3014.16。
+    { a: pageToWorld(2930.1, 367.3), b: pageToWorld(2930.1, 2116.22), halfWidth: 10.12 },
+    // 西南红线外缘路，总平面 0.72 两缘中线。
+    { a: pageToWorld(1535.8, 1573.6), b: pageToWorld(1606.1, 1859.95), halfWidth: 6 },
   ]
 }
 
@@ -268,7 +256,7 @@ export function zebraStripes(): Stripe[] {
   const roadW = (NORTH_ROAD.yCurbSouth - NORTH_ROAD.yCurbNorth) / PT_PER_M
   addCrossing(1616, midY, roadW)
   addCrossing(2279, midY, roadW)
-  addCrossing(2300, 1984, 12)
+  addCrossing(1900, 2116.22, 16)
   return stripes
 }
 
