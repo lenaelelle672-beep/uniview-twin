@@ -79,7 +79,7 @@ export function Podium({ model }: { model: boolean }) {
         receiveShadow
       />
       <mesh name="CourtyardWall" geometry={basin} material={courtWallMaterial} receiveShadow />
-      <FinRow points={arc} spacing={2.2} y={PODIUM_HEIGHT_M / 2} height={PODIUM_HEIGHT_M * 0.92} outwardFrom={focus} />
+      <FinRow points={arc} spacing={1.8} y={PODIUM_HEIGHT_M / 2} height={PODIUM_HEIGHT_M * 0.92} outwardFrom={focus} />
     </group>
   )
 }

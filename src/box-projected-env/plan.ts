@@ -17,7 +17,7 @@ export type BoxEnvHdrUrl = (typeof BOX_ENV_HDR_URLS)[number]
 export const CURTAIN_BOUNDARY_NAMES = ['幕墙', '格栅', '接缝', '铝翅', '檐口'] as const
 
 /** materials.ts 里幕墙和格栅的 customProgramCacheKey。 */
-export const CURTAIN_CACHE_KEYS = ['twin-curtain-v2', 'twin-grille-v1'] as const
+export const CURTAIN_CACHE_KEYS = ['twin-curtain-v3', 'twin-grille-v1'] as const
 
 export const BOX_ENV_LAYERS = {
   curtain: 'envMapIntensity-unchanged',
