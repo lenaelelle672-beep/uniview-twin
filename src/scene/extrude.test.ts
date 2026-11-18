@@ -4,7 +4,12 @@ import { extrudeUp } from './extrude'
 import { createRingBand } from './shell/facade'
 import { courtyardHole, eastCantileverColumnPositions, eastCantileverRibXs, eastCantileverSoffitOutline, eastCantileverUndercroftBackOutline, eastGrilleMount, eastLowerOutline, eastUpperOutline, eastWall, EAST_CANTILEVER_M, EAST_CANTILEVER_SOFFIT_T_M, podiumOutline } from './massing'
 import { EAST_ROOF_M } from './siteGeometry'
-import { TOWER_OUTLINE_OVERVIEW } from './shell/rings'
+import {
+  TOWER_OUTLINE_OVERVIEW,
+  TOWER_SEAM_BACK_Z,
+  TOWER_SEAM_EAST_X,
+  TOWER_SEAM_WEST_X,
+} from './shell/rings'
 
 describe('轮廓挤出', () => {
   it('XZ 矩形挤出后 Y 轴向上，范围与输入一致', () => {
@@ -168,12 +173,22 @@ describe('轮廓挤出', () => {
     expect(southFace.some(([x]) => Math.abs(x + 31.3093) < 1e-4)).toBe(true)
 
     const slot = TOWER_OUTLINE_OVERVIEW.filter(
-      ([x, z]) => x >= -21.6806 - 1e-4 && x <= -18.48 + 1e-4 && z < 16,
+      ([x, z]) => x >= TOWER_SEAM_WEST_X - 1e-4 && x <= TOWER_SEAM_EAST_X + 1e-4 && z < 16,
     )
     expect(slot.length).toBeGreaterThanOrEqual(2)
-    expect(Math.min(...slot.map(([, z]) => z))).toBeCloseTo(-2.0, 3)
-    expect(slot.every(([x]) => x >= -21.6806 - 1e-4 && x <= -18.48 + 1e-4)).toBe(true)
-    expect(TOWER_OUTLINE_OVERVIEW.some(([x, z]) => Math.abs(x + 18.48) < 1e-4 && Math.abs(z + 2) < 1e-4)).toBe(true)
-    expect(TOWER_OUTLINE_OVERVIEW.some(([x, z]) => Math.abs(x + 21.6806) < 1e-4 && Math.abs(z + 2) < 1e-4)).toBe(true)
+    expect(Math.min(...slot.map(([, z]) => z))).toBeCloseTo(TOWER_SEAM_BACK_Z, 3)
+    expect(slot.every(([x]) => x >= TOWER_SEAM_WEST_X - 1e-4 && x <= TOWER_SEAM_EAST_X + 1e-4)).toBe(true)
+    expect(TOWER_SEAM_EAST_X - TOWER_SEAM_WEST_X).toBeCloseTo(6, 3)
+    expect(TOWER_SEAM_BACK_Z).toBeLessThan(-2)
+    expect(
+      TOWER_OUTLINE_OVERVIEW.some(
+        ([x, z]) => Math.abs(x - TOWER_SEAM_EAST_X) < 1e-4 && Math.abs(z - TOWER_SEAM_BACK_Z) < 1e-4,
+      ),
+    ).toBe(true)
+    expect(
+      TOWER_OUTLINE_OVERVIEW.some(
+        ([x, z]) => Math.abs(x - TOWER_SEAM_WEST_X) < 1e-4 && Math.abs(z - TOWER_SEAM_BACK_Z) < 1e-4,
+      ),
+    ).toBe(true)
   })
 })
