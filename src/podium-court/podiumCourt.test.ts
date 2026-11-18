@@ -55,9 +55,11 @@ describe('T134 裙房檐口、屋顶绿化和下沉庭院', () => {
     expect(podium).toMatch(/-COURT_DEPTH_M/)
     expect(podium).toContain("../../scene/siteGeometry")
     expect(podium).toContain("name=\"CourtyardWall\"")
-    expect(podium).toMatch(
-      /<FinRow points=\{arc\} spacing=\{1\.8\} y=\{PODIUM_HEIGHT_M \/ 2\} height=\{PODIUM_HEIGHT_M \* 0\.92\} outwardFrom=\{focus\} \/>/,
-    )
+    expect(podium).toMatch(/<FinRow[\s\S]*points=\{arc\}/)
+    expect(podium).toContain('spacing={PODIUM_ARC_FIN_SPACING_M}')
+    expect(podium).toContain('outwardFrom={focus}')
+    expect(podium).toContain('y={PODIUM_HEIGHT_M / 2}')
+    expect(podium).toContain('height={PODIUM_HEIGHT_M * 0.92}')
     expect(podium).not.toMatch(/podium-court/)
     expect(podium).not.toMatch(/useLoader\.preload/)
     expect(podium).not.toMatch(/MeshReflector|transmission|SSGI|pathtracer/)

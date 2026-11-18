@@ -7,6 +7,7 @@ import { courtyardHole, outset, podiumFrontArc, podiumFocus, podiumOutline, PODI
 import { PODIUM_SOUTH_ADDON } from '../../scene/shell/rings'
 import { courtWallMaterial, curtainMaterial, eaveMaterial, solidMaterial } from '../../scene/materials'
 import { FinRow } from './Fins'
+import { PODIUM_ARC_FIN_DEPTH_M, PODIUM_ARC_FIN_SPACING_M, PODIUM_ARC_FIN_THICKNESS_M, podiumArcFinMaterial } from '../../scene/podiumArcFins'
 
 function insetToward(points: Array<[number, number]>, amount: number): Array<[number, number]> {
   const cx = points.reduce((sum, [x]) => sum + x, 0) / points.length
@@ -79,7 +80,17 @@ export function Podium({ model }: { model: boolean }) {
         receiveShadow
       />
       <mesh name="CourtyardWall" geometry={basin} material={courtWallMaterial} receiveShadow />
-      <FinRow points={arc} spacing={1.8} y={PODIUM_HEIGHT_M / 2} height={PODIUM_HEIGHT_M * 0.92} outwardFrom={focus} />
+      <FinRow
+        points={arc}
+        spacing={PODIUM_ARC_FIN_SPACING_M}
+        y={PODIUM_HEIGHT_M / 2}
+        height={PODIUM_HEIGHT_M * 0.92}
+        depth={PODIUM_ARC_FIN_DEPTH_M}
+        thickness={PODIUM_ARC_FIN_THICKNESS_M}
+        box
+        outwardFrom={focus}
+        material={podiumArcFinMaterial}
+      />
     </group>
   )
 }
