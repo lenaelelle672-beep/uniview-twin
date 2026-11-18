@@ -26,7 +26,7 @@ describe('T135 塔楼 FinRow 与幕墙格线', () => {
     expect(materials).toMatch(/fract\(guv \/ 1\.4\)/)
     expect(materials).not.toMatch(/fract\(guv \/ 1\.55\)/)
     const podium = read('../components/scene/Podium.tsx')
-    expect(podium).toMatch(/spacing=\{1\.8\}/)
+    expect(podium).toMatch(/spacing=\{PODIUM_ARC_FIN_SPACING_M\}/)
     expect(podium).not.toMatch(/spacing=\{2\.2\}/)
   })
 
