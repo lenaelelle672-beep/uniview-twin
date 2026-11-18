@@ -1,14 +1,23 @@
-import { courtyardHole, outset, podiumFocus, podiumOutline, PODIUM_HEIGHT_M } from '../scene/massing'
+import { courtyardHole, eastUpperOutline, outset, podiumFocus, podiumOutline, EAST_ROOF_M, PODIUM_HEIGHT_M } from '../scene/massing'
 import { PODIUM_SOUTH_ADDON } from '../scene/shell/rings'
 import {
   COURT_CURB_HEIGHT_M,
   COURT_CURB_WIDTH_M,
   COURT_CURB_Y_M,
   COURT_DEPTH_M,
+  COURT_PLANT_BAND_WIDTH_M,
+  COURT_PLANT_INNER_GAP_M,
+  COURT_PLANT_INNER_LIFT_M,
+  COURT_PLANT_INNER_WIDTH_M,
   COURT_PLANT_LIFT_M,
   COURT_PLANT_MARGIN_M,
+  COURT_SHRUB_INNER_COUNT,
+  COURT_SHRUB_INNER_SCALE,
+  COURT_SHRUB_OUTER_COUNT,
+  COURT_SHRUB_OUTER_SCALE,
   COURT_STEP_COUNT,
   COURT_STEP_TOP_Y_M,
+  EAST_ROOF_GRASS_INSET_M,
   EAVE_HEIGHT_M,
   EAVE_OUTSET_M,
   ROOF_GRASS_INSET_M,
@@ -232,14 +241,39 @@ function finish(mesh: MeshArrays): MeshArrays {
   return mesh
 }
 
-export function makeRoofGrassMesh(): MeshArrays {
+function addPodiumRoofGrass(mesh: MeshArrays) {
   const focus = podiumFocus()
   const main = offsetToward(podiumOutline(), ROOF_GRASS_INSET_M, focus)
   const addonFocus = ringCentroid(PODIUM_SOUTH_ADDON)
   const addon = offsetToward(PODIUM_SOUTH_ADDON, Math.min(ROOF_GRASS_INSET_M, 0.3), addonFocus)
-  const mesh = emptyMesh()
   addSlab(mesh, main, PODIUM_HEIGHT_M, PODIUM_HEIGHT_M + ROOF_GRASS_THICKNESS_M, 'both')
   addSlab(mesh, addon, PODIUM_HEIGHT_M, PODIUM_HEIGHT_M + ROOF_GRASS_THICKNESS_M, 'both')
+}
+
+function addEastRoofGrass(mesh: MeshArrays) {
+  const outline = eastUpperOutline()
+  const focus = ringCentroid(outline)
+  const ring = offsetToward(outline, EAST_ROOF_GRASS_INSET_M, focus)
+  addSlab(mesh, ring, EAST_ROOF_M, EAST_ROOF_M + ROOF_GRASS_THICKNESS_M, 'both')
+}
+
+export function makePodiumRoofGrassMesh(): MeshArrays {
+  const mesh = emptyMesh()
+  addPodiumRoofGrass(mesh)
+  return finish(mesh)
+}
+
+export function makeEastRoofGrassMesh(): MeshArrays {
+  const mesh = emptyMesh()
+  addEastRoofGrass(mesh)
+  return finish(mesh)
+}
+
+/** 裙房屋面草板 + 东楼顶草板。T142 把东楼顶也铺上。 */
+export function makeRoofGrassMesh(): MeshArrays {
+  const mesh = emptyMesh()
+  addPodiumRoofGrass(mesh)
+  addEastRoofGrass(mesh)
   return finish(mesh)
 }
 
@@ -292,14 +326,117 @@ export function makeCourtRiserMesh(): MeshArrays {
   return finish(mesh)
 }
 
+function courtPlantBandInsets() {
+  const outerStart = courtStepInset(COURT_STEP_COUNT) + COURT_PLANT_MARGIN_M
+  const outerEnd = outerStart + COURT_PLANT_BAND_WIDTH_M
+  const innerStart = outerEnd + COURT_PLANT_INNER_GAP_M
+  const innerEnd = innerStart + COURT_PLANT_INNER_WIDTH_M
+  return { outerStart, outerEnd, innerStart, innerEnd }
+}
+
 export function makeCourtPlantMesh(): MeshArrays {
   const ring = courtyardHole()
   const focus = ringCentroid(ring)
-  const outer = offsetToward(ring, courtStepInset(COURT_STEP_COUNT) + COURT_PLANT_MARGIN_M, focus)
-  const inner = offsetToward(ring, courtStepInset(COURT_STEP_COUNT) + COURT_PLANT_MARGIN_M + 2.4, focus)
+  const inset = courtPlantBandInsets()
   const mesh = emptyMesh()
-  addBand(mesh, outer, inner, -COURT_DEPTH_M, COURT_PLANT_LIFT_M)
+  addBand(
+    mesh,
+    offsetToward(ring, inset.outerStart, focus),
+    offsetToward(ring, inset.outerEnd, focus),
+    -COURT_DEPTH_M,
+    COURT_PLANT_LIFT_M,
+  )
+  addBand(
+    mesh,
+    offsetToward(ring, inset.innerStart, focus),
+    offsetToward(ring, inset.innerEnd, focus),
+    -COURT_DEPTH_M,
+    COURT_PLANT_INNER_LIFT_M,
+  )
   return finish(mesh)
+}
+
+export interface CourtShrubPlacement {
+  x: number
+  y: number
+  z: number
+  rotY: number
+  scale: number
+  /** 外圈用 hi、内圈用 lo，都在晚载模块里实例化，不重开行道树 LOD 组件。 */
+  asset: 'lo' | 'hi'
+}
+
+function ringPerimeter(points: Array<[number, number]>): number {
+  let sum = 0
+  const n = points.length
+  for (let i = 0; i < n; i += 1) {
+    const [x0, z0] = points[i] ?? [0, 0]
+    const [x1, z1] = points[(i + 1) % n] ?? [0, 0]
+    sum += Math.hypot(x1 - x0, z1 - z0)
+  }
+  return sum
+}
+
+function sampleRing(points: Array<[number, number]>, count: number): Array<[number, number]> {
+  if (count <= 0 || points.length < 2) return []
+  const total = ringPerimeter(points)
+  if (total < 1e-6) return []
+  const step = total / count
+  const samples: Array<[number, number]> = []
+  let travelled = 0
+  let edgeIndex = 0
+  let nextAt = 0
+  const n = points.length
+  while (samples.length < count && edgeIndex < n * 2) {
+    const i = edgeIndex % n
+    const j = (i + 1) % n
+    const x0 = points[i]?.[0] ?? 0
+    const z0 = points[i]?.[1] ?? 0
+    const x1 = points[j]?.[0] ?? 0
+    const z1 = points[j]?.[1] ?? 0
+    const edge = Math.hypot(x1 - x0, z1 - z0)
+    if (edge > 1e-8) {
+      while (samples.length < count && nextAt <= travelled + edge + 1e-9) {
+        const t = (nextAt - travelled) / edge
+        samples.push([x0 + (x1 - x0) * t, z0 + (z1 - z0) * t])
+        nextAt += step
+      }
+    }
+    travelled += edge
+    edgeIndex += 1
+  }
+  return samples
+}
+
+/** 下沉庭院两圈矮树/灌木：外圈略高，内圈略矮。落在已有草带上。 */
+export function makeCourtShrubPlacements(): CourtShrubPlacement[] {
+  const ring = courtyardHole()
+  const focus = ringCentroid(ring)
+  const inset = courtPlantBandInsets()
+  const outerMid = offsetToward(ring, (inset.outerStart + inset.outerEnd) / 2, focus)
+  const innerMid = offsetToward(ring, (inset.innerStart + inset.innerEnd) / 2, focus)
+  const placements: CourtShrubPlacement[] = []
+  sampleRing(outerMid, COURT_SHRUB_OUTER_COUNT).forEach(([x, z], i) => {
+    placements.push({
+      x,
+      y: -COURT_DEPTH_M + COURT_PLANT_LIFT_M,
+      z,
+      rotY: i * 1.7,
+      scale: COURT_SHRUB_OUTER_SCALE,
+      asset: 'hi',
+    })
+  })
+  sampleRing(innerMid, COURT_SHRUB_INNER_COUNT).forEach(([x, z], i) => {
+    placements.push({
+      x,
+      y: -COURT_DEPTH_M + COURT_PLANT_INNER_LIFT_M,
+      z,
+      rotY: i * 1.9 + 0.4,
+      scale: COURT_SHRUB_INNER_SCALE,
+      asset: 'lo',
+    })
+  })
+  return placements
 }
 
 export function meshBounds(mesh: MeshArrays) {

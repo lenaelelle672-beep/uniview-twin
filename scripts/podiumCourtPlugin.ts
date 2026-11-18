@@ -62,14 +62,88 @@ export const Fragment = React.Fragment
 `
 }
 
+interface CourtLoaders {
+  gltfLoader: string
+  installMeshopt: string
+}
+
+function exportMap(indexCode: string): Map<string, string> {
+  const tail = indexCode.slice(indexCode.lastIndexOf('export{'))
+  const map = new Map<string, string>()
+  for (const match of tail.matchAll(/([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)/g)) {
+    map.set(match[1], match[2])
+  }
+  if (map.size === 0) throw new Error('T142：入口包没有导出表')
+  return map
+}
+
+/** 复用入口包里 InstancedProp 已经打进去的 GLTFLoader / installMeshopt，避免晚载分包再打一份超 80k。 */
+function discoverCourtLoaders(indexCode: string): CourtLoaders {
+  const exportedByLocal = exportMap(indexCode)
+  const urlDecl = indexCode.match(/([A-Za-z_$][\w$]*)=["']\/models\/street-tree-lo\.glb["']/)
+  if (!urlDecl) throw new Error('T142：入口包没有 street-tree-lo')
+  const preload = indexCode.match(
+    new RegExp(`([A-Za-z_$][\\w$]*)\\.preload\\(([A-Za-z_$][\\w$]*),${urlDecl[1]},([A-Za-z_$][\\w$]*)\\)`),
+  )
+  if (!preload) throw new Error('T142：入口包没有 useLoader.preload(GLTFLoader, street-tree-lo)')
+  const gltfLoader = exportedByLocal.get(preload[2])
+  const installMeshopt = exportedByLocal.get(preload[3])
+  if (!gltfLoader) throw new Error('T142：GLTFLoader 没有从入口包导出')
+  if (!installMeshopt) throw new Error('T142：installMeshopt 没有从入口包导出')
+  return { gltfLoader, installMeshopt }
+}
+
 function fiberShim(indexFile: string, names: GridBindings): string {
   const from = JSON.stringify(`./${indexFile}`)
   return `import { ${names.useThree} as useThree, ${names.useFrame} as useFrame } from ${from}
 export { useThree, useFrame }
+const loads = new Map()
+export function useLoader(Loader, url, extensions) {
+  useThree((state) => state.gl)
+  const key = typeof url === 'string' ? url : String(url)
+  let slot = loads.get(key)
+  if (!slot) {
+    const created = { status: 'pending', value: null, promise: null }
+    const loader = new Loader()
+    if (extensions) extensions(loader)
+    const ready = loader.meshoptDecoder && loader.meshoptDecoder.ready
+    created.promise = Promise.resolve(ready).then(() => loader.loadAsync(url)).then(
+      (value) => {
+        created.status = 'ready'
+        created.value = value
+        return value
+      },
+      (error) => {
+        created.status = 'error'
+        created.value = error
+        throw error
+      },
+    )
+    slot = created
+    loads.set(key, slot)
+  }
+  if (slot.status === 'pending') throw slot.promise
+  if (slot.status === 'error') throw slot.value
+  return slot.value
+}
 `
 }
 
-function shimPlugin(names: GridBindings, externalLive: boolean): EsbuildPlugin {
+function gltfShim(indexFile: string, loaders: CourtLoaders): string {
+  const from = JSON.stringify(`./${indexFile}`)
+  return `import { ${loaders.gltfLoader} as GLTFLoader } from ${from}
+export { GLTFLoader }
+`
+}
+
+function meshoptShim(indexFile: string, loaders: CourtLoaders): string {
+  const from = JSON.stringify(`./${indexFile}`)
+  return `import { ${loaders.installMeshopt} as installMeshopt } from ${from}
+export { installMeshopt }
+`
+}
+
+function shimPlugin(names: GridBindings, loaders: CourtLoaders, externalLive: boolean): EsbuildPlugin {
   return {
     name: 'podium-court-shims',
     setup(build) {
@@ -86,20 +160,29 @@ function shimPlugin(names: GridBindings, externalLive: boolean): EsbuildPlugin {
       build.onResolve({ filter: /^react$/ }, () => ({ path: 'react', namespace: 'court-shim' }))
       build.onResolve({ filter: /^react\/jsx-runtime$/ }, () => ({ path: 'jsx', namespace: 'court-shim' }))
       build.onResolve({ filter: /^@react-three\/fiber$/ }, () => ({ path: 'fiber', namespace: 'court-shim' }))
+      build.onResolve({ filter: /three\/examples\/jsm\/loaders\/GLTFLoader\.js$/ }, () => ({
+        path: 'gltf',
+        namespace: 'court-shim',
+      }))
+      build.onResolve({ filter: /\/scene\/meshopt(?:\.ts)?$/ }, () => ({ path: 'meshopt', namespace: 'court-shim' }))
       build.onLoad({ filter: /.*/, namespace: 'court-shim' }, (args) => {
         const contents =
           args.path === 'react'
             ? reactShim(names.indexFile, names.react)
             : args.path === 'jsx'
               ? jsxShim(names.indexFile, names.react, names.jsx)
-              : fiberShim(names.indexFile, names)
+              : args.path === 'gltf'
+                ? gltfShim(names.indexFile, loaders)
+                : args.path === 'meshopt'
+                  ? meshoptShim(names.indexFile, loaders)
+                  : fiberShim(names.indexFile, names)
         return { contents, loader: 'js', resolveDir: ROOT }
       })
     },
   }
 }
 
-async function bundleEntry(entry: string, externalLive: boolean, names: GridBindings): Promise<string> {
+async function bundleEntry(entry: string, externalLive: boolean, names: GridBindings, loaders: CourtLoaders): Promise<string> {
   const built = await esbuild({
     absWorkingDir: ROOT,
     entryPoints: [entry],
@@ -113,7 +196,7 @@ async function bundleEntry(entry: string, externalLive: boolean, names: GridBind
     write: false,
     jsx: 'automatic',
     logLevel: 'silent',
-    plugins: [shimPlugin(names, externalLive)],
+    plugins: [shimPlugin(names, loaders, externalLive)],
   })
   if (built.warnings.length > 0) {
     throw new Error(`T134：庭院分包有警告 ${built.warnings.map((item) => item.text).join('; ')}`)
@@ -179,8 +262,10 @@ export function podiumCourtAfterHash(): Plugin {
         }
       }
       let names: GridBindings
+      let loaders: CourtLoaders
       try {
         names = discoverGridBindings(index.code, dock.code, loop.code)
+        loaders = discoverCourtLoaders(index.code)
       } catch (error) {
         this.error(`T134：复用入口包失败 ${error instanceof Error ? error.message : error}`)
         return
@@ -188,8 +273,8 @@ export function podiumCourtAfterHash(): Plugin {
       let mount = ''
       let live = ''
       try {
-        mount = await bundleEntry(MOUNT_ENTRY, true, names)
-        live = await bundleEntry(LIVE_ENTRY, false, names)
+        mount = await bundleEntry(MOUNT_ENTRY, true, names, loaders)
+        live = await bundleEntry(LIVE_ENTRY, false, names, loaders)
         assertSyntax(mount, 'PodiumCourtMount')
         assertSyntax(live, 'PodiumCourtDetail')
       } catch (error) {

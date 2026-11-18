@@ -1,5 +1,6 @@
 /**
  * T134：裙房白铝檐口、屋顶绿化和下沉庭院可读性。
+ * T142：在同一晚载模块上扩大裙房/东楼屋顶草，并加强庭院圈状种植。
  * 檐口加宽写在已有 Podium 里（只改数字，不新开材质栈）。
  * 屋顶草、南侧加建檐口、台阶、圈沿与盆底绿化走这条晚加载入口，
  * 过同一道 2600ms 窗口才请求，不进 hardGate / balancedFx。
@@ -16,7 +17,10 @@ export const EAVE_HEIGHT_M = 1.5
 export const EAVE_BELOW_ROOF_M = 1
 
 export const ROOF_GRASS_INSET_M = 0.45
-export const ROOF_GRASS_THICKNESS_M = 0.1
+/** 与 T138 SouthLawn 挤出厚度对齐，总览能读成一片草板，不是树篱。 */
+export const ROOF_GRASS_THICKNESS_M = 0.18
+/** 东楼顶再多收一点，草板留在女儿墙内侧，不披到格栅或南入口雨棚。 */
+export const EAST_ROOF_GRASS_INSET_M = 0.9
 
 export const COURT_CURB_WIDTH_M = 0.4
 export const COURT_CURB_HEIGHT_M = 0.32
@@ -25,8 +29,17 @@ export const COURT_STEP_COUNT = 5
 export const COURT_STEP_TREAD_M = 1.7
 /** 与 makeBasin 顶圈、场地标高对齐的第一步踏面。 */
 export const COURT_STEP_TOP_Y_M = 0.12
-export const COURT_PLANT_LIFT_M = 0.05
+export const COURT_PLANT_LIFT_M = 0.14
 export const COURT_PLANT_MARGIN_M = 0.3
+export const COURT_PLANT_BAND_WIDTH_M = 2.4
+export const COURT_PLANT_INNER_GAP_M = 1.2
+export const COURT_PLANT_INNER_WIDTH_M = 2.2
+export const COURT_PLANT_INNER_LIFT_M = 0.1
+
+export const COURT_SHRUB_OUTER_COUNT = 16
+export const COURT_SHRUB_INNER_COUNT = 12
+export const COURT_SHRUB_OUTER_SCALE = 0.86
+export const COURT_SHRUB_INNER_SCALE = 0.6
 
 export const COURT_DEPTH_M = 5.5
 
