@@ -14,6 +14,7 @@ import { BUILDING_HIGHLIGHT_ORDER } from '../../scene/overlayOrder'
 import { createRingBand, TOWER_BAND } from '../../scene/shell/facade'
 import { TOWER_OUTLINE_OVERVIEW } from '../../scene/shell/rings'
 import { isFloorCurtainOpen, isFloorShellHidden, isRoofHidden } from '../../scene/stage/cut'
+import { towerSeamLinerTransform, towerSeamMaterial } from '../../scene/towerSeam'
 import { createTowerGlass } from '../../scene/towerGlass'
 import { SOFT_SHADOW_CHUNK_AFTER_FIRST_MS } from '../../scene/softShadows'
 import { useTwinStore } from '../../store/store'
@@ -90,7 +91,17 @@ function FloorShell({
         receiveShadow
         renderOrder={selected ? BUILDING_HIGHLIGHT_ORDER : 0}
       />
+      <SeamLiner elevation={elevation} height={height} />
     </group>
+  )
+}
+
+function SeamLiner({ elevation, height }: { elevation: number; height: number }) {
+  const { position, size } = towerSeamLinerTransform(elevation, height)
+  return (
+    <mesh name="TowerSeamLiner" position={position} material={towerSeamMaterial} castShadow receiveShadow>
+      <boxGeometry args={size} />
+    </mesh>
   )
 }
 
@@ -121,6 +132,7 @@ export function Tower({ night }: { night: boolean }) {
       <group name="RoofAssembly" visible={!roofHidden}>
         <mesh geometry={roof} material={solidMaterial} castShadow receiveShadow />
         <mesh name="RoofParapet" geometry={parapet} material={grilleMaterial} castShadow receiveShadow />
+        <SeamLiner elevation={TOWER_ROOF_M - 0.35} height={TOWER_PARAPET_TOP_M - (TOWER_ROOF_M - 0.35)} />
         <LateRoofSign night={night} position={sign} />
       </group>
     </group>
