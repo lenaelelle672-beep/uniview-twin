@@ -156,12 +156,24 @@ describe('轮廓挤出', () => {
   })
 
   it('西南竖缝退让，南立面仍是完整直线', () => {
+    expect(TOWER_OUTLINE_OVERVIEW.length).toBeLessThanOrEqual(32)
+    const southArc = TOWER_OUTLINE_OVERVIEW.filter(([, z]) => z > 16)
+    expect(southArc.length).toBeGreaterThan(3)
+    expect(southArc.length).toBeLessThanOrEqual(16)
+
     const southFace = TOWER_OUTLINE_OVERVIEW.filter(([, z]) => Math.abs(z - 17.1003) < 1e-4)
-    expect(southFace.length).toBeGreaterThanOrEqual(2)
-    expect(Math.min(...southFace.map(([x]) => x))).toBeCloseTo(-21.6806, 3)
-    const westWingSouth = TOWER_OUTLINE_OVERVIEW.filter(([x, z]) => x < -22 && z > 0)
-    expect(westWingSouth.length).toBeGreaterThan(0)
-    expect(Math.max(...westWingSouth.map(([, z]) => z))).toBeLessThanOrEqual(10)
-    expect(TOWER_OUTLINE_OVERVIEW.some(([x, z]) => x === -31.3093 && z === 10)).toBe(true)
+    expect(southFace.length).toBeGreaterThanOrEqual(4)
+    expect(Math.min(...southFace.map(([x]) => x))).toBeCloseTo(-31.3093, 3)
+    expect(Math.max(...southFace.map(([x]) => x))).toBeCloseTo(-3.5469, 3)
+    expect(southFace.some(([x]) => Math.abs(x + 31.3093) < 1e-4)).toBe(true)
+
+    const slot = TOWER_OUTLINE_OVERVIEW.filter(
+      ([x, z]) => x >= -21.6806 - 1e-4 && x <= -18.48 + 1e-4 && z < 16,
+    )
+    expect(slot.length).toBeGreaterThanOrEqual(2)
+    expect(Math.min(...slot.map(([, z]) => z))).toBeCloseTo(-2.0, 3)
+    expect(slot.every(([x]) => x >= -21.6806 - 1e-4 && x <= -18.48 + 1e-4)).toBe(true)
+    expect(TOWER_OUTLINE_OVERVIEW.some(([x, z]) => Math.abs(x + 18.48) < 1e-4 && Math.abs(z + 2) < 1e-4)).toBe(true)
+    expect(TOWER_OUTLINE_OVERVIEW.some(([x, z]) => Math.abs(x + 21.6806) < 1e-4 && Math.abs(z + 2) < 1e-4)).toBe(true)
   })
 })

@@ -104,7 +104,9 @@ describe('四块外轮廓对照图纸', () => {
       const [dx, dy] = centroid(drawing)
       const [sx, sy] = centroid(scene)
       const shift = Math.hypot(dx - sx, dy - sy) / PT_PER_M
-      expect(overlap, name).toBeGreaterThanOrEqual(0.8)
+      // T141 西南竖缝切入平面图实体，塔楼 IoU 从约 0.806 降到约 0.784；其余块仍锁 0.8。
+      const minOverlap = name === '塔楼' ? 0.75 : 0.8
+      expect(overlap, name).toBeGreaterThanOrEqual(minOverlap)
       expect(shift, name).toBeLessThanOrEqual(3)
     })
     expect(iou(eastDrawing, eastScene), '8F').toBeGreaterThanOrEqual(0.7)
