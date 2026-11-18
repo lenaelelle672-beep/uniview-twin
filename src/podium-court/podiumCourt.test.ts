@@ -1,15 +1,19 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { composeOverlay } from '../grid/mount'
-import { courtyardHole, PODIUM_HEIGHT_M } from '../scene/massing'
+import { courtyardHole, EAST_ROOF_M, PODIUM_HEIGHT_M } from '../scene/massing'
 import { COURT_DEPTH_M as SITE_COURT_DEPTH_M } from '../scene/siteGeometry'
 import { PODIUM_COURT_SOURCE_BLOCK, stripPodiumCourtSource } from '../../scripts/podiumCourtPlugin'
+import { treeKindFromVertexCount } from './PodiumCourtDetail'
 import {
   makeAddonEaveMesh,
   makeCourtCurbMesh,
   makeCourtPlantMesh,
   makeCourtRiserMesh,
+  makeCourtShrubPlacements,
   makeCourtTreadMesh,
+  makeEastRoofGrassMesh,
+  makePodiumRoofGrassMesh,
   makeRoofGrassMesh,
   meshBounds,
   meshVertexCount,
@@ -18,12 +22,17 @@ import {
   COURT_CURB_HEIGHT_M,
   COURT_CURB_Y_M,
   COURT_DEPTH_M,
+  COURT_SHRUB_INNER_COUNT,
+  COURT_SHRUB_INNER_SCALE,
+  COURT_SHRUB_OUTER_COUNT,
+  COURT_SHRUB_OUTER_SCALE,
   COURT_STEP_COUNT,
   COURT_STEP_TOP_Y_M,
   EAVE_BELOW_ROOF_M,
   EAVE_HEIGHT_M,
   EAVE_OUTSET_M,
   PODIUM_COURT_AFTER_FIRST_MS,
+  ROOF_GRASS_THICKNESS_M,
   eaveBottomY,
   eaveTopY,
   finTopY,
@@ -47,7 +56,7 @@ describe('T134 裙房檐口、屋顶绿化和下沉庭院', () => {
     expect(podium).toContain("../../scene/siteGeometry")
     expect(podium).toContain("name=\"CourtyardWall\"")
     expect(podium).toMatch(
-      /<FinRow points=\{arc\} spacing=\{2\.2\} y=\{PODIUM_HEIGHT_M \/ 2\} height=\{PODIUM_HEIGHT_M \* 0\.92\} outwardFrom=\{focus\} \/>/,
+      /<FinRow points=\{arc\} spacing=\{1\.8\} y=\{PODIUM_HEIGHT_M \/ 2\} height=\{PODIUM_HEIGHT_M \* 0\.92\} outwardFrom=\{focus\} \/>/,
     )
     expect(podium).not.toMatch(/podium-court/)
     expect(podium).not.toMatch(/useLoader\.preload/)
@@ -71,11 +80,13 @@ describe('T134 裙房檐口、屋顶绿化和下沉庭院', () => {
   })
 
   it('屋顶草复用 T100 草地材质尺寸，铺在裙房屋面内收一圈', () => {
-    const roof = makeRoofGrassMesh()
+    const roof = makePodiumRoofGrassMesh()
     const box = meshBounds(roof)
     expect(meshVertexCount(roof)).toBeGreaterThan(20)
     expect(box.minY).toBeCloseTo(PODIUM_HEIGHT_M, 4)
-    expect(box.maxY).toBeCloseTo(PODIUM_HEIGHT_M + 0.1, 4)
+    expect(box.maxY).toBeCloseTo(PODIUM_HEIGHT_M + ROOF_GRASS_THICKNESS_M, 4)
+    expect(ROOF_GRASS_THICKNESS_M).toBeGreaterThan(0.1)
+    expect(ROOF_GRASS_THICKNESS_M).toBeLessThanOrEqual(0.18)
     const outline = read('../components/scene/Podium.tsx')
     expect(outline).not.toMatch(/grassMaterial/)
     const detail = read('./PodiumCourtDetail.tsx')
@@ -144,6 +155,11 @@ describe('T134 裙房檐口、屋顶绿化和下沉庭院', () => {
     expect(stripPodiumCourtSource(dock)).not.toMatch(/podium-court|mountPodiumCourt/)
     expect(() => stripPodiumCourtSource('const dock = 1')).toThrow(/T134/)
     expect(plugin).toMatch(/name: 'podium-court-after-hash'/)
+    expect(plugin).toMatch(/export function useLoader/)
+    expect(plugin).toMatch(/discoverCourtLoaders/)
+    expect(plugin).toMatch(/meshoptDecoder/)
+    expect(plugin).toMatch(/Promise\.resolve\(ready\)/)
+    expect(plugin).toMatch(/court-shim/)
     expect(vite).toMatch(/podiumCourtAfterHash\(\)/)
     expect(vite).toMatch(/cubeProbeAfterHash\(\),\n    podiumCourtAfterHash\(\),\n    isolateTransformControlsLeaves\(\),/)
     expect(podium).not.toMatch(/podium-court|mountPodiumCourt|PodiumCourtDetail/)
@@ -195,5 +211,115 @@ describe('T134 裙房檐口、屋顶绿化和下沉庭院', () => {
     expect(geometry).not.toMatch(/roadRibbons|zebraStripes|circular lawn|南侧圆形/)
     expect(plan).toMatch(/不铺近场路网和南侧圆形大草坪（T138）/)
     expect(site).not.toMatch(/podium-court/)
+  })
+})
+
+describe('T142 扩大屋顶绿化与庭院种植层次', () => {
+  it('东楼屋顶草在 EAST_ROOF_M，覆盖明显大于只铺裙房的旧网格', () => {
+    const podium = makePodiumRoofGrassMesh()
+    const east = makeEastRoofGrassMesh()
+    const roof = makeRoofGrassMesh()
+    const podiumBox = meshBounds(podium)
+    const eastBox = meshBounds(east)
+    const roofBox = meshBounds(roof)
+    expect(podiumBox.minY).toBeCloseTo(PODIUM_HEIGHT_M, 4)
+    expect(podiumBox.maxY).toBeCloseTo(PODIUM_HEIGHT_M + ROOF_GRASS_THICKNESS_M, 4)
+    expect(eastBox.minY).toBeCloseTo(EAST_ROOF_M, 4)
+    expect(eastBox.maxY).toBeCloseTo(EAST_ROOF_M + ROOF_GRASS_THICKNESS_M, 4)
+    expect(EAST_ROOF_M).toBeCloseTo(45.3, 5)
+    expect(roofBox.minY).toBeCloseTo(PODIUM_HEIGHT_M, 4)
+    expect(roofBox.maxY).toBeCloseTo(EAST_ROOF_M + ROOF_GRASS_THICKNESS_M, 4)
+    expect(meshVertexCount(roof)).toBeGreaterThan(meshVertexCount(podium))
+    expect(meshVertexCount(roof)).toBeGreaterThan(258)
+    expect(roofBox.maxX).toBeGreaterThan(podiumBox.maxX + 10)
+    expect(roofBox.maxX).toBeGreaterThan(80)
+    const geometry = read('./geometry.ts')
+    expect(geometry).toMatch(/eastUpperOutline/)
+    expect(geometry).toMatch(/EAST_ROOF_M/)
+    expect(geometry).toMatch(/from ['"]\.\.\/scene\/massing['"]/)
+    const detail = read('./PodiumCourtDetail.tsx')
+    expect(detail).toMatch(/name="EastRoofGrass"/)
+    expect(detail).toMatch(/name="PodiumRoofGrass"/)
+  })
+
+  it('庭院种植仍在 5.5 m 盆底，并有两圈分层草带与矮树实例', () => {
+    const plants = makeCourtPlantMesh()
+    const plantBox = meshBounds(plants)
+    const placements = makeCourtShrubPlacements()
+    expect(meshVertexCount(plants)).toBeGreaterThan(384)
+    expect(plantBox.minY).toBeCloseTo(-COURT_DEPTH_M, 3)
+    expect(plantBox.maxY).toBeLessThan(0)
+    expect(plantBox.maxY).toBeGreaterThan(-COURT_DEPTH_M + 0.05)
+    expect(placements).toHaveLength(COURT_SHRUB_OUTER_COUNT + COURT_SHRUB_INNER_COUNT)
+    expect(placements.length).toBeGreaterThan(8)
+    expect(placements.length).toBeLessThan(40)
+    const outer = placements.filter((item) => item.scale === COURT_SHRUB_OUTER_SCALE)
+    const inner = placements.filter((item) => item.scale === COURT_SHRUB_INNER_SCALE)
+    expect(outer).toHaveLength(COURT_SHRUB_OUTER_COUNT)
+    expect(inner).toHaveLength(COURT_SHRUB_INNER_COUNT)
+    expect(outer.every((item) => item.asset === 'hi')).toBe(true)
+    expect(inner.every((item) => item.asset === 'lo')).toBe(true)
+    expect(COURT_SHRUB_INNER_SCALE).toBeLessThan(COURT_SHRUB_OUTER_SCALE)
+    expect(COURT_SHRUB_OUTER_SCALE).toBeGreaterThan(0.75)
+    expect(COURT_SHRUB_OUTER_SCALE).toBeLessThan(1.05)
+    expect(COURT_SHRUB_INNER_SCALE).toBeGreaterThan(0.5)
+    // lo 高 6.859 m、hi 高 7.017 m：外圈须探出 5.5 m 盆沿，侧视也能读成一圈。
+    expect(COURT_SHRUB_OUTER_SCALE * 7.017).toBeGreaterThan(COURT_DEPTH_M)
+    expect(COURT_SHRUB_INNER_SCALE * 6.859).toBeGreaterThan(4)
+    for (const item of placements) {
+      expect(item.y).toBeGreaterThan(-COURT_DEPTH_M - 0.01)
+      expect(item.y).toBeLessThan(-COURT_DEPTH_M + 1)
+      expect(item.x).toBeGreaterThan(plantBox.minX - 0.5)
+      expect(item.x).toBeLessThan(plantBox.maxX + 0.5)
+      expect(item.z).toBeGreaterThan(plantBox.minZ - 0.5)
+      expect(item.z).toBeLessThan(plantBox.maxZ + 0.5)
+    }
+    const detail = read('./PodiumCourtDetail.tsx')
+    expect(detail).toMatch(/name="CourtyardPlanting"/)
+    expect(detail).toMatch(/name="CourtyardShrubs"/)
+    expect(detail).toMatch(/street-tree-lo\.glb/)
+    expect(detail).toMatch(/street-tree-hi\.glb/)
+    expect(detail).toMatch(/GLTFLoader/)
+    expect(detail).toMatch(/useLoader/)
+    expect(detail).toMatch(/installMeshopt/)
+    expect(detail).toMatch(/instancedMesh/)
+    expect(detail).toMatch(/name="CourtyardShrubLo"/)
+    expect(detail).toMatch(/name="CourtyardShrubHi"/)
+    expect(detail).toMatch(/borrowTreeMeshes/)
+    expect(detail).toMatch(/loader\.loadAsync/)
+    expect(detail).toMatch(/tree_leaves/)
+    expect(detail).toMatch(/tree_trunk/)
+    expect(treeKindFromVertexCount('tree_leaves', 180)).toBe('lo')
+    expect(treeKindFromVertexCount('tree_leaves', 1020)).toBe('hi')
+    expect(treeKindFromVertexCount('tree_trunk', 28)).toBe('lo')
+    expect(treeKindFromVertexCount('tree_trunk', 131)).toBe('hi')
+    expect(treeKindFromVertexCount('tree_leaves_shadow', 180)).toBeNull()
+    expect(detail).not.toMatch(/InstancedProp/)
+    expect(detail).not.toMatch(/TreeLod/)
+    expect(detail).not.toMatch(/useLoader\.preload/)
+    expect(detail).not.toMatch(/from ['"]@react-three\/drei['"]/)
+  })
+
+  it('仍走 2600ms 晚载，不进 hardGate，也不重开 T100 / T134 檐口台阶 / T138', () => {
+    expect(PODIUM_COURT_AFTER_FIRST_MS).toBe(2600)
+    expect(EAVE_OUTSET_M).toBe(1)
+    expect(EAVE_HEIGHT_M).toBe(1.5)
+    expect(EAVE_BELOW_ROOF_M).toBe(1)
+    expect(COURT_STEP_COUNT).toBe(5)
+    const detail = read('./PodiumCourtDetail.tsx')
+    const geometry = read('./geometry.ts')
+    const plan = read('./plan.ts')
+    const mount = read('./mount.ts')
+    const site = read('../components/scene/Site.tsx')
+    const fx = read('../components/scene/postfx/balancedFx.tsx')
+    const scene = read('../components/Scene.tsx')
+    expect(mount).toMatch(/afterFirstMs: 2600/)
+    expect(detail).not.toMatch(/roof.?tile|瓦|MeshReflector|transmission/i)
+    expect(geometry).not.toMatch(/roadRibbons|zebraStripes|circular lawn|南侧圆形/)
+    expect(plan).toMatch(/不铺近场路网和南侧圆形大草坪（T138）/)
+    expect(site).not.toMatch(/podium-court/)
+    expect(fx).not.toMatch(/podium-court|PodiumCourtDetail|street-tree-lo|street-tree-hi/)
+    expect(scene).not.toMatch(/podium-court|PodiumCourtDetail/)
+    expect(detail).not.toMatch(/import\(['"]\.\/PodiumCourtDetail['"]\)/)
   })
 })
