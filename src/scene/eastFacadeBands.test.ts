@@ -67,6 +67,8 @@ describe('T140 东立面格栅分层', () => {
     expect(mount).toMatch(/eastFacadeBandsDueLatched/)
     expect(mount).toMatch(/__twinReady === true/)
     expect(mount).toMatch(/__twinFirstFrameAt/)
+    expect(mount).toMatch(/due && window\.__twinPrefetchAt != null/)
+    expect(mount).not.toMatch(/from ['\"][^'\"]*prefetchLazyChunks/)
     expect(mount).toMatch(/import\('\.\/EastUpperGrilleFins'\)/)
     expect(mount).not.toMatch(/const \w+ = import\('\.\/EastUpperGrilleFins'\)/)
     expect(mount).not.toMatch(/from '@react-three\/drei'/)

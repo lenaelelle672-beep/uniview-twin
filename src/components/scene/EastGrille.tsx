@@ -161,8 +161,10 @@ function BalancedGrille() {
 }
 
 /**
- * 上段密肋单独分包：等 __twinReady + 首帧 + 2600ms 后再 import，不要在模块顶预拉。
- * 否则会跟 EastGrille 首屏 chunk 一起进 hardGate（D1461）。
+ * 上段密肋单独分包：等 __twinReady + 首帧 + 2600ms，并且 firstPrefetch 已标记
+ *（window.__twinPrefetchAt）后再 import，不要在模块顶预拉。
+ * 否则会跟 EastGrille 首屏 chunk 一起进 hardGate（D1461），
+ * 或在 firstPrefetch 前 1ms 起请求而被 D126 算进 cutoff（D1489）。
  */
 function LateEastUpperGrilleFins() {
   const [Fins, setFins] = useState<ComponentType | null>(null)
@@ -177,7 +179,7 @@ function LateEastUpperGrilleFins() {
         window.__twinFirstFrameAt,
         performance.now(),
       )
-      if (due) {
+      if (due && window.__twinPrefetchAt != null) {
         void import('./EastUpperGrilleFins').then((mod) => {
           if (!cancelled) setFins(() => mod.EastUpperGrilleFins)
         })
