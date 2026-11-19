@@ -3,7 +3,14 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { CURTAIN_CACHE_KEYS } from '../box-projected-env/plan'
-import { TOWER_FIN_SPACING_M, towerFinLoop, towerFocus } from '../components/scene/TowerFins'
+import { TOWER_FIN_SPACING_M, TOWER_WEST_FIN_SPACING_M, towerFinLoop, towerFocus } from '../components/scene/TowerFins'
+import {
+  isTowerWestWingX,
+  splitTowerFinLoops,
+  TOWER_WEST_FIN_DEPTH_M,
+  TOWER_WEST_FIN_THICKNESS_M,
+} from './towerWestFins'
+import { TOWER_SEAM_EAST_X, TOWER_SEAM_WEST_X } from './shell/rings'
 import { finsAlong } from './massing'
 import { applySurfaceMode, curtainMaterial } from './materials'
 
@@ -30,12 +37,18 @@ describe('T135 塔楼 FinRow 与幕墙格线', () => {
     expect(podium).not.toMatch(/spacing=\{2\.2\}/)
   })
 
-  it('闭合总览轮廓按 1.4 m 铺翅，一层只有一批实例', () => {
+  it('闭合总览轮廓仍按翼分别铺翅，南翼保持 1.4 m', () => {
     const loop = towerFinLoop()
     expect(loop[0]).toEqual(loop[loop.length - 1])
-    const fins = finsAlong(loop, TOWER_FIN_SPACING_M, towerFocus(), 0.42 * 0.45)
-    expect(fins.length).toBeGreaterThan(100)
-    expect(fins.length).toBeLessThan(200)
+    const split = splitTowerFinLoops(loop)
+    expect(split.west.length).toBeGreaterThan(0)
+    expect(split.rest.length).toBeGreaterThan(0)
+    const westFins = split.west.flatMap((points) => finsAlong(points, TOWER_WEST_FIN_SPACING_M, towerFocus(), 0.42 * 0.45))
+    const restFins = split.rest.flatMap((points) => finsAlong(points, TOWER_FIN_SPACING_M, towerFocus(), 0.42 * 0.45))
+    expect(restFins.length).toBeGreaterThan(40)
+    expect(westFins.length).toBeGreaterThan(restFins.length * 0.4)
+    expect(westFins.length + restFins.length).toBeGreaterThan(120)
+    expect(westFins.length + restFins.length).toBeLessThan(400)
   })
 
   it('塔楼 FinRow 在懒载模块里挂到每层外壳，打开幕墙或隐藏楼层时卸掉', () => {
@@ -93,4 +106,42 @@ describe('T135 塔楼 FinRow 与幕墙格线', () => {
     const blob = `${tower}\n${fins}\n${podium}\n${materials}`
     expect(blob).not.toMatch(/MeshReflectorMaterial|useBoxProjectedEnv|CubeCamera/)
   })
+
+  it('T146 只加密西翼，南翼偏玻璃，不改共享 finMaterial 与竖缝', () => {
+    expect(TOWER_FIN_SPACING_M).toBe(1.4)
+    expect(TOWER_WEST_FIN_SPACING_M).toBe(0.58)
+    expect(TOWER_WEST_FIN_DEPTH_M).toBe(0.52)
+    expect(TOWER_WEST_FIN_THICKNESS_M).toBe(0.11)
+    expect(TOWER_WEST_FIN_SPACING_M).toBeLessThan(TOWER_FIN_SPACING_M * 0.6)
+    expect(TOWER_WEST_FIN_SPACING_M).toBeGreaterThan(0.45)
+    expect(isTowerWestWingX(TOWER_SEAM_WEST_X)).toBe(true)
+    expect(isTowerWestWingX(TOWER_SEAM_WEST_X + 0.2)).toBe(false)
+    expect(isTowerWestWingX(TOWER_SEAM_EAST_X)).toBe(false)
+    const split = splitTowerFinLoops(towerFinLoop())
+    const westXs = split.west.flat().map(([x]) => x)
+    const restPts = split.rest.flat()
+    expect(westXs.length).toBeGreaterThan(4)
+    expect(Math.max(...westXs)).toBeLessThanOrEqual(TOWER_SEAM_WEST_X + 1e-4)
+    for (const pts of [...split.west, ...split.rest]) {
+      for (let i = 1; i < pts.length; i += 1) {
+        expect(Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])).toBeGreaterThan(1e-8)
+      }
+    }
+    const southRest = restPts.filter(([x, z]) => x >= TOWER_SEAM_EAST_X - 1e-4 && z > 15)
+    expect(southRest.length).toBeGreaterThan(4)
+    const mount = read('../components/scene/TowerFins.tsx')
+    expect(mount).toMatch(/spacing=\{TOWER_WEST_FIN_SPACING_M\}/)
+    expect(mount).toMatch(/depth=\{TOWER_WEST_FIN_DEPTH_M\}/)
+    expect(mount).toMatch(/thickness=\{TOWER_WEST_FIN_THICKNESS_M\}/)
+    expect(mount).toMatch(/\bbox\b/)
+    expect(mount).toMatch(/spacing=\{TOWER_FIN_SPACING_M\}/)
+    expect(mount).not.toMatch(/finMaterial\.(color|metalness)/)
+    expect(mount).not.toMatch(/TOWER_SEAM_LINER|TOWER_SEAM_SOUTH_Z/)
+    const materials = read('./materials.ts')
+    expect(materials).toMatch(/export const finMaterial[\s\S]*color: '#c5cad3'/)
+    const seam = read('./towerSeam.ts')
+    expect(seam).toMatch(/TOWER_SEAM_LINER_INSET_M = 0\.2/)
+    expect(seam).toMatch(/TOWER_SEAM_LINER_MOUTH_M = 1\.2/)
+  })
+
 })
