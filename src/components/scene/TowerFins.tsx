@@ -4,6 +4,12 @@ import { TOWER_OUTLINE_OVERVIEW } from '../../scene/shell/rings'
 import { isFloorCurtainOpen, isFloorShellHidden } from '../../scene/stage/cut'
 import { useTwinStore } from '../../store/store'
 import { FinRow } from './Fins'
+import {
+  splitTowerFinLoops,
+  TOWER_WEST_FIN_DEPTH_M,
+  TOWER_WEST_FIN_SPACING_M,
+  TOWER_WEST_FIN_THICKNESS_M,
+} from '../../scene/towerWestFins'
 
 /**
  * T135：塔楼 FinRow 间距（米）。
@@ -13,6 +19,7 @@ import { FinRow } from './Fins'
  * 须严于裙房原 2.2 m 与原幕墙格线 1.55 m，取 1.4 m（亦与 4.2 m 层高整除）。
  */
 export const TOWER_FIN_SPACING_M = 1.4
+export { TOWER_WEST_FIN_SPACING_M }
 
 /** 闭合的总览轮廓，供 finsAlong 绕塔一圈。 */
 export function towerFinLoop(): Array<[number, number]> {
@@ -31,6 +38,7 @@ export function towerFocus(): [number, number] {
 
 const TOWER_FIN_POINTS = towerFinLoop()
 const TOWER_FIN_FOCUS = towerFocus()
+const TOWER_FIN_SPLIT = splitTowerFinLoops(TOWER_FIN_POINTS)
 
 function FloorFinRow({
   id,
@@ -45,13 +53,31 @@ function FloorFinRow({
   const opened = useTwinStore((state) => isFloorCurtainOpen(state.view, state.selectedFloor, id))
   if (hidden || opened) return null
   return (
-    <FinRow
-      points={TOWER_FIN_POINTS}
-      spacing={TOWER_FIN_SPACING_M}
-      y={elevation + height / 2}
-      height={height * 0.92}
-      outwardFrom={TOWER_FIN_FOCUS}
-    />
+    <group>
+      {TOWER_FIN_SPLIT.west.map((points, index) => (
+        <FinRow
+          key={`west-${index}`}
+          points={points}
+          spacing={TOWER_WEST_FIN_SPACING_M}
+          y={elevation + height / 2}
+          height={height * 0.92}
+          depth={TOWER_WEST_FIN_DEPTH_M}
+          thickness={TOWER_WEST_FIN_THICKNESS_M}
+          box
+          outwardFrom={TOWER_FIN_FOCUS}
+        />
+      ))}
+      {TOWER_FIN_SPLIT.rest.map((points, index) => (
+        <FinRow
+          key={`rest-${index}`}
+          points={points}
+          spacing={TOWER_FIN_SPACING_M}
+          y={elevation + height / 2}
+          height={height * 0.92}
+          outwardFrom={TOWER_FIN_FOCUS}
+        />
+      ))}
+    </group>
   )
 }
 
