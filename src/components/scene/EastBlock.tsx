@@ -33,9 +33,11 @@ const EastGrille = lazy(() => eastGrilleImport)
 preloadEastGrilleForQuality()
 
 /**
- * T139：南入口雨棚单独分包。必须等 __twinReady、首帧后再过 2600ms 才 import / 挂载，
- * 否则雨棚分包与被它拉起的石材 UV 工具会进 hardGate（D1460）。
- * 数字留在本文件，避免为了这个常数去碰 prefetch 模块。
+ * T139：南入口雨棚单独分包。必须等 __twinReady、首帧后再过 2600ms，
+ * 并且 firstPrefetch 已标记（window.__twinPrefetchAt）才 import / 挂载，
+ * 否则雨棚分包与被它拉起的石材 UV 工具会进 hardGate（D1460），
+ * 或在 firstPrefetch 前 1ms 起请求而被 D126 算进 cutoff（D1489）。
+ * 数字留在本文件，只读 window 标记，避免为了这个常数去碰 prefetch 模块。
  */
 const SOUTH_ENTRANCE_AFTER_FIRST_MS = 2600
 const SouthEntrance = lazy(() => import('./SouthEntrance'))
@@ -51,7 +53,8 @@ function LateSouthEntrance({ model }: { model: boolean }) {
       if (
         window.__twinReady === true &&
         first != null &&
-        performance.now() - first >= SOUTH_ENTRANCE_AFTER_FIRST_MS
+        performance.now() - first >= SOUTH_ENTRANCE_AFTER_FIRST_MS &&
+        window.__twinPrefetchAt != null
       ) {
         setOn(true)
         return

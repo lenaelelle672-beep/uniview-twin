@@ -76,6 +76,8 @@ describe('T139 南入口雨棚', () => {
     expect(east).toMatch(/__twinReady === true/)
     expect(east).toMatch(/__twinFirstFrameAt/)
     expect(east).toMatch(/performance\.now\(\) - first >= SOUTH_ENTRANCE_AFTER_FIRST_MS/)
+    expect(east).toMatch(/window\.__twinPrefetchAt != null/)
+    expect(east).not.toMatch(/from ['"][^'"]*prefetchLazyChunks/)
     expect(east).toMatch(/lazy\(\(\) => import\('\.\/SouthEntrance'\)\)/)
     expect(east).toMatch(/<LateSouthEntrance model=\{model\} \/>/)
     expect(east).not.toMatch(/from '\.\/SouthEntrance'/)

@@ -45,7 +45,7 @@ function read(path: string) {
 }
 
 describe('T134 裙房檐口、屋顶绿化和下沉庭院', () => {
-  it('复用已有 5.5 m 盆，不另挖一盆，也不改 FinRow 挂点', () => {
+  it('复用已有 5.5 m 盆，不另挖一盆，FinRow 仍沿弧挂在上段', () => {
     expect(COURT_DEPTH_M).toBe(5.5)
     expect(SITE_COURT_DEPTH_M).toBe(5.5)
     expect(COURT_DEPTH_M).toBe(SITE_COURT_DEPTH_M)
@@ -58,8 +58,8 @@ describe('T134 裙房檐口、屋顶绿化和下沉庭院', () => {
     expect(podium).toMatch(/<FinRow[\s\S]*points=\{arc\}/)
     expect(podium).toContain('spacing={PODIUM_ARC_FIN_SPACING_M}')
     expect(podium).toContain('outwardFrom={focus}')
-    expect(podium).toContain('y={PODIUM_HEIGHT_M / 2}')
-    expect(podium).toContain('height={PODIUM_HEIGHT_M * 0.92}')
+    expect(podium).toContain('y={arcadeTop + upperHeight / 2}')
+    expect(podium).toContain('height={upperHeight * 0.92}')
     expect(podium).not.toMatch(/podium-court/)
     expect(podium).not.toMatch(/useLoader\.preload/)
     expect(podium).not.toMatch(/MeshReflector|transmission|SSGI|pathtracer/)

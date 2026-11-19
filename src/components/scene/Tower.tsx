@@ -22,6 +22,7 @@ import { useFloorActions } from './floorPick'
 
 /**
  * T132：替换后的 roof-sign.glb 约 32 KB，必须晚于 __twinReady / 首帧 hardGate 窗口再挂。
+ * D1489：还要等 firstPrefetch 标记（window.__twinPrefetchAt），避免在 cutoff 前 1ms 起请求。
  * 静态立刻挂载会在首屏 Suspense 里请求 GLB。内层 Suspense 避免回落到 BlankSuspenseFallback。
  */
 const RoofSign = lazy(() => import('./RoofSign').then((mod) => ({ default: mod.RoofSign })))
@@ -34,7 +35,12 @@ function LateRoofSign({ night, position }: { night: boolean; position: [number, 
     const tick = () => {
       if (cancelled) return
       const first = window.__twinFirstFrameAt
-      if (window.__twinReady === true && first != null && performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS) {
+      if (
+        window.__twinReady === true &&
+        first != null &&
+        performance.now() - first >= SOFT_SHADOW_CHUNK_AFTER_FIRST_MS &&
+        window.__twinPrefetchAt != null
+      ) {
         setOn(true)
         return
       }
