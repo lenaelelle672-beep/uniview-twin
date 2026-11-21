@@ -144,7 +144,7 @@ export const baseMaterial = new MeshStandardMaterial({
   envMapIntensity: 0.2,
 })
 export const stoneMaterial = new MeshStandardMaterial({ color: '#d7d2c8', roughness: 0.86, metalness: 0 })
-export const _s: { g?: import('three').BufferGeometry; h: number } = { h: 0 }
+export const _s: { g?: import('three').BufferGeometry; b?: import('three').BufferGeometry; h: number; bh: number } = { h: 0, bh: 0 }
 export const courtWallMaterial = new MeshStandardMaterial({
   color: '#c4bfb4',
   roughness: 0.9,

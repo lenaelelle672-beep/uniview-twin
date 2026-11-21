@@ -93,6 +93,7 @@ function startLoads(load: StoneTextureLoad): void {
     else slot.nor = texture
     if (slot.nor && slot.rough) {
       if (_s.g) stampStoneWallUv(_s.g, _s.h)
+      if (_s.b) stampStoneWallUv(_s.b, _s.bh)
       STONE.material.normalMap = slot.nor
       STONE.material.roughnessMap = slot.rough
       STONE.material.needsUpdate = true
