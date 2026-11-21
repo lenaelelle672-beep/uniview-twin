@@ -144,8 +144,13 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
     const floor = extrudeUp(ring, 0.1, [], 'both')
     floor.clearGroups()
     const backRing = eastCantileverUndercroftBackOutline()
-    const back = backRing.length >= 4 ? extrudeUp(backRing, LOWER_TOP - 0.05, [], 'both') : null
+    const backH = LOWER_TOP - 0.05
+    const back = backRing.length >= 4 ? extrudeUp(backRing, backH, [], 'both') : null
     back?.clearGroups()
+    if (back) {
+      _s.b = back
+      _s.bh = backH
+    }
     const upper = eastUpperOutline()
     const lower = eastLowerOutline()
     const uSouth = Math.max(...upper.map(([, z]) => z))
@@ -254,7 +259,7 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
           <mesh name="EastCantileverSoffit" geometry={undercroft.soffit} material={undercroftMaterial} castShadow receiveShadow />
           <mesh name="EastCantileverUndercroftFloor" geometry={undercroft.floor} material={undercroftMaterial} receiveShadow />
           {undercroft.back ? (
-            <mesh name="EastCantileverUndercroftBack" geometry={undercroft.back} material={undercroftMaterial} castShadow receiveShadow />
+            <mesh name="EastCantileverUndercroftBack" geometry={undercroft.back} material={model ? solidMaterial : stoneMaterial} castShadow receiveShadow />
           ) : null}
           {undercroft.ribs ? (
             <mesh name="EastCantileverUndercroftRibs" geometry={undercroft.ribs} material={undercroftMaterial} castShadow receiveShadow />

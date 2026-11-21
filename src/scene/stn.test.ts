@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ClampToEdgeWrapping, NoColorSpace, RepeatWrapping, Texture } from 'three'
 import { extrudeUp } from './extrude'
 import { stampStoneWallUv, stoneWallV, STONE_TILE_M } from './stoneUv'
-import { EAST_CANTILEVER_M } from './massing'
+import { EAST_CANTILEVER_M, EAST_CANTILEVER_SOFFIT_T_M, EAST_LOWER_TOP_M } from './massing'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, '../..')
@@ -168,6 +168,8 @@ describe('T136 东楼基座石材', () => {
     const east = readFileSync(join(here, '../components/scene/EastBlock.tsx'), 'utf8')
     expect(east).toMatch(/stoneMaterial/)
     expect(east).toMatch(/_s\.g/)
+    expect(east).toMatch(/_s\.b/)
+    expect(east).toMatch(/_s\.bh/)
     expect(east).not.toMatch(/stampStoneWallUv/)
     expect(east).not.toMatch(/stoneUv/)
     expect(east).toMatch(/model \? solidMaterial : stoneMaterial/)
@@ -182,6 +184,8 @@ describe('T136 东楼基座石材', () => {
     expect(src).toMatch(/1 \/ STONE_TILE_M/)
     expect(src).toMatch(/stampStoneWallUv/)
     expect(src).toMatch(/_s\.g/)
+    expect(src).toMatch(/_s\.b/)
+    expect(src).toMatch(/_s\.bh/)
     expect(src).not.toMatch(/metalnessMap/)
     expect(src).not.toMatch(/\.map\s*=/)
     expect(src).not.toMatch(/useLoader\(/)
@@ -323,5 +327,65 @@ describe('T136 东楼基座石材', () => {
     const map = stoneMaterial.normalMap as Texture | null
     expect(map).not.toBeNull()
     expect(map!.anisotropy).toBe(1)
+  })
+})
+
+describe('T148 东楼下层石材基座观感', () => {
+  it('南向底空贴面改挂石材并登记挤出，不改共享材质与悬挑常数', () => {
+    const east = readFileSync(join(here, '../components/scene/EastBlock.tsx'), 'utf8')
+    expect(east).toMatch(
+      /name="EastCantileverUndercroftBack"[^>]*material=\{model \? solidMaterial : stoneMaterial\}/,
+    )
+    expect(east).not.toMatch(/name="EastCantileverUndercroftBack"[^>]*undercroftMaterial/)
+    expect(east).toMatch(/name="EastCantileverSoffit"[^>]*undercroftMaterial/)
+    expect(east).toMatch(/name="EastCantileverUndercroftFloor"[^>]*undercroftMaterial/)
+    expect(east).toMatch(/name="EastCantileverUndercroftRibs"[^>]*undercroftMaterial/)
+    expect(east).toMatch(/name="EastCantileverUndercroftColumns"[^>]*stoneMaterial/)
+    expect(east).toMatch(/_s\.b = back/)
+    expect(east).toMatch(/_s\.bh = backH/)
+    expect(east).not.toMatch(/stampStoneWallUv/)
+    expect(east).not.toMatch(/stoneUv|TreeLod/)
+    expect(east).not.toMatch(/EAST_CANTILEVER_M\s*=/)
+    expect(east).not.toMatch(/EAST_CANTILEVER_SOFFIT_T_M\s*=/)
+    expect(EAST_CANTILEVER_M).toBe(4)
+    expect(EAST_CANTILEVER_SOFFIT_T_M).toBe(0.7)
+  })
+
+  it('日间共享 stoneMaterial 仍是 #b0ada8，undercroftMaterial 仍是 #1a1c20', async () => {
+    const { applySurfaceMode, stoneMaterial, undercroftMaterial } = await import('./materials')
+    applySurfaceMode('day')
+    expect(`#${stoneMaterial.color.getHexString()}`).toBe('#b0ada8')
+    expect(`#${undercroftMaterial.color.getHexString()}`).toBe('#1a1c20')
+  })
+
+  it('南向贴面高度用下层顶减 0.05，墙面 V 仍对顶底', () => {
+    const height = EAST_LOWER_TOP_M - 0.05
+    expect(height).toBeCloseTo(19.55, 6)
+    const geometry = extrudeUp(
+      [
+        [0, 0],
+        [10, 0],
+        [10, 0.08],
+        [0, 0.08],
+      ],
+      height,
+      [],
+      'both',
+    )
+    stampStoneWallUv(geometry, height)
+    const uv = geometry.getAttribute('uv')
+    const pos = geometry.getAttribute('position')
+    const nrm = geometry.getAttribute('normal')
+    let sides = 0
+    for (let i = 0; i < pos.count; i += 1) {
+      if (!nrm || Math.abs(nrm.getY(i)) > 0.5) continue
+      sides += 1
+      const y = pos.getY(i)
+      const v = uv.getY(i)
+      if (y < 1e-4) expect(v).toBeCloseTo(0, 5)
+      if (y > height - 1e-4) expect(v).toBeCloseTo(STONE_TILE_M, 5)
+    }
+    expect(sides).toBeGreaterThan(0)
+    geometry.dispose()
   })
 })
