@@ -20,6 +20,7 @@ import {
   EAST_ROOF_M,
   outset,
 } from '../../scene/massing'
+import { eastSouthGlassPose, eastUpperSolidOutline } from '../../scene/eastSouthFacade'
 import { northWingTopM } from '../../data/levels'
 import { NORTH_WING_OUTLINE } from '../../scene/shell/rings'
 import { FOOTPRINT } from '../../scene/siteGeometry'
@@ -41,6 +42,15 @@ preloadEastGrilleForQuality()
  */
 const SOUTH_ENTRANCE_AFTER_FIRST_MS = 2600
 const SouthEntrance = lazy(() => import('./SouthEntrance'))
+
+/**
+ * T147：南墙上段密肋单独分包。必须等 __twinReady、首帧后再过 2600ms，
+ * 并且 firstPrefetch 已标记（window.__twinPrefetchAt）才 import / 挂载，
+ * 避免格栅实例进 hardGate，或在 firstPrefetch 前起请求拉长 cutoff。
+ * 不改 SOUTH_ENTRANCE_AFTER_FIRST_MS，也不预拉既有晚载块。
+ */
+const SOUTH_FACADE_AFTER_FIRST_MS = 2600
+const EastSouthFacadeFins = lazy(() => import('./EastSouthFacadeFins'))
 
 function LateSouthEntrance({ model }: { model: boolean }) {
   const [on, setOn] = useState(false)
@@ -75,13 +85,47 @@ function LateSouthEntrance({ model }: { model: boolean }) {
   )
 }
 
+function LateEastSouthFacadeFins() {
+  const [on, setOn] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    let raf = 0
+    const tick = () => {
+      if (cancelled) return
+      const first = window.__twinFirstFrameAt
+      if (
+        window.__twinReady === true &&
+        first != null &&
+        performance.now() - first >= SOUTH_FACADE_AFTER_FIRST_MS &&
+        window.__twinPrefetchAt != null
+      ) {
+        setOn(true)
+        return
+      }
+      raf = requestAnimationFrame(tick)
+    }
+    tick()
+    return () => {
+      cancelled = true
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [])
+  if (!on) return null
+  return (
+    <Suspense fallback={null}>
+      <EastSouthFacadeFins />
+    </Suspense>
+  )
+}
+
 const LOWER_TOP = EAST_LOWER_TOP_M
 
 export function EastBlock({ model, quality }: { model: boolean; quality: QualityTier }) {
   const upperOutline = useMemo(() => eastUpperOutline(), [])
+  const upperSolidOutline = useMemo(() => eastUpperSolidOutline(), [])
   const lowerOutline = useMemo(() => eastLowerOutline(), [])
   const bodies = useMemo(() => {
-    const upper = extrudeUp(upperOutline, EAST_ROOF_M - LOWER_TOP, [], 'both')
+    const upper = extrudeUp(upperSolidOutline, EAST_ROOF_M - LOWER_TOP, [], 'both')
     upper.clearGroups()
     upper.translate(0, LOWER_TOP, 0)
     const lower = extrudeUp(lowerOutline, LOWER_TOP, [], 'top')
@@ -89,7 +133,7 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
     _s.g = lower
     _s.h = LOWER_TOP
     return [upper, lower] as const
-  }, [lowerOutline, upperOutline])
+  }, [lowerOutline, upperSolidOutline])
   const undercroft = useMemo(() => {
     const ring = eastCantileverSoffitOutline()
     if (ring.length < 4) return null
@@ -145,6 +189,12 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
     if (!merged) throw new Error('东楼分层线为空')
     return merged
   }, [focus, upperOutline])
+  const southGlass = useMemo(() => {
+    const pose = eastSouthGlassPose()
+    const geometry = new BoxGeometry(...pose.size)
+    geometry.translate(...pose.position)
+    return geometry
+  }, [])
   const facadeBands = useMemo(() => {
     const poses = eastFacadeBandPoses()
     const glassParts = [poses.mid, poses.upper].map((pose) => {
@@ -172,6 +222,14 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
       <object3D name="eastGrilleMount" position={grille.position} rotation={grille.rotation} />
       <mesh geometry={bodies[0]} material={solidMaterial} castShadow receiveShadow />
       <mesh geometry={bodies[1]} material={model ? solidMaterial : stoneMaterial} castShadow receiveShadow />
+      <mesh
+        name="EastSouthFacadeGlass"
+        geometry={southGlass}
+        material={model ? solidMaterial : curtainMaterial}
+        // 分层靠幕墙格线与密肋，不靠实时阴影；软件渲染下接阴影会把上段吃成黑墙。
+        castShadow={false}
+        receiveShadow={false}
+      />
       {!model ? (
         <group name="EastFacadeBands">
           <mesh
@@ -217,6 +275,7 @@ export function EastBlock({ model, quality }: { model: boolean; quality: Quality
       />
       {/* 与 Scene.tsx 外层 Suspense 同边界，__twinReady 等 chunk + lo GLB。 */}
       {!model && <EastGrille quality={quality} />}
+      {!model && <LateEastSouthFacadeFins />}
       <LateSouthEntrance model={model} />
     </group>
   )
